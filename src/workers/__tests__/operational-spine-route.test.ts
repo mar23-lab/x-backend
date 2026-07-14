@@ -19,7 +19,7 @@ const CANARY_LIFECYCLE = {
 
 type Call = { method: string; ws: string; actor?: string; input?: Record<string, unknown>; id?: string };
 
-function appFor(auth: Record<string, unknown>, calls: Call[], opts?: { missingApproval?: boolean }) {
+function appFor(auth: Record<string, unknown>, calls: Call[], opts?: { missingApproval?: boolean; completionFlag?: string; missingPacket?: boolean }) {
   const dal = {
     listTaskPackets: async (ws: string) => {
       calls.push({ method: 'listTaskPackets', ws });
@@ -28,6 +28,11 @@ function appFor(auth: Record<string, unknown>, calls: Call[], opts?: { missingAp
     createTaskPacket: async (ws: string, actor: string, input: Record<string, unknown>) => {
       calls.push({ method: 'createTaskPacket', ws, actor, input });
       return { id: 'pkt_new', workspace_id: ws, actor_user_id: actor, ...input };
+    },
+    evaluateTaskPacketCompletion: async (ws: string, id: string) => {
+      calls.push({ method: 'evaluateTaskPacketCompletion', ws, id });
+      if (opts?.missingPacket) return null;
+      return { packet_id: id, packet_version: 2, can_complete: false, unmet_reasons: ['approval_missing'], facts: {} };
     },
     listEvidenceItems: async (ws: string) => {
       calls.push({ method: 'listEvidenceItems', ws });
@@ -87,7 +92,7 @@ function appFor(auth: Record<string, unknown>, calls: Call[], opts?: { missingAp
     await next();
   });
   app.route('/api/v1', operationalSpineRoute);
-  return app;
+  return { app, env: { ...ENV, PACKET_COMPLETION_EVALUATION_ENABLED: opts?.completionFlag } };
 }
 
 function request(
@@ -98,12 +103,12 @@ function request(
   opts?: { missingApproval?: boolean },
 ) {
   const calls: Call[] = [];
-  const app = appFor(auth, calls, opts);
-  return app.request(`/api/v1${path}`, {
+  const built = appFor(auth, calls, opts);
+  return built.app.request(`/api/v1${path}`, {
     method,
     headers: { 'content-type': 'application/json' },
     body: body ? JSON.stringify(body) : undefined,
-  }, ENV as never).then((res) => ({ res, calls }));
+  }, built.env as never).then((res) => ({ res, calls }));
 }
 
 describe('operational spine routes', () => {
@@ -111,6 +116,26 @@ describe('operational spine routes', () => {
     const { res, calls } = await request('GET', '/packets', OPERATOR);
     expect(res.status).toBe(200);
     expect(calls).toEqual([{ method: 'listTaskPackets', ws: 'tenant_a' }]);
+  });
+
+  it('completion evaluation is default-off and does not touch the DAL', async () => {
+    const { res, calls } = await request('GET', '/packets/pkt_1/completion-evaluation', OPERATOR);
+    expect(res.status).toBe(404);
+    expect((await res.json()).code).toBe('FEATURE_DISABLED');
+    expect(calls).toEqual([]);
+  });
+
+  it('completion evaluation is server-derived and workspace-scoped when explicitly enabled', async () => {
+    const { res, calls } = await request('GET', '/packets/pkt_1/completion-evaluation', OPERATOR, undefined, { completionFlag: 'true' });
+    expect(res.status).toBe(200);
+    expect(calls).toEqual([{ method: 'evaluateTaskPacketCompletion', ws: 'tenant_a', id: 'pkt_1' }]);
+    expect((await res.json()).evaluation).toMatchObject({ packet_id: 'pkt_1', packet_version: 2, can_complete: false });
+  });
+
+  it('completion evaluation does not enumerate another tenant packet', async () => {
+    const { res, calls } = await request('GET', '/packets/pkt_other/completion-evaluation', OPERATOR, undefined, { completionFlag: 'true', missingPacket: true });
+    expect(res.status).toBe(404);
+    expect(calls).toEqual([{ method: 'evaluateTaskPacketCompletion', ws: 'tenant_a', id: 'pkt_other' }]);
   });
 
   it('POST /packets permits operator and ignores any forged workspace field', async () => {

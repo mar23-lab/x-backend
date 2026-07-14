@@ -1,0 +1,67 @@
+{
+  "schema_id": "xlooop.backend_delta_provenance.v1",
+  "authority": "append_only_mirror_receipts",
+  "deltas": [
+    {
+      "delta_id": "backend-lifecycle-contracts-20260714",
+      "generated_at": "2026-07-14T14:31:54Z",
+      "source_repo": "mar23-lab/Xlooop-XCP-demo",
+      "source_commit": "edc0805ae80a6006066c048985a3cc8d86ae0a21",
+      "source_pr": "https://github.com/mar23-lab/Xlooop-XCP-demo/pull/851",
+      "target_base_commit": "9dc68a71cadddb88e4768023147b38434540d522",
+      "authority": "shadow_only_no_production_cutover",
+      "seed_exclusions": [
+        {
+          "path": "docs/deployment/evidence/latest-cloudflare-prod-deploy-receipt.json",
+          "source_blob": "354e5c5cb753c96c5ac6a9bfebd461b25651714b",
+          "reason": "mutable latest production deploy receipt is intentionally gitignored and cannot be part of a reproducible source seed"
+        }
+      ],
+      "copied_files": [
+        { "path": "docs/contracts/api-contract.v1.json", "source_blob": "ffb252819af372c994a1d992d9c07ed4f160583f" },
+        { "path": "scripts/verify-action-intent-shadow.mjs", "source_blob": "1cbfce9492d5797dab0c22fd2e0065cdcf087064" },
+        { "path": "scripts/verify-packet-completion-contract.mjs", "source_blob": "2f3f8d0c13ccbb683f667da047935b1b53460895" },
+        { "path": "scripts/verify-typed-work-relationships.mjs", "source_blob": "c78360759e8c629c665e7c54ec33efbf5e1c828e" },
+        { "path": "src/workers/__fixtures__/action-intent-corpus.json", "source_blob": "90a5262353183cfb076e17099efd404e94dc15c6" },
+        { "path": "src/workers/__tests__/action-intent-shadow-route.test.ts", "source_blob": "333aa2d98faf423c4a2441ffa4308b6058e8a515" },
+        { "path": "src/workers/__tests__/action-intent.test.ts", "source_blob": "2161a7931c95ce7321c1fa32e1ff10dc4be0fd5a" },
+        { "path": "src/workers/__tests__/operational-spine-route.test.ts", "source_blob": "24af8dd8b3bd840a96eec297b55d26c07e08d930" },
+        { "path": "src/workers/__tests__/packet-completion-store.test.ts", "source_blob": "8a952d7ccf057de0f78e15bc925f3c6286daded6" },
+        { "path": "src/workers/__tests__/work-relationship.test.ts", "source_blob": "cc8f2f5cda44569d3c4674c22cacf23798633653" },
+        { "path": "src/workers/dal/DalAdapter.ts", "source_blob": "946aa520e75aa0bbabce115e959e51f817ec14ca" },
+        { "path": "src/workers/dal/operational-spine-methods.ts", "source_blob": "8b174be4b798b73e63073d478afdf51a3a65bbde" },
+        { "path": "src/workers/dal/operational-spine-store.ts", "source_blob": "ba02998fb213adcf00b44f2b736cf9357226ff21" },
+        { "path": "src/workers/dal/types/operational-spine.ts", "source_blob": "3a9dfc9c6de37d8036120c86e9d60809f7f6a18c" },
+        { "path": "src/workers/db/migrations/073_packet_completion_contract.sql", "source_blob": "bdc06273e76c69617b435b5e7fa82709ab6d3916" },
+        { "path": "src/workers/db/migrations/074_typed_work_relationships.sql", "source_blob": "f29a3cbd2b07cda11d80e46b6635dc4d6b4ca19b" },
+        { "path": "src/workers/index.ts", "source_blob": "41d544371b224b169f923afd618632543c5b351c" },
+        { "path": "src/workers/lib/action-intent.ts", "source_blob": "f48e47ffc129f04e76188c9c4730f357497410f2" },
+        { "path": "src/workers/lib/work-relationship.ts", "source_blob": "488fbb8e374bce746085547b71ac25fcf30b8472" },
+        { "path": "src/workers/routes/action-intent-shadow.ts", "source_blob": "a4b93b7a6d8f3fcf8c1571e5b81f24741f5d73e1" },
+        { "path": "src/workers/routes/operational-spine.ts", "source_blob": "c808ba8bf9851688f91677bf85843b36d44a440d" }
+      ],
+      "transformed_files": [
+        {
+          "path": "README.md",
+          "target_blob": "b29ae6e7be99f398b6255bdcab52d5ef19e96472",
+          "reason": "records target-repository shadow authority and latest accepted mirror"
+        },
+        {
+          "path": "package.json",
+          "target_blob": "f6aa1182484951b82d797387247e8810a1450375",
+          "reason": "registers backend-only provenance and contract verifier scripts"
+        },
+        {
+          "path": "scripts/ci-local.mjs",
+          "target_blob": "6a64a61f34184f497c0111d76c54820caa7be761",
+          "reason": "keeps the backend-only authority stack and adds three contract gates"
+        },
+        {
+          "path": "scripts/verify-shadow-seed-provenance.mjs",
+          "target_blob": "ed40b5ca854b07d25d85bc2d5848e22e69630c47",
+          "reason": "delegates explicitly superseded seed paths to append-only delta verification"
+        }
+      ]
+    }
+  ]
+}

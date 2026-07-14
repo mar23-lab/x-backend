@@ -23,7 +23,9 @@ import type {
   CustomerDataLifecycleExecution,
   CustomerDataLifecycleExecutionInput,
   OperationalSpineListOpts,
+  TaskPacketCompletionEvaluation,
 } from './types';
+import { evaluateCompletion } from '../lib/completion-contract';
 
 const DEFAULT_LIMIT = 50;
 const MAX_LIMIT = 200;
@@ -117,6 +119,17 @@ function normalizePacket(row: TaskPacket): TaskPacket {
     forbidden_tools: arrayOrEmpty(row.forbidden_tools),
     source_refs: arrayOrEmpty(row.source_refs),
     evidence_ref_ids: arrayOrEmpty(row.evidence_ref_ids),
+    version: Number(row.version || 1),
+    requested_output: row.requested_output ?? null,
+    acceptance_criteria: arrayOrEmpty(row.acceptance_criteria),
+    acceptance_status: row.acceptance_status ?? 'not_required',
+    evidence_required: row.evidence_required !== false,
+    execution_status: row.execution_status ?? 'pending',
+    blockers_accepted: row.blockers_accepted === true,
+    receipt_required: row.receipt_required !== false,
+    plan_projection_required: row.plan_projection_required !== false,
+    plan_projection_updated_at: row.plan_projection_updated_at ?? null,
+    completed_at: row.completed_at ?? null,
     expires_at: row.expires_at ?? null,
   };
 }
@@ -151,7 +164,10 @@ export async function createTaskPacketRow(
       )
       RETURNING id, workspace_id, project_id, event_id, title, summary, lifecycle_state,
         actor_user_id, allowed_tools, forbidden_tools, source_refs, evidence_ref_ids,
-        approval_required, expires_at, created_at, updated_at
+        approval_required, version, requested_output, acceptance_criteria, acceptance_status,
+        evidence_required, execution_status, blockers_accepted, receipt_required,
+        plan_projection_required, plan_projection_updated_at, completed_at,
+        expires_at, created_at, updated_at
     `,
   ]);
   return normalizePacket(rows[0]!);
@@ -168,7 +184,10 @@ export async function listTaskPacketsRow(
     tx/*sql*/`
       SELECT id, workspace_id, project_id, event_id, title, summary, lifecycle_state,
         actor_user_id, allowed_tools, forbidden_tools, source_refs, evidence_ref_ids,
-        approval_required, expires_at, created_at, updated_at
+        approval_required, version, requested_output, acceptance_criteria, acceptance_status,
+        evidence_required, execution_status, blockers_accepted, receipt_required,
+        plan_projection_required, plan_projection_updated_at, completed_at,
+        expires_at, created_at, updated_at
       FROM task_packets
       WHERE workspace_id = ${workspaceId}
         AND (${opts.packet_id ?? null}::text IS NULL OR id = ${opts.packet_id ?? null})
@@ -178,6 +197,106 @@ export async function listTaskPacketsRow(
     `,
   ], { readOnly: true });
   return rows.map(normalizePacket);
+}
+
+type CompletionFactsRow = {
+  packet_id: string;
+  packet_version: number;
+  requested_output: string | null;
+  acceptance_criteria: unknown;
+  acceptance_status: string;
+  evidence_required: boolean;
+  execution_status: string;
+  blockers_accepted: boolean;
+  approval_required: boolean;
+  receipt_required: boolean;
+  plan_projection_required: boolean;
+  plan_projection_updated_at: string | null;
+  packet_updated_at: string;
+  evidence_attached_count: number | string;
+  receipt_count: number | string;
+  open_blocker_count: number | string;
+  approved_version: number | string | null;
+};
+
+/** Server-derived, counts-only completion facts. No client field can assert its own completion. */
+export async function evaluateTaskPacketCompletionRow(
+  sql: Sql,
+  workspaceId: WorkspaceId,
+  packetId: string,
+): Promise<TaskPacketCompletionEvaluation | null> {
+  assertWorkspaceScope(workspaceId);
+  if (!packetId.trim()) return null;
+  const [rows] = await withWorkspaceRlsContext<[CompletionFactsRow[]]>(sql, workspaceId, (tx) => [
+    tx/*sql*/`
+      SELECT p.id AS packet_id,
+             p.version AS packet_version,
+             p.requested_output,
+             p.acceptance_criteria,
+             p.acceptance_status,
+             p.evidence_required,
+             p.execution_status,
+             p.blockers_accepted,
+             p.approval_required,
+             p.receipt_required,
+             p.plan_projection_required,
+             p.plan_projection_updated_at,
+             p.updated_at AS packet_updated_at,
+             (SELECT count(*) FROM evidence_items e
+               WHERE e.workspace_id = p.workspace_id AND e.packet_id = p.id) AS evidence_attached_count,
+             (SELECT count(*) FROM evidence_items e
+               WHERE e.workspace_id = p.workspace_id AND e.packet_id = p.id AND e.kind = 'receipt') AS receipt_count,
+             (SELECT count(*) FROM operation_events oe
+               WHERE oe.workspace_id = p.workspace_id AND oe.id = p.event_id AND oe.status = 'blocked') AS open_blocker_count,
+             (SELECT max(ar.packet_version) FROM approval_requests ar
+               WHERE ar.workspace_id = p.workspace_id AND ar.packet_id = p.id AND ar.status = 'approved') AS approved_version
+        FROM task_packets p
+       WHERE p.workspace_id = ${workspaceId} AND p.id = ${packetId}
+       LIMIT 1
+    `,
+  ], { readOnly: true });
+  const row = rows[0];
+  if (!row) return null;
+  const version = Number(row.packet_version);
+  const evidenceCount = Number(row.evidence_attached_count);
+  const receiptPresent = !row.receipt_required || Number(row.receipt_count) > 0;
+  const approvedVersion = row.approved_version === null ? null : Number(row.approved_version);
+  const acceptanceCriteria = arrayOrEmpty(row.acceptance_criteria);
+  const planProjectionUpdated = !row.plan_projection_required || (
+    row.plan_projection_updated_at !== null &&
+    new Date(row.plan_projection_updated_at).getTime() >= new Date(row.packet_updated_at).getTime()
+  );
+  const verdict = evaluateCompletion({
+    hasRequestedOutput: Boolean(row.requested_output?.trim()),
+    acceptanceCriteriaRequired: acceptanceCriteria.length > 0,
+    acceptanceCriteriaPass: row.acceptance_status === 'passed' || row.acceptance_status === 'not_required',
+    evidenceRequired: row.evidence_required,
+    evidenceAttachedCount: evidenceCount,
+    executionFinished: row.execution_status === 'succeeded' || row.execution_status === 'not_required',
+    openBlockerCount: Number(row.open_blocker_count),
+    blockersExplicitlyAccepted: row.blockers_accepted,
+    approvalRequired: row.approval_required,
+    approvalPresent: approvedVersion !== null,
+    approvedVersion,
+    currentVersion: version,
+    receiptPresent,
+    planProjectionUpdated,
+  });
+  return {
+    packet_id: row.packet_id,
+    packet_version: version,
+    can_complete: verdict.can_complete,
+    unmet_reasons: verdict.unmet,
+    facts: {
+      evidence_attached_count: evidenceCount,
+      open_blocker_count: Number(row.open_blocker_count),
+      approval_required: row.approval_required,
+      approval_present_for_current_version: approvedVersion === version,
+      approved_version: approvedVersion,
+      receipt_present: receiptPresent,
+      plan_projection_updated: planProjectionUpdated,
+    },
+  };
 }
 
 export async function createEvidenceItemRow(
@@ -260,12 +379,14 @@ export async function createApprovalRequestRow(
   const [rows] = await withWorkspaceRlsContext<[ApprovalRequest[]]>(sql, workspaceId, (tx) => [
     tx/*sql*/`
       INSERT INTO approval_requests (
-        id, workspace_id, packet_id, event_id, requested_by, status, reason
+        id, workspace_id, packet_id, packet_version, event_id, requested_by, status, reason
       ) VALUES (
-        ${id}, ${workspaceId}, ${input.packet_id ?? null}, ${input.event_id ?? null},
+        ${id}, ${workspaceId}, ${input.packet_id ?? null},
+        (SELECT version FROM task_packets WHERE id = ${input.packet_id ?? null} AND workspace_id = ${workspaceId}),
+        ${input.event_id ?? null},
         ${actorUserId}, 'requested', ${reason}
       )
-      RETURNING id, workspace_id, packet_id, event_id, requested_by, decided_by,
+      RETURNING id, workspace_id, packet_id, packet_version, event_id, requested_by, decided_by,
         status, reason, decision_comment, requested_at, decided_at
     `,
   ]);
@@ -291,7 +412,7 @@ export async function decideApprovalRequestRow(
        WHERE id = ${approvalId}
          AND workspace_id = ${workspaceId}
          AND status = 'requested'
-      RETURNING id, workspace_id, packet_id, event_id, requested_by, decided_by,
+      RETURNING id, workspace_id, packet_id, packet_version, event_id, requested_by, decided_by,
         status, reason, decision_comment, requested_at, decided_at
     `,
   ]);
@@ -306,7 +427,7 @@ export async function listApprovalRequestsRow(
   assertWorkspaceScope(workspaceId);
   const [rows] = await withWorkspaceRlsContext<[ApprovalRequest[]]>(sql, workspaceId, (tx) => [
     tx/*sql*/`
-      SELECT id, workspace_id, packet_id, event_id, requested_by, decided_by,
+      SELECT id, workspace_id, packet_id, packet_version, event_id, requested_by, decided_by,
         status, reason, decision_comment, requested_at, decided_at
       FROM approval_requests
       WHERE workspace_id = ${workspaceId}

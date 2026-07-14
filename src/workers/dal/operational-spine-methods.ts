@@ -8,6 +8,7 @@ import type { WorkspaceId, UserId } from './types';
 import {
   createTaskPacketRow,
   listTaskPacketsRow,
+  evaluateTaskPacketCompletionRow,
   createEvidenceItemRow,
   listEvidenceItemsRow,
   createApprovalRequestRow,
@@ -25,6 +26,7 @@ export type OperationalSpineDalMethods = Pick<
   DalAdapter,
   | 'createTaskPacket'
   | 'listTaskPackets'
+  | 'evaluateTaskPacketCompletion'
   | 'createEvidenceItem'
   | 'listEvidenceItems'
   | 'createApprovalRequest'
@@ -53,6 +55,9 @@ export function applyOperationalSpineMethods(adapter: AdapterCtor): void {
     },
     listTaskPackets(workspaceId, opts) {
       return listTaskPacketsRow(sqlOf(this), workspaceId, opts);
+    },
+    evaluateTaskPacketCompletion(workspaceId, packetId) {
+      return evaluateTaskPacketCompletionRow(sqlOf(this), workspaceId, packetId);
     },
     createEvidenceItem(workspaceId, actorUserId, input) {
       return createEvidenceItemRow(sqlOf(this), workspaceId, actorUserId, input);

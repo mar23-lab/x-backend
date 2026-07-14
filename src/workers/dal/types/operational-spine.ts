@@ -54,6 +54,18 @@ export interface TaskPacket {
   source_refs: string[];
   evidence_ref_ids: string[];
   approval_required: boolean;
+  /** Monotonic contract version. Approvals bind to this value and become stale after revision. */
+  version: number;
+  requested_output: string | null;
+  acceptance_criteria: string[];
+  acceptance_status: 'not_required' | 'pending' | 'passed' | 'failed';
+  evidence_required: boolean;
+  execution_status: 'not_required' | 'pending' | 'running' | 'succeeded' | 'failed';
+  blockers_accepted: boolean;
+  receipt_required: boolean;
+  plan_projection_required: boolean;
+  plan_projection_updated_at: string | null;
+  completed_at: string | null;
   expires_at: string | null;
   created_at: string;
   updated_at: string;
@@ -104,6 +116,8 @@ export interface ApprovalRequest {
   id: string;
   workspace_id: WorkspaceId;
   packet_id: string | null;
+  /** Packet version reviewed. Null only for event-only or pre-contract historical approvals. */
+  packet_version: number | null;
   event_id: EventId | null;
   requested_by: UserId;
   decided_by: UserId | null;
@@ -124,6 +138,22 @@ export interface ApprovalRequestInput {
 export interface ApprovalDecisionInput {
   status: Extract<ApprovalStatus, 'approved' | 'rejected' | 'cancelled'>;
   decision_comment?: string | null;
+}
+
+export interface TaskPacketCompletionEvaluation {
+  packet_id: string;
+  packet_version: number;
+  can_complete: boolean;
+  unmet_reasons: string[];
+  facts: {
+    evidence_attached_count: number;
+    open_blocker_count: number;
+    approval_required: boolean;
+    approval_present_for_current_version: boolean;
+    approved_version: number | null;
+    receipt_present: boolean;
+    plan_projection_updated: boolean;
+  };
 }
 
 export interface ToolEvent {

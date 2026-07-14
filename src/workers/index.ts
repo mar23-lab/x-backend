@@ -54,6 +54,7 @@ import { graphRoute } from './routes/graph';                       // ADR-XLOOP-
 import { boardCardsRoute } from './routes/board-cards';
 import { signOffsRoute } from './routes/sign-offs';
 import { operationalSpineRoute } from './routes/operational-spine';
+import { actionIntentShadowRoute } from './routes/action-intent-shadow';
 import { mcpGatewayRoute } from './routes/mcp-gateway';
 import { createMcpRpcRoute } from './routes/mcp-rpc';
 import { developerAccessRoute } from './routes/developer-access';
@@ -227,6 +228,7 @@ protectedRoutes.route('/', customerRoute);           // R55 · POST /customer/au
 protectedRoutes.route('/', developerAccessRoute);    // Customer-safe API/Desktop setup status + redacted connection receipt
 protectedRoutes.route('/', customerWorkspaceFeedRoute); // Customer-safe starter/read-only feed
 protectedRoutes.route('/', customerChatRoute);       // Customer-safe AI chat — tenant-isolated, company-aware (POST /customer-chat)
+protectedRoutes.route('/', actionIntentShadowRoute); // Advisory action-intent classifier (default-off; never role/skill authority)
 protectedRoutes.route('/', customerLineageRoute);    // W3 · customer lineage + graph digest (GET /customer-lineage, /customer-graph-digest)
 protectedRoutes.route('/', chatReceiptRoute);        // W2 · per-answer audit receipt (GET /chat/receipt/:receipt_uid)
 protectedRoutes.route('/', customerAuditLogRoute);   // W2 · customer-scoped audit export (GET /customer-audit-log)
