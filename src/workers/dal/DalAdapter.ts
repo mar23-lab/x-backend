@@ -98,6 +98,7 @@ import {
   CustomerDataLifecycleExecution,
   CustomerDataLifecycleExecutionInput,
   OperationalSpineListOpts,
+  TaskPacketCompletionEvaluation,
   EffectiveTemplateSnapshot,
   EffectiveTemplateEnvelope,
   TemplateAdminApproval,
@@ -351,6 +352,8 @@ export interface DalAdapter {
   /** Backend-first operational spine: task packets scoped to a workspace. */
   createTaskPacket(workspaceId: WorkspaceId, actorUserId: UserId, input: TaskPacketInput): Promise<TaskPacket>;
   listTaskPackets(workspaceId: WorkspaceId, opts?: OperationalSpineListOpts): Promise<TaskPacket[]>;
+  /** Default-off, server-derived Definition-of-Done evaluation for one tenant-scoped packet. */
+  evaluateTaskPacketCompletion(workspaceId: WorkspaceId, packetId: string): Promise<TaskPacketCompletionEvaluation | null>;
 
   /** Customer-safe evidence references; metadata/projection only, no raw graph export. */
   createEvidenceItem(workspaceId: WorkspaceId, actorUserId: UserId, input: EvidenceItemInput): Promise<EvidenceItem>;

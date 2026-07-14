@@ -26,6 +26,8 @@ export interface OperationalSpineEnv extends AuthEnv {
   DATABASE_URL: string;
   /** Wave-Y idempotency (default off ⇒ byte-identical, no dedupe). See lib/idempotency.ts. */
   IDEMPOTENCY_ENABLED?: string;
+  /** Read-only completion-contract projection. Default off; migration 073 is required before enablement. */
+  PACKET_COMPLETION_EVALUATION_ENABLED?: string;
 }
 
 export interface OperationalSpineVariables extends AuthVariables {
@@ -135,6 +137,20 @@ operationalSpineRoute.get('/packets', async (ctx) => {
     const { workspace_id } = ctx.get('auth');
     const packets = await ctx.get('dal').listTaskPackets(workspace_id, listOpts(ctx));
     return ctx.json({ packets });
+  } catch (err) {
+    return errorEnvelope(ctx, err);
+  }
+});
+
+operationalSpineRoute.get('/packets/:id/completion-evaluation', async (ctx) => {
+  try {
+    if (!envFlagTrue(ctx.env.PACKET_COMPLETION_EVALUATION_ENABLED)) {
+      return jsonError(ctx, 404, 'FEATURE_DISABLED', 'packet completion evaluation is not enabled');
+    }
+    const { workspace_id } = ctx.get('auth');
+    const evaluation = await ctx.get('dal').evaluateTaskPacketCompletion(workspace_id, ctx.req.param('id'));
+    if (!evaluation) return jsonError(ctx, 404, 'NOT_FOUND', 'packet not found');
+    return ctx.json({ evaluation });
   } catch (err) {
     return errorEnvelope(ctx, err);
   }
