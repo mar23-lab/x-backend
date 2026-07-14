@@ -1,0 +1,88 @@
+{
+  "started_at": "2026-06-23T00:00:00.000Z",
+  "ended_at": "2026-06-24T00:00:00.000Z",
+  "companies": [
+    {
+      "company_id": "aps",
+      "tenant_id": "org_aps_placeholder",
+      "workspace_name": "ASP by Andrey",
+      "employee_count": 1,
+      "customer_only_employees": true,
+      "source_evidence": {
+        "provider": "gmail",
+        "source_connection_id": "usc_aps_placeholder",
+        "workspace_id": "ws_aps_placeholder",
+        "connection_status": "connected",
+        "sync_status": "synced",
+        "connected_at": "2026-06-23T00:10:00.000Z",
+        "last_synced_at": "2026-06-24T00:10:00.000Z",
+        "emitted_event_count": 1,
+        "latest_event_at": "2026-06-24T00:09:00.000Z",
+        "audit_ids": [
+          "audit_aps_source_placeholder"
+        ]
+      }
+    },
+    {
+      "company_id": "hy",
+      "tenant_id": "org_hy_placeholder",
+      "workspace_name": "Honest & Young",
+      "employee_count": 1,
+      "customer_only_employees": true,
+      "source_evidence": {
+        "provider": "gmail",
+        "source_connection_id": "usc_hy_placeholder",
+        "workspace_id": "ws_hy_placeholder",
+        "connection_status": "connected",
+        "sync_status": "synced",
+        "connected_at": "2026-06-23T00:15:00.000Z",
+        "last_synced_at": "2026-06-24T00:15:00.000Z",
+        "emitted_event_count": 1,
+        "latest_event_at": "2026-06-24T00:14:00.000Z",
+        "audit_ids": [
+          "audit_hy_source_placeholder"
+        ]
+      }
+    }
+  ],
+  "operator_checks": {
+    "fresh_incognito_login": true,
+    "andrey_only_workspace_visible": true,
+    "hy_only_workspace_visible": true,
+    "cross_tenant_search_zero": true,
+    "diagnostics_hidden_for_customers": true
+  },
+  "andrey_checks": {
+    "fresh_login": true,
+    "workspace_only_andrey": true,
+    "project_only_asp_ap": true,
+    "feedback_receipt_seen": true,
+    "no_forbidden_strings": true
+  },
+  "hy_checks": {
+    "fresh_login": true,
+    "workspace_only_hy": true,
+    "feedback_receipt_seen": true,
+    "no_forbidden_strings": true
+  },
+  "api_mcp_checks": {
+    "andrey_whoami_tenant_correct": true,
+    "hy_whoami_tenant_correct": true,
+    "forbidden_surfaces_listed": true,
+    "cross_tenant_packet_denied": true
+  },
+  "metrics": {
+    "cross_tenant_leakage_count": 0,
+    "cross_tenant_search_hit_count": 0,
+    "unapproved_writes_count": 0,
+    "raw_graph_exposure_count": 0,
+    "forbidden_surface_exposure_count": 0,
+    "revocation_bypass_count": 0,
+    "auth_regression_count": 0,
+    "api_mcp_safety_regression_count": 0,
+    "audit_coverage_pct": 100
+  },
+  "audit_ids": [
+    "audit_placeholder_replace_with_real_receipt_id"
+  ]
+}

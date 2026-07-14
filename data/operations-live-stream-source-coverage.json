@@ -1,0 +1,30 @@
+{
+  "schema": "xlooop.operations_live_stream_source_coverage.v1",
+  "source": "data/operations-live-stream.json",
+  "authority": "MB-P operations_live_stream_v1",
+  "readiness_target_percent": 100,
+  "claim_boundary": "internal_sla_polling_not_public_live_streaming_operations",
+  "dashboard_surface": "global operations chat rail + commercial readiness",
+  "required_stream_types": [
+    "packet",
+    "governance_event",
+    "collaboration_event",
+    "skill_invocation",
+    "session_bundle",
+    "graph_signal",
+    "scorecard_signal",
+    "readiness_signal",
+    "gateway_receipt"
+  ],
+  "required_source_adapters": [
+    "mbp-operations-projection",
+    "mbp-governance-events-jsonl",
+    "active-agent-collaboration-registry",
+    "mbp-skill-invocation-log",
+    "mbp-session-context-bundle",
+    "mbp-ecosystem-graph-summary",
+    "mbp-discipline-scorecard",
+    "mbp-mode-coverage-report",
+    "mbp-gateway-receipt-export"
+  ]
+}

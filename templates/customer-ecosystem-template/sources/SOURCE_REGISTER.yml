@@ -1,0 +1,20 @@
+schema: customer_source_register_v1
+status: draft
+authority: pending
+sources:
+  - id: public_website
+    type: public_web
+    access_status: allowed_public
+    provenance_required: true
+  - id: private_email
+    type: email
+    access_status: blocked_until_authority_and_consent
+    provenance_required: true
+  - id: private_drive
+    type: file_storage
+    access_status: blocked_until_authority_and_consent
+    provenance_required: true
+  - id: accounting
+    type: finance_system
+    access_status: blocked_until_authority_and_consent
+    provenance_required: true

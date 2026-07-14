@@ -1,0 +1,63 @@
+{
+  "schema_version": "xlooop.paid_pilot_authority_contract.v1",
+  "pilot_status": "operator_gated_go_with_restrictions_until_strict_cloud_receipt",
+  "authority_chain": [
+    "Cloudflare Access signed JWT",
+    "identity",
+    "app entitlement",
+    "tenant membership",
+    "role permission",
+    "operating mode",
+    "action policy",
+    "receipt policy",
+    "redacted response"
+  ],
+  "signature_verification_required": true,
+  "service_token_headers_are_not_operator_authority": true,
+  "xlooop_access_grants_xcp": false,
+  "xcp_default_entitlement": "disabled",
+  "principal_kinds": [
+    "owner_admin",
+    "customer_admin",
+    "customer_member",
+    "xlooop_only_user",
+    "xcp_admin"
+  ],
+  "default_customer_modes": [
+    "watch",
+    "test"
+  ],
+  "operator_default": "disabled",
+  "operator_gate_required": true,
+  "operator_decision_authority": "Marat",
+  "raw_tenant_content_default": "denied",
+  "required_tables": [
+    "paid_pilot_identities",
+    "paid_pilot_tenant_memberships",
+    "paid_pilot_app_entitlements",
+    "paid_pilot_role_permissions",
+    "paid_pilot_action_policies",
+    "paid_pilot_actions",
+    "paid_pilot_source_writeback_receipts",
+    "paid_pilot_audit_events"
+  ],
+  "routes": [
+    "GET /api/paid-pilot/session",
+    "POST /api/actions/propose",
+    "POST /api/actions/approve",
+    "POST /api/actions/execute",
+    "POST /api/actions/rollback",
+    "GET /api/actions/[id]"
+  ],
+  "go_with_restrictions_requires": [
+    "fresh strict paid-pilot boundary receipt",
+    "signed Cloudflare Access JWT positive proof",
+    "expired malformed and audience-mismatch JWT denial proof",
+    "entitled operator allowlisted action proof",
+    "durable D1 action receipts",
+    "governed Markdown writeback receipt",
+    "monitoring events",
+    "incident/SLA owner",
+    "legal/commercial sign-off reference"
+  ]
+}

@@ -1,0 +1,239 @@
+[
+  {
+    "kind": "personal",
+    "id": "me",
+    "name": "Marat Basyrov",
+    "sub": "Owner operator · MB-P control plane",
+    "avatar": "alt-1"
+  },
+  {
+    "kind": "workspace",
+    "group": "owned",
+    "id": "mbp-private",
+    "name": "MB-P",
+    "sub": "Personal, company, governance, and proof domains",
+    "role": "Owner",
+    "avatar": "alt-1",
+    "source_mode": "staged_snapshot",
+    "generated_at": "2026-05-25T23:03:30.482Z",
+    "source_adapter": "xlooop_full_operations_readiness_v1",
+    "workspace_id": "mbp-private",
+    "domain_id": "mbp-private",
+    "domain_kind": "owner_operations",
+    "owner_graph_id": "owner-graph-marat-basyrov",
+    "space_id": "space-mbp-personal",
+    "member_policy": {
+      "segregation": "owner_private",
+      "invite_policy": "owner_approved",
+      "default_role": "Owner",
+      "external_member_allowed": false
+    },
+    "agent_policy": {
+      "agent_scope": "owner_governed_private",
+      "requires_role_skill_attestation": true,
+      "direct_write_allowed": false
+    }
+  },
+  {
+    "kind": "workspace",
+    "group": "owned",
+    "id": "xcp-platform",
+    "name": "XCP",
+    "sub": "Producer roadmap · AI governed infrastructure",
+    "role": "Owner",
+    "avatar": "alt-4",
+    "source_mode": "staged_snapshot",
+    "generated_at": "2026-05-25T23:03:30.482Z",
+    "source_adapter": "xlooop_full_operations_readiness_v1",
+    "workspace_id": "xcp-platform",
+    "domain_id": "xcp-platform",
+    "domain_kind": "ai_infrastructure",
+    "owner_graph_id": "owner-graph-marat-basyrov",
+    "space_id": "space-xcp-platform",
+    "member_policy": {
+      "segregation": "workspace_scoped",
+      "invite_policy": "owner_approved",
+      "default_role": "Member",
+      "external_member_allowed": true
+    },
+    "agent_policy": {
+      "agent_scope": "workspace_governed",
+      "requires_role_skill_attestation": true,
+      "direct_write_allowed": false
+    }
+  },
+  {
+    "kind": "workspace",
+    "group": "owned",
+    "id": "xlooop",
+    "name": "Xlooop",
+    "sub": "Commercial product workspace · pilot and delivery readiness",
+    "role": "Owner",
+    "avatar": "alt-2",
+    "source_mode": "staged_snapshot",
+    "generated_at": "2026-05-25T23:03:30.482Z",
+    "source_adapter": "xlooop_full_operations_readiness_v1",
+    "workspace_id": "xlooop",
+    "domain_id": "xlooop",
+    "domain_kind": "commercial_product",
+    "owner_graph_id": "owner-graph-marat-basyrov",
+    "space_id": "space-xlooop-product",
+    "member_policy": {
+      "segregation": "workspace_scoped",
+      "invite_policy": "owner_approved",
+      "default_role": "Member",
+      "external_member_allowed": true
+    },
+    "agent_policy": {
+      "agent_scope": "workspace_governed",
+      "requires_role_skill_attestation": true,
+      "direct_write_allowed": false
+    }
+  },
+  {
+    "kind": "workspace",
+    "group": "owned",
+    "id": "org_3EG82VEzc8t3t65XSZ0YDlcaDMI",
+    "name": "Xlooop + XCP",
+    "sub": "Operator live workspace · Neon-backed ecosystem graph",
+    "role": "Owner",
+    "avatar": "alt-2",
+    "source_mode": "staged_snapshot",
+    "generated_at": "2026-06-09T00:00:00.000Z",
+    "source_adapter": "xlooop_full_operations_readiness_v1",
+    "workspace_id": "org_3EG82VEzc8t3t65XSZ0YDlcaDMI",
+    "domain_id": "org_3EG82VEzc8t3t65XSZ0YDlcaDMI",
+    "domain_kind": "commercial_product",
+    "owner_graph_id": "owner-graph-marat-basyrov",
+    "space_id": "space-org-3eg82",
+    "member_policy": {
+      "segregation": "workspace_scoped",
+      "invite_policy": "owner_approved",
+      "default_role": "Member",
+      "external_member_allowed": true
+    },
+    "agent_policy": {
+      "agent_scope": "workspace_governed",
+      "requires_role_skill_attestation": true,
+      "direct_write_allowed": false
+    }
+  },
+  {
+    "kind": "workspace",
+    "group": "adjacent",
+    "id": "x-biz",
+    "name": "x-biz",
+    "sub": "Business, investor readiness, commercial logic, and claim discipline",
+    "role": "Owner",
+    "avatar": "alt-3",
+    "domain_kind": "business_knowledge",
+    "source_mode": "staged_snapshot",
+    "generated_at": "2026-05-25T23:03:30.482Z",
+    "source_adapter": "xlooop_full_operations_readiness_v1",
+    "workspace_id": "x-biz",
+    "domain_id": "x-biz",
+    "repo": "xlooop-x-biz",
+    "owner_graph_id": "owner-graph-marat-basyrov",
+    "space_id": "space-x-biz",
+    "member_policy": {
+      "segregation": "workspace_scoped",
+      "invite_policy": "owner_approved",
+      "default_role": "Member",
+      "external_member_allowed": true
+    },
+    "agent_policy": {
+      "agent_scope": "workspace_governed",
+      "requires_role_skill_attestation": true,
+      "direct_write_allowed": false
+    }
+  },
+  {
+    "kind": "workspace",
+    "group": "adjacent",
+    "id": "x-docs",
+    "name": "x-docs",
+    "sub": "Documentation, repository sync, parsing, and publishing workflows",
+    "role": "Owner",
+    "avatar": "alt-4",
+    "domain_kind": "development_docs",
+    "source_mode": "staged_snapshot",
+    "generated_at": "2026-05-25T23:03:30.482Z",
+    "source_adapter": "xlooop_full_operations_readiness_v1",
+    "workspace_id": "x-docs",
+    "domain_id": "x-docs",
+    "repo": "xlooop-x-docs",
+    "owner_graph_id": "owner-graph-marat-basyrov",
+    "space_id": "space-x-docs",
+    "member_policy": {
+      "segregation": "workspace_scoped",
+      "invite_policy": "owner_approved",
+      "default_role": "Member",
+      "external_member_allowed": true
+    },
+    "agent_policy": {
+      "agent_scope": "workspace_governed",
+      "requires_role_skill_attestation": true,
+      "direct_write_allowed": false
+    }
+  },
+  {
+    "kind": "workspace",
+    "group": "adjacent",
+    "id": "x-front",
+    "name": "x-front",
+    "sub": "Frontend reference shell, graph contracts, and absorption planning",
+    "role": "Owner",
+    "avatar": "alt-5",
+    "domain_kind": "frontend_reference",
+    "source_mode": "staged_snapshot",
+    "generated_at": "2026-05-25T23:03:30.482Z",
+    "source_adapter": "xlooop_full_operations_readiness_v1",
+    "workspace_id": "x-front",
+    "domain_id": "x-front",
+    "repo": "xlooop-x-front",
+    "owner_graph_id": "owner-graph-marat-basyrov",
+    "space_id": "space-x-front",
+    "member_policy": {
+      "segregation": "workspace_scoped",
+      "invite_policy": "owner_approved",
+      "default_role": "Member",
+      "external_member_allowed": true
+    },
+    "agent_policy": {
+      "agent_scope": "workspace_governed",
+      "requires_role_skill_attestation": true,
+      "direct_write_allowed": false
+    }
+  },
+  {
+    "kind": "workspace",
+    "group": "external_onboarding",
+    "id": "aps-pty-ltd",
+    "name": "APS Pty Ltd",
+    "sub": "Access Property Services onboarding sandbox · authority pending",
+    "role": "Owner candidate",
+    "avatar": "alt-6",
+    "source_mode": "staged_snapshot",
+    "generated_at": "2026-05-25T23:03:30.482Z",
+    "source_adapter": "xlooop_full_operations_readiness_v1",
+    "workspace_id": "aps-pty-ltd",
+    "domain_id": "aps-pty-ltd",
+    "domain_kind": "building_inspection_business",
+    "owner_graph_id": "owner-graph-andrey-p",
+    "space_id": "space-aps-pty-ltd",
+    "setup_status": "public_profile_ready_authority_pending",
+    "source_binding_status": "authority_and_private_sources_pending",
+    "runtime_projection_allowed": "sanitized_summary_only",
+    "member_policy": {
+      "segregation": "workspace_scoped",
+      "invite_policy": "owner_approved",
+      "default_role": "Member",
+      "external_member_allowed": true
+    },
+    "agent_policy": {
+      "agent_scope": "workspace_governed",
+      "requires_role_skill_attestation": true,
+      "direct_write_allowed": false
+    }
+  }
+]

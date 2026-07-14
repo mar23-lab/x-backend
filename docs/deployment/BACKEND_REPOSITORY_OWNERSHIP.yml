@@ -1,0 +1,57 @@
+# BACKEND_REPOSITORY_OWNERSHIP.yml · Wave C0.5 (260713) · machine-readable repository-authority SSOT
+# for the backend cutover program. Human narrative + gate register: BACKEND_REPOSITORY_CUTOVER_PREFLIGHT.md.
+# Governance boundary rows live in MB-P BOUNDARY_MATRIX.yml (this file POINTS at them, never mirrors values).
+schema_id: xlooop.backend_repository_ownership.v1
+updated: "2026-07-13"
+
+authority:
+  deploy_authority: Xlooop-XCP-demo          # SOLE until GATE-FLIP (operator-executed)
+  shadow_repo: x-backend                     # github.com/mar23-lab/x-backend · empty until GATE-SEED-PUSH
+  frontend_repo: x-ai-front                  # consumes the API by contract pin, never by source import
+  docs_repo: x-ai-docs                       # canonical cross-repo ADRs/runbooks (DOC_DISPOSITION_LEDGER routes)
+  transfer_trigger_ssot: "MB-P ECOSYSTEM_MANIFEST.yaml (operator freeze declaration + Parity Sentinel green 7d, ABS-P6)"
+
+deploy_surfaces:
+  api_worker:
+    name: xlooop-api
+    domain: api.xlooop.com
+    receipt: docs/deployment/evidence/cloudflare-api-deploy-receipt.json
+    receipt_rule: "emit-deploy-receipt.mjs refuses unless live /health build == local HEAD"
+  pages_app:
+    name: xlooop-app
+    domain: app.xlooop.com
+    receipt: docs/deployment/evidence/latest-cloudflare-prod-deploy-receipt.json
+
+contract:
+  producer_artifact: docs/contracts/api-contract.v1.json     # generated; drift gate verify:contract
+  producer_generator: scripts/emit-api-contract.mjs
+  route_emitter: scripts/emit-routes-manifest.mjs            # stamps contract_version + contract_hash
+  consumer_pin: x-ai-front/wired/scripts/backend-routes.snapshot.json
+  consumer_validators: [verify-wired-routes-resolve.mjs, verify-mock-envelope-parity.mjs]
+
+boundary_gates:
+  - id: verify:import-ban
+    script: scripts/verify-frontend-worker-import-ban.mjs
+    asserts: "no frontend->workers imports; contract-types byte-synced to workers/dal/types (4 files)"
+  - id: verify:contract
+    script: scripts/verify-api-contract-artifact.mjs
+    asserts: "committed api-contract.v1.json == regeneration (byte)"
+
+seed:
+  method: "manifest fresh-copy + git ls-tree blob-hash provenance (MIGRATION-PROVENANCE.md)"
+  base_manifest: docs/deployment/BACKEND_SURFACE_MANIFEST_260711H.md
+  delta_annex: docs/deployment/BACKEND_SURFACE_MANIFEST_DELTA_260713.md
+  rehearsal_receipt: docs/deployment/SEED_REHEARSAL_RECEIPT_260711I.md
+  gate_fork_ledger: docs/deployment/GATE_DISPOSITION_LEDGER_260711H.md
+  freeze_protocol: docs/deployment/FREEZE_PROTOCOL_260711H.md
+
+operator_gates:
+  - GATE-SEED-METHOD
+  - GATE-BOUNDARY-AMEND-XB-SHADOW
+  - GATE-SEED-SHA
+  - GATE-SEED-PUSH
+  - GATE-NEON-BRANCH
+  - GATE-SHADOW-SECRETS
+  - GATE-SHADOW-DEPLOY-1
+  - GATE-FLIP
+  - GATE-CANONICAL-CLAIM

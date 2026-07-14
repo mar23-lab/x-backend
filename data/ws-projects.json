@@ -1,0 +1,1408 @@
+{
+  "mbp-private": [
+    {
+      "id": "mbp-ops",
+      "name": "MB-P governance",
+      "stage": "Operate",
+      "intents": 0,
+      "signoff": 3,
+      "health": "on-track",
+      "source_mode": "staged_snapshot",
+      "generated_at": "2026-05-25T23:03:30.482Z",
+      "source_adapter": "xlooop_full_operations_readiness_v1",
+      "workspace_id": "mbp-private",
+      "domain_id": "mbp-governance",
+      "domain_kind": "governance",
+      "space_id": "space-mbp-personal",
+      "area_kind": "operational_area",
+      "template_id": "owner_governance",
+      "source_binding_status": "metadata_pending",
+      "setup_status": "configured_metadata_only",
+      "member_policy": {
+        "segregation": "owner_private",
+        "invite_policy": "owner_approved",
+        "default_role": "Owner",
+        "external_member_allowed": false
+      },
+      "agent_policy": {
+        "agent_scope": "owner_governed_private",
+        "requires_role_skill_attestation": true,
+        "direct_write_allowed": false
+      },
+      "action_policy": {
+        "watch_mode": "preview_or_no_op",
+        "operator_mode": "governed_proposal_receipt_only",
+        "direct_mbp_write_allowed": false,
+        "dangerous_action_confirmation_required": true
+      },
+      "project_id": "mbp-ops",
+      "lane_id": "overview",
+      "board_id": "governance_queue"
+    },
+    {
+      "id": "mbp-intake",
+      "name": "Unified intake",
+      "stage": "Validate",
+      "intents": 0,
+      "signoff": 2,
+      "health": "on-track",
+      "source_mode": "staged_snapshot",
+      "generated_at": "2026-05-25T23:03:30.482Z",
+      "source_adapter": "xlooop_full_operations_readiness_v1",
+      "workspace_id": "mbp-private",
+      "domain_id": "mbp-intake",
+      "domain_kind": "intake",
+      "space_id": "space-mbp-personal",
+      "area_kind": "operational_area",
+      "template_id": "owner_intake",
+      "source_binding_status": "metadata_pending",
+      "setup_status": "configured_metadata_only",
+      "member_policy": {
+        "segregation": "owner_private",
+        "invite_policy": "owner_approved",
+        "default_role": "Owner",
+        "external_member_allowed": false
+      },
+      "agent_policy": {
+        "agent_scope": "owner_governed_private",
+        "requires_role_skill_attestation": true,
+        "direct_write_allowed": false
+      },
+      "action_policy": {
+        "watch_mode": "preview_or_no_op",
+        "operator_mode": "governed_proposal_receipt_only",
+        "direct_mbp_write_allowed": false,
+        "dangerous_action_confirmation_required": true
+      },
+      "project_id": "mbp-intake",
+      "lane_id": "overview",
+      "board_id": "intake_router"
+    },
+    {
+      "id": "mbp-life",
+      "name": "Private areas",
+      "stage": "Validate",
+      "intents": 0,
+      "signoff": 1,
+      "health": "on-track",
+      "source_mode": "staged_snapshot",
+      "generated_at": "2026-05-25T23:03:30.482Z",
+      "source_adapter": "xlooop_full_operations_readiness_v1",
+      "workspace_id": "mbp-private",
+      "domain_id": "mbp-private-domains",
+      "domain_kind": "personal_operations",
+      "space_id": "space-mbp-personal",
+      "area_kind": "operational_area",
+      "template_id": "personal_goals",
+      "source_binding_status": "metadata_pending",
+      "setup_status": "configured_metadata_only",
+      "member_policy": {
+        "segregation": "owner_private",
+        "invite_policy": "owner_approved",
+        "default_role": "Owner",
+        "external_member_allowed": false
+      },
+      "agent_policy": {
+        "agent_scope": "owner_governed_private",
+        "requires_role_skill_attestation": true,
+        "direct_write_allowed": false
+      },
+      "action_policy": {
+        "watch_mode": "preview_or_no_op",
+        "operator_mode": "governed_proposal_receipt_only",
+        "direct_mbp_write_allowed": false,
+        "dangerous_action_confirmation_required": true
+      },
+      "project_id": "mbp-life",
+      "lane_id": "overview",
+      "board_id": "life_domain_board"
+    }
+  ],
+  "xcp-platform": [
+    {
+      "id": "xcp-roadmap",
+      "name": "XCP roadmap",
+      "stage": "Build",
+      "intents": 0,
+      "signoff": 2,
+      "health": "on-track",
+      "source_mode": "staged_snapshot",
+      "generated_at": "2026-05-25T23:03:30.482Z",
+      "source_adapter": "xlooop_full_operations_readiness_v1",
+      "workspace_id": "xcp-platform",
+      "domain_id": "xcp-roadmap",
+      "domain_kind": "platform_roadmap",
+      "space_id": "space-xcp-platform",
+      "area_kind": "operational_area",
+      "template_id": "ai_governance_infrastructure",
+      "source_binding_status": "metadata_pending",
+      "setup_status": "configured_metadata_only",
+      "member_policy": {
+        "segregation": "workspace_scoped",
+        "invite_policy": "owner_approved",
+        "default_role": "Member",
+        "external_member_allowed": true
+      },
+      "agent_policy": {
+        "agent_scope": "workspace_governed",
+        "requires_role_skill_attestation": true,
+        "direct_write_allowed": false
+      },
+      "action_policy": {
+        "watch_mode": "preview_or_no_op",
+        "operator_mode": "governed_proposal_receipt_only",
+        "direct_mbp_write_allowed": false,
+        "dangerous_action_confirmation_required": true
+      },
+      "project_id": "xcp-roadmap",
+      "lane_id": "overview",
+      "board_id": "control_plane"
+    },
+    {
+      "id": "xcp-control-plane",
+      "name": "AI infrastructure control plane",
+      "stage": "Design",
+      "intents": 0,
+      "signoff": 1,
+      "health": "on-track",
+      "source_mode": "staged_snapshot",
+      "generated_at": "2026-05-25T23:03:30.482Z",
+      "source_adapter": "xlooop_full_operations_readiness_v1",
+      "workspace_id": "xcp-platform",
+      "domain_id": "xcp-control-plane",
+      "domain_kind": "ai_infrastructure",
+      "space_id": "space-xcp-platform",
+      "area_kind": "operational_area",
+      "template_id": "ai_governance_infrastructure",
+      "source_binding_status": "metadata_pending",
+      "setup_status": "configured_metadata_only",
+      "member_policy": {
+        "segregation": "workspace_scoped",
+        "invite_policy": "owner_approved",
+        "default_role": "Member",
+        "external_member_allowed": true
+      },
+      "agent_policy": {
+        "agent_scope": "workspace_governed",
+        "requires_role_skill_attestation": true,
+        "direct_write_allowed": false
+      },
+      "action_policy": {
+        "watch_mode": "preview_or_no_op",
+        "operator_mode": "governed_proposal_receipt_only",
+        "direct_mbp_write_allowed": false,
+        "dangerous_action_confirmation_required": true
+      },
+      "project_id": "xcp-control-plane",
+      "lane_id": "overview",
+      "board_id": "control_plane"
+    }
+  ],
+  "xlooop": [
+    {
+      "id": "xlooop-product",
+      "name": "Xlooop product",
+      "stage": "Validate",
+      "intents": 0,
+      "signoff": 2,
+      "health": "on-track",
+      "source_mode": "staged_snapshot",
+      "generated_at": "2026-05-25T23:03:30.482Z",
+      "source_adapter": "xlooop_full_operations_readiness_v1",
+      "workspace_id": "xlooop",
+      "domain_id": "xlooop-product",
+      "domain_kind": "commercial_product",
+      "space_id": "space-xlooop-product",
+      "area_kind": "operational_area",
+      "template_id": "product_delivery",
+      "source_binding_status": "metadata_pending",
+      "setup_status": "configured_metadata_only",
+      "member_policy": {
+        "segregation": "workspace_scoped",
+        "invite_policy": "owner_approved",
+        "default_role": "Member",
+        "external_member_allowed": true
+      },
+      "agent_policy": {
+        "agent_scope": "workspace_governed",
+        "requires_role_skill_attestation": true,
+        "direct_write_allowed": false
+      },
+      "action_policy": {
+        "watch_mode": "preview_or_no_op",
+        "operator_mode": "governed_proposal_receipt_only",
+        "direct_mbp_write_allowed": false,
+        "dangerous_action_confirmation_required": true
+      },
+      "project_id": "xlooop-product",
+      "lane_id": "overview",
+      "board_id": "storybook_contract_lab"
+    },
+    {
+      "id": "xlooop-commercial",
+      "name": "Commercial readiness",
+      "stage": "Review",
+      "intents": 0,
+      "signoff": 1,
+      "health": "on-track",
+      "source_mode": "staged_snapshot",
+      "generated_at": "2026-05-25T23:03:30.482Z",
+      "source_adapter": "xlooop_full_operations_readiness_v1",
+      "workspace_id": "xlooop",
+      "domain_id": "xlooop-commercial",
+      "domain_kind": "commercial_readiness",
+      "space_id": "space-xlooop-product",
+      "area_kind": "operational_area",
+      "template_id": "commercial_readiness",
+      "source_binding_status": "metadata_pending",
+      "setup_status": "configured_metadata_only",
+      "member_policy": {
+        "segregation": "workspace_scoped",
+        "invite_policy": "owner_approved",
+        "default_role": "Member",
+        "external_member_allowed": true
+      },
+      "agent_policy": {
+        "agent_scope": "workspace_governed",
+        "requires_role_skill_attestation": true,
+        "direct_write_allowed": false
+      },
+      "action_policy": {
+        "watch_mode": "preview_or_no_op",
+        "operator_mode": "governed_proposal_receipt_only",
+        "direct_mbp_write_allowed": false,
+        "dangerous_action_confirmation_required": true
+      },
+      "project_id": "xlooop-commercial",
+      "lane_id": "overview",
+      "board_id": "demo_readiness"
+    }
+  ],
+  "org_3EG82VEzc8t3t65XSZ0YDlcaDMI": [
+    {
+      "id": "org_3EG82VEzc8t3t65XSZ0YDlcaDMI-cockpit-ux",
+      "name": "Cockpit & workspace UX",
+      "stage": "Operate",
+      "intents": 269,
+      "signoff": 0,
+      "health": "on-track",
+      "source_mode": "staged_snapshot",
+      "generated_at": "2026-06-09T00:00:00.000Z",
+      "source_adapter": "xlooop_full_operations_readiness_v1",
+      "workspace_id": "org_3EG82VEzc8t3t65XSZ0YDlcaDMI",
+      "domain_id": "org_3EG82VEzc8t3t65XSZ0YDlcaDMI-cockpit-ux",
+      "domain_kind": "commercial_product",
+      "space_id": "space-org-3eg82",
+      "area_kind": "operational_area",
+      "template_id": "product_delivery",
+      "source_binding_status": "live_neon_backed",
+      "setup_status": "configured_metadata_only",
+      "member_policy": {
+        "segregation": "workspace_scoped",
+        "invite_policy": "owner_approved",
+        "default_role": "Member",
+        "external_member_allowed": true
+      },
+      "agent_policy": {
+        "agent_scope": "workspace_governed",
+        "requires_role_skill_attestation": true,
+        "direct_write_allowed": false
+      },
+      "action_policy": {
+        "watch_mode": "preview_or_no_op",
+        "operator_mode": "governed_proposal_receipt_only",
+        "direct_mbp_write_allowed": false,
+        "dangerous_action_confirmation_required": true
+      },
+      "project_id": "org_3EG82VEzc8t3t65XSZ0YDlcaDMI-cockpit-ux",
+      "lane_id": "overview",
+      "board_id": "operations_overview"
+    },
+    {
+      "id": "org_3EG82VEzc8t3t65XSZ0YDlcaDMI-infra-deploy",
+      "name": "Infra · migrations · deploy",
+      "stage": "Operate",
+      "intents": 97,
+      "signoff": 0,
+      "health": "on-track",
+      "source_mode": "staged_snapshot",
+      "generated_at": "2026-06-09T00:00:00.000Z",
+      "source_adapter": "xlooop_full_operations_readiness_v1",
+      "workspace_id": "org_3EG82VEzc8t3t65XSZ0YDlcaDMI",
+      "domain_id": "org_3EG82VEzc8t3t65XSZ0YDlcaDMI-infra-deploy",
+      "domain_kind": "commercial_product",
+      "space_id": "space-org-3eg82",
+      "area_kind": "operational_area",
+      "template_id": "product_delivery",
+      "source_binding_status": "live_neon_backed",
+      "setup_status": "configured_metadata_only",
+      "member_policy": {
+        "segregation": "workspace_scoped",
+        "invite_policy": "owner_approved",
+        "default_role": "Member",
+        "external_member_allowed": true
+      },
+      "agent_policy": {
+        "agent_scope": "workspace_governed",
+        "requires_role_skill_attestation": true,
+        "direct_write_allowed": false
+      },
+      "action_policy": {
+        "watch_mode": "preview_or_no_op",
+        "operator_mode": "governed_proposal_receipt_only",
+        "direct_mbp_write_allowed": false,
+        "dangerous_action_confirmation_required": true
+      },
+      "project_id": "org_3EG82VEzc8t3t65XSZ0YDlcaDMI-infra-deploy",
+      "lane_id": "overview",
+      "board_id": "operations_overview"
+    },
+    {
+      "id": "org_3EG82VEzc8t3t65XSZ0YDlcaDMI-event-pipeline",
+      "name": "Event pipeline & live stream",
+      "stage": "Operate",
+      "intents": 93,
+      "signoff": 0,
+      "health": "on-track",
+      "source_mode": "staged_snapshot",
+      "generated_at": "2026-06-09T00:00:00.000Z",
+      "source_adapter": "xlooop_full_operations_readiness_v1",
+      "workspace_id": "org_3EG82VEzc8t3t65XSZ0YDlcaDMI",
+      "domain_id": "org_3EG82VEzc8t3t65XSZ0YDlcaDMI-event-pipeline",
+      "domain_kind": "commercial_product",
+      "space_id": "space-org-3eg82",
+      "area_kind": "operational_area",
+      "template_id": "product_delivery",
+      "source_binding_status": "live_neon_backed",
+      "setup_status": "configured_metadata_only",
+      "member_policy": {
+        "segregation": "workspace_scoped",
+        "invite_policy": "owner_approved",
+        "default_role": "Member",
+        "external_member_allowed": true
+      },
+      "agent_policy": {
+        "agent_scope": "workspace_governed",
+        "requires_role_skill_attestation": true,
+        "direct_write_allowed": false
+      },
+      "action_policy": {
+        "watch_mode": "preview_or_no_op",
+        "operator_mode": "governed_proposal_receipt_only",
+        "direct_mbp_write_allowed": false,
+        "dangerous_action_confirmation_required": true
+      },
+      "project_id": "org_3EG82VEzc8t3t65XSZ0YDlcaDMI-event-pipeline",
+      "lane_id": "overview",
+      "board_id": "operations_overview"
+    },
+    {
+      "id": "org_3EG82VEzc8t3t65XSZ0YDlcaDMI-onboarding",
+      "name": "Onboarding & provisioning",
+      "stage": "Operate",
+      "intents": 70,
+      "signoff": 0,
+      "health": "on-track",
+      "source_mode": "staged_snapshot",
+      "generated_at": "2026-06-09T00:00:00.000Z",
+      "source_adapter": "xlooop_full_operations_readiness_v1",
+      "workspace_id": "org_3EG82VEzc8t3t65XSZ0YDlcaDMI",
+      "domain_id": "org_3EG82VEzc8t3t65XSZ0YDlcaDMI-onboarding",
+      "domain_kind": "commercial_product",
+      "space_id": "space-org-3eg82",
+      "area_kind": "operational_area",
+      "template_id": "product_delivery",
+      "source_binding_status": "live_neon_backed",
+      "setup_status": "configured_metadata_only",
+      "member_policy": {
+        "segregation": "workspace_scoped",
+        "invite_policy": "owner_approved",
+        "default_role": "Member",
+        "external_member_allowed": true
+      },
+      "agent_policy": {
+        "agent_scope": "workspace_governed",
+        "requires_role_skill_attestation": true,
+        "direct_write_allowed": false
+      },
+      "action_policy": {
+        "watch_mode": "preview_or_no_op",
+        "operator_mode": "governed_proposal_receipt_only",
+        "direct_mbp_write_allowed": false,
+        "dangerous_action_confirmation_required": true
+      },
+      "project_id": "org_3EG82VEzc8t3t65XSZ0YDlcaDMI-onboarding",
+      "lane_id": "overview",
+      "board_id": "operations_overview"
+    },
+    {
+      "id": "org_3EG82VEzc8t3t65XSZ0YDlcaDMI-governance",
+      "name": "Governance & verification",
+      "stage": "Operate",
+      "intents": 69,
+      "signoff": 0,
+      "health": "on-track",
+      "source_mode": "staged_snapshot",
+      "generated_at": "2026-06-09T00:00:00.000Z",
+      "source_adapter": "xlooop_full_operations_readiness_v1",
+      "workspace_id": "org_3EG82VEzc8t3t65XSZ0YDlcaDMI",
+      "domain_id": "org_3EG82VEzc8t3t65XSZ0YDlcaDMI-governance",
+      "domain_kind": "commercial_product",
+      "space_id": "space-org-3eg82",
+      "area_kind": "operational_area",
+      "template_id": "product_delivery",
+      "source_binding_status": "live_neon_backed",
+      "setup_status": "configured_metadata_only",
+      "member_policy": {
+        "segregation": "workspace_scoped",
+        "invite_policy": "owner_approved",
+        "default_role": "Member",
+        "external_member_allowed": true
+      },
+      "agent_policy": {
+        "agent_scope": "workspace_governed",
+        "requires_role_skill_attestation": true,
+        "direct_write_allowed": false
+      },
+      "action_policy": {
+        "watch_mode": "preview_or_no_op",
+        "operator_mode": "governed_proposal_receipt_only",
+        "direct_mbp_write_allowed": false,
+        "dangerous_action_confirmation_required": true
+      },
+      "project_id": "org_3EG82VEzc8t3t65XSZ0YDlcaDMI-governance",
+      "lane_id": "overview",
+      "board_id": "operations_overview"
+    },
+    {
+      "id": "org_3EG82VEzc8t3t65XSZ0YDlcaDMI-investor",
+      "name": "Investor portal & data room",
+      "stage": "Operate",
+      "intents": 57,
+      "signoff": 0,
+      "health": "on-track",
+      "source_mode": "staged_snapshot",
+      "generated_at": "2026-06-09T00:00:00.000Z",
+      "source_adapter": "xlooop_full_operations_readiness_v1",
+      "workspace_id": "org_3EG82VEzc8t3t65XSZ0YDlcaDMI",
+      "domain_id": "org_3EG82VEzc8t3t65XSZ0YDlcaDMI-investor",
+      "domain_kind": "commercial_product",
+      "space_id": "space-org-3eg82",
+      "area_kind": "operational_area",
+      "template_id": "product_delivery",
+      "source_binding_status": "live_neon_backed",
+      "setup_status": "configured_metadata_only",
+      "member_policy": {
+        "segregation": "workspace_scoped",
+        "invite_policy": "owner_approved",
+        "default_role": "Member",
+        "external_member_allowed": true
+      },
+      "agent_policy": {
+        "agent_scope": "workspace_governed",
+        "requires_role_skill_attestation": true,
+        "direct_write_allowed": false
+      },
+      "action_policy": {
+        "watch_mode": "preview_or_no_op",
+        "operator_mode": "governed_proposal_receipt_only",
+        "direct_mbp_write_allowed": false,
+        "dangerous_action_confirmation_required": true
+      },
+      "project_id": "org_3EG82VEzc8t3t65XSZ0YDlcaDMI-investor",
+      "lane_id": "overview",
+      "board_id": "operations_overview"
+    },
+    {
+      "id": "org_3EG82VEzc8t3t65XSZ0YDlcaDMI-commercial-gtm",
+      "name": "Commercial proof & GTM",
+      "stage": "Operate",
+      "intents": 37,
+      "signoff": 0,
+      "health": "on-track",
+      "source_mode": "staged_snapshot",
+      "generated_at": "2026-06-09T00:00:00.000Z",
+      "source_adapter": "xlooop_full_operations_readiness_v1",
+      "workspace_id": "org_3EG82VEzc8t3t65XSZ0YDlcaDMI",
+      "domain_id": "org_3EG82VEzc8t3t65XSZ0YDlcaDMI-commercial-gtm",
+      "domain_kind": "commercial_product",
+      "space_id": "space-org-3eg82",
+      "area_kind": "operational_area",
+      "template_id": "product_delivery",
+      "source_binding_status": "live_neon_backed",
+      "setup_status": "configured_metadata_only",
+      "member_policy": {
+        "segregation": "workspace_scoped",
+        "invite_policy": "owner_approved",
+        "default_role": "Member",
+        "external_member_allowed": true
+      },
+      "agent_policy": {
+        "agent_scope": "workspace_governed",
+        "requires_role_skill_attestation": true,
+        "direct_write_allowed": false
+      },
+      "action_policy": {
+        "watch_mode": "preview_or_no_op",
+        "operator_mode": "governed_proposal_receipt_only",
+        "direct_mbp_write_allowed": false,
+        "dangerous_action_confirmation_required": true
+      },
+      "project_id": "org_3EG82VEzc8t3t65XSZ0YDlcaDMI-commercial-gtm",
+      "lane_id": "overview",
+      "board_id": "operations_overview"
+    },
+    {
+      "id": "proj_xlooop_xcp_ops",
+      "name": "Operations",
+      "stage": "Operate",
+      "intents": 3,
+      "signoff": 0,
+      "health": "on-track",
+      "source_mode": "staged_snapshot",
+      "generated_at": "2026-06-09T00:00:00.000Z",
+      "source_adapter": "xlooop_full_operations_readiness_v1",
+      "workspace_id": "org_3EG82VEzc8t3t65XSZ0YDlcaDMI",
+      "domain_id": "proj_xlooop_xcp_ops",
+      "domain_kind": "commercial_product",
+      "space_id": "space-org-3eg82",
+      "area_kind": "operational_area",
+      "template_id": "product_delivery",
+      "source_binding_status": "live_neon_backed",
+      "setup_status": "configured_metadata_only",
+      "member_policy": {
+        "segregation": "workspace_scoped",
+        "invite_policy": "owner_approved",
+        "default_role": "Member",
+        "external_member_allowed": true
+      },
+      "agent_policy": {
+        "agent_scope": "workspace_governed",
+        "requires_role_skill_attestation": true,
+        "direct_write_allowed": false
+      },
+      "action_policy": {
+        "watch_mode": "preview_or_no_op",
+        "operator_mode": "governed_proposal_receipt_only",
+        "direct_mbp_write_allowed": false,
+        "dangerous_action_confirmation_required": true
+      },
+      "project_id": "proj_xlooop_xcp_ops",
+      "lane_id": "overview",
+      "board_id": "operations_overview"
+    },
+    {
+      "id": "org_3EG82VEzc8t3t65XSZ0YDlcaDMI-funnel",
+      "name": "Marketing funnel & site",
+      "stage": "Operate",
+      "intents": 2,
+      "signoff": 0,
+      "health": "on-track",
+      "source_mode": "staged_snapshot",
+      "generated_at": "2026-06-09T00:00:00.000Z",
+      "source_adapter": "xlooop_full_operations_readiness_v1",
+      "workspace_id": "org_3EG82VEzc8t3t65XSZ0YDlcaDMI",
+      "domain_id": "org_3EG82VEzc8t3t65XSZ0YDlcaDMI-funnel",
+      "domain_kind": "commercial_product",
+      "space_id": "space-org-3eg82",
+      "area_kind": "operational_area",
+      "template_id": "product_delivery",
+      "source_binding_status": "live_neon_backed",
+      "setup_status": "configured_metadata_only",
+      "member_policy": {
+        "segregation": "workspace_scoped",
+        "invite_policy": "owner_approved",
+        "default_role": "Member",
+        "external_member_allowed": true
+      },
+      "agent_policy": {
+        "agent_scope": "workspace_governed",
+        "requires_role_skill_attestation": true,
+        "direct_write_allowed": false
+      },
+      "action_policy": {
+        "watch_mode": "preview_or_no_op",
+        "operator_mode": "governed_proposal_receipt_only",
+        "direct_mbp_write_allowed": false,
+        "dangerous_action_confirmation_required": true
+      },
+      "project_id": "org_3EG82VEzc8t3t65XSZ0YDlcaDMI-funnel",
+      "lane_id": "overview",
+      "board_id": "operations_overview"
+    },
+    {
+      "id": "proj_xlooop_xcp_internal_ops",
+      "name": "Internal Ops",
+      "stage": "Operate",
+      "intents": 2,
+      "signoff": 0,
+      "health": "on-track",
+      "source_mode": "staged_snapshot",
+      "generated_at": "2026-06-09T00:00:00.000Z",
+      "source_adapter": "xlooop_full_operations_readiness_v1",
+      "workspace_id": "org_3EG82VEzc8t3t65XSZ0YDlcaDMI",
+      "domain_id": "proj_xlooop_xcp_internal_ops",
+      "domain_kind": "commercial_product",
+      "space_id": "space-org-3eg82",
+      "area_kind": "operational_area",
+      "template_id": "product_delivery",
+      "source_binding_status": "live_neon_backed",
+      "setup_status": "configured_metadata_only",
+      "member_policy": {
+        "segregation": "workspace_scoped",
+        "invite_policy": "owner_approved",
+        "default_role": "Member",
+        "external_member_allowed": true
+      },
+      "agent_policy": {
+        "agent_scope": "workspace_governed",
+        "requires_role_skill_attestation": true,
+        "direct_write_allowed": false
+      },
+      "action_policy": {
+        "watch_mode": "preview_or_no_op",
+        "operator_mode": "governed_proposal_receipt_only",
+        "direct_mbp_write_allowed": false,
+        "dangerous_action_confirmation_required": true
+      },
+      "project_id": "proj_xlooop_xcp_internal_ops",
+      "lane_id": "overview",
+      "board_id": "operations_overview"
+    },
+    {
+      "id": "proj_xlooop_xcp_customer_pilots",
+      "name": "Customer Pilot Tracking",
+      "stage": "Operate",
+      "intents": 2,
+      "signoff": 0,
+      "health": "on-track",
+      "source_mode": "staged_snapshot",
+      "generated_at": "2026-06-09T00:00:00.000Z",
+      "source_adapter": "xlooop_full_operations_readiness_v1",
+      "workspace_id": "org_3EG82VEzc8t3t65XSZ0YDlcaDMI",
+      "domain_id": "proj_xlooop_xcp_customer_pilots",
+      "domain_kind": "commercial_product",
+      "space_id": "space-org-3eg82",
+      "area_kind": "operational_area",
+      "template_id": "product_delivery",
+      "source_binding_status": "live_neon_backed",
+      "setup_status": "configured_metadata_only",
+      "member_policy": {
+        "segregation": "workspace_scoped",
+        "invite_policy": "owner_approved",
+        "default_role": "Member",
+        "external_member_allowed": true
+      },
+      "agent_policy": {
+        "agent_scope": "workspace_governed",
+        "requires_role_skill_attestation": true,
+        "direct_write_allowed": false
+      },
+      "action_policy": {
+        "watch_mode": "preview_or_no_op",
+        "operator_mode": "governed_proposal_receipt_only",
+        "direct_mbp_write_allowed": false,
+        "dangerous_action_confirmation_required": true
+      },
+      "project_id": "proj_xlooop_xcp_customer_pilots",
+      "lane_id": "overview",
+      "board_id": "operations_overview"
+    },
+    {
+      "id": "proj_xlooop_xcp_sales",
+      "name": "Sales",
+      "stage": "Operate",
+      "intents": 0,
+      "signoff": 0,
+      "health": "on-track",
+      "source_mode": "staged_snapshot",
+      "generated_at": "2026-06-09T00:00:00.000Z",
+      "source_adapter": "xlooop_full_operations_readiness_v1",
+      "workspace_id": "org_3EG82VEzc8t3t65XSZ0YDlcaDMI",
+      "domain_id": "proj_xlooop_xcp_sales",
+      "domain_kind": "commercial_product",
+      "space_id": "space-org-3eg82",
+      "area_kind": "operational_area",
+      "template_id": "product_delivery",
+      "source_binding_status": "live_neon_backed",
+      "setup_status": "configured_metadata_only",
+      "member_policy": {
+        "segregation": "workspace_scoped",
+        "invite_policy": "owner_approved",
+        "default_role": "Member",
+        "external_member_allowed": true
+      },
+      "agent_policy": {
+        "agent_scope": "workspace_governed",
+        "requires_role_skill_attestation": true,
+        "direct_write_allowed": false
+      },
+      "action_policy": {
+        "watch_mode": "preview_or_no_op",
+        "operator_mode": "governed_proposal_receipt_only",
+        "direct_mbp_write_allowed": false,
+        "dangerous_action_confirmation_required": true
+      },
+      "project_id": "proj_xlooop_xcp_sales",
+      "lane_id": "overview",
+      "board_id": "operations_overview"
+    },
+    {
+      "id": "org_3EG82VEzc8t3t65XSZ0YDlcaDMI-allactivity",
+      "name": "All activity",
+      "stage": "Operate",
+      "intents": 0,
+      "signoff": 0,
+      "health": "on-track",
+      "source_mode": "staged_snapshot",
+      "generated_at": "2026-06-09T00:00:00.000Z",
+      "source_adapter": "xlooop_full_operations_readiness_v1",
+      "workspace_id": "org_3EG82VEzc8t3t65XSZ0YDlcaDMI",
+      "domain_id": "org_3EG82VEzc8t3t65XSZ0YDlcaDMI-allactivity",
+      "domain_kind": "commercial_product",
+      "space_id": "space-org-3eg82",
+      "area_kind": "operational_area",
+      "template_id": "product_delivery",
+      "source_binding_status": "live_neon_backed",
+      "setup_status": "configured_metadata_only",
+      "member_policy": {
+        "segregation": "workspace_scoped",
+        "invite_policy": "owner_approved",
+        "default_role": "Member",
+        "external_member_allowed": true
+      },
+      "agent_policy": {
+        "agent_scope": "workspace_governed",
+        "requires_role_skill_attestation": true,
+        "direct_write_allowed": false
+      },
+      "action_policy": {
+        "watch_mode": "preview_or_no_op",
+        "operator_mode": "governed_proposal_receipt_only",
+        "direct_mbp_write_allowed": false,
+        "dangerous_action_confirmation_required": true
+      },
+      "project_id": "org_3EG82VEzc8t3t65XSZ0YDlcaDMI-allactivity",
+      "lane_id": "overview",
+      "board_id": "operations_overview"
+    }
+  ],
+  "x-biz": [
+    {
+      "id": "x-biz-commercial-claims",
+      "name": "Commercial claim hygiene",
+      "stage": "Review",
+      "intents": 0,
+      "signoff": 1,
+      "health": "watch",
+      "workspace_id": "x-biz",
+      "domain_id": "x-biz-claims",
+      "domain_kind": "business_knowledge",
+      "source_mode": "staged_snapshot",
+      "generated_at": "2026-05-25T23:03:30.482Z",
+      "source_adapter": "xlooop_full_operations_readiness_v1",
+      "space_id": "space-x-biz",
+      "area_kind": "operational_area",
+      "template_id": "commercial_claim_discipline",
+      "source_binding_status": "metadata_pending",
+      "setup_status": "configured_metadata_only",
+      "member_policy": {
+        "segregation": "workspace_scoped",
+        "invite_policy": "owner_approved",
+        "default_role": "Member",
+        "external_member_allowed": true
+      },
+      "agent_policy": {
+        "agent_scope": "workspace_governed",
+        "requires_role_skill_attestation": true,
+        "direct_write_allowed": false
+      },
+      "action_policy": {
+        "watch_mode": "preview_or_no_op",
+        "operator_mode": "governed_proposal_receipt_only",
+        "direct_mbp_write_allowed": false,
+        "dangerous_action_confirmation_required": true
+      },
+      "project_id": "x-biz-commercial-claims",
+      "lane_id": "overview",
+      "board_id": "x-biz-commercial-claims-board"
+    },
+    {
+      "id": "x-biz-public-private-posture",
+      "name": "Public/private posture",
+      "stage": "Govern",
+      "intents": 0,
+      "signoff": 1,
+      "health": "watch",
+      "workspace_id": "x-biz",
+      "domain_id": "x-biz-posture",
+      "domain_kind": "business_knowledge",
+      "source_mode": "staged_snapshot",
+      "generated_at": "2026-05-25T23:03:30.482Z",
+      "source_adapter": "xlooop_full_operations_readiness_v1",
+      "space_id": "space-x-biz",
+      "area_kind": "operational_area",
+      "template_id": "public_private_posture",
+      "source_binding_status": "metadata_pending",
+      "setup_status": "configured_metadata_only",
+      "member_policy": {
+        "segregation": "workspace_scoped",
+        "invite_policy": "owner_approved",
+        "default_role": "Member",
+        "external_member_allowed": true
+      },
+      "agent_policy": {
+        "agent_scope": "workspace_governed",
+        "requires_role_skill_attestation": true,
+        "direct_write_allowed": false
+      },
+      "action_policy": {
+        "watch_mode": "preview_or_no_op",
+        "operator_mode": "governed_proposal_receipt_only",
+        "direct_mbp_write_allowed": false,
+        "dangerous_action_confirmation_required": true
+      },
+      "project_id": "x-biz-public-private-posture",
+      "lane_id": "overview",
+      "board_id": "x-biz-public-private-posture-board"
+    },
+    {
+      "id": "x-biz-investor-readiness",
+      "name": "Investor readiness",
+      "stage": "Review",
+      "intents": 0,
+      "signoff": 1,
+      "health": "watch",
+      "workspace_id": "x-biz",
+      "domain_id": "x-biz-investor-readiness",
+      "domain_kind": "business_knowledge",
+      "source_mode": "staged_snapshot",
+      "generated_at": "2026-05-25T23:03:30.482Z",
+      "source_adapter": "xlooop_full_operations_readiness_v1",
+      "space_id": "space-x-biz",
+      "area_kind": "operational_area",
+      "template_id": "investor_readiness",
+      "source_binding_status": "metadata_pending",
+      "setup_status": "configured_metadata_only",
+      "member_policy": {
+        "segregation": "workspace_scoped",
+        "invite_policy": "owner_approved",
+        "default_role": "Member",
+        "external_member_allowed": true
+      },
+      "agent_policy": {
+        "agent_scope": "workspace_governed",
+        "requires_role_skill_attestation": true,
+        "direct_write_allowed": false
+      },
+      "action_policy": {
+        "watch_mode": "preview_or_no_op",
+        "operator_mode": "governed_proposal_receipt_only",
+        "direct_mbp_write_allowed": false,
+        "dangerous_action_confirmation_required": true
+      },
+      "project_id": "x-biz-investor-readiness",
+      "lane_id": "overview",
+      "board_id": "investor_pack"
+    },
+    {
+      "id": "x-biz-commercial-logic",
+      "name": "Commercial logic",
+      "stage": "Validate",
+      "intents": 0,
+      "signoff": 1,
+      "health": "on-track",
+      "workspace_id": "x-biz",
+      "domain_id": "x-biz-commercial-logic",
+      "domain_kind": "business_knowledge",
+      "source_mode": "staged_snapshot",
+      "generated_at": "2026-05-25T23:03:30.482Z",
+      "source_adapter": "xlooop_full_operations_readiness_v1",
+      "space_id": "space-x-biz",
+      "area_kind": "operational_area",
+      "template_id": "commercial_logic",
+      "source_binding_status": "metadata_pending",
+      "setup_status": "configured_metadata_only",
+      "member_policy": {
+        "segregation": "workspace_scoped",
+        "invite_policy": "owner_approved",
+        "default_role": "Member",
+        "external_member_allowed": true
+      },
+      "agent_policy": {
+        "agent_scope": "workspace_governed",
+        "requires_role_skill_attestation": true,
+        "direct_write_allowed": false
+      },
+      "action_policy": {
+        "watch_mode": "preview_or_no_op",
+        "operator_mode": "governed_proposal_receipt_only",
+        "direct_mbp_write_allowed": false,
+        "dangerous_action_confirmation_required": true
+      },
+      "project_id": "x-biz-commercial-logic",
+      "lane_id": "overview",
+      "board_id": "x-biz-commercial-logic-board"
+    },
+    {
+      "id": "x-biz-claim-discipline",
+      "name": "Claim discipline",
+      "stage": "Operate",
+      "intents": 0,
+      "signoff": 1,
+      "health": "on-track",
+      "workspace_id": "x-biz",
+      "domain_id": "x-biz-claim-discipline",
+      "domain_kind": "business_knowledge",
+      "source_mode": "staged_snapshot",
+      "generated_at": "2026-05-25T23:03:30.482Z",
+      "source_adapter": "xlooop_full_operations_readiness_v1",
+      "space_id": "space-x-biz",
+      "area_kind": "operational_area",
+      "template_id": "commercial_claim_discipline",
+      "source_binding_status": "metadata_pending",
+      "setup_status": "configured_metadata_only",
+      "member_policy": {
+        "segregation": "workspace_scoped",
+        "invite_policy": "owner_approved",
+        "default_role": "Member",
+        "external_member_allowed": true
+      },
+      "agent_policy": {
+        "agent_scope": "workspace_governed",
+        "requires_role_skill_attestation": true,
+        "direct_write_allowed": false
+      },
+      "action_policy": {
+        "watch_mode": "preview_or_no_op",
+        "operator_mode": "governed_proposal_receipt_only",
+        "direct_mbp_write_allowed": false,
+        "dangerous_action_confirmation_required": true
+      },
+      "project_id": "x-biz-claim-discipline",
+      "lane_id": "overview",
+      "board_id": "x-biz-claim-discipline-board"
+    }
+  ],
+  "x-docs": [
+    {
+      "id": "x-docs-dev-qa-boundary",
+      "name": "Development and QA docs boundary",
+      "stage": "Monitor",
+      "intents": 0,
+      "signoff": 1,
+      "health": "watch",
+      "workspace_id": "x-docs",
+      "domain_id": "x-docs-dev-qa",
+      "domain_kind": "development_docs",
+      "source_mode": "staged_snapshot",
+      "generated_at": "2026-05-25T23:03:30.482Z",
+      "source_adapter": "xlooop_full_operations_readiness_v1",
+      "space_id": "space-x-docs",
+      "area_kind": "operational_area",
+      "template_id": "documentation_ops",
+      "source_binding_status": "metadata_pending",
+      "setup_status": "configured_metadata_only",
+      "member_policy": {
+        "segregation": "workspace_scoped",
+        "invite_policy": "owner_approved",
+        "default_role": "Member",
+        "external_member_allowed": true
+      },
+      "agent_policy": {
+        "agent_scope": "workspace_governed",
+        "requires_role_skill_attestation": true,
+        "direct_write_allowed": false
+      },
+      "action_policy": {
+        "watch_mode": "preview_or_no_op",
+        "operator_mode": "governed_proposal_receipt_only",
+        "direct_mbp_write_allowed": false,
+        "dangerous_action_confirmation_required": true
+      },
+      "project_id": "x-docs-dev-qa-boundary",
+      "lane_id": "overview",
+      "board_id": "repo_sync"
+    },
+    {
+      "id": "x-docs-repo-sync",
+      "name": "Repository sync",
+      "stage": "Operate",
+      "intents": 0,
+      "signoff": 1,
+      "health": "on-track",
+      "workspace_id": "x-docs",
+      "domain_id": "x-docs-repo-sync",
+      "domain_kind": "development_docs",
+      "source_mode": "staged_snapshot",
+      "generated_at": "2026-05-25T23:03:30.482Z",
+      "source_adapter": "xlooop_full_operations_readiness_v1",
+      "space_id": "space-x-docs",
+      "area_kind": "operational_area",
+      "template_id": "documentation_ops",
+      "source_binding_status": "metadata_pending",
+      "setup_status": "configured_metadata_only",
+      "member_policy": {
+        "segregation": "workspace_scoped",
+        "invite_policy": "owner_approved",
+        "default_role": "Member",
+        "external_member_allowed": true
+      },
+      "agent_policy": {
+        "agent_scope": "workspace_governed",
+        "requires_role_skill_attestation": true,
+        "direct_write_allowed": false
+      },
+      "action_policy": {
+        "watch_mode": "preview_or_no_op",
+        "operator_mode": "governed_proposal_receipt_only",
+        "direct_mbp_write_allowed": false,
+        "dangerous_action_confirmation_required": true
+      },
+      "project_id": "x-docs-repo-sync",
+      "lane_id": "overview",
+      "board_id": "repo_sync"
+    },
+    {
+      "id": "x-docs-architecture",
+      "name": "Architecture documentation",
+      "stage": "Build",
+      "intents": 0,
+      "signoff": 1,
+      "health": "watch",
+      "workspace_id": "x-docs",
+      "domain_id": "x-docs-architecture",
+      "domain_kind": "development_docs",
+      "source_mode": "staged_snapshot",
+      "generated_at": "2026-05-25T23:03:30.482Z",
+      "source_adapter": "xlooop_full_operations_readiness_v1",
+      "space_id": "space-x-docs",
+      "area_kind": "operational_area",
+      "template_id": "documentation_ops",
+      "source_binding_status": "metadata_pending",
+      "setup_status": "configured_metadata_only",
+      "member_policy": {
+        "segregation": "workspace_scoped",
+        "invite_policy": "owner_approved",
+        "default_role": "Member",
+        "external_member_allowed": true
+      },
+      "agent_policy": {
+        "agent_scope": "workspace_governed",
+        "requires_role_skill_attestation": true,
+        "direct_write_allowed": false
+      },
+      "action_policy": {
+        "watch_mode": "preview_or_no_op",
+        "operator_mode": "governed_proposal_receipt_only",
+        "direct_mbp_write_allowed": false,
+        "dangerous_action_confirmation_required": true
+      },
+      "project_id": "x-docs-architecture",
+      "lane_id": "overview",
+      "board_id": "repo_sync"
+    },
+    {
+      "id": "x-docs-demo-readiness",
+      "name": "Demo readiness docs",
+      "stage": "Review",
+      "intents": 0,
+      "signoff": 1,
+      "health": "on-track",
+      "workspace_id": "x-docs",
+      "domain_id": "x-docs-demo-readiness",
+      "domain_kind": "development_docs",
+      "source_mode": "staged_snapshot",
+      "generated_at": "2026-05-25T23:03:30.482Z",
+      "source_adapter": "xlooop_full_operations_readiness_v1",
+      "space_id": "space-x-docs",
+      "area_kind": "operational_area",
+      "template_id": "documentation_ops",
+      "source_binding_status": "metadata_pending",
+      "setup_status": "configured_metadata_only",
+      "member_policy": {
+        "segregation": "workspace_scoped",
+        "invite_policy": "owner_approved",
+        "default_role": "Member",
+        "external_member_allowed": true
+      },
+      "agent_policy": {
+        "agent_scope": "workspace_governed",
+        "requires_role_skill_attestation": true,
+        "direct_write_allowed": false
+      },
+      "action_policy": {
+        "watch_mode": "preview_or_no_op",
+        "operator_mode": "governed_proposal_receipt_only",
+        "direct_mbp_write_allowed": false,
+        "dangerous_action_confirmation_required": true
+      },
+      "project_id": "x-docs-demo-readiness",
+      "lane_id": "overview",
+      "board_id": "repo_sync"
+    }
+  ],
+  "x-front": [
+    {
+      "id": "x-front-ilmir-compatibility",
+      "name": "Ilmir branch compatibility",
+      "stage": "Read-only",
+      "intents": 0,
+      "signoff": 0,
+      "health": "blocked",
+      "workspace_id": "x-front",
+      "domain_id": "x-front-compatibility",
+      "domain_kind": "frontend_reference",
+      "source_mode": "staged_snapshot",
+      "generated_at": "2026-05-25T23:03:30.482Z",
+      "source_adapter": "xlooop_full_operations_readiness_v1",
+      "space_id": "space-x-front",
+      "area_kind": "operational_area",
+      "template_id": "frontend_reference",
+      "source_binding_status": "metadata_pending",
+      "setup_status": "configured_metadata_only",
+      "member_policy": {
+        "segregation": "workspace_scoped",
+        "invite_policy": "owner_approved",
+        "default_role": "Member",
+        "external_member_allowed": true
+      },
+      "agent_policy": {
+        "agent_scope": "workspace_governed",
+        "requires_role_skill_attestation": true,
+        "direct_write_allowed": false
+      },
+      "action_policy": {
+        "watch_mode": "preview_or_no_op",
+        "operator_mode": "governed_proposal_receipt_only",
+        "direct_mbp_write_allowed": false,
+        "dangerous_action_confirmation_required": true
+      },
+      "project_id": "x-front-ilmir-compatibility",
+      "lane_id": "overview",
+      "board_id": "reference_shell"
+    },
+    {
+      "id": "x-front-storybook-patterns",
+      "name": "Storybook/provider pattern mining",
+      "stage": "Read-only",
+      "intents": 0,
+      "signoff": 0,
+      "health": "watch",
+      "workspace_id": "x-front",
+      "domain_id": "x-front-storybook",
+      "domain_kind": "frontend_reference",
+      "source_mode": "staged_snapshot",
+      "generated_at": "2026-05-25T23:03:30.482Z",
+      "source_adapter": "xlooop_full_operations_readiness_v1",
+      "space_id": "space-x-front",
+      "area_kind": "operational_area",
+      "template_id": "frontend_reference",
+      "source_binding_status": "metadata_pending",
+      "setup_status": "configured_metadata_only",
+      "member_policy": {
+        "segregation": "workspace_scoped",
+        "invite_policy": "owner_approved",
+        "default_role": "Member",
+        "external_member_allowed": true
+      },
+      "agent_policy": {
+        "agent_scope": "workspace_governed",
+        "requires_role_skill_attestation": true,
+        "direct_write_allowed": false
+      },
+      "action_policy": {
+        "watch_mode": "preview_or_no_op",
+        "operator_mode": "governed_proposal_receipt_only",
+        "direct_mbp_write_allowed": false,
+        "dangerous_action_confirmation_required": true
+      },
+      "project_id": "x-front-storybook-patterns",
+      "lane_id": "overview",
+      "board_id": "reference_shell"
+    },
+    {
+      "id": "x-front-reference-shell",
+      "name": "Reference frontend shell",
+      "stage": "Reference",
+      "intents": 0,
+      "signoff": 1,
+      "health": "watch",
+      "workspace_id": "x-front",
+      "domain_id": "x-front-reference-shell",
+      "domain_kind": "frontend_reference",
+      "source_mode": "staged_snapshot",
+      "generated_at": "2026-05-25T23:03:30.482Z",
+      "source_adapter": "xlooop_full_operations_readiness_v1",
+      "space_id": "space-x-front",
+      "area_kind": "operational_area",
+      "template_id": "frontend_reference",
+      "source_binding_status": "metadata_pending",
+      "setup_status": "configured_metadata_only",
+      "member_policy": {
+        "segregation": "workspace_scoped",
+        "invite_policy": "owner_approved",
+        "default_role": "Member",
+        "external_member_allowed": true
+      },
+      "agent_policy": {
+        "agent_scope": "workspace_governed",
+        "requires_role_skill_attestation": true,
+        "direct_write_allowed": false
+      },
+      "action_policy": {
+        "watch_mode": "preview_or_no_op",
+        "operator_mode": "governed_proposal_receipt_only",
+        "direct_mbp_write_allowed": false,
+        "dangerous_action_confirmation_required": true
+      },
+      "project_id": "x-front-reference-shell",
+      "lane_id": "overview",
+      "board_id": "reference_shell"
+    },
+    {
+      "id": "x-front-graph-contracts",
+      "name": "Graph contracts",
+      "stage": "Build",
+      "intents": 0,
+      "signoff": 1,
+      "health": "on-track",
+      "workspace_id": "x-front",
+      "domain_id": "x-front-graph-contracts",
+      "domain_kind": "frontend_reference",
+      "source_mode": "staged_snapshot",
+      "generated_at": "2026-05-25T23:03:30.482Z",
+      "source_adapter": "xlooop_full_operations_readiness_v1",
+      "space_id": "space-x-front",
+      "area_kind": "operational_area",
+      "template_id": "frontend_reference",
+      "source_binding_status": "metadata_pending",
+      "setup_status": "configured_metadata_only",
+      "member_policy": {
+        "segregation": "workspace_scoped",
+        "invite_policy": "owner_approved",
+        "default_role": "Member",
+        "external_member_allowed": true
+      },
+      "agent_policy": {
+        "agent_scope": "workspace_governed",
+        "requires_role_skill_attestation": true,
+        "direct_write_allowed": false
+      },
+      "action_policy": {
+        "watch_mode": "preview_or_no_op",
+        "operator_mode": "governed_proposal_receipt_only",
+        "direct_mbp_write_allowed": false,
+        "dangerous_action_confirmation_required": true
+      },
+      "project_id": "x-front-graph-contracts",
+      "lane_id": "overview",
+      "board_id": "reference_shell"
+    },
+    {
+      "id": "x-front-absorption-plan",
+      "name": "Absorption planning",
+      "stage": "Blocked until Xlooop green",
+      "intents": 0,
+      "signoff": 1,
+      "health": "blocked",
+      "workspace_id": "x-front",
+      "domain_id": "x-front-absorption-plan",
+      "domain_kind": "frontend_reference",
+      "source_mode": "staged_snapshot",
+      "generated_at": "2026-05-25T23:03:30.482Z",
+      "source_adapter": "xlooop_full_operations_readiness_v1",
+      "space_id": "space-x-front",
+      "area_kind": "operational_area",
+      "template_id": "frontend_reference",
+      "source_binding_status": "metadata_pending",
+      "setup_status": "configured_metadata_only",
+      "member_policy": {
+        "segregation": "workspace_scoped",
+        "invite_policy": "owner_approved",
+        "default_role": "Member",
+        "external_member_allowed": true
+      },
+      "agent_policy": {
+        "agent_scope": "workspace_governed",
+        "requires_role_skill_attestation": true,
+        "direct_write_allowed": false
+      },
+      "action_policy": {
+        "watch_mode": "preview_or_no_op",
+        "operator_mode": "governed_proposal_receipt_only",
+        "direct_mbp_write_allowed": false,
+        "dangerous_action_confirmation_required": true
+      },
+      "project_id": "x-front-absorption-plan",
+      "lane_id": "overview",
+      "board_id": "reference_shell"
+    }
+  ],
+  "aps-pty-ltd": [
+    {
+      "id": "aps-business-intake",
+      "name": "Business intake",
+      "stage": "Public discovery",
+      "intents": 0,
+      "signoff": 0,
+      "health": "setup-blocked",
+      "source_mode": "staged_snapshot",
+      "generated_at": "2026-05-25T23:03:30.482Z",
+      "source_adapter": "xlooop_full_operations_readiness_v1",
+      "workspace_id": "aps-pty-ltd",
+      "domain_id": "aps-business-intake",
+      "domain_kind": "business_onboarding",
+      "space_id": "space-aps-pty-ltd",
+      "area_kind": "operational_area",
+      "template_id": "business_operations_intake",
+      "source_binding_status": "authority_and_private_sources_pending",
+      "setup_status": "public_profile_ready_authority_pending",
+      "blocking_setup_gap": {
+        "exact_missing_source": "Andrey/Dominic authority confirmation and APS first workflow source package"
+      },
+      "lane_set": [
+        "overview",
+        "needs_you",
+        "public_discovery",
+        "authority",
+        "source_register",
+        "workflow",
+        "evidence",
+        "launch"
+      ],
+      "workbench_set": [
+        "onboarding_confirmation",
+        "ai_ready_scorecard",
+        "source_register",
+        "workflow_blueprint"
+      ],
+      "member_policy": {
+        "segregation": "workspace_scoped",
+        "invite_policy": "owner_approved",
+        "default_role": "Member",
+        "external_member_allowed": true
+      },
+      "agent_policy": {
+        "agent_scope": "workspace_governed",
+        "requires_role_skill_attestation": true,
+        "direct_write_allowed": false
+      },
+      "action_policy": {
+        "watch_mode": "preview_or_no_op",
+        "operator_mode": "governed_proposal_receipt_only",
+        "direct_mbp_write_allowed": false,
+        "dangerous_action_confirmation_required": true
+      },
+      "status": "blocked",
+      "click_target": {
+        "screen": "project",
+        "workspace_id": "aps-pty-ltd",
+        "project_id": "aps-business-intake"
+      },
+      "project_id": "aps-business-intake",
+      "lane_id": "overview",
+      "board_id": "onboarding_confirmation"
+    }
+  ]
+}

@@ -1,0 +1,258 @@
+{
+  "schema_id": "xlooop.external_capability_registry.v2",
+  "purpose": "Track optional third-party capabilities before they can influence customer packets, memory, context compression, extraction, graph hints, or MCP/API behavior.",
+  "default_policy": "External capabilities are disabled by default until benchmark, security, redaction, citation, license, tenant isolation, and rollback gates pass.",
+  "adoption_modes": [
+    "external_benchmark",
+    "canary_only",
+    "restricted_adapter",
+    "native_rebuild",
+    "opt_in_runtime",
+    "default_runtime"
+  ],
+  "global_pipeline": [
+    "source_file",
+    "sandboxed_extraction",
+    "redaction",
+    "acl_filter",
+    "citation_and_provenance",
+    "tenant_memory_projection",
+    "packet_evidence_api_mcp"
+  ],
+  "capabilities": [
+    {
+      "id": "markitdown",
+      "name": "microsoft/markitdown",
+      "source_url": "https://github.com/microsoft/markitdown",
+      "license": "MIT",
+      "status": "benchmark_candidate",
+      "adopted_by_default": false,
+      "adoption_mode": "restricted_adapter_then_native_converter_lane",
+      "runtime_surface": "backend_sandboxed_file_conversion_adapter_after_approval",
+      "risk_class": "file_conversion_can_be_lossy_and_runs_with_process_io_privileges",
+      "current_local_adoption": "not_adopted",
+      "allowed_scopes_if_approved": [
+        "tenant_scoped_file_conversion",
+        "sandboxed_connector_ingestion_normalization",
+        "metadata_only_conversion_fallback",
+        "source_span_wrapped_markdown_generation"
+      ],
+      "forbidden_scopes": [
+        "raw_graph",
+        "full_tenant_memory",
+        "secrets",
+        "governance_scoring",
+        "agent_routing",
+        "unredacted_customer_sources",
+        "network_enabled_conversion_without_allowlist",
+        "plugins_enabled_without_allowlist",
+        "default_customer_runtime_without_feature_flag"
+      ],
+      "sandbox_policy": {
+        "network_default": "disabled",
+        "plugin_default": "disabled",
+        "file_allowlist_required": true,
+        "size_limit_required": true,
+        "timeout_required": true,
+        "process_isolation_required": true,
+        "raw_output_never_customer_authority": true
+      },
+      "acceptance_gates": {
+        "extraction_fidelity_pct_min": 95,
+        "citation_source_span_coverage_pct_min": 95,
+        "sensitive_leakage_count": 0,
+        "redaction_invariant_pct": 100,
+        "tenant_boundary_bypass_count": 0,
+        "replayability_pct": 100,
+        "p95_small_doc_conversion_ms_target": 3000,
+        "license_security_sbom_required": true,
+        "tenant_feature_flag_required": true,
+        "owner_approval_required": true
+      },
+      "approval_ref": null,
+      "version_or_commit": null,
+      "rollback_plan": "Disable tenant feature flag and replay ingestion from original object-store artifact through the previous approved converter.",
+      "verifier": "npm run verify:markitdown-sandbox-adapter"
+    },
+    {
+      "id": "hyper_extract",
+      "name": "yifanfeng97/Hyper-Extract",
+      "source_url": "https://github.com/yifanfeng97/Hyper-Extract",
+      "license": "Apache-2.0",
+      "status": "native_rebuild_candidate",
+      "adopted_by_default": false,
+      "adoption_mode": "native_rebuild_preferred_restricted_adapter_only_for_benchmark",
+      "runtime_surface": "xlooop_native_typed_extraction_profiles_after_review",
+      "risk_class": "structured_extraction_and_graph_outputs_can_conflict_with_private_xlooop_graph_authority",
+      "current_local_adoption": "not_adopted",
+      "native_rebuild_policy": {
+        "harvest_allowed": [
+          "typed_extraction_profiles",
+          "structure_catalog_ideas",
+          "schema_quality_metrics",
+          "graph_stability_heuristics",
+          "source_span_and_confidence_patterns"
+        ],
+        "must_reimplement_as": [
+          "Xlooop SourceExtractionCandidate",
+          "Xlooop ExtractionEvidenceRef",
+          "Xlooop GraphSuggestion",
+          "Xlooop EffectiveTemplateSnapshot metadata"
+        ],
+        "external_graph_authority_allowed": false,
+        "customer_visible_graph_export_allowed": false,
+        "direct_upstream_mcp_server_allowed": false
+      },
+      "allowed_scopes_if_approved": [
+        "typed_extraction_profile_benchmark",
+        "source_linked_metadata_extraction",
+        "schema_candidate_generation",
+        "native_graph_suggestion_generation",
+        "graph_architecture_inspiration_review"
+      ],
+      "forbidden_scopes": [
+        "raw_graph",
+        "authoritative_graph_write",
+        "persistent_external_knowledge_graph",
+        "direct_hyper_extract_mcp_server_customer_exposure",
+        "obsidian_export_customer_authority",
+        "full_tenant_memory",
+        "private_graph_schema",
+        "governance_scoring",
+        "agent_routing",
+        "secrets",
+        "unapproved_template_execution",
+        "default_customer_runtime_without_feature_flag"
+      ],
+      "sandbox_policy": {
+        "adapter_mode": "benchmark_only",
+        "native_runtime_dependency_allowed": false,
+        "network_default": "disabled",
+        "graph_projection_requires_xlooop_schema": true,
+        "raw_upstream_graph_discarded_after_review": true
+      },
+      "acceptance_gates": {
+        "typed_extraction_fidelity_pct_min": 95,
+        "citation_source_span_coverage_pct_min": 95,
+        "schema_drift_count": 0,
+        "sensitive_leakage_count": 0,
+        "redaction_invariant_pct": 100,
+        "tenant_boundary_bypass_count": 0,
+        "external_graph_authority_count": 0,
+        "replayability_pct": 100,
+        "license_security_sbom_required": true,
+        "tenant_feature_flag_required": true,
+        "owner_approval_required": true
+      },
+      "approval_ref": null,
+      "version_or_commit": null,
+      "rollback_plan": "Disable typed-extraction feature flag, discard GraphSuggestion rows, and replay from original source artifact through native baseline extraction.",
+      "verifier": "npm run verify:hyper-extract-native-adapter"
+    },
+    {
+      "id": "headroom",
+      "name": "chopratejas/headroom",
+      "source_url": "https://github.com/chopratejas/headroom",
+      "license": "Apache-2.0",
+      "status": "benchmark_candidate",
+      "adopted_by_default": false,
+      "adoption_mode": "restricted_adapter_with_replay_required",
+      "runtime_surface": "backend_only_adapter_after_approval",
+      "risk_class": "context_compression_may_drop_decision_or_citation_context",
+      "current_local_adoption": "not_adopted; existing Xlooop headroom scripts are bundle/capacity checks, not this tool",
+      "allowed_scopes_if_approved": [
+        "tenant_scoped_packet_compaction",
+        "operator_log_compaction",
+        "redacted_evidence_summary_compaction"
+      ],
+      "forbidden_scopes": [
+        "raw_graph",
+        "full_tenant_memory",
+        "secrets",
+        "governance_scoring",
+        "agent_routing",
+        "unredacted_customer_sources",
+        "default_customer_runtime_without_feature_flag"
+      ],
+      "sandbox_policy": {
+        "original_payload_hash_required": true,
+        "compressed_payload_hash_required": true,
+        "replay_from_original_required": true,
+        "redaction_before_compression_required": true,
+        "citation_check_after_decompression_required": true
+      },
+      "acceptance_gates": {
+        "token_reduction_pct_min": 25,
+        "token_reduction_pct_target": 40,
+        "answer_equivalence_pct_min": 95,
+        "citation_coverage_pct_min": 95,
+        "sensitive_leakage_count": 0,
+        "redaction_invariant_pct": 100,
+        "reversible_replay_required": true,
+        "license_security_sbom_required": true,
+        "tenant_feature_flag_required": true,
+        "owner_approval_required": true
+      },
+      "approval_ref": null,
+      "version_or_commit": null,
+      "rollback_plan": "Disable tenant feature flag and replay from original uncompressed packet/evidence payload.",
+      "verifier": "npm run verify:headroom-replay-compression"
+    },
+    {
+      "id": "impeccable",
+      "name": "pbakaus/impeccable",
+      "source_url": "https://github.com/pbakaus/impeccable",
+      "license": "Apache-2.0",
+      "status": "ui_quality_detector_canary",
+      "adopted_by_default": false,
+      "adoption_mode": "canary_only",
+      "runtime_surface": "developer_cli_visual_quality_detector_only",
+      "risk_class": "external_ui_detector_may_report_false_positives_and_must_not_access_customer_data_or_write_source_automatically",
+      "current_local_adoption": "governed_detector_cli_planned_impeccable_3_1_0",
+      "allowed_scopes_if_approved": [
+        "source_text_ui_quality_scan",
+        "controlled_hosted_route_visual_scan",
+        "design_review_advisory_findings",
+        "customer_safe_feedback_visual_regression_triage"
+      ],
+      "forbidden_scopes": [
+        "raw_graph",
+        "full_tenant_memory",
+        "secrets",
+        "governance_scoring",
+        "agent_routing",
+        "customer_session_live_mode",
+        "automatic_source_write",
+        "raw_customer_evidence_upload",
+        "graph_authority",
+        "default_customer_runtime_without_feature_flag"
+      ],
+      "sandbox_policy": {
+        "version_pinned": "3.1.0",
+        "network_default": "disabled_for_ci_except_package_fetch",
+        "update_check_disabled": true,
+        "no_customer_data": true,
+        "no_source_write_without_review": true,
+        "detector_json_output_required": true,
+        "live_mode_allowed": false,
+        "chrome_extension_allowed": false
+      },
+      "acceptance_gates": {
+        "customer_visible_forbidden_internal_labels": 0,
+        "customer_visible_raw_id_count": 0,
+        "customer_visual_overlap_count": 0,
+        "long_uppercase_customer_badge_count": 0,
+        "tiny_customer_body_text_count": 0,
+        "sensitive_leakage_count": 0,
+        "tenant_boundary_bypass_count": 0,
+        "license_security_sbom_required": true,
+        "tenant_feature_flag_required": true,
+        "owner_approval_required": true
+      },
+      "approval_ref": null,
+      "version_or_commit": "npm:impeccable@3.1.0",
+      "rollback_plan": "Remove Impeccable scripts/config from the validation lane; keep Xlooop-native visual-slop verifier as the authority.",
+      "verifier": "npm run verify:customer-visual-slop-hardening"
+    }
+  ]
+}

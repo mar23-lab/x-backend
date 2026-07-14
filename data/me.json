@@ -1,0 +1,51 @@
+{
+  "id": "marat",
+  "name": "Marat Basyrov",
+  "handle": "@marat",
+  "avatarColor": "alt-1",
+  "email": "",
+  "title": "Owner · MB-P / Xlooop / XCP",
+  "tz": "Australia/Melbourne",
+  "locale": "en-AU",
+  "bio": "Operates MB-P private domains, Xlooop commercial workspaces, and XCP validation as governed real-life proof.",
+  "joined": "",
+  "prefs": {
+    "theme": "system",
+    "density": "comfortable",
+    "emailDigest": "daily",
+    "desktopNotifs": true,
+    "soundOnMention": false
+  },
+  "notifRules": [
+    {
+      "id": "mentions",
+      "label": "@-mentions",
+      "channel": "desktop+email",
+      "on": true
+    },
+    {
+      "id": "approvals",
+      "label": "You're an approver",
+      "channel": "desktop+email",
+      "on": true
+    },
+    {
+      "id": "sla",
+      "label": "SLA breaches on your projects",
+      "channel": "desktop",
+      "on": true
+    },
+    {
+      "id": "merges",
+      "label": "Merges in projects you watch",
+      "channel": "email",
+      "on": false
+    },
+    {
+      "id": "invites",
+      "label": "Workspace invitations",
+      "channel": "desktop+email",
+      "on": true
+    }
+  ]
+}

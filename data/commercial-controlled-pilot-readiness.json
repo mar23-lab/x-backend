@@ -1,0 +1,118 @@
+{
+  "schema_version": "xlooop.commercial_controlled_pilot_readiness.v1",
+  "stage": "controlled_pilot_ready",
+  "commercial_stance": "go_with_restrictions",
+  "public_claim_status": "not_claimed",
+  "operator_gate_required": true,
+  "operator_decision_authority": "Marat",
+  "operator_decision_status": "not_recorded",
+  "private_paid_operator_mode": "disabled_until_operator_decision_and_evidence",
+  "default_customer_modes": ["watch", "test"],
+  "xcp_entitlement_default": "disabled",
+  "xlooop_access_grants_xcp": false,
+  "surface_label": "Controlled pilot: ready with restrictions",
+  "disabled_private_action_label": "Requires Marat onboarding decision",
+  "strict_paid_pilot_receipt": {
+    "status": "pending_cloud_evidence",
+    "preflight_command": "npm run paid-pilot:evidence:preflight",
+    "required_command": "npm run evidence:paid-pilot:renew",
+    "evidence_doctor": "npm run paid-pilot:evidence:doctor",
+    "strict_gate": "npm run verify:paid-pilot-boundary:strict",
+    "current_receipt": "docs/deployment/evidence/latest-paid-pilot-boundary-receipt.json",
+    "missing_evidence_count": 9,
+    "missing_evidence": [
+      "Cloudflare Access signed JWT positive and negative checks",
+      "tenant membership and XCP entitlement proof",
+      "customer Operator default-deny proof",
+      "allowlisted Operator execution and idempotency proof",
+      "Markdown writeback adapter receipt",
+      "redaction scan",
+      "monitoring events",
+      "incident/SLA owner",
+      "legal/commercial sign-off"
+    ]
+  },
+  "readiness_ladder": [
+    {
+      "stage": "commercial_demo",
+      "label": "Commercial demo",
+      "status": "go",
+      "owner": "Xlooop delivery readiness",
+      "allowed_claims": [
+        "browser-safe operating cockpit proof",
+        "Project Operating Space and proposal-only document workflow",
+        "customer onboarding public-discovery gate demonstration"
+      ],
+      "blocked_claims": [
+        "paid private customer operations",
+        "production SaaS self-serve",
+        "unrestricted source writeback"
+      ],
+      "missing_evidence_count": 0,
+      "required_command": "npm run verify:commercial-demo-readiness",
+      "last_evidence_ref": "docs/_archive/audits/commercial-demo-readiness.json"
+    },
+    {
+      "stage": "controlled_pilot",
+      "label": "Controlled pilot",
+      "status": "go_with_restrictions",
+      "owner": "Marat",
+      "allowed_claims": [
+        "controlled review with Watch/Test defaults",
+        "operator-gated preparation",
+        "proposal-first customer-feedback path"
+      ],
+      "blocked_claims": [
+        "private Operator without Marat decision",
+        "customer private integrations without authority and consent"
+      ],
+      "missing_evidence_count": 0,
+      "required_command": "npm run verify:commercial-controlled-pilot-readiness",
+      "last_evidence_ref": "data/commercial-controlled-pilot-readiness.json"
+    },
+    {
+      "stage": "paid_pilot_strict",
+      "label": "Paid pilot strict",
+      "status": "blocked_pending_cloud_evidence",
+      "owner": "Marat + cloud/security operator",
+      "allowed_claims": [
+        "not claimed yet"
+      ],
+      "blocked_claims": [
+        "private paid Operator mode",
+        "tenant private data operation",
+        "governed Markdown source writeback"
+      ],
+      "missing_evidence_count": 9,
+      "required_command": "npm run paid-pilot:evidence:doctor",
+      "last_evidence_ref": "docs/deployment/evidence/latest-paid-pilot-boundary-receipt.json"
+    },
+    {
+      "stage": "production_saas",
+      "label": "Production SaaS",
+      "status": "blocked",
+      "owner": "Xlooop production governance",
+      "allowed_claims": [
+        "not claimed yet"
+      ],
+      "blocked_claims": [
+        "public self-serve production",
+        "autonomous customer operations",
+        "enterprise production assurance"
+      ],
+      "missing_evidence_count": 1,
+      "required_command": "complete paid-pilot strict and production readiness ADRs first",
+      "last_evidence_ref": "data/production-pilot-readiness.json"
+    }
+  ],
+  "evidence_statuses": [
+    { "key": "auth", "status": "operator_gated", "next_action": "Record signed Cloudflare Access identity evidence." },
+    { "key": "tenant", "status": "operator_gated", "next_action": "Record tenant membership and owner graph evidence." },
+    { "key": "rbac", "status": "operator_gated", "next_action": "Record role permission and action policy evidence." },
+    { "key": "redaction", "status": "operator_gated", "next_action": "Record customer-safe response/export evidence." },
+    { "key": "monitoring", "status": "operator_gated", "next_action": "Record monitoring event and health evidence." },
+    { "key": "incident_sla", "status": "operator_gated", "next_action": "Record incident owner and SLA response evidence." },
+    { "key": "legal", "status": "operator_gated", "next_action": "Record legal/commercial claim approval reference." },
+    { "key": "owner_signoff", "status": "operator_gated", "next_action": "Record Marat onboarding decision/signoff reference." }
+  ]
+}

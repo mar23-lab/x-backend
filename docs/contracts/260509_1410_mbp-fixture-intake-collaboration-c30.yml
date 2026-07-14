@@ -1,0 +1,53 @@
+id: c30_mbp_fixture_intake_collaboration
+title: C30-FIXTURE-02 / C30-INTAKE-02 / C30-COLLAB-01 MB-P Fixture, Intake, And Collaboration Replacement
+created_at: "2026-05-09T14:10:00+10:00"
+date_key: "260509_1410"
+timezone: Australia/Melbourne
+status: implemented_current_surface
+lifecycle_state: active_reference
+owner_roles:
+  - Product Manager
+  - UX Lead
+  - Chief-of-Staff
+  - AI Governed Infrastructure Manager
+domains:
+  - xlooop_xcp_demo
+  - mbp
+  - xcp_platform
+source_files:
+  - data/initial-store.json
+  - data/project-data.json
+  - data/projects/trinity/manifest.json
+  - data/projects/northstar/manifest.json
+  - data/projects/vertex/manifest.json
+  - src/shared/storybook/fixtures/mbp-fixture.ts
+  - src/app/App.jsx
+  - src/pages/personal/Personal.jsx
+  - src/widgets/demo-tour/DemoTour.jsx
+  - src/widgets/AdminMenu/AdminMenu.jsx
+  - src/widgets/project-modes/Signoff/Signoff.jsx
+  - tests/e2e/c29-web-gateway-routing.spec.ts
+  - tests/e2e/v3-client-projection.spec.ts
+  - tests/e2e/v3-signed-url.spec.ts
+implemented:
+  active_project_manifests_removed:
+    - trinity
+    - northstar
+    - vertex
+  storybook_fixture: mbp-fixture
+  intake_packet:
+    intent_id: required
+    lifecycle_state: candidate_owner_review_required
+    sterility_state: sterile_quarantined
+    graph_required: true
+    owner_review_required: true
+  collaboration_fixture: owner_approved_mbp_review_packet
+remaining_followups:
+  - id: c30_seed_contracts_03
+    surface: src/contracts/seed-contracts.ts
+    state: legacy_example_contracts
+    recommendation: replace_or_retain_as_evidence
+  - id: c30_golden_path_03
+    surface: src/shared/storybook/golden-path
+    state: legacy_golden_path_evidence
+    recommendation: migrate_to_mbp_chain

@@ -1,0 +1,200 @@
+{
+  "schema_version": "xlooop.tenant_manifest.v1",
+  "tenant_id": "operator-mbp",
+  "display_name": "MB-P Operator Ecosystem",
+  "description": "Marat's operator-only cockpit deploy. Contains the 6 operator-owned workspaces (mbp-private, xcp-platform, xlooop, x-biz, x-docs, x-front). Customer-prospect workspaces (aps-pty-ltd, aps-access-property-services) are STRIPPED at build time per tenant_filter rules below.",
+  "deploy_target": {
+    "cloudflare_pages_project": "xlooop-app",
+    "primary_domain": "app.xlooop.com",
+    "branch": "main"
+  },
+  "owned_workspaces": [
+    "mbp-private",
+    "xcp-platform",
+    "xlooop",
+    "x-biz",
+    "x-docs",
+    "x-front"
+  ],
+  "excluded_workspaces": [
+    "aps-pty-ltd",
+    "aps-access-property-services"
+  ],
+  "data_files": [
+    {
+      "path": "data/spaces.json",
+      "filter": "strip_workspaces",
+      "filter_args": { "ids": ["aps-pty-ltd", "aps-access-property-services"] },
+      "rationale": "Workspace switcher · operator tenant must NOT show customer-prospect cards"
+    },
+    {
+      "path": "data/ws-detail.json",
+      "filter": "strip_keys",
+      "filter_args": { "keys": ["aps-pty-ltd", "aps-access-property-services"] },
+      "rationale": "Workspace operational detail · per-workspace keys; remove customer entries"
+    },
+    {
+      "path": "data/ws-projects.json",
+      "filter": "strip_keys",
+      "filter_args": { "keys": ["aps-pty-ltd", "aps-access-property-services"] },
+      "rationale": "Per-workspace project list · scope to operator workspaces only"
+    },
+    {
+      "path": "data/workspace-tree-read-model.json",
+      "filter": "strip_workspaces",
+      "filter_args": { "ids": ["aps-pty-ltd", "aps-access-property-services"] },
+      "rationale": "Workspace tree navigation · operator-side only"
+    },
+    {
+      "path": "data/operations-rollup-read-model.json",
+      "filter": "strip_rollup_keys",
+      "filter_args": { "workspace_counts": ["aps-pty-ltd", "aps-access-property-services"] },
+      "rationale": "Operations dashboard rollup · customer rows removed from workspace_counts"
+    },
+    {
+      "path": "data/workspace-setup-blueprint.json",
+      "filter": "strip_workspaces",
+      "filter_args": { "ids": ["aps-pty-ltd", "aps-access-property-services"] },
+      "rationale": "Setup-blueprint catalog · operator-side workspaces only"
+    },
+    {
+      "path": "data/operational-area-source-map.json",
+      "filter": "strip_workspaces",
+      "filter_args": { "ids": ["aps-pty-ltd", "aps-access-property-services"] },
+      "rationale": "Source-map projection · operator tenant scope"
+    },
+    {
+      "path": "data/governed-role-route-projection.json",
+      "filter": "strip_workspaces",
+      "filter_args": { "ids": ["aps-pty-ltd", "aps-access-property-services"] },
+      "rationale": "Role-route projection · operator routes only"
+    },
+    {
+      "path": "data/project-data.json",
+      "filter": "strip_projects_by_workspace",
+      "filter_args": { "workspace_ids": ["aps-pty-ltd", "aps-access-property-services"] },
+      "rationale": "Project data · drop projects whose workspaceId matches customer tenants"
+    },
+    {
+      "path": "data/server-tenant-policy-contract.json",
+      "filter": "strip_tenant_policies",
+      "filter_args": { "tenant_ids": ["aps-pty-ltd", "aps-access-property-services"] },
+      "rationale": "Server-side per-tenant policy · operator tenant entries only"
+    },
+    {
+      "path": "data/customer-safe-export-manifest.json",
+      "filter": "strip_customer_ids",
+      "filter_args": { "customer_ids": ["aps-access-property-services"] },
+      "rationale": "Customer-safe export manifest · operator copy excludes APS customer"
+    },
+    {
+      "path": "data/customer-health-value-read-model.json",
+      "filter": "strip_customer_ids",
+      "filter_args": { "customer_ids": ["aps-access-property-services"] },
+      "rationale": "Customer-health value read-model · operator copy excludes APS customer (moved to APS tenant deploy)"
+    },
+    {
+      "path": "data/customer-onboarding-read-model.json",
+      "filter": "strip_customer_ids",
+      "filter_args": { "customer_ids": ["aps-access-property-services"] },
+      "rationale": "Customer-onboarding read-model · operator copy excludes APS customer"
+    },
+    {
+      "path": "data/member-directory-read-model.json",
+      "filter": "passthrough",
+      "rationale": "Already operator-only after R50-Tail-7 cleanup (Marat-only)"
+    },
+    {
+      "path": "data/ui-journey-priority-matrix.json",
+      "filter": "passthrough",
+      "rationale": "Assisted-mode v1 ground-truth registry · global UI metadata, no per-tenant rows (verified 0 APS refs) · the hover-help overlay fetches it at /data/"
+    },
+    {
+      "path": "data/operations-live-stream.json",
+      "filter": "strip_workspaces",
+      "filter_args": { "ids": ["aps-pty-ltd", "aps-access-property-services"] },
+      "rationale": "Operator activity feed · the cockpit data-projection-reader fetches /data/operations-live-stream.json to compute freshness (_meta.valid_until). Was EXCLUDED from the projection → 404 → SPA-fallback HTML → reader defaulted to degraded·stale (U3, 2026-06-02). Defensive strip_workspaces keeps it APS-clean (verified 0 APS refs today; 55 rows all operator/MB-P/Xlooop scope)."
+    },
+    {
+      "path": "data/nav-config.json",
+      "filter": "passthrough",
+      "rationale": "Generic nav UI config (wsPanes + projectModes), no tenant data. DataLoader reads it into window.WS_PANES/PROJECT_MODES; was EXCLUDED from the projection → /data/nav-config.json fell through to SPA-fallback HTML → JSON.parse fail → undefined globals → authenticated-render crash (guarded in App.jsx #680, but the live nav config was degraded)."
+    },
+    {
+      "path": "data/agent-capability-projection.json",
+      "filter": "passthrough",
+      "rationale": "Agent capability projection read-model (operator scope, 0 customer refs) — was undeployed -> /data served SPA HTML -> DataLoader fail-soft null -> degraded read-model. 0 customer refs; boundary gate validates."
+    },
+    {
+      "path": "data/durable-proposal-receipts.json",
+      "filter": "passthrough",
+      "rationale": "Durable proposal receipts read-model (operator scope) — was undeployed -> /data served SPA HTML -> DataLoader fail-soft null -> degraded read-model. 0 customer refs; boundary gate validates."
+    },
+    {
+      "path": "data/governed-proposal-ledger.example.json",
+      "filter": "passthrough",
+      "rationale": "Governed proposal ledger (DataLoader reads this .example path directly, not as a fallback) — was undeployed -> /data served SPA HTML -> DataLoader fail-soft null -> degraded read-model. 0 customer refs; boundary gate validates."
+    },
+    {
+      "path": "data/graph-context-slice.json",
+      "filter": "passthrough",
+      "rationale": "Graph context slice read-model (operator scope) — was undeployed -> /data served SPA HTML -> DataLoader fail-soft null -> degraded read-model. 0 customer refs; boundary gate validates."
+    },
+    {
+      "path": "data/initial-store.json",
+      "filter": "strip_keys",
+      "filter_args": {
+        "keys": ["aps-business-intake", "aps-pty-ltd", "aps-access-property-services"]
+      },
+      "rationale": "Initial store seed (operator workspaces/domains; API hydrators overlay live state) — was undeployed -> /data served SPA HTML -> DataLoader fail-soft null -> degraded read-model. CORRECTION to #682: shipped as passthrough but the seed carries the operator-side 'aps-business-intake' top-level workspace key (empty, no customer content) which the tenant-isolation gate (R51-λ-2 APS_TOKENS) forbids in the operator bundle — every sibling operator file already strips the aps-* keys. strip_keys drops the aps top-level keys; the 21 operator workspaces remain. verify-tenant-bundle-isolation validates."
+    },
+    {
+      "path": "data/me.json",
+      "filter": "passthrough",
+      "rationale": "Operator identity fixture (generic) — was undeployed -> /data served SPA HTML -> DataLoader fail-soft null -> degraded read-model. 0 customer refs; boundary gate validates."
+    },
+    {
+      "path": "data/notification-event-read-model.json",
+      "filter": "passthrough",
+      "rationale": "Notification events read-model (operator scope) — was undeployed -> /data served SPA HTML -> DataLoader fail-soft null -> degraded read-model. 0 customer refs; boundary gate validates."
+    },
+    {
+      "path": "data/operator-onboarding-decision.json",
+      "filter": "passthrough",
+      "rationale": "Operator onboarding decision (generic) — was undeployed -> /data served SPA HTML -> DataLoader fail-soft null -> degraded read-model. 0 customer refs; boundary gate validates."
+    },
+    {
+      "path": "data/production-pilot-readiness.json",
+      "filter": "passthrough",
+      "rationale": "Production pilot-readiness read-model (Xlooop product readiness; no tenant data, 0 customer refs). Was undeployed -> SPA HTML -> DataLoader fail-soft null. Boundary gate validates."
+    },
+    {
+      "path": "data/commercial-controlled-pilot-readiness.json",
+      "filter": "passthrough",
+      "rationale": "Commercial controlled-pilot readiness read-model (Xlooop commercial stance/readiness ladder; no tenant data). Was undeployed -> SPA HTML -> DataLoader fail-soft null. Boundary gate validates."
+    },
+    {
+      "path": "data/home.json",
+      "filter": "passthrough",
+      "rationale": "Personal-home fixture (window.HOME; 0 APS tokens). Operator-only (28 operator-personal refs -> NOT in customer bundle). Was undeployed -> SPA HTML -> DataLoader fail-soft (default UserShellCockpit path unaffected; PersonalHome derefs guarded by router not mounting it)."
+    },
+    {
+      "path": "data/domain-template-catalog.json",
+      "filter": "passthrough",
+      "rationale": "Generic global template registry (window.DOMAIN_TEMPLATE_CATALOG; 0 APS tokens). Operator-only (carries operator owner_graph + template refs -> NOT customer-safe). Was undeployed -> 404 -> SPA HTML; consumers fail-soft (AccountScreens static BOARD_CATALOG fallback)."
+    }
+  ],
+  "passthrough_dirs": [
+    "data/schemas/",
+    "dist/",
+    "vendor/",
+    "src/",
+    "index.html",
+    "index.standalone.html"
+  ],
+  "metadata": {
+    "produced_by": "scripts/tenant-projection-builder.mjs",
+    "spec": "docs/_archive/audits/260528-r51-b-wave-beta-closure.md",
+    "lineage": "R51-β-2 (federated-waterfall PHASE 5 prep)"
+  }
+}

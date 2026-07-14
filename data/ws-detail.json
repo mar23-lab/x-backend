@@ -1,0 +1,645 @@
+{
+  "mbp-private": {
+    "members": [
+      {
+        "name": "Marat Basyrov",
+        "handle": "@marat",
+        "role": "Owner",
+        "team": "Owner office",
+        "avail": "active",
+        "last": "now",
+        "since": "Jan 2024",
+        "initials": "MB",
+        "color": "alt-1"
+      }
+    ],
+    "teams": [
+      {
+        "id": "owner-office",
+        "name": "Owner office",
+        "sub": "Marat authority, decisions, approvals",
+        "members": [
+          "@marat"
+        ],
+        "lead": "@marat"
+      },
+      {
+        "id": "governance",
+        "name": "Governance",
+        "sub": "Intake, graph, lineage, sterility, gates",
+        "members": [],
+        "lead": "@marat"
+      }
+    ],
+    "activity": [
+      {
+        "what": "requested non-current sample wording removal from the active product surface",
+        "where": "Unified intake",
+        "when": "now",
+        "kind": "create",
+        "source_kind": "actor",
+        "actor_ref": {
+          "schema_version": "ActorRef.v1",
+          "actor_id": "actor:marat-basyrov",
+          "display_name": "Marat Basyrov",
+          "kind": "human",
+          "source_ref": "MB-P/AGENTS.md"
+        }
+      },
+      {
+        "what": "prepared multi-domain triage packet (role route invocation, not a workspace member) (role route invocation, not a workspace member)",
+        "where": "MB-P governance",
+        "when": "today",
+        "kind": "check",
+        "source_kind": "role_route",
+        "role_route_ref": "role-route:critical-intake-review",
+        "source_label": "Governed role route"
+      },
+      {
+        "what": "flagged platform-promotion candidate from MB-P usage (role route invocation, not a workspace member) (role route invocation, not a workspace member)",
+        "where": "XCP roadmap",
+        "when": "today",
+        "kind": "approve",
+        "source_kind": "role_route",
+        "role_route_ref": "role-route:critical-intake-review",
+        "source_label": "Governed role route"
+      }
+    ],
+    "tasks": [
+      {
+        "id": "MBP-SI-001",
+        "title": "Review sterility burn-down packet",
+        "proj": "MB-P governance",
+        "mode": "signoff",
+        "who": "@marat",
+        "due": "today",
+        "pill": "P0",
+        "pillKind": "bad"
+      },
+      {
+        "id": "MBP-INTAKE-014",
+        "title": "Review multi-domain intake routing",
+        "proj": "Unified intake",
+        "mode": "triage",
+        "who": "@marat",
+        "due": "in 1d",
+        "pill": "Review",
+        "pillKind": "warn"
+      }
+    ],
+    "settings": {
+      "name": "MB-P",
+      "slug": "mbp-private",
+      "visibility": "private",
+      "defaultRole": "Owner approved",
+      "slaDefault": "24 hours for external input classification",
+      "gates": [
+        "Unified intake",
+        "Role panel",
+        "Lifecycle",
+        "Sterility",
+        "Graph visibility",
+        "Owner sign-off"
+      ],
+      "retention": "Governed by MB-P lifecycle and sterility policy",
+      "integrations": [
+        {
+          "name": "GitHub",
+          "status": "connected",
+          "sub": "Repo evidence and PR checks"
+        },
+        {
+          "name": "XCP graph",
+          "status": "connected",
+          "sub": "Lean context and lineage"
+        },
+        {
+          "name": "Local LLM lane",
+          "status": "monitored",
+          "sub": "Candidate-only review output"
+        }
+      ]
+    },
+    "source_mode": "staged_snapshot",
+    "generated_at": "2026-05-25T23:03:30.482Z",
+    "source_adapter": "xlooop_full_operations_readiness_v1",
+    "workspace_id": "mbp-private",
+    "domain_id": "mbp-private",
+    "domain_kind": "owner_operations"
+  },
+  "xcp-platform": {
+    "members": [
+      {
+        "name": "Marat Basyrov",
+        "handle": "@marat",
+        "role": "Owner",
+        "team": "Platform",
+        "avail": "active",
+        "last": "now",
+        "since": "May 2026",
+        "initials": "MB",
+        "color": "alt-1"
+      }
+    ],
+    "teams": [
+      {
+        "id": "platform",
+        "name": "Platform",
+        "sub": "Reusable XCP substrate and infrastructure roadmap",
+        "members": [
+          "@marat"
+        ],
+        "lead": "@marat"
+      }
+    ],
+    "activity": [
+      {
+        "what": "classified MB-P graph-harness learning as a platform-promotion candidate (role route invocation, not a workspace member) (role route invocation, not a workspace member)",
+        "where": "XCP roadmap",
+        "when": "today",
+        "kind": "check",
+        "source_kind": "role_route",
+        "role_route_ref": "role-route:critical-intake-review",
+        "source_label": "Governed role route"
+      }
+    ],
+    "tasks": [
+      {
+        "id": "XCP-PROMOTE-003",
+        "title": "Review lean graph context promotion",
+        "proj": "XCP roadmap",
+        "mode": "substrate",
+        "who": "@marat",
+        "due": "in 2d",
+        "pill": "P1",
+        "pillKind": "warn"
+      }
+    ],
+    "settings": {
+      "name": "XCP",
+      "slug": "xcp-platform",
+      "visibility": "private",
+      "defaultRole": "Owner approved",
+      "slaDefault": "5 business days",
+      "gates": [
+        "Evidence quality",
+        "Role/skill coverage",
+        "Platform extraction",
+        "DevSecOps review"
+      ],
+      "retention": "Producer platform evidence only; no MB-P private raw data",
+      "integrations": [
+        {
+          "name": "MB-P harness",
+          "status": "connected",
+          "sub": "Validated usage signals and promotion candidates"
+        },
+        {
+          "name": "Platform backlog",
+          "status": "connected",
+          "sub": "Reusable capability extraction"
+        }
+      ]
+    },
+    "source_mode": "staged_snapshot",
+    "generated_at": "2026-05-25T23:03:30.482Z",
+    "source_adapter": "xlooop_full_operations_readiness_v1",
+    "workspace_id": "xcp-platform",
+    "domain_id": "xcp-platform",
+    "domain_kind": "ai_infrastructure"
+  },
+  "xlooop": {
+    "members": [
+      {
+        "name": "Marat Basyrov",
+        "handle": "@marat",
+        "role": "Owner",
+        "team": "Product",
+        "avail": "active",
+        "last": "now",
+        "since": "May 2026",
+        "initials": "MB",
+        "color": "alt-1"
+      }
+    ],
+    "teams": [
+      {
+        "id": "product",
+        "name": "Product",
+        "sub": "Xlooop commercial product and pilot flow",
+        "members": [
+          "@marat"
+        ],
+        "lead": "@marat"
+      },
+      {
+        "id": "product-governance",
+        "name": "Product governance",
+        "sub": "Evidence, contract readiness, and owner sign-off",
+        "members": [],
+        "lead": "@marat"
+      }
+    ],
+    "activity": [
+      {
+        "what": "confirmed Xlooop must be visible as a first-class ecosystem workspace",
+        "where": "Xlooop product",
+        "when": "now",
+        "kind": "create",
+        "source_kind": "actor",
+        "actor_ref": {
+          "schema_version": "ActorRef.v1",
+          "actor_id": "actor:marat-basyrov",
+          "display_name": "Marat Basyrov",
+          "kind": "human",
+          "source_ref": "MB-P/AGENTS.md"
+        }
+      },
+      {
+        "what": "linked MB-P owner-intake proof to Xlooop product readiness (role route invocation, not a workspace member) (role route invocation, not a workspace member)",
+        "where": "Commercial readiness",
+        "when": "today",
+        "kind": "check",
+        "source_kind": "role_route",
+        "role_route_ref": "role-route:critical-intake-review",
+        "source_label": "Governed role route"
+      }
+    ],
+    "tasks": [
+      {
+        "id": "XLOOOP-PRODUCT-001",
+        "title": "Validate first-30-second governed workflow",
+        "proj": "Xlooop product",
+        "mode": "overview",
+        "who": "@marat",
+        "due": "today",
+        "pill": "P0",
+        "pillKind": "warn"
+      },
+      {
+        "id": "XLOOOP-COMM-001",
+        "title": "Prepare pilot-safe product proof",
+        "proj": "Commercial readiness",
+        "mode": "signoff",
+        "who": "@marat",
+        "due": "in 2d",
+        "pill": "Review",
+        "pillKind": "good"
+      }
+    ],
+    "settings": {
+      "name": "Xlooop",
+      "slug": "xlooop",
+      "visibility": "private",
+      "defaultRole": "Owner approved",
+      "slaDefault": "2 business days",
+      "gates": [
+        "Intent capture",
+        "Governed triage",
+        "Evidence",
+        "Sign-off",
+        "XCP feedback"
+      ],
+      "retention": "Commercial product proof; private MB-P context remains redacted",
+      "integrations": [
+        {
+          "name": "MB-P harness",
+          "status": "connected",
+          "sub": "Real operating proof and owner-intake evidence"
+        },
+        {
+          "name": "XCP event contracts",
+          "status": "connected",
+          "sub": "Generated mirror with drift guard"
+        }
+      ]
+    },
+    "source_mode": "staged_snapshot",
+    "generated_at": "2026-05-25T23:03:30.482Z",
+    "source_adapter": "xlooop_full_operations_readiness_v1",
+    "workspace_id": "xlooop",
+    "domain_id": "xlooop",
+    "domain_kind": "commercial_product"
+  },
+  "x-biz": {
+    "workspace_id": "x-biz",
+    "domain_id": "x-biz",
+    "domain_kind": "business_knowledge",
+    "source_mode": "staged_snapshot",
+    "generated_at": "2026-05-25T23:03:30.482Z",
+    "source_adapter": "xlooop_full_operations_readiness_v1",
+    "members": [
+      {
+        "name": "Marat Basyrov",
+        "handle": "@marat",
+        "role": "Owner",
+        "team": "x-biz",
+        "avail": "active",
+        "last": "now",
+        "since": "May 2026",
+        "initials": "MB",
+        "color": "alt-1"
+      }
+    ],
+    "teams": [
+      {
+        "id": "x-biz",
+        "name": "x-biz",
+        "sub": "Read-only adjacent domain surfaced for full-operations context",
+        "members": [
+          "@marat"
+        ],
+        "lead": "@marat"
+      }
+    ],
+    "activity": [
+      {
+        "what": "keeps business documentation and commercial claim posture visible to operations (role route invocation, not a workspace member)",
+        "where": "Commercial claim hygiene",
+        "when": "today",
+        "kind": "check",
+        "source_kind": "role_route",
+        "role_route_ref": "role-route:repo-schema-audit",
+        "source_label": "Knowledge Architect"
+      }
+    ],
+    "tasks": [
+      {
+        "id": "XBIZ-POSTURE-001",
+        "title": "Review public/private commercial claim posture",
+        "proj": "Commercial claim hygiene",
+        "mode": "signoff",
+        "who": "@marat",
+        "due": "after internal proof",
+        "pill": "Review",
+        "pillKind": "warn"
+      }
+    ],
+    "settings": {
+      "name": "x-biz",
+      "slug": "x-biz",
+      "visibility": "private",
+      "defaultRole": "Owner approved",
+      "slaDefault": "read-only review cadence",
+      "gates": [
+        "Source ownership",
+        "Read-only boundary",
+        "Evidence reference",
+        "Owner disposition"
+      ],
+      "retention": "No source mutation from Xlooop; evidence and metadata only",
+      "integrations": [
+        {
+          "name": "MB-P governance",
+          "status": "connected",
+          "sub": "Consumes/read-model metadata only"
+        }
+      ]
+    }
+  },
+  "x-docs": {
+    "workspace_id": "x-docs",
+    "domain_id": "x-docs",
+    "domain_kind": "development_docs",
+    "source_mode": "staged_snapshot",
+    "generated_at": "2026-05-25T23:03:30.482Z",
+    "source_adapter": "xlooop_full_operations_readiness_v1",
+    "members": [
+      {
+        "name": "Marat Basyrov",
+        "handle": "@marat",
+        "role": "Owner",
+        "team": "x-docs",
+        "avail": "active",
+        "last": "now",
+        "since": "May 2026",
+        "initials": "MB",
+        "color": "alt-1"
+      }
+    ],
+    "teams": [
+      {
+        "id": "x-docs",
+        "name": "x-docs",
+        "sub": "Read-only adjacent domain surfaced for full-operations context",
+        "members": [
+          "@marat"
+        ],
+        "lead": "@marat"
+      }
+    ],
+    "activity": [
+      {
+        "what": "keeps development and QA documentation boundary discoverable (role route invocation, not a workspace member)",
+        "where": "Development and QA docs boundary",
+        "when": "today",
+        "kind": "check",
+        "source_kind": "role_route",
+        "role_route_ref": "role-route:repo-schema-audit",
+        "source_label": "Knowledge Architect"
+      }
+    ],
+    "tasks": [
+      {
+        "id": "XDOCS-BOUNDARY-001",
+        "title": "Confirm dev/QA documentation boundary remains current",
+        "proj": "Development and QA docs boundary",
+        "mode": "evidence",
+        "who": "@marat",
+        "due": "weekly",
+        "pill": "Monitor",
+        "pillKind": "info"
+      }
+    ],
+    "settings": {
+      "name": "x-docs",
+      "slug": "x-docs",
+      "visibility": "private",
+      "defaultRole": "Owner approved",
+      "slaDefault": "read-only review cadence",
+      "gates": [
+        "Source ownership",
+        "Read-only boundary",
+        "Evidence reference",
+        "Owner disposition"
+      ],
+      "retention": "No source mutation from Xlooop; evidence and metadata only",
+      "integrations": [
+        {
+          "name": "MB-P governance",
+          "status": "connected",
+          "sub": "Consumes/read-model metadata only"
+        }
+      ]
+    }
+  },
+  "x-front": {
+    "workspace_id": "x-front",
+    "domain_id": "x-front",
+    "domain_kind": "frontend_reference",
+    "source_mode": "staged_snapshot",
+    "generated_at": "2026-05-25T23:03:30.482Z",
+    "source_adapter": "xlooop_full_operations_readiness_v1",
+    "members": [
+      {
+        "name": "Marat Basyrov",
+        "handle": "@marat",
+        "role": "Owner",
+        "team": "x-front",
+        "avail": "active",
+        "last": "now",
+        "since": "May 2026",
+        "initials": "MB",
+        "color": "alt-1"
+      }
+    ],
+    "teams": [
+      {
+        "id": "x-front",
+        "name": "x-front",
+        "sub": "Read-only adjacent domain surfaced for full-operations context",
+        "members": [
+          "@marat"
+        ],
+        "lead": "@marat"
+      }
+    ],
+    "activity": [
+      {
+        "what": "tracks Ilmir-owned x-front compatibility in read-only mode (role route invocation, not a workspace member)",
+        "where": "Ilmir branch compatibility",
+        "when": "today",
+        "kind": "check",
+        "source_kind": "role_route",
+        "role_route_ref": "role-route:frontend-architecture-review",
+        "source_label": "Frontend Architect"
+      }
+    ],
+    "tasks": [
+      {
+        "id": "XFRONT-RO-001",
+        "title": "Read-only compatibility matrix after Ilmir handoff",
+        "proj": "Ilmir branch compatibility",
+        "mode": "lineage",
+        "who": "@marat",
+        "due": "after Focus gates",
+        "pill": "Blocked",
+        "pillKind": "bad"
+      }
+    ],
+    "settings": {
+      "name": "x-front",
+      "slug": "x-front",
+      "visibility": "private",
+      "defaultRole": "Owner approved",
+      "slaDefault": "read-only review cadence",
+      "gates": [
+        "Source ownership",
+        "Read-only boundary",
+        "Evidence reference",
+        "Owner disposition"
+      ],
+      "retention": "No source mutation from Xlooop; evidence and metadata only",
+      "integrations": [
+        {
+          "name": "MB-P governance",
+          "status": "connected",
+          "sub": "Consumes/read-model metadata only"
+        }
+      ]
+    }
+  },
+  "aps-pty-ltd": {
+    "_r50_tail_7_note": "R50-Tail-7 (2026-05-28) · Andrey Petrushko + Dominic Ogburn removed from members + teams. They were public-website-scraped contacts (source_mode: public_website_snapshot), not invited Xlooop members. They have their own customer-side login path and should not appear in the operator's MB-P ecosystem. Workspace skeleton retained pending R52 full tenant separation (move aps-pty-ltd to its own Cloudflare Pages deploy with isolated tenant data).",
+    "members": [],
+    "teams": [],
+    "activity": [
+      {
+        "what": "built sanitized APS profile from website, ABN, and provided intake (role route invocation, not a workspace member)",
+        "where": "Business intake",
+        "when": "now",
+        "kind": "check",
+        "source_kind": "role_route",
+        "role_route_ref": "role-route:customer-onboarding-discovery",
+        "source_label": "Public discovery"
+      },
+      {
+        "what": "blocked private integrations pending authority and consent (role route invocation, not a workspace member)",
+        "where": "Source register",
+        "when": "today",
+        "kind": "block",
+        "source_kind": "role_route",
+        "role_route_ref": "role-route:customer-onboarding-discovery",
+        "source_label": "Xlooop onboarding"
+      }
+    ],
+    "tasks": [
+      {
+        "id": "APS-AUTH-001",
+        "title": "Confirm Andrey/Dominic onboarding authority",
+        "proj": "Business intake",
+        "mode": "signoff",
+        "who": null,
+        "due": "before integrations",
+        "pill": "Authority",
+        "pillKind": "warn",
+        "_r50_tail_7_note": "R50-Tail-7 · who set to null after Andrey/Dominic removed from members[] · task title intentionally retained for operator-prospect-context"
+      },
+      {
+        "id": "APS-DATA-001",
+        "title": "Confirm do-not-ingest list and first workflow package",
+        "proj": "Business intake",
+        "mode": "evidence",
+        "who": null,
+        "due": "next",
+        "pill": "Boundary",
+        "pillKind": "warn",
+        "_r50_tail_7_note": "R50-Tail-7 · who set to null after Andrey/Dominic removed from members[]"
+      }
+    ],
+    "settings": {
+      "name": "APS Pty Ltd",
+      "slug": "aps-pty-ltd",
+      "visibility": "private onboarding sandbox",
+      "defaultRole": "Owner candidate",
+      "slaDefault": "authority before private integration",
+      "gates": [
+        "Authority",
+        "Privacy",
+        "Source register",
+        "Do-not-ingest",
+        "Workflow confirmation",
+        "AI-ready scorecard"
+      ],
+      "retention": "No raw client/property data in product projection",
+      "integrations": [
+        {
+          "name": "Public website",
+          "status": "connected_public",
+          "sub": "Sanitized website facts only"
+        },
+        {
+          "name": "ABN Lookup",
+          "status": "public_candidate",
+          "sub": "Entity candidate needs customer confirmation"
+        },
+        {
+          "name": "Google Workspace/Gmail",
+          "status": "blocked",
+          "sub": "Requires authority and consent"
+        },
+        {
+          "name": "Xero/Stripe",
+          "status": "blocked",
+          "sub": "Requires authority and consent"
+        }
+      ]
+    },
+    "workspace_id": "aps-pty-ltd",
+    "domain_id": "aps-pty-ltd",
+    "domain_kind": "operations",
+    "source_mode": "staged_snapshot",
+    "generated_at": "2026-05-25T23:03:30.482Z",
+    "source_adapter": "xlooop_full_operations_readiness_v1"
+  }
+}

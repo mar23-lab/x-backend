@@ -1,0 +1,36 @@
+{
+  "schema_version": "xlooop.tenant_entitlement_proof.v1",
+  "tenant_id": "example-customer",
+  "environment": "test",
+  "cloudflare_access_identity": {
+    "email": "customer@example.com",
+    "access_group": "xlooop-test-named-testers",
+    "verified_by_cloudflare_access": true
+  },
+  "invitation_code": {
+    "present": true,
+    "purpose": "routing_and_invitation_hint_only",
+    "expires_at": "2026-06-30T00:00:00Z",
+    "single_use_or_rate_limited": true
+  },
+  "xlooop_entitlement": {
+    "enabled": true,
+    "default_action_mode": "watch_or_proposal_only",
+    "operator_mode_enabled": false
+  },
+  "xcp_second_level_entitlement": {
+    "enabled": false,
+    "enabled_by_admin": null,
+    "reason": "XCP requires separate admin approval per user."
+  },
+  "data_boundary": {
+    "customer_safe_export_manifest": "data/customer-safe-export-manifest.json",
+    "raw_mbp_private_data_allowed": false,
+    "raw_customer_private_data_allowed": false
+  },
+  "owner_approval": {
+    "approved_by": null,
+    "approved_at": null,
+    "evidence_refs": []
+  }
+}

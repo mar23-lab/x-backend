@@ -1,0 +1,145 @@
+{
+  "schema_version": "xlooop.packet_persistence_collaboration_boundary.v1",
+  "boundary_id": "boundary-260510-c105-persistence-collaboration",
+  "contract_kind": "packet_persistence_collaboration_boundary",
+  "contract_version": "0.1.0",
+  "state": "contract_only_no_backend_persistence",
+  "packet_id": "packet-260510-c105-persistence-boundary",
+  "intent_id": "intent-260510-c105-persistence-boundary",
+  "tenant_id": "tenant.mbp",
+  "workspace_id": "xlooop",
+  "project_id": "xlooop-product",
+  "persistence_policy": {
+    "persistence_mode": "owner_approved_persistent",
+    "authority": "xlooop_owner_packet",
+    "allowed_fields": [
+      "packet_id",
+      "intent_id",
+      "workspace_id",
+      "project_id",
+      "title",
+      "source_type",
+      "source_domains",
+      "role_panel",
+      "required_skills",
+      "owner_confirmation_state",
+      "lifecycle_state",
+      "graph_state",
+      "evidence_ref_ids",
+      "decision_ref_ids",
+      "xcp_feedback_state",
+      "created_at",
+      "updated_at"
+    ],
+    "forbidden_fields": [
+      "raw_text",
+      "raw_content",
+      "private_payload",
+      "secret",
+      "token",
+      "credential",
+      "mbp_private_note_body",
+      "protected_source_code"
+    ],
+    "source_refs": [
+      {
+        "contract_version": "0.1.0",
+        "source_type": "operator_review",
+        "uri": "docs/_archive/audits/260510_1625_operations-readiness-decision-c104.md",
+        "title": "C104 operations readiness decision",
+        "last_verified_at": "2026-05-10T16:25:00+10:00",
+        "raw_content_included": false,
+        "source_repo": "Xlooop-XCP-demo",
+        "source_access_mode": "local_owned"
+      }
+    ],
+    "graph_state": {
+      "graph_node_id": "graph:packet:c105-persistence-boundary",
+      "graph_layer": "lean_context",
+      "graph_visibility": "workspace",
+      "graph_sensitivity": "internal",
+      "source_ref_uris": [
+        "docs/_archive/audits/260510_1625_operations-readiness-decision-c104.md"
+      ],
+      "evidence_ref_ids": [
+        "evidence:c104-readiness-decision"
+      ]
+    },
+    "writes_back_to_mbp_allowed": false,
+    "backend_persistence_implemented": false,
+    "owner_approval_required": true,
+    "private_payload_allowed": false
+  },
+  "collaboration_policy": {
+    "collaboration_mode": "owner_only",
+    "tenant_id": "tenant.mbp",
+    "workspace_id": "xlooop",
+    "project_id": "xlooop-product",
+    "invited_collaborators_enabled": false,
+    "invited_collaborator_requires_owner_approval": true,
+    "collaborator_visibility": [
+      {
+        "actor_id": "actor.marat",
+        "role": "Owner",
+        "allowed_permissions": [
+          "read",
+          "comment",
+          "triage",
+          "approve"
+        ],
+        "visible_fields": [
+          "packet_id",
+          "intent_id",
+          "workspace_id",
+          "project_id",
+          "title",
+          "source_type",
+          "source_domains",
+          "role_panel",
+          "required_skills",
+          "owner_confirmation_state",
+          "lifecycle_state",
+          "graph_state",
+          "evidence_ref_ids",
+          "decision_ref_ids",
+          "xcp_feedback_state",
+          "created_at",
+          "updated_at"
+        ],
+        "hidden_fields": [
+          "raw_text",
+          "raw_content",
+          "private_payload",
+          "secret",
+          "token",
+          "credential",
+          "mbp_private_note_body",
+          "protected_source_code"
+        ],
+        "can_see_mbp_projection_metadata": true,
+        "can_see_private_mbp_payload": false,
+        "can_mutate_source_packet": false
+      }
+    ],
+    "external_share_requires_signed_url": true,
+    "public_link_allowed": false
+  },
+  "blocked_actions": [
+    "write_mbp_repo",
+    "copy_private_payload",
+    "expose_raw_owner_notes",
+    "enable_public_link",
+    "invite_without_owner_approval",
+    "mutate_xfront_or_xdocs",
+    "promote_xcp_event_without_decision"
+  ],
+  "verification_refs": [
+    "scripts/seam-gates/run.mjs --gate packet-persistence-collaboration-boundary",
+    "src/__contracts__/packetPersistenceCollaborationBoundary.contract.test.ts"
+  ],
+  "next_recommended_slice": {
+    "id": "C106-PERSISTENCE-COLLABORATION-STORY-02",
+    "title": "Surface persistence/collaboration boundary readiness in Operations without backend writes",
+    "reason": "Owner should see what is contractually safe before backend persistence or invited-collaborator flows are implemented."
+  }
+}

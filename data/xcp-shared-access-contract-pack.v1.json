@@ -1,0 +1,284 @@
+{
+  "schema_version": "xcp.shared_access_contract_pack.v1",
+  "pack_version": "2026.05.21",
+  "authority": "xcp-platform",
+  "governance_authority": "MB-P",
+  "product_consumers": [
+    "xlooop",
+    "xcp-control-plane"
+  ],
+  "package_manager_policy": "vendor_public_safe_pack_for_cloud_deploys_no_sibling_file_dependencies",
+  "source_authority_policy": {
+    "current_source_authority": {
+      "xcp-platform": "GitHub mar23-lab/xcp-platform plus governed local clone",
+      "Xlooop-XCP-demo": "GitHub mar23-lab/Xlooop-XCP-demo plus governed local clone",
+      "x-biz": "GitHub mar23-lab/x-biz plus governed local clone",
+      "x-docs": "GitHub x-ude/x-docs read-only evidence unless owner-approved",
+      "x-front": "GitHub x-ude/x-front read-only evidence unless owner-approved"
+    },
+    "legacy_provenance": {
+      "Bitbucket": "historical/provenance only; never an active dependency or default context"
+    },
+    "local_clone_authority": "local clones are execution evidence only when MB-P route and branch guards authorize the target",
+    "owner_boundary": "Ilmir-owned x-front and x-docs are read-only from Marat-owned sessions until explicit owner-approved scope exists",
+    "governance_source": "MB-P CANONICAL_SOURCES_REGISTRY.yml"
+  },
+  "canonical_access_chain": [
+    "cloudflare_access_identity",
+    "app_entitlement",
+    "tenant_membership",
+    "role_permission",
+    "operating_context",
+    "receipt_policy"
+  ],
+  "required_packages": [
+    {
+      "package_name": "@xcp/identity-contracts",
+      "version": "0.2.0",
+      "package_path": "packages/xcp-identity-contracts"
+    },
+    {
+      "package_name": "@xcp/access-policy",
+      "version": "0.1.0",
+      "package_path": "packages/xcp-access-policy"
+    },
+    {
+      "package_name": "@xcp/operating-context",
+      "version": "0.1.0",
+      "package_path": "packages/xcp-operating-context"
+    },
+    {
+      "package_name": "@xcp/proposal-receipts",
+      "version": "0.1.0",
+      "package_path": "packages/xcp-proposal-receipts"
+    },
+    {
+      "package_name": "@xcp/read-model-contracts",
+      "version": "0.1.0",
+      "package_path": "packages/xcp-read-model-contracts"
+    },
+    {
+      "package_name": "@xcp/commercial-readiness-contracts",
+      "version": "0.1.0",
+      "package_path": "packages/xcp-commercial-readiness-contracts"
+    },
+    {
+      "package_name": "@xcp/feedback-annotations",
+      "version": "0.1.0",
+      "package_path": "packages/xcp-feedback-annotations"
+    }
+  ],
+  "required_contracts": {
+    "app_ids": [
+      "xlooop",
+      "xcp"
+    ],
+    "app_entitlement_statuses": [
+      "active",
+      "disabled",
+      "expired",
+      "revoked",
+      "pending_approval"
+    ],
+    "operating_modes": [
+      "watch",
+      "test",
+      "operator"
+    ],
+    "platform_roles": [
+      "mbp_ecosystem_operator",
+      "xlooop_company_owner_admin",
+      "xcp_platform_admin",
+      "company_telemetry_viewer"
+    ],
+    "telemetry_scopes": [
+      "company_aggregate_usage",
+      "tenant_admin_summary",
+      "tenant_raw_break_glass",
+      "mbp_internal_governance"
+    ],
+    "xcp_default_entitlement": "disabled",
+    "xlooop_access_grants_xcp": false,
+    "test_mode_behavior": "feedback_annotation_only_non_mutating",
+    "access_code_security_role": "invitation_routing_hint_not_authentication",
+    "tenant_raw_scope_policy": "audited_break_glass_required_not_default_owner_view",
+    "paid_pilot_contracts": [
+      "PaidPilotAuthorityContract",
+      "PaidPilotAuthorityEvidence",
+      "PaidPilotPrincipalKind",
+      "ActorRef",
+      "WorkspaceMemberProjection",
+      "ProjectMemberProjection",
+      "GovernedRoleRouteProjection",
+      "AgentCapabilityProjection",
+      "AgentRuntimeEvent",
+      "ActivityEventProjection",
+      "WorkItemAssignmentProjection",
+      "NotificationSourceProjection",
+      "FixtureProvenance",
+      "DisplaySurfaceTaxonomy",
+      "ActionPolicy",
+      "ExecutionReceipt",
+      "SourceWritebackReceipt"
+    ],
+    "member_role_agent_boundary": {
+      "actor_ref": "ActorRef.v1_real_human_external_or_service_account",
+      "member_projection": "WorkspaceMemberProjection.v1_human_external_service_account_only",
+      "project_member_projection": "ProjectMemberProjection.v1_human_external_service_account_only",
+      "role_route_projection": "GovernedRoleRouteProjection.v1_invocation_routes_not_members",
+      "capability_projection": "AgentCapabilityProjection.v1_automation_capabilities_not_staff",
+      "runtime_event_projection": "AgentRuntimeEvent.v1_audited_execution_not_standing_membership",
+      "activity_event_projection": "ActivityEventProjection.v1_typed_source_kind_not_ambiguous_who",
+      "work_item_assignment_projection": "WorkItemAssignmentProjection.v1_responsible_actor_plus_supporting_routes_capabilities",
+      "notification_source_projection": "NotificationSourceProjection.v1_typed_source_kind_not_member",
+      "fixture_provenance": "FixtureProvenance.v1_live_fixture_legacy_planned_blocked_deferred",
+      "display_surface_taxonomy": "DisplaySurfaceTaxonomy.v1_member_role_capability_runtime_event_receipt_task_activity_fixture",
+      "agent_profile_status": "deferred_until_execution_persistence_assignment_audit_surface_exists"
+    },
+    "paid_pilot_operator_boundary": "go_with_restrictions_requires_signed_access_jwt_explicit_entitlement_action_policy_durable_receipt",
+    "paid_pilot_source_writeback_boundary": "markdown_only_backend_adapter_collaboration_claim_verifier_rollback_required",
+    "commercial_readiness_contracts": [
+      "CommercialReadinessPosture",
+      "OperatorOnboardingDecision",
+      "PilotAuthorityEvidence"
+    ],
+    "controlled_pilot_commercial_stance": "go_with_restrictions",
+    "public_self_serve_readiness": "not_claimed",
+    "private_paid_operator_mode": "operator_gated_disabled_until_marat_decision_and_evidence",
+    "auth_session_fixture_archetypes": [
+      "marat_xlooop_xcp_admin",
+      "andrey_xlooop_tenant_only",
+      "named_tester_xlooop_watch_test",
+      "investor_data_room_read_only",
+      "authenticated_denied_no_entitlement"
+    ],
+    "auth_session_source_policy": "cloudflare_access_oidc_service_token_local_dev_and_test_fixture_are_authentication_sources_only_app_entry_requires_explicit_entitlement",
+    "source_authority_fields": [
+      "current_source_authority",
+      "legacy_provenance",
+      "local_clone_authority",
+      "owner_boundary"
+    ]
+  },
+  "public_safe_surface": [
+    "identity_id",
+    "actor_id",
+    "email",
+    "display_name",
+    "identity_source",
+    "tenant_id",
+    "owner_graph_id",
+    "memberships",
+    "app_entitlements",
+    "permissions",
+    "platform_roles",
+    "telemetry_scopes",
+    "session_issued_at",
+    "session_expires_at",
+    "assurance_level",
+    "WorkspaceMemberProjection",
+    "ProjectMemberProjection",
+    "GovernedRoleRouteProjection",
+    "AgentCapabilityProjection",
+    "AgentRuntimeEvent",
+    "ActorRef",
+    "ActivityEventProjection",
+    "WorkItemAssignmentProjection",
+    "NotificationSourceProjection",
+    "FixtureProvenance",
+    "DisplaySurfaceTaxonomy"
+  ],
+  "forbidden_consumer_patterns": [
+    "sibling file dependency to xcp-platform",
+    "xlooop entitlement implies xcp entitlement",
+    "operator mode without backend entitlement check",
+    "feedback mode as separate authority",
+    "Bitbucket as active source authority",
+    "product repo inferred from local path instead of MB-P route authority",
+    "role route rendered as workspace member",
+    "agent capability rendered as invited staff",
+    "role route or capability rendered as task owner",
+    "ambiguous who field for non-human activity source",
+    "storybook member fixture with kind agent while agent_profile is deferred",
+    "automation capability grouped under role routes as if it were an invocation persona",
+    "agent_profile treated as live before deferred trigger conditions are met"
+  ],
+  "sources": [
+    {
+      "package_name": "@xcp/identity-contracts",
+      "path": "packages/xcp-identity-contracts/package.json",
+      "sha256": "a2477db56d3e5ca90e4b1ad129ae849b31614496f81a659f446185ecdfc54728"
+    },
+    {
+      "package_name": "@xcp/identity-contracts",
+      "path": "packages/xcp-identity-contracts/src/index.ts",
+      "sha256": "393f67fc5211255f51f411965e4825762aeb4247352f7f40a65077b2b60f9ba4"
+    },
+    {
+      "package_name": "@xcp/identity-contracts",
+      "path": "packages/xcp-identity-contracts/fixtures/auth-session-principals.v1.json",
+      "sha256": "569ac77ac951393607e7b328893f8514872ac0638dd8dfbebbcbdf01f3ef9fcb"
+    },
+    {
+      "package_name": "@xcp/access-policy",
+      "path": "packages/xcp-access-policy/package.json",
+      "sha256": "f4492204d0b29c5c5ac82c3e61090bab7eb13acfd8bec393a709caa74c71c09b"
+    },
+    {
+      "package_name": "@xcp/access-policy",
+      "path": "packages/xcp-access-policy/src/index.ts",
+      "sha256": "4f2a864e5952301d4a7e5f55b7e383c754a5359102d2acb173be3318437cabbc"
+    },
+    {
+      "package_name": "@xcp/operating-context",
+      "path": "packages/xcp-operating-context/package.json",
+      "sha256": "0176c7fc40cefb2ef8df9013596100ed83201953201344d5988f5d659aeaad6d"
+    },
+    {
+      "package_name": "@xcp/operating-context",
+      "path": "packages/xcp-operating-context/src/index.ts",
+      "sha256": "f2d02539f9d8e1fff8d56ee7cfbeeb32c795313d4ac784f72f2265ca1739a719"
+    },
+    {
+      "package_name": "@xcp/proposal-receipts",
+      "path": "packages/xcp-proposal-receipts/package.json",
+      "sha256": "dd13a09f4678382be6b63fe00a836be1cb9e8e852219d83d66d045a50e452b49"
+    },
+    {
+      "package_name": "@xcp/proposal-receipts",
+      "path": "packages/xcp-proposal-receipts/src/index.ts",
+      "sha256": "74544dafd9285dd0523a829697b9ff88243016da94189c2313bac3b11a3d830d"
+    },
+    {
+      "package_name": "@xcp/read-model-contracts",
+      "path": "packages/xcp-read-model-contracts/package.json",
+      "sha256": "201155a0e975361b452085b95a0e3246e1acb5f65cb7d4dc5fba44a0abbe8554"
+    },
+    {
+      "package_name": "@xcp/read-model-contracts",
+      "path": "packages/xcp-read-model-contracts/src/index.ts",
+      "sha256": "3d34ae73a4f897deaa3481432f58cdde8721fbe0c06027653d7f66909c5c2a52"
+    },
+    {
+      "package_name": "@xcp/commercial-readiness-contracts",
+      "path": "packages/xcp-commercial-readiness-contracts/package.json",
+      "sha256": "788791ddd46047ace4f0dc84e3c7bdaa9bb4a879a0acef1fb9dc1257f6659737"
+    },
+    {
+      "package_name": "@xcp/commercial-readiness-contracts",
+      "path": "packages/xcp-commercial-readiness-contracts/src/index.ts",
+      "sha256": "79e909eb037ddc651b2985c76d718866b036c4a9189f2c6af9285100ca52c753"
+    },
+    {
+      "package_name": "@xcp/feedback-annotations",
+      "path": "packages/xcp-feedback-annotations/package.json",
+      "sha256": "14cb7889a8e04a959c2d43d2552c9b2f71063377ce1ee1133e9c219dd79c739e"
+    },
+    {
+      "package_name": "@xcp/feedback-annotations",
+      "path": "packages/xcp-feedback-annotations/src/index.ts",
+      "sha256": "ce48b305bd715c7fb40c4d00bc80921115436eb9a8970bc272a5d7bd7431f67b"
+    }
+  ],
+  "contract_pack_sha256": "46bfea3a4e61af92a439bbcc83bec8c4d689204bf0ce86f0f238ca84ebd23b8a"
+}

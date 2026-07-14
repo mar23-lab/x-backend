@@ -1,0 +1,39 @@
+{
+  "schema_version": "xlooop.backend_proposal_receipt_contract.v1",
+  "source_mode": "browser_safe_contract",
+  "status": "local_adapter_contract_present_backend_required_for_paid_pilot",
+  "runtime_adapter": "BackendProposalReceiptGateway",
+  "browser_storage_key": "xcp.backend.proposal_receipts.v1",
+  "backend_authoritative": false,
+  "direct_execution_allowed": false,
+  "required_fields": [
+    "receipt_id",
+    "idempotency_key",
+    "actor_id",
+    "tenant_id",
+    "workspace_id",
+    "project_id",
+    "lane_id",
+    "action_id",
+    "mode",
+    "status",
+    "created_at",
+    "rollback_note"
+  ],
+  "statuses": [
+    "proposed",
+    "pending_approval",
+    "executing",
+    "succeeded",
+    "failed",
+    "cancelled",
+    "rolled_back"
+  ],
+  "required_behaviors": [
+    "Operator Mode creates backend-shaped proposal receipts first, not direct mutation.",
+    "Watch Mode must never create backend mutations.",
+    "Duplicate operator clicks use idempotency keys and do not create duplicate active proposals.",
+    "Receipts are visible in stream, inspector, right rail, and project history projections.",
+    "Real execution remains disabled until allowlisted backend handlers, approvals, and rollback policies exist."
+  ]
+}

@@ -1,0 +1,102 @@
+id: c29_story_01_storybook_dod_state_matrix
+created_at: "2026-05-09T11:09:00+10:00"
+date_key: "260509_1109"
+owner: Marat Basyrov
+scope: storybook_governance_documentation_only
+source_xfront:
+  repo_path: /Users/maratbasyrov/WIP/Xlooop/x-front
+  head_sha: 401e6d40a0befc683a7a410f1ed0aee0afd6f492
+  head_short: 401e6d4
+decision:
+  verdict: adopt_dod_scorecard_discipline_not_source
+  xfront_code_import_authorized: false
+  xfront_file_mutation_authorized: false
+  demo_runtime_change_authorized: false
+  archive_delete_move_authorized: false
+role_panel:
+  - chief-of-staff
+  - cto
+  - ux
+  - product-manager
+  - knowledge-architect
+  - ai-governed-infrastructure-manager
+  - devsecops
+  - lead-engineer
+skills_used:
+  - component-contract-storybook
+  - product-engineering-router
+  - existing-artifact-discovery
+evidence:
+  xfront:
+    dod_scorecard:
+      path: /Users/maratbasyrov/WIP/Xlooop/x-front/docs/frontend-audit/DOD-SCORECARD.md
+      score: "76/76"
+      transfer_decision: adopt_scorecard_concept
+    definition_of_done:
+      path: /Users/maratbasyrov/WIP/Xlooop/x-front/docs/frontend-audit/07-definition-of-done.md
+      transfer_decision: adapt_state_matrix_and_proof_rules
+    storybook_finalisation:
+      path: /Users/maratbasyrov/WIP/Xlooop/x-front/docs/frontend-audit/11-storybook-finalisation.md
+      transfer_decision: adopt_no_overclaim_phase_closure
+    story_count:
+      value: 107
+      transfer_decision: reference_only
+  demo:
+    story_count:
+      value: 35
+    contract_json_count:
+      value: 17
+    play_story_count:
+      value: 13
+    component_dod:
+      path: src/shared/storybook/docs/Component-DoD.mdx
+      transfer_decision: update_with_c29_addendum
+maturity_levels:
+  - level: 0
+    meaning: no_story
+  - level: 1
+    meaning: visual_placeholder
+  - level: 2
+    meaning: basic_states
+  - level: 3
+    meaning: fixture_and_contract_backed
+  - level: 4
+    meaning: interaction_a11y_client_safety_ready
+  - level: 5
+    meaning: contract_driven_and_scorecard_gated
+adopted_principles:
+  - filesystem_proof_beats_self_report
+  - generated_scorecard
+  - state_matrix_per_component_widget
+  - fixture_or_view_model_marker
+  - interaction_tests_for_interactive_ui
+  - client_safety_proof
+  - phase_closure_checklist
+priority_backlog:
+  - id: SB-DOD-01
+    title: add_demo_generated_storybook_dod_scorecard
+    effort: M
+    risk: 25
+  - id: SB-DOD-02
+    title: extend_contract_json_schema_with_maturity_state_matrix_fields
+    effort: S
+    risk: 20
+  - id: SB-DOD-03
+    title: add_level_4_checks_for_p0_journey_stories
+    effort: M
+    risk: 30
+  - id: SB-DOD-04
+    title: add_closure_checklist_row_to_pr_phase_docs
+    effort: S
+    risk: 15
+  - id: SB-DOD-05
+    title: keep_xfront_storybook_as_reference_only
+    effort: XS
+    risk: 5
+stop_conditions:
+  - stop_on_direct_xfront_story_or_component_import
+  - stop_on_maturity_claim_without_filesystem_evidence
+  - stop_on_client_visible_story_private_data_leak
+  - stop_on_xcp_platform_admin_surface_mixed_into_product_storybook
+  - stop_on_component_bypassing_tier_shipping_rules
+recommended_next_slice: C29-UIKIT-01

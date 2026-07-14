@@ -1,0 +1,199 @@
+{
+  "schema_version": "xlooop.customer_health_value_read_model.v1",
+  "generated_at": "2026-05-17T11:25:00.000Z",
+  "source_mode": "public_discovery_only_preliminary_baseline",
+  "customer_id": "aps-access-property-services",
+  "customer_name": "Access Property Services / Access Built Pty Ltd candidate",
+  "review_id": "aps-health-public-baseline-20260517",
+  "review_mode": "authority_pending",
+  "authority_status": "pending",
+  "consent_status": "pending",
+  "internal_knowledge_status": "not_provided",
+  "internal_knowledge_processed": false,
+  "raw_dirty_files_processed": false,
+  "private_integrations_allowed": false,
+  "operator_mode_allowed": false,
+  "github_remote_launch_allowed": false,
+  "team_invite_allowed": false,
+  "score_cap": 70,
+  "uncapped_preliminary_score": 64,
+  "capped_preliminary_score": 64,
+  "score_disclosures": [
+    "APS has not provided approved internal/raw/dirty knowledge.",
+    "The baseline uses public discovery and existing sterile skeleton evidence only.",
+    "Internal stance, value realised, workflow metrics, and ROI are not validated.",
+    "Private integrations, GitHub remote launch, team invites, Operator mode, and exact ROI/savings claims remain blocked."
+  ],
+  "preliminary_onboarding_scores": {
+    "onboarding_readiness": 62,
+    "ai_ready_ecosystem": 55,
+    "source_coverage": 58,
+    "privacy_safety": 82,
+    "team_invite_readiness": 42,
+    "workflow_opportunity_readiness": 86
+  },
+  "dimensions": [
+    {
+      "dimension_id": "public_internal_alignment",
+      "weight": 10,
+      "score_0_to_5": 2,
+      "weighted_score": 4,
+      "evidence_refs": ["data/customer-onboarding-read-model.json", "Andrey P - Ecosystem/business/public-discovery.md"],
+      "source_posture": "public_only",
+      "confidence": "medium",
+      "freshness_days": 0,
+      "blocked_by": ["customer_internal_stance_not_confirmed"]
+    },
+    {
+      "dimension_id": "leadership_team_professional_focus_clarity",
+      "weight": 8,
+      "score_0_to_5": 2,
+      "weighted_score": 3.2,
+      "evidence_refs": ["data/customer-onboarding-read-model.json"],
+      "source_posture": "public_only",
+      "confidence": "low",
+      "freshness_days": 0,
+      "blocked_by": ["identity_and_authority_confirmation_pending"]
+    },
+    {
+      "dimension_id": "operational_evidence_quality",
+      "weight": 14,
+      "score_0_to_5": 2,
+      "weighted_score": 5.6,
+      "evidence_refs": ["Andrey P - Ecosystem/business/baseline-scorecard.md", "Andrey P - Ecosystem/workflows/workflow-opportunity-radar.md"],
+      "source_posture": "public_only",
+      "confidence": "medium",
+      "freshness_days": 0,
+      "blocked_by": ["no_approved_internal_sources"]
+    },
+    {
+      "dimension_id": "source_provenance_coverage",
+      "weight": 10,
+      "score_0_to_5": 3,
+      "weighted_score": 6,
+      "evidence_refs": ["data/customer-onboarding-read-model.json", "Andrey P - Ecosystem/sources/SOURCE_REGISTER.yml"],
+      "source_posture": "public_only",
+      "confidence": "medium",
+      "freshness_days": 0,
+      "blocked_by": ["private_source_register_not_confirmed"]
+    },
+    {
+      "dimension_id": "compliance_governance_readiness",
+      "weight": 12,
+      "score_0_to_5": 3,
+      "weighted_score": 7.2,
+      "evidence_refs": ["Andrey P - Ecosystem/governance/PRIVACY_AND_CONSENT.md", "Andrey P - Ecosystem/identity/authority-and-consent.md"],
+      "source_posture": "public_only",
+      "confidence": "medium",
+      "freshness_days": 0,
+      "blocked_by": ["authority_pending", "consent_pending"]
+    },
+    {
+      "dimension_id": "roadmap_alignment",
+      "weight": 12,
+      "score_0_to_5": 3,
+      "weighted_score": 7.2,
+      "evidence_refs": ["Andrey P - Ecosystem/roadmap/ROADMAP.md", "Andrey P - Ecosystem/todos/TODOS.md"],
+      "source_posture": "public_only",
+      "confidence": "medium",
+      "freshness_days": 0,
+      "blocked_by": ["customer_priority_confirmation_pending"]
+    },
+    {
+      "dimension_id": "capability_maturity",
+      "weight": 10,
+      "score_0_to_5": 2,
+      "weighted_score": 4,
+      "evidence_refs": ["Andrey P - Ecosystem/governance/AI_TOOL_READINESS.md"],
+      "source_posture": "public_only",
+      "confidence": "medium",
+      "freshness_days": 0,
+      "blocked_by": ["approved_tool_source_evidence_missing"]
+    },
+    {
+      "dimension_id": "risk_control",
+      "weight": 10,
+      "score_0_to_5": 4,
+      "weighted_score": 8,
+      "evidence_refs": ["data/customer-onboarding-read-model.json", "Andrey P - Ecosystem/sources/DO_NOT_INGEST.yml"],
+      "source_posture": "public_only",
+      "confidence": "high",
+      "freshness_days": 0,
+      "blocked_by": ["customer_specific_do_not_ingest_confirmation_pending"]
+    },
+    {
+      "dimension_id": "value_realised",
+      "weight": 9,
+      "score_0_to_5": 1,
+      "weighted_score": 1.8,
+      "evidence_refs": ["Andrey P - Ecosystem/workflows/workflow-opportunity-radar.md"],
+      "source_posture": "public_only",
+      "confidence": "low",
+      "freshness_days": 0,
+      "blocked_by": ["value_is_hypothesis_only", "no_internal_baseline"]
+    },
+    {
+      "dimension_id": "future_value_opportunity",
+      "weight": 5,
+      "score_0_to_5": 4,
+      "weighted_score": 4,
+      "evidence_refs": ["Andrey P - Ecosystem/workflows/workflow-opportunity-radar.md"],
+      "source_posture": "public_only",
+      "confidence": "medium",
+      "freshness_days": 0,
+      "blocked_by": ["customer_selection_pending"]
+    }
+  ],
+  "roadmap_recommendations": [
+    {
+      "recommendation_id": "aps-p1-lead-intake-quote-conversion",
+      "title": "Lead intake and quote conversion baseline",
+      "problem_addressed": "Public discovery suggests lead response, quote follow-up, and win/loss visibility may be practical first value areas.",
+      "evidence_refs": ["Andrey P - Ecosystem/workflows/workflow-opportunity-radar.md"],
+      "expected_value": "Qualitative only until approved lead/quote sources validate baseline.",
+      "risk_reduced": "Avoids starting with sensitive report/photo corpus before trust and authority are confirmed.",
+      "effort": "low-medium",
+      "priority": "P1",
+      "dependencies": ["authority_confirmed", "source_boundaries_confirmed", "lead_source_approved"],
+      "owner": "domain-operator",
+      "success_metric": "inquiry_to_first_response_time and quote_turnaround_time baseline established",
+      "next_action": "Ask Andrey/Dominic to confirm whether inquiry-to-quote is the first workflow to model.",
+      "source_posture": "public_only",
+      "claim_posture": "hypothesis_no_roi_claim"
+    }
+  ],
+  "claim_hygiene": {
+    "unsupported_roi_claims": 0,
+    "blocked_claims": [
+      "validated ROI",
+      "production customer operations",
+      "internal/private source processing",
+      "autonomous customer operations"
+    ]
+  },
+  "value_ledger": [
+    {
+      "metric": "customer_safe_public_baseline_created",
+      "previous": false,
+      "current": true,
+      "source_posture": "public_only",
+      "evidence_refs": ["data/customer-health-value-read-model.json", "Andrey P - Ecosystem/business/baseline-scorecard.md"]
+    },
+    {
+      "metric": "approved_internal_knowledge_processed",
+      "previous": false,
+      "current": false,
+      "source_posture": "not_assessed",
+      "evidence_refs": ["Andrey P - Ecosystem/identity/authority-and-consent.md"]
+    }
+  ],
+  "next_review_date": "2026-06-17",
+  "stop_conditions": [
+    "authority_pending",
+    "consent_pending",
+    "internal_knowledge_not_provided",
+    "raw_dirty_files_not_processed",
+    "private_integrations_blocked",
+    "operator_mode_blocked"
+  ]
+}

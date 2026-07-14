@@ -1,0 +1,271 @@
+{
+  "schema_version": "xlooop.visual_verification_morning_addendum.v1",
+  "report_id": "visual-report-260510-c82-xlooop-operations",
+  "generated_at": "2026-05-18T16:29:10+10:00",
+  "state": "ready_for_owner_visual_review",
+  "scope": "Xlooop-XCP-demo current Operations UI; MB-P metadata-only feedback; no protected repo mutation.",
+  "operator_path": [
+    "Open workspace Xlooop",
+    "Go to Operations",
+    "Review the Current owner action -> lifecycle -> evidence/sign-off -> Learning / XCP feedback ribbon",
+    "Open Messy intake readiness",
+    "Review Runtime export headroom guard under Diagnostics / run evidence",
+    "Review Morning report and Visual verification addendum"
+  ],
+  "visible_changes": [
+    {
+      "id": "C79",
+      "label": "Operations cockpit path",
+      "surface": "Do now / Workflow / Evidence and telemetry ribbon",
+      "test_id": "xlooop-cockpit-path-ribbon",
+      "owner_value": "Shows the hierarchy before the dense Operations cards."
+    },
+    {
+      "id": "C80",
+      "label": "Messy intake readiness",
+      "surface": "MB-P benchmark feedback with owner review action",
+      "test_id": "xlooop-mbp-messy-intake-benchmark",
+      "owner_value": "Turns MB-P intake benchmark gaps into a Xlooop-local review packet without raw MB-P payload or writeback."
+    },
+    {
+      "id": "C81",
+      "label": "Bundle headroom guard",
+      "surface": "App bundle headroom verifier and journey-priority gate",
+      "test_id": "xlooop-visual-verification-bundle",
+      "owner_value": "Restores app bundle headroom for more visible product work and prevents future hidden UI-bloat loops."
+    },
+    {
+      "id": "C84",
+      "label": "First-30-second hierarchy",
+      "surface": "Current owner action -> lifecycle -> evidence/sign-off -> Learning / XCP feedback",
+      "test_id": "xlooop-cockpit-path-ribbon",
+      "owner_value": "Makes the commercial workflow understandable before diagnostics, CI evidence, and runtime budget details."
+    },
+    {
+      "id": "C85",
+      "label": "Guided owner review",
+      "surface": "Confirm, prove, sign, learn",
+      "test_id": "xlooop-owner-guided-review",
+      "owner_value": "Reduces below-first-viewport card load by showing owner confirmation, evidence, sign-off, and Learning / XCP feedback as one packet review sequence."
+    },
+    {
+      "id": "C91",
+      "label": "MB-P projection packet adoption",
+      "surface": "MB-P operations projection action row",
+      "test_id": "xlooop-mbp-projection-action-packet-260509-c49-mbp-live-ops-adopt",
+      "owner_value": "Turns a safe MB-P projected packet into a Xlooop-local owner review packet without MB-P writeback or raw private payload."
+    },
+    {
+      "id": "C92",
+      "label": "Projection guided handoff",
+      "surface": "Guided owner review",
+      "test_id": "xlooop-adopted-projection-handoff",
+      "owner_value": "Keeps the adopted MB-P projection packet in the same confirm, prove, sign, learn chain so it is visible and actionable after queue adoption."
+    },
+    {
+      "id": "C93",
+      "label": "Owner queue continuity",
+      "surface": "Workflow lane continuity strip",
+      "test_id": "xlooop-owner-queue-continuity",
+      "owner_value": "Removes adopted projection packets from the source action queue and shows one owner-visible continuation path with queues as supporting context."
+    },
+    {
+      "id": "C94",
+      "label": "First-viewport continuity",
+      "surface": "Operations first viewport",
+      "test_id": "xlooop-owner-queue-continuity",
+      "owner_value": "Moves owner continuation guidance above the primary and workflow lanes so it is visible before lower queue details."
+    },
+    {
+      "id": "C95",
+      "label": "Operations free-text intake handoff",
+      "surface": "Owner intake handoff above primary action lane",
+      "test_id": "xlooop-ops-free-text-intake-handoff",
+      "owner_value": "Lets the owner type a real MB-P/Xlooop operational request and create a Xlooop-local governance packet without backend persistence or MB-P writeback."
+    },
+    {
+      "id": "C96",
+      "label": "Free-text packet guided continuity",
+      "surface": "Guided owner review",
+      "test_id": "xlooop-free-text-guided-handoff",
+      "owner_value": "Shows that a newly typed owner request continues immediately through confirmation, evidence, sign-off, and Learning / XCP feedback."
+    },
+    {
+      "id": "C97",
+      "label": "Recent packet review history",
+      "surface": "Operations packet recovery strip",
+      "test_id": "xlooop-packet-review-history",
+      "owner_value": "Keeps owner-created packets recoverable after creation and confirmation without forcing the owner into source queues or telemetry."
+    },
+    {
+      "id": "C98",
+      "label": "History evidence/sign-off handoff",
+      "surface": "Recent packet review history row",
+      "test_id": "xlooop-packet-review-history",
+      "owner_value": "Moves an owner-created packet from evidence readiness to sign-off to Learning / XCP feedback from the same compact history row."
+    },
+    {
+      "id": "C99",
+      "label": "History density and keyboard clarity",
+      "surface": "Recent packet review history row",
+      "test_id": "xlooop-packet-review-history",
+      "owner_value": "Keeps the operational packet history row compact, readable, and keyboard-operable as it moves through confirmation, evidence, sign-off, and Learning / XCP feedback."
+    },
+    {
+      "id": "C100",
+      "label": "Owner visual walkthrough continuation",
+      "surface": "Owner packet created confirmation",
+      "test_id": "xlooop-ops-confirm-created-packet",
+      "owner_value": "Keeps the next owner-confirmation action visible immediately after packet creation instead of requiring the owner to scroll into lower history."
+    },
+    {
+      "id": "C101",
+      "label": "Visible evidence/sign-off continuation",
+      "surface": "Owner packet created confirmation",
+      "test_id": "xlooop-ops-evidence-created-packet",
+      "owner_value": "After owner confirmation, the same visible continuation lane advances to evidence readiness, sign-off, and Learning / XCP feedback without lower-queue hunting."
+    },
+    {
+      "id": "C102",
+      "label": "Visible completion copy",
+      "surface": "Owner packet created confirmation",
+      "test_id": "xlooop-ops-created-packet-status",
+      "owner_value": "The same visible lane now names each state: created, owner review confirmed, evidence ready, sign-off complete, and Learning / XCP feedback next."
+    },
+    {
+      "id": "C103",
+      "label": "Completion lifecycle screenshots",
+      "surface": "Committed visual evidence",
+      "test_id": "docs/_archive/audits/screenshots/c103-operations-completion-visual-capture/manifest.json",
+      "owner_value": "Morning review now has four committed screenshots covering created, confirmed, evidence-ready, and signed/Learning-ready packet states."
+    },
+    {
+      "id": "C104",
+      "label": "Readiness decision review",
+      "surface": "Operations readiness decision",
+      "test_id": "docs/_archive/audits/260510_1625_operations-readiness-decision-c104.md",
+      "owner_value": "Names that the packet lane is ready for persistence/collaboration boundary planning, while backend persistence, MB-P writeback, and invited-collaborator flows remain unimplemented."
+    },
+    {
+      "id": "C105",
+      "label": "Persistence and collaboration boundary",
+      "surface": "Contract-only packet boundary",
+      "test_id": "data/packet-persistence-collaboration-boundary.example.json",
+      "owner_value": "Defines allowed persisted fields, forbidden private fields, invited-collaborator limits, and blocked MB-P/x-front/x-docs/XCP event actions before backend work."
+    },
+    {
+      "id": "C106",
+      "label": "Boundary visibility in Operations",
+      "surface": "Operations persistence and collaboration boundary panel",
+      "test_id": "xlooop-persistence-collaboration-boundary",
+      "owner_value": "Makes safe persisted metadata, forbidden private fields, blocked MB-P writeback, and disabled collaborator/public-link states visible before backend implementation."
+    },
+    {
+      "id": "C107",
+      "label": "Persistence action guard",
+      "surface": "Operations persistence and collaboration boundary panel",
+      "test_id": "xlooop-persistence-action-guard",
+      "owner_value": "Lets the owner create a local planning packet for persistence/collaboration while backend persistence, MB-P writeback, private payloads, invited collaborators, and public links remain blocked."
+    },
+    {
+      "id": "C129",
+      "label": "Commercial proof loop and mobile shell",
+      "surface": "Operations first-run comprehension path",
+      "test_id": "xlooop-commercial-proof-loop",
+      "owner_value": "Makes the live MB-P integrated demo narratable as intent capture, governed context, decision ledger, evidence, sign-off, and learning while keeping the mobile main surface visible."
+    }
+  ],
+  "local_gate_evidence": [
+    "C79 npm run verify:operations-action-lanes PASS",
+    "C79 npm run test:e2e PASS 60 passed / 3 skipped",
+    "C80 npm run verify:mbp-messy-intake-feedback PASS",
+    "C80 npm run test:e2e PASS 60 passed / 3 skipped",
+    "C81 npm run verify:app-bundle-headroom PASS headroom 57849 B",
+    "C81 npm run verify:current-integrity PASS 39/39",
+    "C81 npm run test:e2e PASS 60 passed / 3 skipped",
+    "C84 npm run verify:operations-first-viewport-hierarchy PASS",
+    "C85 npm run verify:owner-guided-operations-review PASS",
+    "C91 npx playwright test c91-mbp-projection-packet-adoption.spec.ts PASS",
+    "C91 npm run test:contracts PASS",
+    "C92 npx playwright test c92-projection-adoption-guided-handoff.spec.ts PASS",
+    "C93 npx playwright test c93-owner-queue-continuity-review.spec.ts PASS",
+    "C94 npx playwright test c94-operations-visual-clickability-review.spec.ts PASS",
+    "C95 npx playwright test c95-operations-free-text-intake-handoff.spec.ts PASS",
+    "C96 npx playwright test c96-operations-intake-guided-review-continuity.spec.ts PASS",
+    "C97 npx playwright test c97-operations-packet-review-history.spec.ts PASS",
+    "C99 npx playwright test c99-operations-history-density-a11y.spec.ts PASS",
+    "C100 npx playwright test c100-operations-owner-visual-walkthrough.spec.ts PASS",
+    "C101 npx playwright test c101-operations-visible-evidence-continuation.spec.ts PASS",
+    "C102 npx playwright test c102-operations-visible-completion-polish.spec.ts PASS",
+    "C103 npx playwright test c103-operations-completion-visual-capture.spec.ts PASS",
+    "C104 node scripts/verify-operations-readiness-decision-review.mjs PASS",
+    "C105 node scripts/seam-gates/run.mjs --gate packet-persistence-collaboration-boundary PASS",
+    "C106 node scripts/verify-operations-persistence-boundary-visibility.mjs PASS",
+    "C107 node scripts/verify-operations-persistence-action-guard.mjs PASS",
+    "C129 npm run verify:first-run-commercial-comprehension PASS 100/100",
+    "C129 npm run verify:ui-action-operability-exhaustive PASS 100% actions / 100% screens",
+    "C129 npm run verify:commercial-demo-readiness PASS 100/100 go",
+    "C129 npm run verify:app-bundle-headroom PASS headroom 50400 B"
+  ],
+  "github_ci_classifications": [
+    "PR #106 smoke zero-step/log_not_found external runner issue; local gates authoritative",
+    "PR #107 smoke zero-step/log_not_found external runner issue; local gates authoritative",
+    "PR #108 smoke zero-step/log_not_found external runner issue; local gates authoritative",
+    "PR #125 smoke zero-step/log_not_found external runner issue; local gates authoritative",
+    "PR #128 smoke zero-step/log_not_found external runner issue; local gates authoritative"
+  ],
+  "bundle": {
+    "app_bundle_path": "dist/v3-app.js",
+    "before_c81_bytes": 511996,
+    "after_c81_bytes": 1256819,
+    "max_bytes": 1376256,
+    "headroom_bytes": 119437,
+    "status": "safe_for_next_ui_slice"
+  },
+  "boundaries": [
+    "Xlooop-XCP-demo writable only",
+    "MB-P read-only guidance and metadata projection only",
+    "No x-front, x-docs, XCP-platform, archive, delete, or move work"
+  ],
+  "next_recommended_slice": {
+    "id": "C108-PERSISTENCE-COLLABORATION-PLANNING-LIFECYCLE-04",
+    "title": "Continue the planning packet through owner confirmation and evidence readiness",
+    "reason": "C107 creates only a local planning packet. The next slice should prove the packet can move through owner confirmation and readiness without enabling backend persistence, public links, invited collaborators, private payload storage, or MB-P writeback."
+  },
+  "owner_handoff": {
+    "intent_id": "intent-260510-1120-xlooop-visual-verification-review",
+    "packet_id": "packet-260510-1120-xlooop-visual-verification-review",
+    "title": "Owner review current visual verification addendum",
+    "priority": "P1",
+    "area": "Visual verification / owner review",
+    "target_project_ids": [
+      "xlooop-product"
+    ],
+    "source_domains": [
+      "xlooop",
+      "mbp",
+      "xcp"
+    ],
+    "role_route_refs": [
+      "role-route:ecosystem-status-brief",
+      "role-route:delivery-readiness-gates",
+      "role-route:frontend-architecture-review"
+    ],
+    "role_panel": [
+      "role-route:ecosystem-status-brief",
+      "role-route:delivery-readiness-gates",
+      "role-route:frontend-architecture-review"
+    ],
+    "required_skills": [
+      "delivery-readiness-gates",
+      "xlooop-design-review",
+      "frontend-architecture-review",
+      "component-contract-storybook"
+    ],
+    "acceptance_criteria": [
+      "Owner can see where the latest overnight work landed.",
+      "Owner can create a Xlooop-local review packet from the addendum.",
+      "Owner can confirm the handoff into a work item without MB-P writeback."
+    ]
+  }
+}

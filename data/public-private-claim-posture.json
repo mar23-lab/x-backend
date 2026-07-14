@@ -1,0 +1,185 @@
+{
+  "schema": "xlooop.public_private_claim_posture.v1",
+  "posture_id": "claim-posture:mbp:xlooop:metadata-readonly:20260607",
+  "projection_id": "projection:mbp:xlooop:r-m-d-i-20260607-1640",
+  "manifest_export_id": "export:mbp:xlooop:r-m-d-i-20260607-1640",
+  "operation_mode": "metadata_readonly",
+  "current_stage": "commercial_demo_metadata_readonly",
+  "canonical_public_domain": "xlooop.com",
+  "retired_after_launch_domain": "xlooop.ai",
+  "redaction_state": "metadata_only",
+  "private_raw_content_included": false,
+  "writes_back_to_mbp_allowed": false,
+  "deployment_environments": [
+    {
+      "environment": "dev",
+      "xlooop_domain": "dev.xlooop.com",
+      "xcp_domain": "xcp-dev.xlooop.com",
+      "access": "Cloudflare Access for Marat and approved internal operators.",
+      "data_posture": "Internal-full MB-P operational proof is allowed when Access-protected and not publicly reachable.",
+      "operator_mode": "Allowed for approved owner/operator users through governed proposal/action/receipt paths.",
+      "claim_posture": "Internal development and MB-P operations learning/testing only."
+    },
+    {
+      "environment": "test",
+      "xlooop_domain": "test.xlooop.com",
+      "xcp_domain": "xcp-test.xlooop.com",
+      "access": "Cloudflare Access plus named tester invitation/access code.",
+      "data_posture": "Redacted or explicitly owner-approved dataset only.",
+      "operator_mode": "Watch or proposal-only by default; no direct MB-P writeback.",
+      "xcp_second_level_access": "Disabled by default and enabled separately by admin per user.",
+      "claim_posture": "Customer feedback and controlled walkthrough only; no production SaaS claim."
+    }
+  ],
+  "access_policy": {
+    "waiting_list": "Allowed for lead capture and invitation queue.",
+    "access_code": "Base64url-style opaque code is allowed only as an invitation/routing hint, not authentication.",
+    "required_authentication": "Cloudflare Access identity plus server-side entitlement validation.",
+    "xlooop_first_level_access": "Default product access after invitation approval.",
+    "xcp_second_level_access": "Separate admin-enabled entitlement per user."
+  },
+  "operation_modes": [
+    {
+      "mode_id": "development_mode",
+      "stage": "build_qa_local_hardening",
+      "allowed_use": "Internal engineering, design review, verifier development, local screenshots, fixtures, and owner review.",
+      "required_controls": [
+        "bounded_sprint_scope",
+        "relevant_verifiers",
+        "retrospective_closeout",
+        "no_external_claims_without_claim_gate"
+      ],
+      "claim_posture": "internal_only"
+    },
+    {
+      "mode_id": "mbp_operations_learning_testing",
+      "stage": "owner_operated_mbp_proof_and_learning_testing",
+      "allowed_use": "Internal MB-P operations, owner-local/internal SSE proof, live read-model snapshots, gateway receipts, retrospectives, and governance or architecture updates.",
+      "required_controls": [
+        "mbp_remains_authority",
+        "no_direct_product_writeback_to_mbp_repos",
+        "evidence_packet_per_material_run",
+        "retrospective_next_steps",
+        "architecture_cascade_review_when_dependencies_change"
+      ],
+      "claim_posture": "internal_owner_proof_and_learning_testing_only"
+    },
+    {
+      "mode_id": "controlled_commercial_walkthrough",
+      "stage": "selected_buyer_or_investor_walkthrough",
+      "allowed_use": "Presenter-controlled explanation of the MB-P loop, selected screenshots, restricted demos, and pilot-discovery conversations.",
+      "required_controls": [
+        "owner_approved_brief",
+        "explicit_caveats",
+        "no_raw_private_exports",
+        "claim_safety_review",
+        "public_private_claim_posture_check"
+      ],
+      "claim_posture": "allowed_with_restrictions"
+    },
+    {
+      "mode_id": "external_customer_operations",
+      "stage": "future_customer_or_client_operations",
+      "allowed_use": "External customer-facing operations, pilots under terms, and production-like service claims.",
+      "required_controls": [
+        "production_hosted_service",
+        "auth_token_rotation",
+        "redaction_policy",
+        "durable_event_store",
+        "monitoring_sla_owner",
+        "risk_legal_owner_signoff",
+        "customer_release_packet"
+      ],
+      "claim_posture": "blocked_until_controls_and_signoff_exist"
+    }
+  ],
+  "claim_boundary": {
+    "current_topline": "Metadata-only MB-P projection proof loop and controlled walkthrough substrate.",
+    "must_not_say": [
+      "production SaaS fully operating live MB-P",
+      "production SaaS",
+      "unrestricted public demo",
+      "signed pilot terms ready without owner claim sign-off",
+      "public export without redaction",
+      "xlooop.ai as canonical domain",
+      "customer-feedback.xlooop.com",
+      "feedback.xlooop.com"
+    ],
+    "required_caveat": "This surface uses owner-approved metadata-only MB-P projection data for owner operations only and remains no-writeback; public claims require redacted projection data and owner claim sign-off. Public marketing must be forward-looking and canonical on xlooop.com; xlooop.ai is retired or redirected after the new site launches."
+  },
+  "stream_claim_posture": {
+    "read_model_snapshot": "allowed_internal_owner_proof",
+    "live_streaming_operations": "internal_sla_poll_allowed_public_blocked",
+    "public_claim_allowed": false,
+    "required_caveat": "Operations streams are MB-P-owned read-model snapshots with internal SLA-protected receipt polling, not public-safe live streaming operations until owner claim sign-off and public-safe redaction exist.",
+    "must_not_say": [
+      "public-safe live streaming operations",
+      "production live streaming MB-P operations",
+      "fully live MB-P operation without caveat",
+      "real-time public stream"
+    ]
+  },
+  "tiers": [
+    {
+      "tier": "internal_owner_proof",
+      "status": "allowed",
+      "allowed_claim": "Xlooop can run the MB-P proof loop from operator intent to governed packet, decision ledger, evidence, sign-off, learning, and recovery/next action using owner-approved internal projection data.",
+      "required_caveats": [
+        "Owner-approved metadata-only MB-P projection data may be included in the active snapshot.",
+        "No direct MB-P repository writeback is allowed from Xlooop.",
+        "MB-P remains the governance authority."
+      ]
+    },
+    {
+      "tier": "controlled_commercial_walkthrough",
+      "status": "allowed_with_restrictions",
+      "allowed_claim": "Owner-led selected buyer or investor walkthrough of the MB-P loop.",
+      "required_caveats": [
+        "Do not present owner-operation exports as unrestricted public-safe evidence without owner claim sign-off.",
+        "Do not claim production SaaS readiness.",
+        "Use the presenter caveat brief before external use."
+      ]
+    },
+    {
+      "tier": "pilot_discovery",
+      "status": "allowed_with_restrictions",
+      "allowed_claim": "Pilot-discovery conversation about the governed delivery loop and operating model.",
+      "required_caveats": [
+        "Discovery does not equal signed pilot readiness.",
+        "Owner-approved claim hygiene is required before pilot terms."
+      ]
+    },
+    {
+      "tier": "public_unrestricted",
+      "status": "blocked",
+      "blocked_because": "owner-operation projection is not a redacted, owner-signed unrestricted public demo claim"
+    },
+    {
+      "tier": "signed_pilot_terms",
+      "status": "blocked",
+      "blocked_because": "owner-approved public/private claim sign-off and pilot terms packet are not recorded here"
+    },
+    {
+      "tier": "production_saas_now",
+      "status": "blocked",
+      "blocked_because": "production SLA, public-safe redaction posture, and owner claim sign-off are not recorded here"
+    }
+  ],
+  "required_gates": [
+    "verify:current-surface-truthfulness",
+    "verify:public-private-claim-gate",
+    "verify:commercial-demo-readiness"
+  ],
+  "required_blocked_actions": [
+    "public_export_without_redaction",
+    "write_mbp_repo",
+    "copy_private_payload"
+  ],
+  "owner_decision_needed_for_green_public_claims": [
+    "redacted_public_projection_or_demo_dataset",
+    "public_claim_signoff_packet",
+    "pilot_terms_readiness_packet",
+    "production_receipt_export_sla",
+    "public_live_streaming_operations_signoff"
+  ]
+}

@@ -1,0 +1,13 @@
+schema: customer_do_not_ingest_v1
+status: draft
+authority: pending
+blocked_until_confirmed:
+  - raw_customer_emails
+  - personal_identifiers
+  - property_addresses
+  - financial_credentials
+  - OAuth_tokens
+  - legal_material
+  - private_messages
+  - raw_reports
+  - photos_or_media_with_sensitive_context

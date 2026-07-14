@@ -1,0 +1,33 @@
+{
+  "_comment": "CONTEXT_PACKET_CONTRACT (ABS-P4 / AR-2.2, 260713). The versioned schema of the customer-safe, auditable record of the context an agent was given for one governed action: intent -> resolved capability (role/skills/tools) -> the role-scoped context scope (counts) -> redaction -> a deterministic fingerprint. Built by src/workers/lib/context-packet.ts (pure kernel). Persistence (context_packets table) + the assembler wire are the next operator-gated steps. CUSTOMER-SAFE INVARIANT: this record NEVER carries internal ids, event/document ids, graph topology, prompts, or skill bodies - only counts, coarse capability labels, and a content fingerprint.",
+  "schema_id": "xlooop.context_packet.v1",
+  "contract_version": "2026.07.0",
+  "customer_safe": true,
+  "fields": {
+    "schema_id": "const 'xlooop.context_packet.v1'",
+    "tenant": "workspace id (internal-linkage field, not surfaced to other tenants)",
+    "principal": "user id (internal-linkage field)",
+    "role": "membership role (customer-safe label)",
+    "mode": "operating mode",
+    "intent": "the intent ref this context served, or null",
+    "selected_skills": "[{key, version}] the skills the resolver selected (customer_visible catalog keys)",
+    "allowed_tools": "string[] tools granted for this action",
+    "denied_tools": "string[] tools denied (internal tools stay named-but-denied, never invoked)",
+    "skill_coverage": "'resolved' | 'no_skill_for_action' | 'no_catalog'",
+    "context_scope": "{event_count, document_count, unpromoted_document_count, source_count} - COUNTS ONLY, never ids",
+    "redaction": "{profile, client_empty} - which redaction profile the assembler applied",
+    "freshness": "{generated_at, stale_after_s}",
+    "policy_summary": "customer-safe one-liner (role + coverage + scope)",
+    "context_fingerprint": "deterministic FNV-1a content id (dedup + change-detection; excludes timestamp + receipt_ref)",
+    "receipt_ref": "the resolution receipt id this packet links to, or null"
+  },
+  "forbidden_fields": [
+    "event_ids", "document_ids", "graph_node_ids", "graph_edges", "prompt", "skill_body",
+    "internal_engine", "agent_chain", "repo_path", "raw_policy_expression"
+  ],
+  "invariants": [
+    "context_fingerprint is stable for the same (tenant, role, mode, intent, skills, tools, scope-counts, redaction) - independent of generated_at and receipt_ref",
+    "no field in forbidden_fields ever appears in a built packet",
+    "client_empty=true implies an empty grounding bundle (context_scope counts may still describe what was excluded)"
+  ]
+}

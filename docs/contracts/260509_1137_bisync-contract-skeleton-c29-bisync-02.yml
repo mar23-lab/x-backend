@@ -1,0 +1,53 @@
+id: c29_bisync_02_contract_skeleton
+created_at: "2026-05-09T11:37:00+10:00"
+date_key: "260509_1137"
+owner: Marat Basyrov
+scope: contract_skeleton_only
+decision:
+  verdict: implemented_type_only_contract_skeleton
+  xfront_code_import_authorized: false
+  xfront_file_mutation_authorized: false
+  runtime_implementation_authorized: false
+  archive_delete_move_authorized: false
+role_panel:
+  - chief-of-staff
+  - cto
+  - lead-engineer
+  - frontend-architect
+  - integration-boundary-architect
+  - devsecops
+  - ai-governed-infrastructure-manager
+skills_used:
+  - product-engineering-router
+  - integration-boundary-contracts
+  - delivery-readiness-gates
+contracts_added:
+  - SourceSnapshotContract
+  - SourceAdapterContract
+  - CodeDraftContract
+  - CodePatchContract
+  - RenderTreeContract
+  - PreviewSandboxMessageContract
+  - EditorSessionContract
+  - BiSyncEvidenceContract
+paths:
+  contract_root: src/contracts/bisync
+  contract_test: src/__contracts__/bisync.contract.test.ts
+  docs:
+    - docs/contracts/260509_1137_bisync-contract-skeleton-c29-bisync-02.md
+    - docs/contracts/260509_1137_bisync-contract-skeleton-c29-bisync-02.yml
+quality_gates:
+  - npm run test:contracts
+  - npm run smoke
+  - npm run verify:current-integrity
+remaining_risks:
+  - id: runtime_overreach_before_contracts_mature
+    score: 80
+  - id: sandbox_security_policy_abstract
+    score: 70
+  - id: ux_proof_not_visible
+    score: 60
+  - id: xfront_engine_drift
+    score: 85
+recommended_next_slice: C29-BISYNC-03
+recommended_next_slice_scope: synthetic_storybook_state_matrix_no_runtime_no_xfront_import

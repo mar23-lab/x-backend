@@ -1,0 +1,88 @@
+# GRAPH_SUBSTRATE_MANIFEST.yml · ADR-XLOOP-ARCH-004 · HR-PROJECTION-SUBSTRATE-EVIDENCE-1 teeth
+#
+# WHY: a projection/read-model can be code-correct + ci-green + deployed yet render NOTHING because its
+# SOURCE TABLES are empty in prod ("wired but unfed" — ARCH-004 VIII.2, defect S1). This manifest makes
+# the substrate EXPLICIT + CENSUSED, so a "fed/live/done" claim about the graph must carry evidence that
+# its inputs actually contain data. `scripts/verify-projection-substrate-evidence.mjs` enforces it.
+#
+# UPDATE the `census` block by running the prod row-count query (the verifier prints the SQL) and the
+# `status` MUST follow the census: persisted_graph_nodes == 0 → status MUST be `wired_not_fed`.
+
+schema_id: xlooop.graph_substrate_manifest.v1
+projection: data-graph
+projection_module: src/workers/graph/data-graph.ts
+persistence_module: src/workers/dal/graph-store.ts
+populated_by: src/workers/crons/graph-rebuild.ts   # hourly cron (0 * * * *) + POST /api/v1/graph/rebuild
+
+# Every relational table the projection READS (must match the FROM clauses in graph-store.ts).
+source_tables:
+  - table: operation_events
+    feeds: event nodes + scopes/realizes edges
+    role: core            # the dominant fact source (ARCH-004 D1: drive off this, not operations_unified)
+  - table: operations_unified
+    feeds: governance/synthetic packet nodes
+    role: core
+  - table: projects
+    feeds: project nodes + contains edges
+    role: core
+  - table: workspaces
+    feeds: workspace nodes
+    role: core
+  - table: synthetic_domains
+    feeds: lens nodes
+    role: core
+  - table: synthetic_domain_membership
+    feeds: views edges (lens -> project)
+    role: core
+  - table: intents
+    feeds: intent nodes + realizes/derived_from edges
+    role: lineage         # RCA backbone — empty in prod until Send-Intent is exercised
+  - table: project_source_bindings
+    feeds: source nodes + feeds edges
+    role: lineage         # lineage ORIGIN — empty in prod (github webhook bypasses it; ARCH-004 D2)
+  - table: audit_logs
+    feeds: caused_by edges (causation)
+    role: lineage         # causation_id empty in prod until governance sign-offs accrue
+  # W3 (260708) · document lineage nodes — read ONLY when GRAPH_DOCUMENT_NODES_ENABLED='true'
+  # (flag-gated at assembleDataGraphFactsRow so the graph_hash stays byte-stable flag-off).
+  - table: documents
+    feeds: document nodes + contains/derived_from (version chain) edges
+    role: lineage         # flag-gated (GRAPH_DOCUMENT_NODES_ENABLED, default off); prod census pending activation
+  - table: evidence_items
+    feeds: evidences edges (document -> packet/event via the 051 content_hash join)
+    role: lineage         # flag-gated with documents; census pending activation
+
+# Last live prod census (flat-truth-23350426). Re-run on every substrate-affecting change.
+census:
+  dated: '2026-06-11T00:00:47Z'    # latest graph_snapshot; re-censused 2026-06-11 during the ARCH-006 production-truth audit
+  source: prod Neon flat-truth-23350426 (read-only)
+  row_counts:
+    operation_events: 4209          # grew from operator-action + activity events (monotonic event-log growth)
+    operations_unified: 83          # governance plane grew (decision/folder-promote mirrors)
+    projects: 101
+    workspaces: 8
+    synthetic_domains: 16
+    synthetic_domain_membership: 35
+    intents: 0                      # lineage backbone EMPTY — fills when Send-Intent is used
+    project_source_bindings: 51     # FED — D2 backfill (ARCH-006 W2) ran in the 23:00 cron (7 repos x projects)
+    audit_logs_with_causation_id: 0 # causation EMPTY — fills when sign-offs/decisions accrue
+  persisted_graph_nodes: 4466       # FED + kept fresh by the hourly graph_rebuild cron (latest 2026-06-11T00:00:47Z)
+  persisted_graph_edges: 4427       # scopes:4255 + contains:101 + feeds:51 + views:20
+  persisted_node_breakdown: 'event:4208, project:101, packet:83, source:51, lens:15, workspace:8'
+  persisted_lineage_spine: 'source:51, feeds:51, intent:0, caused_by:0'   # source/feeds NOW FED (D2); intent/causation still empty (need usage)
+  projected_capacity_nodes: 4466    # source nodes (51) appeared after the D2 backfill seeded project_source_bindings
+
+# status MUST follow the census (the verifier enforces persisted_graph_nodes==0 => wired_not_fed):
+#   wired_not_fed   — code + tables exist but the persisted graph is empty (no rebuild / empty sources)
+#   partially_fed   — core nodes fed (events/projects/lenses) but a `lineage`-role table is still empty
+#   fed             — every core AND lineage source has data + the persisted graph reflects it
+status: partially_fed
+status_note: >
+  SOURCE SPINE NOW FED (2026-06-10T23:00:53Z). After the ARCH-006 batch deploy (worker 6b0ee0bc + cockpit
+  132fd3b4), the 23:00 graph_rebuild cron ran the W2 D2 backfill (ensureGithubRepoBindingsForOperator):
+  project_source_bindings 0 -> 51, so the persisted graph gained 51 `source` nodes + 51 `feeds` edges.
+  v_artefact_lineage now resolves the full chain `source --feeds--> project --scopes--> event/packet`
+  (4466 nodes / 4427 edges as of the 2026-06-11 audit re-census; the hourly cron keeps it fresh).
+  Still `partially_fed` NOT `fed`: the CAUSATION/INTENT spine
+  (intent / realizes / derived_from / caused_by) is still 0 — it fills only when the operator exercises
+  Send-Intent, sign-offs, and decisions (the machinery is live as of this deploy; the data accrues with use).

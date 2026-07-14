@@ -1,0 +1,140 @@
+{
+  "schema_version": "xlooop.tenant_manifest.v1",
+  "tenant_id": "aps-pty-ltd",
+  "display_name": "APS Pty Ltd · Customer Pilot",
+  "description": "Customer-pilot deploy for APS Pty Ltd. Operator-side workspaces (mbp-private, xcp-platform, xlooop, x-biz, x-docs, x-front) are EXCLUDED at build time per tenant_filter rules. APS sees only its own workspace.",
+  "deploy_target": {
+    "cloudflare_pages_project": "aps-pilot-app",
+    "primary_domain": "aps.xlooop.com",
+    "branch": "main"
+  },
+  "owned_workspaces": [
+    "aps-pty-ltd",
+    "aps-access-property-services"
+  ],
+  "excluded_workspaces": [
+    "mbp-private",
+    "xcp-platform",
+    "xlooop",
+    "x-biz",
+    "x-docs",
+    "x-front"
+  ],
+  "data_files": [
+    {
+      "path": "data/spaces.json",
+      "filter": "keep_only_workspaces",
+      "filter_args": { "ids": ["aps-pty-ltd", "aps-access-property-services"] },
+      "rationale": "Workspace switcher · APS deploy sees only its own workspaces"
+    },
+    {
+      "path": "data/ws-detail.json",
+      "filter": "keep_only_keys",
+      "filter_args": { "keys": ["aps-pty-ltd", "aps-access-property-services"] },
+      "rationale": "Workspace operational detail · APS workspaces only"
+    },
+    {
+      "path": "data/ws-projects.json",
+      "filter": "keep_only_keys",
+      "filter_args": { "keys": ["aps-pty-ltd", "aps-access-property-services"] },
+      "rationale": "Per-workspace project list · APS only"
+    },
+    {
+      "path": "data/workspace-tree-read-model.json",
+      "filter": "keep_only_workspaces",
+      "filter_args": { "ids": ["aps-pty-ltd", "aps-access-property-services"] },
+      "rationale": "Workspace tree navigation · APS only"
+    },
+    {
+      "path": "data/operations-rollup-read-model.json",
+      "filter": "keep_only_rollup_keys",
+      "filter_args": { "workspace_counts": ["aps-pty-ltd", "aps-access-property-services"] },
+      "rationale": "Operations dashboard rollup · APS rows only"
+    },
+    {
+      "path": "data/workspace-setup-blueprint.json",
+      "filter": "keep_only_workspaces",
+      "filter_args": { "ids": ["aps-pty-ltd", "aps-access-property-services"] },
+      "rationale": "Setup-blueprint catalog · APS only"
+    },
+    {
+      "path": "data/operational-area-source-map.json",
+      "filter": "keep_only_workspaces",
+      "filter_args": { "ids": ["aps-pty-ltd", "aps-access-property-services"] },
+      "rationale": "Source-map projection · APS tenant scope"
+    },
+    {
+      "path": "data/governed-role-route-projection.json",
+      "filter": "keep_only_workspaces",
+      "filter_args": { "ids": ["aps-pty-ltd", "aps-access-property-services"] },
+      "rationale": "Role-route projection · APS routes only"
+    },
+    {
+      "path": "data/project-data.json",
+      "filter": "keep_only_projects_by_workspace",
+      "filter_args": { "workspace_ids": ["aps-pty-ltd", "aps-access-property-services"] },
+      "rationale": "Project data · APS workspace projects only"
+    },
+    {
+      "path": "data/server-tenant-policy-contract.json",
+      "filter": "keep_only_tenant_policies",
+      "filter_args": { "tenant_ids": ["aps-pty-ltd", "aps-access-property-services"] },
+      "rationale": "Server-side per-tenant policy · APS tenant entries only"
+    },
+    {
+      "path": "data/customer-safe-export-manifest.json",
+      "filter": "keep_only_customer_ids",
+      "filter_args": { "customer_ids": ["aps-access-property-services"] },
+      "rationale": "Customer-safe export manifest · APS customer only"
+    },
+    {
+      "path": "data/customer-health-value-read-model.json",
+      "filter": "keep_only_customer_ids",
+      "filter_args": { "customer_ids": ["aps-access-property-services"] },
+      "rationale": "Customer-health value read-model · APS customer only"
+    },
+    {
+      "path": "data/customer-onboarding-read-model.json",
+      "filter": "keep_only_customer_ids",
+      "filter_args": { "customer_ids": ["aps-access-property-services"] },
+      "rationale": "Customer-onboarding read-model · APS customer only"
+    },
+    {
+      "path": "data/member-directory-read-model.json",
+      "filter": "aps_member_directory",
+      "filter_args": {},
+      "rationale": "Member directory · APS deploy seeds Andrey + Dominic as customer-side members (currently empty in operator bundle post R50-Tail-7; APS tenant manifest re-populates them as authority candidates)"
+    },
+    {
+      "path": "data/nav-config.json",
+      "filter": "passthrough",
+      "rationale": "Generic nav UI config (wsPanes + projectModes), no tenant data. The customer bundle's index.html also runs DataLoader, which reads it into window.WS_PANES/PROJECT_MODES; without it the customer app would hit the same authenticated-render crash."
+    }
+  ],
+  "_passthrough_note": "src/ (worker source) is DELIBERATELY NOT passed through to this CUSTOMER bundle: a static Cloudflare Pages site serves dist/ + data/ + index.html and never executes worker source. Shipping src/ verbatim would expose operator construction IP (lens engine, detector-config seed SQL, cockpit chat-bridge) into a customer bundle. Enforced by scripts/verify-tenant-source-isolation.mjs (HR-PLATFORM-VS-INSTANCE-1, F1-exposure).",
+  "passthrough_dirs": [
+    "dist/",
+    "vendor/",
+    "index.html",
+    "index.standalone.html"
+  ],
+  "customer_redaction": {
+    "_comment": "Operator-identity/IP scrub applied to EVERY data_files[] output (customer tenants only — operator-mbp has no such block so its projection is untouched). Closes the 2026-06-14 envelope-leak class: keep_only_* shallow-copies the top-level envelope, passing operator owner_graph / approved_by / governance source_paths through to the customer bundle.",
+    "operator_owner_graph_ids": ["owner-graph-marat-basyrov"],
+    "operator_actor_ids": ["actor:marat-basyrov"],
+    "operator_names": ["Marat Basyrov"],
+    "customer_owner_graph_id": "owner-graph-andrey-p",
+    "customer_owner_actor_id": "actor:andrey-p",
+    "neutral_operator_name": "Xlooop operator",
+    "operator_repo_prefixes": ["MB-P/", "xcp-platform/", "_sys/xcp-system"],
+    "drop_in_owner_graph": ["model", "segregation_rule"],
+    "drop_operator_deploy_keys": ["deployment_target", "durable_target_domain"]
+  },
+  "metadata": {
+    "produced_by": "scripts/tenant-projection-builder.mjs",
+    "spec": "docs/_archive/audits/260528-r51-b-wave-beta-closure.md",
+    "lineage": "R51-β-2 (federated-waterfall PHASE 5 prep)",
+    "operator_authority": "Andrey Petrushko (APS authority candidate); operator-side reference Marat",
+    "login_path": "Andrey logs in at aps.xlooop.com (his designated path per R50-Tail-7 audit doc)"
+  }
+}

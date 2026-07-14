@@ -1,0 +1,315 @@
+# GOVERNANCE_PILLARS.yml · L3 (260710-D) · the ONE machine-verified map of the governance architecture.
+#
+# schema_id: xlooop.governance_pillars.v1
+# WHY: the pillars below existed as scattered code + migrations + gates + docs, and the failure classes
+# (F-series) as inline mentions across 6+ docs — nothing machine-checked that every invariant still has
+# its enforcing gate, its runtime flag still exists, or its canonical doc still resolves. This manifest is
+# the operator directive made structural: intent→packet→event→tool→receipt lineage + LLM context
+# generation, traceable and auditable, "applied across the customers' ecosystem always, as the must by
+# any agent".
+# DRIFT-GATED by scripts/verify-governance-pillars.mjs (--self-test RED/GREEN):
+#   every gates[]/enforced_by[] entry resolves to a ci-local GATES id OR a package.json script key ·
+#   every runtime_flags[] entry is bound in wrangler.toml [vars] OR read in src/workers ·
+#   every canonical_docs[] path exists · every metrics[] entry is an ObservabilityKind or catalogued
+#   pre-existing kind · failure_classes ids unique, enforced ⇒ non-empty enforced_by.
+# EXTEND HERE (not in a parallel doc) when a pillar gains an invariant/flag/gate — the gate fails on
+# dangling references, so a rename/removal elsewhere surfaces immediately.
+# owner: backend seat · consumers: any agent touching app.xlooop.com customer surfaces (consult-first,
+# same rule class as DESIGN_DECISIONS_REGISTER.md).
+
+schema_id: xlooop.governance_pillars.v1
+verify: node scripts/verify-governance-pillars.mjs
+
+pillars:
+  - id: append-only-lineage
+    intent: every governed fact is an append-only spine row with principal+instrument attribution and terminating causation
+    canonical_docs:
+      - docs/governance/PRINCIPAL_INSTRUMENT_LINEAGE.md
+    invariants:
+      - id: no-raw-event-insert
+        statement: operation_events INSERTs only via canonical DAL stores (event-store/intent-store/spine-store)
+        enforcement: gate
+        gates: [verify:no-raw-operation-events-insert]
+      - id: append-only-content
+        statement: operation_events content/identity columns are immutable (042 DB trigger; allow-listed status columns only)
+        enforcement: db_trigger
+        gates: [verify:op-events-append-only]   # warn-tier watcher; the trigger itself is the enforcement once 042 is applied
+      - id: principal-instrument-attribution
+        statement: every write path stamps authorized_by_user_id / instrument_kind / authority_source (050 vocabulary)
+        enforcement: gate
+        gates: [principal-instrument-lineage]
+      - id: causation-chains-terminate
+        statement: cause-edges (caused_by/realizes/derived_from) always trace to a root — a cyclic chain is a defect
+        enforcement: gate
+        gates: [verify:causation-traceability]
+
+  - id: tenant-isolation-rls
+    intent: a tenant can never read or write another tenant's rows — route guard + DB-level RLS second layer
+    canonical_docs:
+      - docs/governance/OPERATOR_AXIS_AUTHORITY.md
+    invariants:
+      - id: rls-second-layer
+        statement: customer-plane tables carry RLS policies keyed on xlooop_rls_workspace_id()
+        enforcement: gate
+        gates: [verify:postgres-rls-phase2, rls-runtime-enforcement]
+      - id: route-tenant-boundary
+        statement: workspace scope comes ONLY from the verified JWT/token binding, never a body-supplied value
+        enforcement: gate
+        gates: [verify:auth-tenant-boundary, verify:ip-boundary-suite]
+      - id: source-and-bundle-isolation
+        statement: source bindings and served bundles never leak cross-tenant
+        enforcement: gate
+        gates: [verify:tenant-source-isolation, verify:tenant-bundle-isolation]
+
+  - id: context-assembly-and-grounding
+    intent: what the LLM grounds on is a PROJECTION of the asker's authority, assembled from graph/sources/receipts — and every assembly decision is traceable per answer
+    canonical_docs:
+      - docs/governance/DESIGN_DECISIONS_REGISTER.md
+      - docs/governance/CUSTOMER_FACT_BUNDLE_MANIFEST.yml
+    invariants:
+      - id: role-projected-grounding
+        statement: grounding ≤ the asker's visibility ceiling; client role = contribution-only empty bundle (G9 · D-5/D-6/D-7)
+        enforcement: runtime_flag
+        runtime_flags: [CHAT_ROLE_SCOPED_CONTEXT_ENABLED]
+        metrics: [role_scoped_context]
+      - id: source-truth-beats-stale-reminders
+        statement: a connected provider mechanically demotes its stale setup reminders out of the grounding set
+        enforcement: runtime_flag
+        runtime_flags: [CHAT_SOURCE_TRUTH_OVERRIDE_ENABLED]
+        metrics: [source_truth_override]
+      - id: tier-weighted-grounding
+        statement: per-project source trust tier (read_policy · D-16) reorders grounding weight — metadata only, reflection_only preserved
+        enforcement: runtime_flag
+        runtime_flags: [SOURCE_TIER_GROUNDING_ENABLED]
+      - id: graph-budgeted-context
+        statement: graph edges enter the model budget via the pure selector (≤30 edges, terminating cause-chains first)
+        enforcement: runtime_flag
+        runtime_flags: [CHAT_GRAPH_CONTEXT_ENABLED]
+      - id: durable-assembly-trace
+        statement: every context-assembly decision (projection/demotions/tiers/graph/bundle) persists into grounded_on.assembly — L1 260710-D
+        enforcement: runtime_flag
+        runtime_flags: [CHAT_ASSEMBLY_TRACE_ENABLED]
+        metrics: [chat_fact_bundle]
+      - id: receipt-grounding
+        statement: assistant messages carry grounding_event_ids + receipt_uid (058) so any answer is receipt-traceable
+        enforcement: runtime_flag
+        runtime_flags: [CHAT_RECEIPT_GROUNDING_ENABLED]
+      - id: customer-egress-redaction
+        statement: customer-facing payloads never leak principal identities or free-text reasons (D-8 conservative redaction)
+        enforcement: gate
+        gates: [principal-redaction]
+
+  - id: document-lineage-and-read-audit
+    intent: documents carry an in-table version chain and every content read (human, chat-grounding, or MCP agent) leaves a bounded audit trail
+    canonical_docs:
+      - docs/governance/DOCUMENT_VERSION_CHAIN.md
+    invariants:
+      - id: version-chain-integrity
+        statement: documents.content_hash/version/supersedes_id — in-table chain, never a parallel document_versions table
+        enforcement: gate
+        gates: [document-version-chain]
+      - id: read-audit-day-grain
+        statement: content entering the model's grounding IS the read — recorded day-grain deduped (059 · D4/D-9)
+        enforcement: runtime_flag
+        runtime_flags: [DOCUMENT_READ_AUDIT_ENABLED]
+      - id: mcp-read-audit
+        statement: MCP tenant read tools record (workspace, tool, actor, day) into mcp_access_log (063) — L2 260710-D
+        enforcement: runtime_flag
+        runtime_flags: [MCP_READ_AUDIT_ENABLED]
+        metrics: [mcp_customer_read]
+      - id: graph-document-nodes
+        statement: documents project into the lineage graph (intent→packet→event→tool→document walkable per tenant)
+        enforcement: runtime_flag
+        runtime_flags: [GRAPH_DOCUMENT_NODES_ENABLED]
+
+  - id: flag-gated-activation-operator-authority
+    intent: prod behavior changes ship flag-gated default-off; migrations/flips/deploys are operator-named; repo claims about prod state are machine-checked
+    canonical_docs:
+      - docs/governance/OPERATOR_AXIS_AUTHORITY.md
+    invariants:
+      - id: migration-state-ssot
+        statement: the APPLIED-STATE SSOT block is the only undated home for migration-state claims (F1)
+        enforcement: gate
+        gates: [verify:migration-state-ssot]
+      - id: stage0-preflight
+        statement: any executed handoff artifact gets the §9 6-row STAGE-0 preflight from FRESH reads first
+        enforcement: prose
+      - id: entitlement-authority
+        statement: session-mode + entitlements become authority-bearing only via ENTITLEMENT_ENFORCEMENT (Tranche-C-last, operator-only)
+        enforcement: runtime_flag
+        runtime_flags: [ENTITLEMENT_ENFORCEMENT]
+        metrics: [spine_authority.deny]
+      - id: dev-agent-dogfooding
+        statement: >-
+          dev-agent sessions (Claude Code / Codex) report their work through the SAME lineage plane
+          customers get — activity grain via the activity webhook (source_tool claude|codex, per-wave
+          idempotent events, evidence links), governed grain via task_packet + tool_events (057
+          companion spine lineage) once the operator token exists. Commit grain (GitHub webhook) alone
+          does NOT satisfy "traceable and auditable by any agent". (260710-F)
+        enforcement: prose
+        canonical_docs:
+          - docs/runbooks/cockpit-live-ingestion.md
+
+  - id: contract-first-customer-surfaces
+    intent: no customer-facing control without a verified backend contract (F14) — the registry⟷ledger join is blocking, residuals are explicit
+    canonical_docs:
+      - docs/governance/DESIGN_DECISIONS_REGISTER.md
+      - docs/frontend-migration/precutover-hardening/backend-ui-contract-ledger-260709.json
+    invariants:
+      - id: registry-ledger-agreement
+        statement: every backend-required ui_id in the Design registry has a ledger row and vice versa (BLOCKING since 260710-C)
+        enforcement: gate
+        gates: [verify:registry-ledger-compare]
+      - id: ledger-integrity
+        statement: ledger counts/percentages derive from the file; residuals carry disabled_until_contract_defined + ui_must_degrade
+        enforcement: gate
+        gates: [verify:precutover-contract-ledger, verify:precutover-hardening-manifest]
+      - id: ui-contract-fidelity
+        statement: served UI contracts match the backend register
+        enforcement: gate
+        gates: [verify:backend-ui-contracts]
+
+  - id: observability-and-metrics
+    intent: every metric names its producer and consumer; the structured-event catalog cannot drift from code; egress is redacted
+    canonical_docs:
+      - docs/governance/METRIC_PRODUCER_CONSUMER_MANIFEST.yml
+    invariants:
+      - id: kind-catalog-no-drift
+        statement: ObservabilityKind union == the manifest's observability_kinds, both directions
+        enforcement: gate
+        gates: [verify:governance-manifests]
+      - id: governance-audit-coverage
+        statement: governed mutations INSERT audit_logs rows via curated DAL functions (M5); session events audited
+        enforcement: gate
+        gates: [audit-coverage, session-event-audit]
+      - id: status-egress-redaction
+        statement: status/telemetry egress never leaks IPs or internal identifiers (F4)
+        enforcement: gate
+        gates: [status-redaction]
+      - id: per-tenant-llm-metering
+        statement: >-
+          customer-driveable LLM answers meter per-(workspace, model, user, day) into llm_usage_log
+          (migration 064) — the commercial-staircase prerequisite (metering BEFORE any pricing/self-serve
+          flag). G2 260711. Named v1 residual: the operator/cron free-tier Llama surfaces (digest drafting,
+          packet enrichment, prompt enhance, onboarding welcome) are unmetered; the operator's unscoped
+          cockpit chat is a deliberate skip (not tenant spend).
+        enforcement: runtime_flag
+        runtime_flags: [LLM_USAGE_METERING_ENABLED]
+        metrics: [llm_usage]
+
+  - id: role-skill-context-lineage
+    intent: >-
+      the operator's spine — every governed customer action resolves its role+skills MECHANICALLY from
+      the published catalog (never a natural-language "act as" prompt), is folded into a customer-safe
+      context packet, and terminates in signed evidence (resolution → invocation → closing). Traceable +
+      auditable, the same for every app.xlooop.com tenant. AR-2/AR-5, 260713. Substrate is complete +
+      structurally gated; runtime EMISSION is flag-gated (operator-named), so the gate is structural.
+    canonical_docs:
+      - docs/contracts/role-skill-catalog.json
+      - docs/contracts/context-packet.v1.json
+      - docs/architecture/OPERATING_SPINE_DDD_AND_METRICS.md
+    invariants:
+      - id: mechanical-role-skill-resolution
+        statement: >-
+          role + skills come from the versioned catalog via buildCatalogBindings + resolveRoleAndSkills
+          (deny-wins), fingerprinted by CATALOG_MANIFEST_SHA256 — a client cannot assert authority, and a
+          catalog change that isn't re-fingerprinted cannot land.
+        enforcement: gate
+        gates: [verify:role-skill-catalog-loader-fresh, verify:lineage-completeness]
+        runtime_flags: [ROLE_SKILL_CATALOG_ENABLED, ROLE_SKILL_RESOLVER_ENABLED]
+      - id: every-governed-action-receipted
+        statement: >-
+          resolution + authority-denial + skill-invocation + closing attestation each write a
+          content-hashed (optionally HS256-signed) evidence row (migration 070) via the canonical DAL —
+          no governed action without a receipt.
+        enforcement: gate
+        gates: [verify:lineage-completeness]
+      - id: intent-to-context-packet
+        statement: >-
+          the context an agent is given is folded into a customer-safe context_packets record (migration
+          071) with a deterministic FNV fingerprint — the intent→context half of the line is durable + dedup-able.
+        enforcement: gate
+        gates: [verify:lineage-completeness]
+      - id: customer-safe-spine-projection
+        statement: >-
+          the customer-facing surface of the spine carries only counts, coarse capability labels, and
+          receipt refs — never internal ids, graph topology, prompts, or skill bodies (context-packet
+          forbidden_fields + the shared customer-safe serializer).
+        enforcement: gate
+        gates: [verify:ip-boundary-suite, verify:lineage-completeness]
+        runtime_flags: [CUSTOMER_SAFE_SERIALIZER_ENABLED]
+
+# ── The F-class MASTER REGISTRY (consolidates the scattered F-series; 260710-D) ─────────────────────
+# status: enforced = a resolving gate/script watches it · prose = discipline documented, no automated gate.
+failure_classes:
+  - id: F1
+    name: migration-state-doc-drift
+    meaning: repo prose claims APPLIED/STAGED that contradicts the prod schema head
+    defined_at: docs/governance/OPERATOR_AXIS_AUTHORITY.md
+    status: enforced
+    enforced_by: [verify:migration-state-ssot]
+  - id: F4
+    name: status-egress-redaction
+    meaning: status/telemetry surfaces leaking IPs / internal identifiers (R49-P0)
+    defined_at: scripts/ci-local.mjs
+    status: enforced
+    enforced_by: [status-redaction]
+  - id: F9
+    name: dws-operator-only-false-affordance
+    meaning: customer-visible operator surface (DWS spaces) rendered from a fabricated role
+    defined_at: scripts/ci-local.mjs
+    status: enforced
+    enforced_by: [dws-operator-only-spaces]
+  - id: F10
+    name: authority-matrix-code-drift
+    meaning: documented role matrix diverges from route behavior (GET /members client-role)
+    defined_at: docs/contracts/OLD_UI_TRUTH_ENVELOPE_MAP.md
+    status: enforced
+    enforced_by: [verify:ip-boundary-suite]
+  - id: F12
+    name: owner-only-editor-false-affordance
+    meaning: a member-role editor rendered for roles that cannot use it
+    defined_at: docs/contracts/OLD_UI_TRUTH_ENVELOPE_MAP.md
+    status: prose
+    enforced_by: []
+  - id: F13
+    name: honest-probe-not-field-truthiness
+    meaning: health/status fields must probe reality (sentry_active getDsn), never echo configuration
+    defined_at: docs/runbooks/sentry-setup.md
+    status: prose
+    enforced_by: []
+  - id: F14
+    name: contract-first-no-speculative-build
+    meaning: no customer-facing surface built before its contract is ratified; residuals stay disabled+degrading
+    defined_at: docs/governance/DESIGN_DECISIONS_REGISTER.md
+    status: enforced
+    enforced_by: [verify:registry-ledger-compare, verify:precutover-contract-ledger]
+  - id: F15
+    name: cold-mount-gating-inert
+    meaning: a probe that only fires on an event stream is dead at cold mount — re-fire on the status event
+    defined_at: docs/contracts/OLD_UI_TRUTH_ENVELOPE_MAP.md
+    status: prose
+    enforced_by: []
+  - id: F16
+    name: evidence-in-repo-and-snapshot-provenance
+    meaning: cross-seat evidence lives in-repo (never only Downloads); every drop names its ONE authoritative export
+    defined_at: docs/frontend-migration/precutover-hardening/registry-snapshots/260710/README.md
+    status: prose
+    enforced_by: []   # freshness WARN in compare-registry-to-ledger.mjs is deliberately non-blocking
+  - id: F17
+    name: visibility-floor
+    meaning: per-project event reads must respect the viewer-role visibility tier floor
+    defined_at: scripts/verify-project-events-visibility-floor.mjs
+    status: enforced
+    enforced_by: [verify:project-events-visibility-floor]
+  - id: F19
+    name: schema-first-inventory
+    meaning: before classifying any control residual/unbacked, enumerate ALL columns of every candidate table — the D-16 contract-vs-read_policy conflation class (260710-D)
+    defined_at: docs/frontend-migration/precutover-hardening/RETRO-260710-D.md
+    status: prose
+    enforced_by: []
+
+corrections:
+  - note: "F18 was never assigned in-repo — a 260710 session-memory ghost ('echoed-menu ≠ consent', a real lesson but session-local). The number stays deliberately UNASSIGNED to avoid resurrecting the ghost."
+  - note: "F17 = per-project events visibility-floor (verify-project-events-visibility-floor.mjs), NOT 'direct-vs-effective' — that is the D-12 ledger coverage metric (69.4% direct / 97.3% effective)."
+  - note: "F-numbers are sparse by construction (F2-F3, F5-F8, F11, F18 unassigned); new classes take the next free number and register HERE first."

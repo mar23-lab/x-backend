@@ -1,0 +1,93 @@
+{
+  "schema_version": "mbp.gateway_receipts.v1",
+  "contract_kind": "mbp_gateway_receipt_projection",
+  "contract_version": "v0.1.0",
+  "projection_id": "mbp-gateway-receipts-260513-c150",
+  "producer_repo": "MB-P",
+  "consumer_repo": "Xlooop-XCP-demo",
+  "authority_source": "mb-p-gateway",
+  "projection_mode": "read_only_authoritative_receipt_projection",
+  "direct_mbp_repo_write_allowed": false,
+  "raw_content_included": false,
+  "receipts": [
+    {
+      "receipt_id": "mbp-receipt-260513-c150-free-chat-capture",
+      "proposal_id": "proposal-260513-c142-free-chat-capture",
+      "proposal_kind": "free_text_chat_capture",
+      "idempotency_key": "xlooop:c142:free-chat-capture:260513:intent-to-contract",
+      "receipt_state": "accepted_by_mbp",
+      "receipt_source": "mbp_gateway_authoritative_projection",
+      "receipt_ref": "mbp-gateway://receipts/mbp-receipt-260513-c150-free-chat-capture",
+      "receipt_observed_at": "2026-05-13T13:20:00+10:00",
+      "replay_ref": "mbp-gateway://replay/xlooop:c142:free-chat-capture:260513:intent-to-contract",
+      "rollback_ref": "mbp-gateway://rollback/xlooop:c142:free-chat-capture:260513:intent-to-contract",
+      "owner_decision_state": "receipt_recorded",
+      "direct_mbp_repo_write_allowed": false,
+      "raw_content_included": false,
+      "evidence_refs": [
+        {
+          "ref_id": "receipt:evidence:c150-free-chat-capture",
+          "repo": "MB-P",
+          "uri": "mbp://gateway/receipts/mbp-receipt-260513-c150-free-chat-capture",
+          "access_mode": "read_only_projection",
+          "raw_content_included": false
+        }
+      ]
+    },
+    {
+      "receipt_id": "mbp-receipt-260513-c161-telegram-chat-capture",
+      "proposal_id": "proposal-260513-c161-telegram-chat-capture",
+      "proposal_kind": "free_text_chat_capture",
+      "idempotency_key": "xlooop:c161:telegram-chat-capture:260513:intent-to-contract",
+      "receipt_state": "accepted_by_mbp",
+      "receipt_source": "mbp_gateway_authoritative_projection",
+      "receipt_ref": "mbp-gateway://receipts/mbp-receipt-260513-c161-telegram-chat-capture",
+      "receipt_observed_at": "2026-05-13T18:55:00+10:00",
+      "replay_ref": "mbp-gateway://replay/xlooop:c161:telegram-chat-capture:260513:intent-to-contract",
+      "rollback_ref": "mbp-gateway://rollback/xlooop:c161:telegram-chat-capture:260513:intent-to-contract",
+      "owner_decision_state": "receipt_recorded",
+      "direct_mbp_repo_write_allowed": false,
+      "raw_content_included": false,
+      "evidence_refs": [
+        {
+          "ref_id": "receipt:evidence:c161-telegram-chat-capture",
+          "repo": "MB-P",
+          "uri": "mbp://gateway/receipts/mbp-receipt-260513-c161-telegram-chat-capture",
+          "access_mode": "read_only_projection",
+          "raw_content_included": false
+        },
+        {
+          "ref_id": "receipt:evidence:private-telegram-direct-input-encryption",
+          "repo": "MB-P",
+          "uri": "private-host://AGENTS/xcp-chat-bridge/src/queueCrypto.ts",
+          "access_mode": "read_only_evidence",
+          "raw_content_included": false
+        }
+      ]
+    },
+    {
+      "receipt_id": "mbp-receipt-260513-c150-live-operation-handoff",
+      "proposal_id": "proposal-260513-c142-xlooop-live-operation-handoff",
+      "proposal_kind": "xlooop_live_operation_handoff",
+      "idempotency_key": "xlooop:c142:live-operation-handoff:projection-packet-action",
+      "receipt_state": "accepted_by_mbp",
+      "receipt_source": "mbp_gateway_authoritative_projection",
+      "receipt_ref": "mbp-gateway://receipts/mbp-receipt-260513-c150-live-operation-handoff",
+      "receipt_observed_at": "2026-05-13T13:22:00+10:00",
+      "replay_ref": "mbp-gateway://replay/xlooop:c142:live-operation-handoff:projection-packet-action",
+      "rollback_ref": "mbp-gateway://rollback/xlooop:c142:live-operation-handoff:projection-packet-action",
+      "owner_decision_state": "receipt_recorded",
+      "direct_mbp_repo_write_allowed": false,
+      "raw_content_included": false,
+      "evidence_refs": [
+        {
+          "ref_id": "receipt:evidence:c150-live-operation-handoff",
+          "repo": "MB-P",
+          "uri": "mbp://gateway/receipts/mbp-receipt-260513-c150-live-operation-handoff",
+          "access_mode": "read_only_projection",
+          "raw_content_included": false
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,49 @@
+# CUSTOMER_FACT_BUNDLE_MANIFEST.yml · T3/P5 (260710) · the DDD surface of the chat grounding bundle.
+#
+# schema_id: xlooop.customer_fact_bundle_manifest.v1
+# WHAT THIS IS: the one governance description of WHAT an LLM answer on app.xlooop.com may ground on, WHERE
+# each plane comes from, and WHICH authority projection filters it — the "graph → roles → context →
+# artefacts, traceable + auditable" pillar, as a checkable doc instead of tribal knowledge.
+# SSOT for shapes: src/workers/services/cockpit-chat.ts (CockpitChatFacts / SourceGroundingFact /
+# grounded_on) + src/workers/services/role-scoped-context.ts (the §168 projection).
+# DRIFT-GATED: scripts/verify-governance-manifests.mjs asserts every field listed here exists in the source
+# interfaces (field-presence check), so a renamed/removed plane fails CI.
+# owner: backend seat · consumers: design seat (§168), audit, the FE production build.
+
+schema_id: xlooop.customer_fact_bundle_manifest.v1
+verify: node scripts/verify-governance-manifests.mjs
+
+planes:
+  events:              # Plane A — operation_events, workspace-scoped + role-filtered at the DAL
+    source: dal.listEvents(workspace_id, { role })
+    projection: role-scoped-context (D-5 visibility ceiling; monotone owner ⊇ operator ⊇ viewer ⊇ client)
+    override: source-truth-override (CHAT_SOURCE_TRUTH_OVERRIDE_ENABLED) demotes superseded setup reminders
+  governance:          # Plane B — MB-P operations-live-stream packets/decisions (operator plane only)
+    source: mapGovernanceRowsToEvents(operations-live-stream)
+  pinned:              # Wave 3b — operator-pinned context cards (cross-scope, lead the answer)
+    source: operator pinned cards
+  lineage:             # OS-4 P4 — v_artefact_lineage edges for the pinned cards
+    source: dal.getArtefactLineage
+    projection: owner/operator-class only (§167 U2)
+  documents:           # Plane C — uploaded docs (admissibility-filtered)
+    source: documents (isAdmissibleForContext)
+    projection: "D-6: approved ground anyone (within ceiling); candidate grounds ONLY the proposer, flagged unpromoted"
+  sources:             # T1/P3 — source connection/sync truth (the anti-stale-reminder plane)
+    source: buildSourceFacts(workspace, user sources, events)
+    projection: ops-internal class — owner/operator ground on it; viewer/client do not (flag-on)
+  companyContext:      # S1 — captured customer company context
+    source: dal.getCustomerContextProfile(workspace_id)
+
+source_grounding_fact_fields:  # SourceGroundingFact (cockpit-chat.ts) — checked for presence in source
+  - provider
+  - status
+  - workspace_binding
+  - connected_at
+  - last_sync_at
+  - last_sync_error
+  - event_count
+  - latest_event_at
+  - scopes
+
+client_rule: "D-7 · an external client persona gets NO grounded spine (empty bundle, contribution-only)."
+audit: "every flag-on assembly logs kind:role_scoped_context (include/exclude counts per plane) + kind:chat_fact_bundle (bundle size + provenance); receipts (W2) carry grounding_event_ids."

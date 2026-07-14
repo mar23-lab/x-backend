@@ -1,0 +1,47 @@
+{
+  "schema_version": "xcp.ecosystem_leverage_contract_pack.v1",
+  "pack_version": "2026.05.21",
+  "authority": "xcp-platform",
+  "governance_authority": "MB-P",
+  "mbp_authority_ref": "MB-P/_sys/xcp-system/governance/ECOSYSTEM_CAPABILITY_LEVERAGE_REGISTRY.yml",
+  "package_name": "@xcp/ecosystem-leverage-contracts",
+  "reuse_classes": [
+    "reuse_now",
+    "extract_package",
+    "reference_only",
+    "do_not_share",
+    "operator_decision_required"
+  ],
+  "required_contracts": [
+    "EcosystemCapabilityLeverageEntry",
+    "ReuseClass",
+    "CapabilityAdoptionReceipt",
+    "CapabilityConsumerManifest",
+    "CapabilityEvidenceRef"
+  ],
+  "forbidden_patterns": [
+    "direct import from another product app src directory",
+    "private MB-P projection in public-safe contract pack",
+    "customer data in shared fixture",
+    "public readiness claim without MB-P authority",
+    "Xlooop entitlement implies XCP entitlement"
+  ],
+  "sources": [
+    {
+      "package_name": "@xcp/ecosystem-leverage-contracts",
+      "path": "packages/xcp-ecosystem-leverage-contracts/package.json",
+      "sha256": "a70cd75731ae74e5ae25be95b90aadb94c3484b2b4557212206dd2494e17e115"
+    },
+    {
+      "package_name": "@xcp/ecosystem-leverage-contracts",
+      "path": "packages/xcp-ecosystem-leverage-contracts/src/index.ts",
+      "sha256": "7087b75af181b58b8028d9d0ee81b695d8bf921708c0add77859258266accbf3"
+    },
+    {
+      "package_name": "@xcp/ecosystem-leverage-contracts",
+      "path": "packages/xcp-ecosystem-leverage-contracts/README.md",
+      "sha256": "fafbddb4d71ca2be0bb40c39986c115b5576972b16103ec05cbd24bd4e87adcf"
+    }
+  ],
+  "contract_pack_sha256": "cedbfe632294a3d41adde808a2f80892612e175c90b6d9b6871edb900b4767d4"
+}

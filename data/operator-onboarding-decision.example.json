@@ -1,0 +1,38 @@
+{
+  "schema_version": "xlooop.operator_onboarding_decision_template.v1",
+  "status": "template_only_not_authority",
+  "usage": "Copy the decision object into data/operator-onboarding-decision.json only after Marat records an explicit onboarding decision with evidence.",
+  "decision": {
+    "schema_version": "xcp.operator_onboarding_decision.v1",
+    "decision_id": "opd-YYYYMMDD-customer-slug-001",
+    "operator_id": "Marat",
+    "customer_or_workspace": "customer-or-investor-workspace-id",
+    "allowed_apps": [
+      "xlooop"
+    ],
+    "allowed_modes": [
+      "watch",
+      "test"
+    ],
+    "valid_from": "YYYY-MM-DD",
+    "valid_until": "YYYY-MM-DD",
+    "evidence_refs": [
+      "cloudflare_access_identity:<id>",
+      "tenant_membership:<id>",
+      "redaction_safe_pack:<id>",
+      "monitoring_receipt:<id>",
+      "owner_signoff:<id>"
+    ],
+    "notes": "Operator-gated controlled pilot. XCP access is not granted by this template.",
+    "xcp_access": {
+      "granted": false,
+      "reason": "XCP requires a separate explicit entitlement and admin decision."
+    }
+  },
+  "forbidden_defaults": [
+    "operator mode by URL param",
+    "XCP access from Xlooop access",
+    "tenant access from localStorage",
+    "public/self-serve readiness claim"
+  ]
+}

@@ -1,0 +1,87 @@
+# Wave R-M-K+1 G9 — archive convention: keep _ARCHIVE/ content out of git
+# but track the README so HR-ARCHIVE-FOLDER-CONVENTION-1 is satisfied.
+# The legacy "Xlooop-XCP-demo ARCHIVE/" was renamed to _ARCHIVE/ in this wave;
+# its 10MB of legacy v2 demo content remains intentionally untracked.
+_ARCHIVE/*
+!_ARCHIVE/README.md
+
+# macOS
+.DS_Store
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Claude Code session state · ignore everything under .claude/
+# EXCEPT .claude/skills/ which IS committed as reusable repo-wide
+# tooling (Phase 10C P10C.0b · c159). The pattern below carefully
+# re-includes .claude/ as a dir, then re-ignores everything in it
+# EXCEPT .claude/skills/ subtree.
+.claude/*
+!.claude/skills/
+.claude/.DS_Store
+
+# smoke-cli output (regenerated on every run)
+.smoke-result.json
+
+# Phase 9 P9.6 · node_modules + Playwright outputs
+node_modules
+node_modules/
+test-results/
+playwright-report.json
+playwright-report/
+playwright-v3-report.json
+playwright-v3-report/
+
+# Phase 10D P10D.1 c176 · Storybook build output (regenerated on every build)
+storybook-static/
+.gstack/
+dist-vite-standalone/
+dist-cloudflare/
+dist-production/
+# R51-β · per-tenant build output from scripts/tenant-projection-builder.mjs
+dist-tenant-*/
+.wrangler/
+# R-N-3-β · build-substrate-snapshot.mjs output (regenerated every build)
+dist/substrate-snapshot.html-fragment
+
+# R42 · per-customer seed files (filled with real Clerk org_id + user_id by operator)
+# Authored by scripts/onboard-customer.mjs or hand-substituted from the pre-staged
+# templates in docs/handoffs/customer-onboarding/. NEVER commit a filled seed.
+.seed-customer-*.sql
+.seed-*.sql
+
+# R55 Phase 4b · per-customer readiness briefs authored by onboard-customer.mjs from the
+# funnel Q&A (contain customer answers/PII). Operator copies into the MB-P ecosystem. NEVER commit.
+.onboard-*
+
+# R-I.5 · parallel-session land-lock (scripts/land.mjs · transient, never committed)
+.land-lock
+
+# wrangler deploy --dry-run --outdir output (regenerated; never commit)
+dist-workers-dryrun/
+
+# Impeccable local UI-review state. Shared config is committed, but local
+# settings, cookies, screenshots, and hook logs must stay out of source.
+.impeccable/config.local.json
+.impeccable/*.local.json
+.impeccable/*.log
+.impeccable/*.ndjson
+.impeccable/screenshots/
+.impeccable/cookies*
+
+# Cloudflare local deploy receipts are mutable "latest" evidence. The guarded
+# deploy wrapper writes them for operator closeout, but committing them creates
+# a source_commit feedback loop because the receipt records the pre-commit HEAD.
+docs/deployment/evidence/latest-cloudflare-local-deploy-receipt.*.json
+docs/deployment/evidence/latest-*-deploy-receipt.json
+
+
+# MB-P parallel-session-guard recon artifacts (belong only in MB-P repo)
+_sys/xcp-system/derivative/
+wrangler.test.generated.toml
+
+# born-WARN gate calibration accrual (local, not a tracked artifact)
+.gate-calibration/

@@ -1,0 +1,318 @@
+{
+  "schema_version": "xlooop.governed_proposal_ledger.v1",
+  "contract_kind": "governed_proposal_ledger",
+  "contract_version": "v0.1.0",
+  "ledger_id": "ledger-260513-c142-governed-proposal-ledger",
+  "producer_repo": "Xlooop-XCP-demo",
+  "authority_source": "mb-p-gateway",
+  "proposal_record_mode": "xlooop_local_proposal_record_only",
+  "mbp_receipt_model": "eventual_mbp_gateway_receipt",
+  "direct_mbp_repo_write_allowed": false,
+  "proposals": [
+    {
+      "proposal_id": "proposal-260513-c142-free-chat-capture",
+      "proposal_kind": "free_text_chat_capture",
+      "idempotency_key": "xlooop:c142:free-chat-capture:260513:intent-to-contract",
+      "source_adapter": {
+        "adapter_id": "free_chat_text",
+        "adapter_role": "transport_adapter",
+        "adapter_label": "Free chat text capture",
+        "owns_governance_logic": false,
+        "governance_logic_allowed": false
+      },
+      "runtime_adapter": {
+        "adapter_id": "codex",
+        "adapter_role": "runtime_adapter",
+        "adapter_label": "Codex proposal runtime",
+        "execution_mode": "proposal_only",
+        "owns_governance_logic": false,
+        "governance_logic_allowed": false
+      },
+      "HarnessTurn": {
+        "status": "pass",
+        "selected_route": "ecosystem-status-brief",
+        "detected_role": "xlooop-xcp-demo",
+        "entry_skill": "product-engineering-router",
+        "required_skills": [
+          "product-engineering-router",
+          "ecosystem-status-brief",
+          "xlooop-demo-governance-review"
+        ],
+        "loaded_skills": [
+          "product-engineering-router",
+          "ecosystem-status-brief",
+          "xlooop-demo-governance-review"
+        ],
+        "stop_conditions": [],
+        "evidence_checked": [
+          "mcp://mb-p-gateway/harness_session_start",
+          "data/governed-chat-capture-projection.example.json",
+          "scripts/verify-governed-chat-capture-projection.mjs"
+        ]
+      },
+      "risk_lane": "reversible_metadata_proposal",
+      "security_policy": {
+        "prompt_body_storage": "xlooop_local_metadata_only",
+        "direct_input_queue_encryption": "not_applicable",
+        "key_material_stored_in_product_repo": false,
+        "raw_prompt_projected_to_product": false
+      },
+      "evidence_refs": [
+        {
+          "ref_id": "evidence:c106-governed-chat-capture-projection",
+          "repo": "Xlooop-XCP-demo",
+          "uri": "data/governed-chat-capture-projection.example.json",
+          "access_mode": "xlooop_local_record",
+          "raw_content_included": false
+        },
+        {
+          "ref_id": "evidence:mbp-chat-capture-standard",
+          "repo": "MB-P",
+          "uri": "mbp://_sys/xcp-system/operations/GOVERNED_CHAT_TO_CONTRACT_CAPTURE_STANDARD.md",
+          "access_mode": "read_only_projection",
+          "raw_content_included": false
+        }
+      ],
+      "replay_command": {
+        "command_id": "replay-260513-c142-free-chat-capture",
+        "command_kind": "proposal_replay",
+        "target_control_plane": "mb-p-gateway",
+        "command": "mbp_gateway.proposals.replay",
+        "idempotency_key": "xlooop:c142:free-chat-capture:260513:intent-to-contract",
+        "direct_mbp_write_allowed": false
+      },
+      "rollback_command": {
+        "command_id": "rollback-260513-c142-free-chat-capture",
+        "command_kind": "proposal_rollback",
+        "target_control_plane": "xlooop-local-proposal-ledger",
+        "command": "xlooop.local_proposal_ledger.rollback",
+        "idempotency_key": "xlooop:c142:free-chat-capture:260513:intent-to-contract",
+        "direct_mbp_write_allowed": false
+      },
+      "owner_decision_state": "pending_owner_review",
+      "target_control_plane": "mb-p-gateway",
+      "gateway_record_route": "owner_approved_gateway_proposal",
+      "direct_mbp_write_allowed": false,
+      "mbp_receipt": {
+        "receipt_state": "not_submitted",
+        "receipt_id": null,
+        "receipt_ref": null,
+        "receipt_source": "xlooop_local_state",
+        "authority_level": "xlooop_local_only",
+        "receipt_observed_at": null,
+        "evidence_refs": [],
+        "replay_ref": null,
+        "rollback_ref": null
+      }
+    },
+    {
+      "proposal_id": "proposal-260513-c161-telegram-chat-capture",
+      "proposal_kind": "free_text_chat_capture",
+      "idempotency_key": "xlooop:c161:telegram-chat-capture:260513:intent-to-contract",
+      "source_adapter": {
+        "adapter_id": "telegram",
+        "adapter_role": "transport_adapter",
+        "adapter_label": "Telegram chat text capture",
+        "owns_governance_logic": false,
+        "governance_logic_allowed": false
+      },
+      "runtime_adapter": {
+        "adapter_id": "codex",
+        "adapter_role": "runtime_adapter",
+        "adapter_label": "Codex proposal runtime",
+        "execution_mode": "proposal_only",
+        "owns_governance_logic": false,
+        "governance_logic_allowed": false
+      },
+      "HarnessTurn": {
+        "status": "pass",
+        "selected_route": "ecosystem-status-brief",
+        "detected_role": "xlooop-xcp-demo",
+        "entry_skill": "product-engineering-router",
+        "required_skills": [
+          "product-engineering-router",
+          "ecosystem-status-brief",
+          "xlooop-demo-governance-review"
+        ],
+        "loaded_skills": [
+          "product-engineering-router",
+          "ecosystem-status-brief",
+          "xlooop-demo-governance-review"
+        ],
+        "stop_conditions": [],
+        "evidence_checked": [
+          "mcp://mb-p-gateway/harness_session_start",
+          "xcp-platform/packages/xcp-chat-bridge/README.md",
+          "xcp-platform/packages/xcp-event-contracts/src/topic-registry.ts",
+          "data/governed-proposal-ledger.example.json"
+        ]
+      },
+      "risk_lane": "reversible_metadata_proposal",
+      "security_policy": {
+        "prompt_body_storage": "private_host_encrypted_queue",
+        "direct_input_queue_encryption": "aes-256-gcm",
+        "key_material_stored_in_product_repo": false,
+        "raw_prompt_projected_to_product": false
+      },
+      "evidence_refs": [
+        {
+          "ref_id": "evidence:c106-governed-chat-capture-projection",
+          "repo": "Xlooop-XCP-demo",
+          "uri": "data/governed-chat-capture-projection.example.json",
+          "access_mode": "xlooop_local_record",
+          "raw_content_included": false
+        },
+        {
+          "ref_id": "evidence:mbp-chat-capture-standard",
+          "repo": "MB-P",
+          "uri": "mbp://_sys/xcp-system/operations/GOVERNED_CHAT_TO_CONTRACT_CAPTURE_STANDARD.md",
+          "access_mode": "read_only_projection",
+          "raw_content_included": false
+        },
+        {
+          "ref_id": "evidence:xcp-chat-bridge-telegram-transport",
+          "repo": "xcp-platform",
+          "uri": "packages/xcp-chat-bridge/README.md",
+          "access_mode": "read_only_evidence",
+          "raw_content_included": false
+        },
+        {
+          "ref_id": "evidence:private-telegram-direct-input-encryption",
+          "repo": "MB-P",
+          "uri": "private-host://AGENTS/xcp-chat-bridge/src/queueCrypto.ts",
+          "access_mode": "read_only_evidence",
+          "raw_content_included": false
+        }
+      ],
+      "replay_command": {
+        "command_id": "replay-260513-c161-telegram-chat-capture",
+        "command_kind": "proposal_replay",
+        "target_control_plane": "mb-p-gateway",
+        "command": "mbp_gateway.proposals.replay",
+        "idempotency_key": "xlooop:c161:telegram-chat-capture:260513:intent-to-contract",
+        "direct_mbp_write_allowed": false
+      },
+      "rollback_command": {
+        "command_id": "rollback-260513-c161-telegram-chat-capture",
+        "command_kind": "proposal_rollback",
+        "target_control_plane": "xlooop-local-proposal-ledger",
+        "command": "xlooop.local_proposal_ledger.rollback",
+        "idempotency_key": "xlooop:c161:telegram-chat-capture:260513:intent-to-contract",
+        "direct_mbp_write_allowed": false
+      },
+      "owner_decision_state": "pending_owner_review",
+      "target_control_plane": "mb-p-gateway",
+      "gateway_record_route": "owner_approved_gateway_proposal",
+      "direct_mbp_write_allowed": false,
+      "mbp_receipt": {
+        "receipt_state": "not_submitted",
+        "receipt_id": null,
+        "receipt_ref": null,
+        "receipt_source": "xlooop_local_state",
+        "authority_level": "xlooop_local_only",
+        "receipt_observed_at": null,
+        "evidence_refs": [],
+        "replay_ref": null,
+        "rollback_ref": null
+      }
+    },
+    {
+      "proposal_id": "proposal-260513-c142-xlooop-live-operation-handoff",
+      "proposal_kind": "xlooop_live_operation_handoff",
+      "idempotency_key": "xlooop:c142:live-operation-handoff:projection-packet-action",
+      "source_adapter": {
+        "adapter_id": "xlooop_operations_ui",
+        "adapter_role": "product_surface_adapter",
+        "adapter_label": "Xlooop Operations UI handoff",
+        "owns_governance_logic": false,
+        "governance_logic_allowed": false
+      },
+      "runtime_adapter": {
+        "adapter_id": "codex",
+        "adapter_role": "runtime_adapter",
+        "adapter_label": "Codex operations runtime",
+        "execution_mode": "local_reducer_only",
+        "owns_governance_logic": false,
+        "governance_logic_allowed": false
+      },
+      "HarnessTurn": {
+        "status": "pass",
+        "selected_route": "ecosystem-status-brief",
+        "detected_role": "xlooop-xcp-demo",
+        "entry_skill": "product-engineering-router",
+        "required_skills": [
+          "product-engineering-router",
+          "integration-boundary-contracts",
+          "xlooop-demo-governance-review",
+          "delivery-readiness-gates"
+        ],
+        "loaded_skills": [
+          "product-engineering-router",
+          "integration-boundary-contracts",
+          "xlooop-demo-governance-review",
+          "delivery-readiness-gates"
+        ],
+        "stop_conditions": [],
+        "evidence_checked": [
+          "src/runtime/mbp-operations-bridge.ts",
+          "src/pages/workspace/Workspace.jsx",
+          "scripts/verify-mbp-live-operation-handoff-contract.mjs"
+        ]
+      },
+      "risk_lane": "owner_approved_gateway_handoff",
+      "security_policy": {
+        "prompt_body_storage": "xlooop_local_metadata_only",
+        "direct_input_queue_encryption": "not_applicable",
+        "key_material_stored_in_product_repo": false,
+        "raw_prompt_projected_to_product": false
+      },
+      "evidence_refs": [
+        {
+          "ref_id": "evidence:c141-live-operation-handoff-contract",
+          "repo": "Xlooop-XCP-demo",
+          "uri": "src/runtime/mbp-operations-bridge.ts",
+          "access_mode": "read_only_evidence",
+          "raw_content_included": false
+        },
+        {
+          "ref_id": "evidence:mbp-operations-projection",
+          "repo": "Xlooop-XCP-demo",
+          "uri": "data/mbp-operations-projection.example.json",
+          "access_mode": "xlooop_local_record",
+          "raw_content_included": false
+        }
+      ],
+      "replay_command": {
+        "command_id": "replay-260513-c142-live-operation-handoff",
+        "command_kind": "proposal_replay",
+        "target_control_plane": "mb-p-gateway",
+        "command": "mbp_gateway.proposals.replay",
+        "idempotency_key": "xlooop:c142:live-operation-handoff:projection-packet-action",
+        "direct_mbp_write_allowed": false
+      },
+      "rollback_command": {
+        "command_id": "rollback-260513-c142-live-operation-handoff",
+        "command_kind": "proposal_rollback",
+        "target_control_plane": "xlooop-local-proposal-ledger",
+        "command": "xlooop.local_proposal_ledger.rollback",
+        "idempotency_key": "xlooop:c142:live-operation-handoff:projection-packet-action",
+        "direct_mbp_write_allowed": false
+      },
+      "owner_decision_state": "pending_owner_review",
+      "target_control_plane": "mb-p-gateway",
+      "gateway_record_route": "owner_approved_gateway_proposal",
+      "direct_mbp_write_allowed": false,
+      "mbp_receipt": {
+        "receipt_state": "not_submitted",
+        "receipt_id": null,
+        "receipt_ref": null,
+        "receipt_source": "xlooop_local_state",
+        "authority_level": "xlooop_local_only",
+        "receipt_observed_at": null,
+        "evidence_refs": [],
+        "replay_ref": null,
+        "rollback_ref": null
+      }
+    }
+  ]
+}

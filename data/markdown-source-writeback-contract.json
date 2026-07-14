@@ -1,0 +1,49 @@
+{
+  "schema_version": "xlooop.markdown_source_writeback_contract.v1",
+  "source_mode": "browser_safe_contract",
+  "status": "proposal_only_until_governed_backend_writeback",
+  "proposal_contract": "MarkdownWritebackProposal.v1",
+  "backend_governed_writeback_enabled": false,
+  "browser_direct_write_allowed": false,
+  "source_file_overwrite_allowed_from_browser": false,
+  "first_supported_source_type": "markdown",
+  "minimum_workflow": [
+    "view_markdown_projection",
+    "edit_local_draft",
+    "save_local_version",
+    "submit_review_proposal",
+    "create_backend_proposal_receipt",
+    "owner_approval",
+    "backend_adapter_creates_diff_version_and_rollback_note",
+    "source_writeback_after_governed_approval"
+  ],
+  "writeback_record_required_fields": [
+    "writeback_id",
+    "receipt_id",
+    "tenant_id",
+    "workspace_id",
+    "project_id",
+    "source_ref",
+    "diff_summary",
+    "approved_by",
+    "version_before",
+    "version_after",
+    "rollback_note"
+  ],
+  "failure_modes": [
+    "authority_missing",
+    "tenant_policy_denied",
+    "source_adapter_missing",
+    "conflict_detected",
+    "approval_missing",
+    "write_failed"
+  ],
+  "required_behaviors": [
+    "Browser can save local/proposal versions but cannot overwrite source files.",
+    "Submit review opens a diff preview before creating a proposal receipt.",
+    "Proposal history is visible in the document panel and inspector.",
+    "Approved writeback must create a diff, durable receipt, source version, and rollback note.",
+    "Rejected or failed writeback leaves source unchanged and visible to the operator.",
+    "Watch Mode remains preview/proposal-only."
+  ]
+}

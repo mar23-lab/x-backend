@@ -1,0 +1,81 @@
+{
+  "//": "P1 seam-gate consolidation manifest. Each gate is run by scripts/seam-gates/run.mjs.",
+  "//1": "Migrated faithfully from the standalone scripts/verify-<id>.mjs (parity-validated via --compare-legacy).",
+  "//2": "Migrated flat-check gates: Wave 1 = agent-profile-deferred, packet-persistence-collaboration; Wave 2 = customer-privacy.",
+  "//3": "The remaining verify-*-boundary.mjs are DELIBERATELY KEPT BESPOKE (not boilerplate): they use recursive JSON",
+  "//4": "tree-walks (activity-event-actor, customer-ip, data-projection-taxonomy), directory scans + sibling-repo refs",
+  "//5": "(v3-docs-domain), Date.now()/TTL + --strict modes (paid-pilot, customer-feedback-production, production-pilot),",
+  "//6": "self-referential package.json assertions (operations-persistence-visibility), spawnSync composition (auth-tenant),",
+  "//7": "or swarm-hot widget-source greps (profile/settings/feature-flags/project-boards operability). The flat manifest",
+  "//8": "grammar cannot express these faithfully; forcing them would be lossy. See ~/.claude/plans/xlooop-fsd-architecture-review-260604.md.",
+  "gates": [
+    {
+      "id": "agent-profile-deferred-boundary",
+      "label": "Agent profile deferred boundary",
+      "files": {
+        "capability": { "path": "data/agent-capability-projection.json", "json": true },
+        "doc": { "path": "docs/_archive/audits/phase-10A-closure-followups/agent-profile-deferred.md", "caseInsensitive": true }
+      },
+      "checks": [
+        { "id": "projection_deferred", "file": "capability", "json": { "op": "equals", "path": "agent_profile_status", "value": "deferred" } },
+        { "id": "trigger:real_agent_execution_surface", "file": "capability", "json": { "op": "includes", "path": "deferred_trigger_conditions", "value": "real_agent_execution_surface" } },
+        { "id": "trigger:runtime_persistence", "file": "capability", "json": { "op": "includes", "path": "deferred_trigger_conditions", "value": "runtime_persistence" } },
+        { "id": "trigger:assignment_workflow", "file": "capability", "json": { "op": "includes", "path": "deferred_trigger_conditions", "value": "assignment_workflow" } },
+        { "id": "trigger:audit_surface", "file": "capability", "json": { "op": "includes", "path": "deferred_trigger_conditions", "value": "audit_surface" } },
+        { "id": "doc_marker:agent_profile", "file": "doc", "includesAll": ["agent_profile"] },
+        { "id": "doc_marker:deferred", "file": "doc", "includesAll": ["deferred"] },
+        { "id": "doc_marker:execution surface", "file": "doc", "includesAll": ["execution surface"] },
+        { "id": "doc_marker:persistence", "file": "doc", "includesAll": ["persistence"] },
+        { "id": "doc_marker:assignment workflow", "file": "doc", "includesAll": ["assignment workflow"] },
+        { "id": "doc_marker:audit surface", "file": "doc", "includesAll": ["audit surface"] }
+      ]
+    },
+    {
+      "id": "packet-persistence-collaboration-boundary",
+      "label": "Packet persistence collaboration boundary (C105)",
+      "files": {
+        "boundary": { "path": "data/packet-persistence-collaboration-boundary.example.json", "json": true },
+        "contract": { "path": "src/contracts/persistence-collaboration/packet-boundary.contract.ts" },
+        "barrel": { "path": "src/contracts/index.ts" },
+        "test": { "path": "src/__contracts__/packetPersistenceCollaborationBoundary.contract.test.ts" },
+        "c104": { "path": "docs/_archive/audits/260510_1625_operations-readiness-decision-c104.md" }
+      },
+      "checks": [
+        { "id": "schema_version", "file": "boundary", "json": { "op": "equals", "path": "schema_version", "value": "xlooop.packet_persistence_collaboration_boundary.v1" } },
+        { "id": "contract_only_state", "file": "boundary", "json": { "op": "equals", "path": "state", "value": "contract_only_no_backend_persistence" } },
+        { "id": "no_backend_claim", "file": "boundary", "json": { "op": "isFalse", "path": "persistence_policy.backend_persistence_implemented" } },
+        { "id": "no_mbp_writeback", "file": "boundary", "json": { "op": "isFalse", "path": "persistence_policy.writes_back_to_mbp_allowed" } },
+        { "id": "no_private_payload", "file": "boundary", "json": { "op": "isFalse", "path": "persistence_policy.private_payload_allowed" } },
+        { "id": "owner_approval_required", "file": "boundary", "json": { "op": "isTrue", "path": "persistence_policy.owner_approval_required" } },
+        { "id": "allowed_fields_cover_required", "file": "boundary", "json": { "op": "supersetOf", "path": "persistence_policy.allowed_fields", "values": ["packet_id", "intent_id", "workspace_id", "project_id", "title", "source_type", "role_panel", "required_skills", "owner_confirmation_state", "lifecycle_state", "graph_state", "evidence_ref_ids", "decision_ref_ids", "xcp_feedback_state"] } },
+        { "id": "forbidden_fields_cover_required", "file": "boundary", "json": { "op": "supersetOf", "path": "persistence_policy.forbidden_fields", "values": ["raw_text", "raw_content", "private_payload", "secret", "token", "credential", "mbp_private_note_body", "protected_source_code"] } },
+        { "id": "collaboration_owner_only", "file": "boundary", "json": { "op": "equals", "path": "collaboration_policy.collaboration_mode", "value": "owner_only" } },
+        { "id": "invites_disabled", "file": "boundary", "json": { "op": "isFalse", "path": "collaboration_policy.invited_collaborators_enabled" } },
+        { "id": "invites_require_owner_approval", "file": "boundary", "json": { "op": "isTrue", "path": "collaboration_policy.invited_collaborator_requires_owner_approval" } },
+        { "id": "public_link_blocked", "file": "boundary", "json": { "op": "isFalse", "path": "collaboration_policy.public_link_allowed" } },
+        { "id": "signed_url_required", "file": "boundary", "json": { "op": "isTrue", "path": "collaboration_policy.external_share_requires_signed_url" } },
+        { "id": "collaborator_no_private_payload", "file": "boundary", "json": { "op": "everyItem", "path": "collaboration_policy.collaborator_visibility", "all": [{ "field": "can_see_private_mbp_payload", "op": "isFalse" }, { "field": "can_mutate_source_packet", "op": "isFalse" }] } },
+        { "id": "blocked_actions_cover_required", "file": "boundary", "json": { "op": "supersetOf", "path": "blocked_actions", "values": ["write_mbp_repo", "copy_private_payload", "expose_raw_owner_notes", "enable_public_link", "invite_without_owner_approval", "mutate_xfront_or_xdocs", "promote_xcp_event_without_decision"] } },
+        { "id": "xfront_xdocs_readonly", "file": "boundary", "includesAll": ["mutate_xfront_or_xdocs"] },
+        { "id": "contract_exports_guard", "file": "contract", "includesAll": ["isPacketPersistenceCollaborationBoundaryContract"] },
+        { "id": "root_barrel_keeps_contract_direct_import_only", "file": "barrel", "includesNone": ["export * from './persistence-collaboration'"] },
+        { "id": "type_test_registered", "file": "test", "includesAll": ["@ts-expect-error MB-P writeback"] },
+        { "id": "c104_points_to_c105", "file": "c104", "includesAll": ["C105-PERSISTENCE-COLLABORATION-BOUNDARY-01"] },
+        { "id": "next_slice_c106", "file": "boundary", "json": { "op": "equals", "path": "next_recommended_slice.id", "value": "C106-PERSISTENCE-COLLABORATION-STORY-02" } }
+      ]
+    },
+    {
+      "id": "customer-privacy-boundary",
+      "label": "Customer privacy boundary",
+      "files": {
+        "model": { "path": "data/customer-onboarding-read-model.json", "json": true, "caseInsensitive": true }
+      },
+      "checks": [
+        { "id": "no_forbidden_private_markers", "file": "model", "includesNone": ["@gmail.com", "property address:", "inspection photo", "raw report", "client name:", "invoice number:", "oauth_token_value", "access token"] },
+        { "id": "do_not_ingest_property_addresses", "file": "model", "json": { "op": "includes", "path": "source_boundaries.do_not_ingest", "value": "property_addresses" } },
+        { "id": "do_not_ingest_inspection_photos", "file": "model", "json": { "op": "includes", "path": "source_boundaries.do_not_ingest", "value": "inspection_photos" } },
+        { "id": "private_integrations_blocked", "file": "model", "json": { "op": "isFalse", "path": "consent.private_integrations_allowed" } }
+      ]
+    }
+  ]
+}

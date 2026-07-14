@@ -1,0 +1,63 @@
+# DEPLOYED_SURFACES.yml · ADR-XLOOP-ARCH-005 · HR-SURFACE-DISCOVERABILITY-1 + HR-SEARCH-BEFORE-ABSENCE-1
+#
+# WHY: an AI agent could not find the investor deck (live at invest.xlooop.com/?screen=investor-deck,
+# discussed before) because surface knowledge was scattered across ~10 files with NO single SSOT — a
+# structural discoverability gap that drives context-drift. THIS is the canonical inventory of every LIVE
+# product surface: an agent's (and operator's) first move for "where is X / what's live / what state is it
+# in" is ONE query here, not a grep-and-hope. verify-deployed-surfaces.mjs keeps it honest + complete.
+#
+# RULE: a new deployed surface (a new host, a new deploy script, a new investor screen) MUST be registered
+# here in the same change that ships it (HR-SURFACE-DISCOVERABILITY-1). Before claiming "X doesn't exist /
+# is wrong / can't be found", query THIS file (HR-SEARCH-BEFORE-ABSENCE-1).
+
+schema_id: xlooop.deployed_surfaces.v1
+last_reviewed: '2026-06-10'
+
+hosts:
+  - id: app
+    url: https://app.xlooop.com
+    purpose: operator cockpit (chief-of-staff over the operator's real activity; MB-P-first proving)
+    state: live
+    deploy_script: deploy:app:prod          # node scripts/deploy-app-prod.mjs (boundary-gated CF Pages, xlooop-app)
+    router: src/widgets/XcpScreenRouter/XcpScreenRouter.jsx
+    default_screen: chat
+    screens: [audit, chat, profile, project, project-workspace, recommendations, settings, workspace]
+
+  - id: invest
+    url: https://invest.xlooop.com
+    purpose: investor data room + tier-gated pitch deck
+    state: parked_pending_track_b            # HONEST: per the disposition doc, current invest deploy is
+    disposition: docs/INVESTOR_PORTAL_PRODUCTION_ARCHITECTURE.md   # "scaffolding for a deprecated approach;
+                                             # build the purpose-built Track B" — LIVE but not production-final.
+    deploy_script: deploy:invest             # npx wrangler pages deploy ... --project-name xlooop-invest
+    router: src/app/routing/InvestorHostRouter.jsx
+    screens:
+      - id: investor-welcome
+        component: window.InvestorWelcomeGated
+      - id: investor-data-room
+        component: window.InvestorDataRoomGated
+        requires_auth: clerk_jwt + investor_tier>=2
+      - id: investor-deck                    # THE pitch deck → https://invest.xlooop.com/?screen=investor-deck
+        component: window.InvestorDeckDownloadGated
+        api: POST /api/v1/investor/request-deck-download   # src/workers/routes/investor.ts (Clerk + tier-1 gate)
+        requires_auth: clerk_jwt + investor_tier>=1 + typed-name NDA
+        notes: tier-1 approval is manual operator gate (MASTER_OUTSTANDING_ITEMS DR-11..14)
+      - id: investor-nda
+        component: window.InvestorNDAShelled
+      - id: investor-admin
+        component: window.InvestorAdminShelled
+        requires_auth: clerk_jwt + admin_role
+
+  - id: www
+    url: https://www.xlooop.com
+    purpose: public marketing site (software-development vertical + regulated-SMB path)
+    state: live
+    source_repo: x-web                        # separate repo; deployed via x-web/.github/workflows/deploy.yml
+    deploy_script: '(x-web repo)'
+
+  - id: api
+    url: https://api.xlooop.com
+    purpose: backend worker (investor/workspace/graph/events/sign-off endpoints)
+    state: live
+    deploy_script: deploy:api                 # wrangler deploy --config wrangler.toml
+    config: wrangler.toml

@@ -1,0 +1,74 @@
+{
+  "schema_version": "xlooop.governed_chat_capture_projection.v1",
+  "contract_kind": "governed_chat_capture_projection",
+  "contract_version": "0.1.0",
+  "source_packet_schema_id": "xcp_governed_chat_capture_packet_v1",
+  "capture_id": "capture-20260511-chat-to-contract-example",
+  "intent_id": "intent-20260511-chat-contract-capture",
+  "tenant_id": "tenant.mbp",
+  "workspace_id": "xlooop",
+  "project_id": "xlooop-product",
+  "source_repo": "MB-P",
+  "target_repo": "Xlooop-XCP-demo",
+  "projection_mode": "metadata_only",
+  "owner_approval_state": "pending",
+  "graph_visibility": "workspace",
+  "graph_sensitivity": "internal",
+  "allowed_fields": [
+    "capture_id",
+    "intent_id",
+    "summary",
+    "contract_proposal.status",
+    "owner_approval.status",
+    "repo_evidence_refs",
+    "verification.required_gates"
+  ],
+  "forbidden_fields": [
+    "raw_transcript",
+    "raw_text",
+    "raw_content",
+    "private_payload",
+    "secret",
+    "token",
+    "credential",
+    "mbp_private_note_body",
+    "protected_source_code"
+  ],
+  "source_refs": [
+    {
+      "contract_version": "0.1.0",
+      "source_type": "operator_review",
+      "uri": "mbp://_sys/xcp-system/evidence/templates/GOVERNED_CHAT_CAPTURE_PACKET.template.json",
+      "title": "MB-P governed chat capture packet template",
+      "last_verified_at": "2026-05-11T00:00:00+10:00",
+      "raw_content_included": false,
+      "source_repo": "MB-P",
+      "source_access_mode": "read_only_projection"
+    }
+  ],
+  "repo_evidence_refs": [
+    {
+      "repo": "MB-P",
+      "uri": "_sys/xcp-system/operations/GOVERNED_CHAT_TO_CONTRACT_CAPTURE_STANDARD.md",
+      "access_mode": "read_only_projection"
+    },
+    {
+      "repo": "x-front",
+      "uri": "read-only://Ilmir-owned/x-front/design-code-sync",
+      "access_mode": "read_only_evidence"
+    },
+    {
+      "repo": "x-docs",
+      "uri": "read-only://Ilmir-collaborator/x-docs/ast-proxy-plan",
+      "access_mode": "read_only_evidence"
+    }
+  ],
+  "verification_refs": [
+    "scripts/verify-governed-chat-capture-projection.mjs",
+    "src/__contracts__/governedChatCaptureProjection.contract.test.ts"
+  ],
+  "mbp_record_requires_owner_approval": true,
+  "mbp_writeback_allowed": false,
+  "raw_transcript_included": false,
+  "private_payload_included": false
+}

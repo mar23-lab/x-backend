@@ -1,0 +1,99 @@
+id: c29_uikit_01_wrapper_reconciliation
+created_at: "2026-05-09T11:19:00+10:00"
+date_key: "260509_1119"
+owner: Marat Basyrov
+scope: wrapper_status_reconciliation_only
+source_xfront:
+  repo_path: /Users/maratbasyrov/WIP/Xlooop/x-front
+  head_sha: 401e6d40a0befc683a7a410f1ed0aee0afd6f492
+  head_short: 401e6d4
+decision:
+  verdict: current_root_wrappers_already_absorbed_keep_improve
+  xfront_code_import_authorized: false
+  xfront_file_mutation_authorized: false
+  demo_runtime_change_authorized: false
+  archive_delete_move_authorized: false
+role_panel:
+  - chief-of-staff
+  - cto
+  - ux
+  - product-manager
+  - knowledge-architect
+  - ai-governed-infrastructure-manager
+  - devsecops
+  - lead-engineer
+skills_used:
+  - component-contract-storybook
+  - product-engineering-router
+  - existing-artifact-discovery
+old_policy_supersession:
+  path: docs/contracts/ui-library-policy.json
+  status: historical_evidence_partially_superseded
+  reason: implementation_location_references_v2_src_ui_but_current_root_structure_has_absorbed_wrappers
+  active_root_paths:
+    - src/shared/uiKit/Avatar/
+    - src/shared/uiKit/XEvidenceImage/
+    - src/shared/uiKit/XEvidencePreview/
+components:
+  - id: avatar
+    current_root_path: src/shared/uiKit/Avatar
+    xfront_reference_path: /Users/maratbasyrov/WIP/Xlooop/x-front/src/shared/uiKit/Avatar
+    old_recommendation: approve_for_future_adoption
+    classification: already_absorbed_keep_improve
+    current_maturity: production
+    direct_import_required: false
+    improvement_backlog:
+      - UIKIT-A11Y-01
+  - id: x_evidence_image
+    current_root_path: src/shared/uiKit/XEvidenceImage
+    xfront_reference_path: /Users/maratbasyrov/WIP/Xlooop/x-front/src/shared/uiKit/Image
+    old_recommendation: adopt_with_wrapper
+    classification: already_absorbed_keep_improve
+    current_maturity: app_integrated
+    direct_import_required: false
+    improvement_backlog:
+      - UIKIT-SB-01
+  - id: x_evidence_preview
+    current_root_path: src/shared/uiKit/XEvidencePreview
+    xfront_reference_path: /Users/maratbasyrov/WIP/Xlooop/x-front/src/shared/uiKit/Preview
+    old_recommendation: adopt_with_wrapper
+    classification: already_absorbed_keep_improve
+    current_maturity: app_integrated
+    direct_import_required: false
+    improvement_backlog:
+      - UIKIT-SB-02
+quality_snapshot:
+  runtime_file: 3
+  storybook_story: 3
+  contract_json: 3
+  type_only_test: 3
+  barrel_files_complete: 3
+  direct_xfront_imports: 0
+improvement_backlog:
+  - id: UIKIT-A11Y-01
+    surface: Avatar
+    priority: P2
+    risk: 20
+    recommendation: emit_semantic_role_aria_where_identity_is_conveyed
+  - id: UIKIT-SB-01
+    surface: XEvidenceImage
+    priority: P2
+    risk: 25
+    recommendation: add_level_4_storybook_a11y_client_safety_proof
+  - id: UIKIT-SB-02
+    surface: XEvidencePreview
+    priority: P2
+    risk: 25
+    recommendation: add_level_4_type_status_matrix_proof
+  - id: UIKIT-POLICY-01
+    surface: ui_library_policy
+    priority: P2
+    risk: 15
+    recommendation: supersede_or_update_v2_path_references_in_later_policy_cleanup_slice
+stop_conditions:
+  - stop_on_direct_xfront_uikit_import
+  - stop_on_recreating_v2_src_ui_path
+  - stop_on_private_data_in_client_visible_fixtures
+  - stop_on_using_old_p10c_policy_as_current_path_authority
+  - stop_on_wrapper_improvement_without_storybook_contract_and_test_updates
+recommended_next_slice: C29-BISYNC-01

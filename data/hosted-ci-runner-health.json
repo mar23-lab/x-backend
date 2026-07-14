@@ -1,0 +1,118 @@
+{
+  "schema_version": "xlooop.hosted_ci_runner_health.v1",
+  "generated_at": "2026-06-22T07:17:00Z",
+  "purpose": "Classify hosted CI/account/runner failures separately from product code-test failures.",
+  "policy": {
+    "hosted_ci_is_release_authority": false,
+    "local_replacement_required_when_hosted_pre_step_failure": true,
+    "do_not_claim_hosted_green_without_step_execution": true,
+    "xlooop_release_authority": "local_cloudflare_direct_upload_and_local_gate_stack"
+  },
+  "repositories": [
+    {
+      "repo": "mar23-lab/MB-P",
+      "evidence_class": "fresh_live_hosted_run_payload",
+      "observed_at": "2026-06-22T07:17:00Z",
+      "head_branch": "main",
+      "head_sha": "05352fdf7a94322693efb99e63b63624cad38fee",
+      "classification": "hosted_ci_pre_step_infra_failure",
+      "active_as_release_gate": false,
+      "local_replacement_required": true,
+      "runs": [
+        {
+          "run_id": 27935988962,
+          "workflow_name": "XCP Domain Registry Enforcement",
+          "event": "push",
+          "conclusion": "failure",
+          "created_at": "2026-06-22T07:14:14Z",
+          "updated_at": "2026-06-22T07:14:18Z",
+          "url": "https://github.com/mar23-lab/MB-P/actions/runs/27935988962",
+          "jobs": [
+            {
+              "job_id": 82657675938,
+              "name": "domain-registry",
+              "conclusion": "failure",
+              "started_at": "2026-06-22T07:14:15Z",
+              "completed_at": "2026-06-22T07:14:17Z",
+              "steps": [],
+              "duration_seconds": 2
+            }
+          ]
+        },
+        {
+          "run_id": 27935988937,
+          "workflow_name": "Governance Validation",
+          "event": "push",
+          "conclusion": "failure",
+          "created_at": "2026-06-22T07:14:14Z",
+          "updated_at": "2026-06-22T07:14:18Z",
+          "url": "https://github.com/mar23-lab/MB-P/actions/runs/27935988937",
+          "jobs": [
+            {
+              "job_id": 82657675840,
+              "name": "validate",
+              "conclusion": "failure",
+              "started_at": "2026-06-22T07:14:15Z",
+              "completed_at": "2026-06-22T07:14:17Z",
+              "steps": [],
+              "duration_seconds": 2
+            }
+          ]
+        }
+      ],
+      "verifier_evidence": [
+        "gh run list --repo mar23-lab/MB-P --limit 10 --json databaseId,status,conclusion,workflowName,createdAt,updatedAt,headBranch,headSha,event,url",
+        "gh run view 27935988962 --repo mar23-lab/MB-P --json jobs,conclusion,status,createdAt,updatedAt,url,workflowName",
+        "gh run view 27935988937 --repo mar23-lab/MB-P --json jobs,conclusion,status,createdAt,updatedAt,url,workflowName"
+      ]
+    },
+    {
+      "repo": "mar23-lab/Xlooop-XCP-demo",
+      "evidence_class": "stale_historical_hosted_run_plus_current_disabled_workflow_policy",
+      "observed_at": "2026-06-22T06:05:00Z",
+      "head_branch": "main",
+      "head_sha": "261011cc588deaef0f33608146d153e8fb4ca207",
+      "classification": "hosted_actions_disabled_non_authoritative",
+      "active_as_release_gate": false,
+      "local_replacement_required": true,
+      "current_workflow_yaml_count": 0,
+      "runs": [
+        {
+          "run_id": 26005431734,
+          "workflow_name": "smoke",
+          "event": "push",
+          "conclusion": "failure",
+          "created_at": "2026-05-17T23:09:06Z",
+          "updated_at": "2026-05-17T23:09:10Z",
+          "url": "https://github.com/mar23-lab/Xlooop-XCP-demo/actions/runs/26005431734",
+          "jobs": [
+            {
+              "job_id": 76435982536,
+              "name": "smoke",
+              "conclusion": "failure",
+              "started_at": "2026-05-17T23:09:07Z",
+              "completed_at": "2026-05-17T23:09:09Z",
+              "steps": [],
+              "duration_seconds": 2
+            },
+            {
+              "job_id": 76435984964,
+              "name": "e2e",
+              "conclusion": "skipped",
+              "started_at": "2026-05-17T23:09:09Z",
+              "completed_at": "2026-05-17T23:09:09Z",
+              "steps": [],
+              "duration_seconds": 0
+            }
+          ]
+        }
+      ],
+      "verifier_evidence": [
+        "gh run list --repo mar23-lab/Xlooop-XCP-demo --limit 5 --json databaseId,status,conclusion,workflowName,createdAt,updatedAt,headBranch,headSha,event,url",
+        "gh run view 26005431734 --repo mar23-lab/Xlooop-XCP-demo --json jobs,conclusion,status,createdAt,updatedAt,url,workflowName",
+        "find .github -maxdepth 3 -type f -print"
+      ]
+    }
+  ],
+  "conclusion": "Hosted failures are not product test failures when every failed job has steps: [] and <=3s duration, or when the repo currently disables workflow YAML by policy. Local gates and Cloudflare direct-upload receipts remain release authority."
+}

@@ -1,0 +1,254 @@
+# wrangler.toml · API Worker (api.xlooop.com)
+#
+# Separate from wrangler.jsonc (which configures the Pages deployment).
+# This config deploys the backend REST API at api.xlooop.com.
+#
+# Per BACKEND_ADR_001.md · API_CONTRACT_V1.md · AUTH_TENANCY_MODEL.md
+#
+# Deploy:  npm run deploy:api
+# Dev:     npm run dev:api
+
+name = "xlooop-api"
+main = "src/workers/index.ts"
+compatibility_date = "2026-05-26"
+compatibility_flags = ["nodejs_compat"]
+
+# Preserve dashboard-set vars/secrets across `wrangler deploy`. Without this (default false),
+# a deploy DELETES any variable set only in the dashboard and not in this file — e.g. the
+# operator-flipped CUSTOMER_INAPP_READINESS_GATE / CUSTOMER_AUTO_PROVISION_* (Parts M/O). keep_vars
+# makes deploys additive: this file's [vars] win for keys it declares; dashboard-only keys survive.
+keep_vars = true
+
+# Production route binding · api.xlooop.com → xlooop-api
+# Custom domain provisioned via Cloudflare Dashboard 2026-05-26.
+# Custom domains use the bare hostname (no path glob — wrangler rejects /* here).
+[[routes]]
+pattern = "api.xlooop.com"
+zone_name = "xlooop.com"
+custom_domain = true
+
+# R49 PR-5+6 · Cron Trigger · propagation worker tick.
+# Fires every 5 minutes (Cloudflare's minimum free-tier cron granularity).
+# Each tick reads new events + matches against active propagation rules + writes
+# pending recommendations. See src/workers/index.ts scheduledHandler.
+#
+# R51-ζ-2 · Self-maintenance cron triggers per §16.5.
+#
+# Wave ν (2026-05-28 · post-deploy-attempt) · CRITICAL Cloudflare Workers
+# account-plan limit: max 5 cron triggers per worker. Original Wave ζ
+# shipped 7; first wrangler-deploy returned "code: 10072 · limit of 5
+# cron triggers". Consolidated to 5 by chaining pairs of daily loops:
+#   - threshold_retune (04:00) now ALSO invokes pattern_suspend (was 04:30)
+#   - calibration_retrain (05:00) now ALSO invokes shadow_eval (was 05:15)
+# All 7 cron handlers remain registered + callable via admin endpoint /
+# scheduledHandler dispatcher; only the wrangler-managed schedules are 5.
+[triggers]
+crons = [
+  "*/5 * * * *",   # propagation_tick (5min)
+  "0 * * * *",     # permanent_suppress + graph_rebuild (hourly · ARCH-004 chained graph_rebuild into this slot — it FEEDS the data-graph substrate; see crons/index.ts permanentSuppressThenGraphRebuild)
+  "0 4 * * *",     # threshold_retune + pattern_suspend (daily 04:00 UTC)
+  "0 5 * * *",     # calibration_retrain + shadow_eval (daily 05:00 UTC)
+  "0 3 * * 1",     # weight_retune (weekly Mon 03:00 UTC)
+  "45 * * * *",    # reclassify_unattributed — PR #517 self-heal backstop (hourly :45 · flag-gated RECLASSIFY_CRON_ENABLED, default OFF)
+]
+
+# R55 (2026-06-07) · Cloudflare Email Service — transactional admin notifications (in-ecosystem,
+# native binding, NO API keys/secrets). Sends from EMAIL_FROM_ADDRESS on an Email-Sending-onboarded
+# domain. Onboard once (dashboard → Compute & AI → Email Service → Email Sending → Onboard Domain,
+# or `wrangler email sending enable <domain>`): this adds SPF/DKIM only — never MX — so Google
+# Workspace / Gmail receiving is unaffected. Consumed by services/email-notifier.ts.
+[[send_email]]
+name = "EMAIL"
+
+# R56 Stage 1 · public-surface hardening — strict per-IP rate-limit on the unauthenticated
+# signup funnel (POST /api/v1/request-access, 5/min/IP). The rateLimit() middleware
+# (src/workers/middleware/rate-limit.ts) uses an in-isolate fallback bucket until this binding is
+# provisioned. To activate GLOBAL (distributed) limiting, UNCOMMENT and `npm run deploy:api`:
+# [[ratelimit]]
+# name = "RATE_LIMITER_SIGNUP"
+# namespace_id = "2001"
+# simple = { limit = 5, period = 60 }
+
+# Stage 3.5 (2026-06-08) · Cloudflare Workers AI — powers the LLM-richer governed digest agent
+# (services/agent-digest.ts buildWorkspaceDigestLLM). Native platform binding, NO API keys/secrets;
+# Cloudflare provides the inference (free-tier neuron allowance). Safe-by-default: the LLM draft is
+# still posted as a PENDING proposal the operator approves, and a missing/failing binding falls back
+# to the deterministic digest. Consumed via env.AI.
+[ai]
+binding = "AI"
+
+# Non-secret build/runtime config (secrets set via `wrangler secret put`)
+[vars]
+ENVIRONMENT = "production"
+CLERK_JWKS_CACHE_TTL_SECONDS = "300"
+ALLOWED_ORIGIN_PATTERN = "https://*.xlooop.com"
+LOG_LEVEL = "info"
+# W4/G2 · operator-owned org ids — connectors auto-approve the operator-approval side for these
+# (the operator IS the authority for their own workspaces). Customer orgs are NOT listed → they
+# require explicit operator approval (POST /admin/customer/:id/approve). Non-secret identifiers.
+OPERATOR_WORKSPACE_IDS = "org_3EG82VEzc8t3t65XSZ0YDlcaDMI,org_3EIO8YYcUTtjOQ9d1i7eh8mvBFv"
+# Self-driving weekly digest sweep (services/scheduled-digest-sweep.ts, chained into the weekly
+# weight_retune cron). Default OFF — deploying the worker is INERT until this flips. Two-stage
+# safety: the agent code can ship unactivated. Set "true" to activate the self-driving sweep, in
+# which case the agent PROACTIVELY drafts one PENDING digest proposal per active workspace each week
+# (lands in the notifications bell → operator one-tap approves; the sweep never auto-posts). Flip via
+# redeploy of api with this var = "true", OR `wrangler secret put DIGEST_SWEEP_ENABLED` / dashboard
+# env var (no redeploy). Governed + idempotent + never-throws by construction.
+# ACTIVATED 2026-06-08 (operator decision: self-driving moat ON). The weekly weight_retune cron
+# (Mon 03:00 UTC) now sweeps the operator's active workspaces and drafts one PENDING digest proposal
+# each into the bell for one-tap approval. Set back to "false" to deactivate.
+DIGEST_SWEEP_ENABLED = "true"
+# Self-healing reclassification backstop (crons/reclassify-unattributed.ts · the backstop to the
+# going-forward producer PR #517). Default OFF — deploying the worker is INERT until this flips.
+# When "true", the hourly :45 cron RE-FILES the unattributed backlog (project_id NULL or the
+# '%-allactivity' catch-all) into the 8 bodies-of-work projects using the SAME classifier, but ONLY
+# within workspaces that opted into the split (have a project with metadata.origin =
+# allactivity_split_260609) and ONLY into projects that already exist (FK-safe). Bounded to 500
+# events/run; idempotent; never-throws. Flip via redeploy with this var = "true", OR
+# `wrangler secret put RECLASSIFY_CRON_ENABLED` / dashboard env var (no redeploy). PROD IS
+# OPERATOR-GATED — leave "false" until the operator enables it.
+RECLASSIFY_CRON_ENABLED = "true"
+# OS-3 UX Wave-2.1 · the execution-pipeline executor (services/operations-queue-consumer.ts, chained
+# into the hourly :45 reclassify slot). Default OFF ("disabled") — deploying the worker is INERT: the
+# executor makes ZERO DB calls until this flips. The keystone trust fix: WRITE-mode chat actions log
+# operation_events status='queued' but nothing ran them ("proceed did nothing"). When "enabled", the
+# hourly cron DRAINS the operator's queued events — atomically claims each (queued→running, run-
+# exactly-once), runs the named `execute:<verb>` (e.g. execute:digest), and writes the result back as
+# a GOVERNED proposal (needs_review/pending — never auto-posts). Governed + run-exactly-once + never-
+# throws by construction. Flip via redeploy with this var = "enabled", OR `wrangler secret put
+# EXECUTOR_MODE` / dashboard env var (no redeploy). PROD ACTIVATION enabled 2026-06-12 on the
+# operator's NAMED instruction ("Flip the executor" — quoted with the exact command). Runbook
+# pre-flight was green (executor commit deployed-ancestor + MBP_OWNER_USER_ID secret set); Wave 2.2
+# chat enqueue + the OS-5 W2 approve->post consumer are both live. Rollback = set "disabled" +
+# redeploy (next cron run is inert; EXECUTOR_ACTIVATION_RUNBOOK.md section 3).
+EXECUTOR_MODE = "enabled"
+# Phase 2 magic-link (Wave R-I.7 Stage C · 2026-05-29 · operator-confirmed dashboard config done).
+# When "true", investor tier-1-grant sends a Clerk magic-link invitation email (sendClerkInvitation
+# in src/workers/routes/investor.ts). Feature flag, not a secret. Set false to revert to DB-only
+# entitlement (no auto-email) instantly.
+CLERK_INVITATIONS_ENABLED = "true"
+INVESTOR_PORTAL_REDIRECT_URL = "https://app.xlooop.com/?screen=investor-welcome"
+# R55 · Cloudflare Email Service admin notifications (services/email-notifier.ts).
+# FROM must live on the Email-Sending-onboarded domain. Operator onboarded the SUBDOMAIN
+# notify.xlooop.com (dashboard 2026-06-07: Enabled + Configured + Healthy); root xlooop.com MX
+# stays on Google Workspace, and notify.* carries its own Cloudflare SPF/DKIM (no conflict).
+EMAIL_FROM_ADDRESS = "alerts@notify.xlooop.com"
+# Recipient(s) for new-access-request alerts (comma-separated). Operator's chosen alert inbox.
+ADMIN_NOTIFICATION_EMAIL = "info@xlooop.com"
+# R40 · admin Clerk user_ids (comma-separated). Members of this list bypass DB admin check.
+# Set via `wrangler secret put ADMIN_USER_IDS` for production (so it's not visible in source).
+# Local dev: set in .dev.vars
+# ADMIN_USER_IDS = "user_xxx,user_yyy"
+
+# R43.7 · Clerk user_id of the platform operator who can read MB-P real data via
+# /api/v1/mbp-projection + /api/v1/mbp-live-stream. Single value (not a list).
+# Set via `wrangler secret put MBP_OWNER_USER_ID` for production.
+# MBP_OWNER_USER_ID = "user_xxx"
+
+# Clerk-first customer provisioning. Keep OFF unless operator-created Clerk orgs are the trusted
+# onboarding lane. When enabled, first org-scoped login can create the access request + workspace
+# using CUSTOMER_AUTO_PROVISION_APPROVER_USER_ID (or MBP_OWNER_USER_ID) as the audited approver.
+# CUSTOMER_AUTO_PROVISION_ON_SESSION = "true"
+# CUSTOMER_AUTO_PROVISION_FROM_CLERK_ORG = "true"
+# CUSTOMER_AUTO_PROVISION_APPROVER_USER_ID = "user_xxx"
+
+# Wave B (260628) · server-side public-signal enrichment on readiness submit. ACTIVATED 260629.
+# When "true", onboarding fetches REAL public signals (SPF/DMARC/TLS — free, no key) into the
+# assessment's enrichment JSONB → the connected AI sees them.
+ENRICHMENT_SWEEP_ENABLED = "true"
+
+# Self-service (Part P, 260629): event soft-delete/restore + "Update my roadmap" re-entry. Parsed
+# quote-tolerantly via envFlagTrue, so a dashboard "true" also works. PURGE_DELETED_ENABLED stays OFF
+# until the operator has confirmed the delete→restore round-trip on a real account.
+CUSTOMER_SELF_SERVICE_ENABLED = "true"
+
+# New-UI activation (260712 - operator "flip everything to production" / "do all on my behalf").
+# Migrations 062 (workspace_members.removed_at) + 066 (plan_entities) + 067 (user_source_connections.
+# read_policy) APPLIED to prod Neon flat-truth-23350426 before this flip. Parsed via envFlagTrue.
+# ENTITLEMENT_ENFORCEMENT deliberately NOT flipped (no customer consent surface).
+PLAN_ENTITIES_ENABLED = "true"
+MEMBER_REMOVAL_ENABLED = "true"
+FEEDBACK_PERSISTENCE_ENABLED = "true"
+
+# ── Tranche A (260710-B R2b · operator-authorized "Do as per your recommendations") ─────────────
+# Five SERVER-SIDE flags — invisible to any UI contract, no FE pairing, schema head 61 satisfies all
+# migration deps. Verified conflict-free with the NEW UI (registry/prototype carry no flag coupling).
+# Rollback for any of them = set "false" + redeploy (every gate is flag-off byte-identical).
+# 1. The felt-pain fix: a queued "Connect Gmail" reminder is demoted once gmail IS connected.
+CHAT_SOURCE_TRUTH_OVERRIDE_ENABLED = "true"
+# 2. §168 role-scoped grounding (D-5/6/7): visibility ceiling + admissibility + client-empty bundle,
+#    now including the sources axis (T1).
+CHAT_ROLE_SCOPED_CONTEXT_ENABLED = "true"
+# 3. W1/G2 spine unification: tool events emit their companion operation_events row (migration 057).
+SPINE_TOOL_EVENT_UNIFICATION_ENABLED = "true"
+# 4. W4/G3 document-read audit: day-grain deduped access log (migration 059).
+DOCUMENT_READ_AUDIT_ENABLED = "true"
+# 5. W5 graph-aware chat context (graph slice into the operator cockpit grounding).
+CHAT_GRAPH_CONTEXT_ENABLED = "true"
+
+# OAR-W2 (260713) · role/skill resolver SHADOW observer at authorizeSpineWrite (mig 070 evidence plane).
+# Default OFF — leave commented until the operator flips it (parsed via envFlagTrue). When "true" it writes
+# role_skill_resolutions + authority_denial_receipts and emits 'role_skill_resolution' events. Byte-identical
+# off. Prod apply of mig 070 is a precondition of flipping this on.
+ROLE_SKILL_RESOLVER_ENABLED = "true"  # OAR-W2 shadow observer — flipped 260713 (mig 070/071/072 applied to prod)
+ROLE_SKILL_CATALOG_ENABLED = "true"  # AR-2.1 260713 — resolver uses bundled role-skill-catalog.json (9 entries): real skill resolution vs no_catalog. Shadow, no authority change.
+CUSTOMER_SAFE_SERIALIZER_ENABLED = "true"  # AR-0 260713 — strips internal provisioning + normalizes generated_by from customer chat/session payloads (closes live IP-leak). Non-authority.
+PACKET_INTENT_QUALITY_ENABLED = "true"  # F4 260714 (operator-approved) — POST /packets rejects bare-verb/one-word titles with 400 intent_too_thin (live incident: chat words "execute"/"proceed" became junk packets). Compat verified: only internal writer is report-wave-to-spine ("Dev-agent wave ..."). Non-authority.
+# XLOOOP_DEPLOY_SHA = "<build sha>"      # optional receipt provenance stamp (Track A); unset ⇒ deploy_sha null
+# RESOLUTION_RECEIPT_SIGNING_KEY_ID = "k1"  # optional rotation label for signed receipts; unset ⇒ 'default'
+
+# ---- Secrets (NOT committed; set via `wrangler secret put <NAME>`) ----
+# DEP-3 (260711-J): this block was missing several live-feature secrets the code reads. Full set:
+#   ANTHROPIC_API_KEY       — Claude API key for the chat chief-of-staff ladder. Absent → the ladder
+#                             falls back to Workers-AI / deterministic (no Claude tier). OPTIONAL.
+#   SENTRY_DSN              — error/observability sink. Absent → sentry.ts console-fallback (dormant-safe).
+#                             Companion tuning vars (all OPTIONAL): SENTRY_* (sample rates / environment).
+#   RESEND_API_KEY          — transactional email (admin notify, investor invite). Absent → notifier
+#                             reports delivered:false (never throws). OPTIONAL. + RESEND_FROM_EMAIL.
+#   OPERATIONAL_SPINE_PACKET_SIGNING_SECRET — HMAC for signed operational-spine packets. Required only
+#                             when packet signing is exercised.
+#   RESOLUTION_RECEIPT_SIGNING_SECRET — HS256 (HMAC) for role/skill resolution + denial receipts
+#                             (OAR-W2). OPTIONAL: unset ⇒ receipts hashed but written UNSIGNED
+#                             (signature_alg='none'); the shadow observer never 503s.
+#   MBP_LIVE_STREAM_INGEST_TOKEN — bearer for the MB-P projection live-rail ingest. Required for that path.
+#   ACTIVITY_INGEST_TOKEN   — bearer for the PUBLIC activity-webhook (constant-time compare). Required for
+#                             that ingest route; absent → 503/401.
+#   GITHUB_WEBHOOK_SECRET   — HMAC secret for the github-webhook signature verify. Absent → 503.
+#   XLOOOP_CANARY_*         — paid-pilot canary service-principal identifiers (access-identity resolver).
+#   XLOOOP_RLS_APP_DATABASE_URL — OPTIONAL · the RLS-subject (xlooop_app role) Neon URL for the 2nd RLS
+#                             layer on document reads. Absent → owner DATABASE_URL (identical result).
+# Required secrets per AUTH_TENANCY_MODEL.md §4 + DATABASE_SCHEMA_V1.md:
+#   CLERK_SECRET_KEY        — Clerk server-side API key
+#   CLERK_PUBLISHABLE_KEY   — Clerk publishable key (for JWKS URL derivation)
+#   CLERK_JWKS_URL          — explicit JWKS URL (overrides derivation)
+#   DATABASE_URL            — Neon Postgres connection URL (HTTPS-compatible)
+#   TURNSTILE_SECRET        — R56 Stage 1 · Cloudflare Turnstile secret (funnel bot-protection).
+#                             Server verify in routes/request-access.ts is GATED on this: until set,
+#                             the funnel accepts submissions (wire-now). Set AFTER the x-web Turnstile
+#                             widget is live, else the funnel 403s tokenless posts. The matching SITE
+#                             key goes in x-web. `wrangler secret put TURNSTILE_SECRET`
+#   HIBP_API_KEY            — Wave B (OPTIONAL) · HaveIBeenPwned API key. Absent → the breach source
+#                             reports 'not_configured' (honest), never a fake result. `wrangler secret put HIBP_API_KEY`
+#   BUILTWITH_API_KEY       — Wave B (OPTIONAL) · BuiltWith API key for tech-stack detection. Absent →
+#                             'not_configured'. `wrangler secret put BUILTWITH_API_KEY`
+#   MODEL_RUNTIME_ENC_KEY   — Wave C · AES-256 master key (base64 of 32 random bytes) that encrypts customer
+#                             model-provider credentials AT REST (Workers have no per-tenant vault). Generate:
+#                             `openssl rand -base64 32`; bind: `wrangler secret put MODEL_RUNTIME_ENC_KEY`.
+#                             Absent → provider-credential WRITES 503 (fail-closed; never stores plaintext);
+#                             masked reads of existing rows still work. Rotating it orphans existing ciphertext
+#                             (enc_version marks rows for a future re-encrypt).
+
+# ---- Local dev (wrangler dev) ----
+# Pulls from .dev.vars (NOT committed). See .dev.vars.example for the template.
+[dev]
+port = 8787
+local_protocol = "http"
+
+# ---- Observability (Workers paid plan) ----
+# [observability]
+# enabled = true
+
+# ---- Compatibility notes ----
+# - nodejs_compat enables Node.js APIs needed by @neondatabase/serverless
+# - No D1 binding here (Neon Postgres is the SoT for production data)
+# - The Pages deployment (wrangler.jsonc) uses D1 for feedback only — different concern

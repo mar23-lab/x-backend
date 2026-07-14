@@ -1,0 +1,202 @@
+{
+  "_meta": {
+    "schema": "mbp-operations-projection.v1",
+    "generated_at": "2026-07-11T03:30:05+10:00",
+    "producer": "_sys/scripts/export_mbp_to_xlooop_projection.py",
+    "git_sha": "f878e0d78401834375a113aaad72e3dc9db8387a"
+  },
+  "projection_kind": "mbp_operations_projection",
+  "projection_contract_version": "v0.1.0",
+  "projection_id": "projection:mbp:xlooop:r-m-d-i-20260711-0330",
+  "authority_source": "mbp_governance_projection",
+  "source_repo": "MB-P",
+  "source_mode": "read_only_projection",
+  "operator_workspace_id": "mbp-private",
+  "consumer_workspace_id": "xlooop",
+  "generated_at": "2026-07-11T03:30:05+10:00",
+  "valid_until": "2026-07-12T03:30:05+10:00",
+  "health": "connected_snapshot",
+  "redaction_state": "metadata_only",
+  "private_raw_content_included": false,
+  "writes_back_to_mbp_allowed": false,
+  "operation_mode": "metadata_readonly",
+  "quality_gates": [
+    "owner_workspace_scope_only",
+    "graph_visibility_declared",
+    "redacted_projection_only",
+    "metadata_only_per_sensitive_ip_markers",
+    "no_private_raw_content",
+    "no_writeback_to_mbp"
+  ],
+  "blocked_actions": [
+    "write_mbp_repo",
+    "copy_private_payload",
+    "expose_raw_owner_notes",
+    "public_export_without_redaction",
+    "mutate_xcp_platform",
+    "mutate_xfront_or_xdocs"
+  ],
+  "packets": [
+    {
+      "packet_id": "packet-mbp-skills-260711",
+      "intent_id": "intent-mbp-skill-registry-projection",
+      "title": "MB-P skill registry: 223 canonical skills",
+      "workspace_id": "mbp-private",
+      "project_id": "mbp-governance",
+      "lifecycle_state": "evidence_ready",
+      "owner_confirmation_state": "confirmed",
+      "sterility_state": "sterile_active",
+      "graph_layer": "lean_context",
+      "evidence_state": "ready",
+      "signoff_state": "ready",
+      "xcp_feedback_state": "ready_for_substrate",
+      "source_refs": [
+        {
+          "ref_id": "source:mbp:skills-index",
+          "label": "skills-index.yaml metadata (223 skills)",
+          "uri": "mbp://governance/skills-index",
+          "ref_kind": "governance",
+          "raw_content_included": false
+        }
+      ]
+    },
+    {
+      "packet_id": "packet-mbp-hard-rules-260711",
+      "intent_id": "intent-mbp-hard-rules-projection",
+      "title": "MB-P HARD_RULES v1.26.0 (279 HR-* IDs)",
+      "workspace_id": "mbp-private",
+      "project_id": "mbp-governance",
+      "lifecycle_state": "evidence_ready",
+      "owner_confirmation_state": "confirmed",
+      "sterility_state": "sterile_active",
+      "graph_layer": "lean_context",
+      "evidence_state": "ready",
+      "signoff_state": "ready",
+      "xcp_feedback_state": "ready_for_substrate",
+      "source_refs": [
+        {
+          "ref_id": "source:mbp:hard-rules",
+          "label": "HARD_RULES.md v1.26.0",
+          "uri": "mbp://governance/hard-rules",
+          "ref_kind": "governance",
+          "raw_content_included": false
+        }
+      ]
+    },
+    {
+      "packet_id": "packet-mbp-pillars-260711",
+      "intent_id": "intent-mbp-pillar-maturity-projection",
+      "title": "MB-P pillar maturity composite ~7.86; 0/7 at 10/10",
+      "workspace_id": "mbp-private",
+      "project_id": "mbp-governance",
+      "lifecycle_state": "evidence_ready",
+      "owner_confirmation_state": "confirmed",
+      "sterility_state": "sterile_active",
+      "graph_layer": "audit_evidence",
+      "evidence_state": "ready",
+      "signoff_state": "ready",
+      "xcp_feedback_state": "ready_for_substrate",
+      "source_refs": [
+        {
+          "ref_id": "source:mbp:pillars",
+          "label": "PILLARS.md v2 7-pillar maturity",
+          "uri": "mbp://governance/pillars",
+          "ref_kind": "governance",
+          "raw_content_included": false
+        }
+      ]
+    },
+    {
+      "packet_id": "packet-mbp-recent-waves-260711",
+      "intent_id": "intent-mbp-recent-waves-projection",
+      "title": "MB-P recent waves (5 most recent retrospectives)",
+      "workspace_id": "mbp-private",
+      "project_id": "mbp-governance",
+      "lifecycle_state": "evidence_ready",
+      "owner_confirmation_state": "confirmed",
+      "sterility_state": "sterile_active",
+      "graph_layer": "audit_evidence",
+      "evidence_state": "ready",
+      "signoff_state": "ready",
+      "xcp_feedback_state": "ready_for_substrate",
+      "xcp_feedback_id": "xcp-feedback-mbp-recent-waves-260711",
+      "owner_decision_state": "approved_for_substrate_learning",
+      "owner_decision_ref": "operator_request:2026-05-13:projection-learning-100",
+      "learning_summary": "Recent wave retrospectives are approved as reusable XCP learning input for the internal MB-P operations proof.",
+      "source_refs": [
+        {
+          "ref_id": "source:mbp:wave:0",
+          "label": "260511-wave-r-m-d-vi-adr-0049-ratified-path-b-supabase-mermaid-diagram",
+          "uri": "mbp://wave-reports/260511-wave-r-m-d-vi-adr-0049-ratified-path-b-supabase-mermaid-diagram.md",
+          "ref_kind": "evidence",
+          "raw_content_included": false
+        },
+        {
+          "ref_id": "source:mbp:wave:1",
+          "label": "260511-wave-r-m-d-v-adr-0049-c111-decision-gate-framework",
+          "uri": "mbp://wave-reports/260511-wave-r-m-d-v-adr-0049-c111-decision-gate-framework.md",
+          "ref_kind": "evidence",
+          "raw_content_included": false
+        },
+        {
+          "ref_id": "source:mbp:wave:2",
+          "label": "260511-wave-r-m-c-iii-p4-p5-verifier-batch-hr-t4-promotion-criteria",
+          "uri": "mbp://wave-reports/260511-wave-r-m-c-iii-p4-p5-verifier-batch-hr-t4-promotion-criteria.md",
+          "ref_kind": "evidence",
+          "raw_content_included": false
+        },
+        {
+          "ref_id": "source:mbp:wave:3",
+          "label": "260511-wave-r-m-d-i-c108-pre-a-mb-p-side-export-script-attestation-chain",
+          "uri": "mbp://wave-reports/260511-wave-r-m-d-i-c108-pre-a-mb-p-side-export-script-attestation-chain.md",
+          "ref_kind": "evidence",
+          "raw_content_included": false
+        },
+        {
+          "ref_id": "source:mbp:wave:4",
+          "label": "260511-wave-r-m-c-ii-critical-review-backlog-overlay-5-hr-batch-signal-extractor-extension",
+          "uri": "mbp://wave-reports/260511-wave-r-m-c-ii-critical-review-backlog-overlay-5-hr-batch-signal-extractor-extension.md",
+          "ref_kind": "evidence",
+          "raw_content_included": false
+        }
+      ]
+    },
+    {
+      "packet_id": "packet-mbp-comprehensive-review-260711",
+      "intent_id": "intent-mbp-comprehensive-ecosystem-review-scope",
+      "title": "MB-P comprehensive ecosystem review scope is dashboard-visible and mandatory",
+      "workspace_id": "mbp-private",
+      "project_id": "mbp-governance",
+      "lifecycle_state": "evidence_ready",
+      "owner_confirmation_state": "confirmed",
+      "sterility_state": "sterile_active",
+      "graph_layer": "audit_evidence",
+      "evidence_state": "ready",
+      "signoff_state": "ready",
+      "xcp_feedback_state": "ready_for_substrate",
+      "source_refs": [
+        {
+          "ref_id": "source:mbp:engine-contract-registry",
+          "label": "ENGINE_CONTRACT_REGISTRY.yml module.comprehensive_ecosystem_review_scope",
+          "uri": "mbp://governance/engine-contract-registry",
+          "ref_kind": "governance",
+          "raw_content_included": false
+        },
+        {
+          "ref_id": "source:mbp:ecosystem-review-matrix",
+          "label": "ECOSYSTEM_REVIEW_MATRIX.yml",
+          "uri": "mbp://governance/ecosystem-review-matrix",
+          "ref_kind": "governance",
+          "raw_content_included": false
+        },
+        {
+          "ref_id": "source:mbp:closed-loop-dashboard-projection",
+          "label": "closed_loop_engine_projection.json",
+          "uri": "mbp://dashboard/closed-loop-engine-projection",
+          "ref_kind": "evidence",
+          "raw_content_included": false
+        }
+      ]
+    }
+  ]
+}

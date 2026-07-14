@@ -1,0 +1,60 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://xlooop.dev/schemas/document-context-read-model.v1.schema.json",
+  "title": "document-context-read-model.v1",
+  "description": "Round 13 R13.1 (2026-05-20). Contract for data/document-context-read-model.json — public-safe document-anchored context backing the doc-context surface. Producer: scripts/generate-document-context-read-model.mjs. R13.4 will inject the _meta envelope.",
+  "type": "object",
+  "additionalProperties": true,
+  "anyOf": [
+    { "required": ["schema_version", "generated_at", "documents"] },
+    { "required": ["_meta", "documents"] }
+  ],
+  "properties": {
+    "_meta": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["schema", "generated_at", "producer"],
+      "properties": {
+        "schema": {
+          "type": "string",
+          "const": "document-context-read-model.v1"
+        },
+        "generated_at": { "type": "string" },
+        "producer": { "type": "string" },
+        "git_sha": { "type": "string", "pattern": "^[0-9a-f]{0,40}$" }
+      }
+    },
+    "schema_version": { "type": "string" },
+    "source_mode": { "type": "string" },
+    "generated_at": { "type": "string" },
+    "valid_until": { "type": ["string", "null"] },
+    "producer_refs": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "public_safe": { "type": "boolean" },
+    "raw_private_content_included": { "type": "boolean" },
+    "documents": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": true,
+        "required": ["ref_id"],
+        "properties": {
+          "ref_id": { "type": "string" },
+          "source_path": { "type": ["string", "null"] },
+          "label": { "type": ["string", "null"] },
+          "title": { "type": ["string", "null"] },
+          "source_repo": { "type": ["string", "null"] },
+          "workspace_id": { "type": ["string", "null"] },
+          "project_id": { "type": ["string", "null"] },
+          "excerpt": { "type": ["string", "null"] },
+          "graph_anchor_ids": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        }
+      }
+    }
+  }
+}

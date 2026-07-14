@@ -1,0 +1,306 @@
+{
+  "generated": "2026-07-11",
+  "source": "seed-data.js (§225–§228) — Xlooop AI-Front frontier manifest",
+  "purpose": "Machine-readable projection of the need-contract frontier, consult-first dispositions + status, the decided idempotency write-rule, and the ratified object-model + gate-workflow calls. Consumed by the backend parity gate + merged-ledger SSOT.",
+  "note": "Honest baseline: nothing wired yet. This manifest is a PROJECTION of the keyed SSOT (§223), not an independent count. Stages advance on an EVIDENCE RECEIPT only (F13): §219 G2 subset green behind a flag → wired; named blocking gate green + flag removed → verified. Reads may shadow; writes may NOT dual-run (§220). No write slice reaches \"wired\" until request-level idempotency keys exist (§225: uniform Idempotency-Key header + dedupe table, DECIDED) — backend build pending (§222).",
+  "idempotency": {
+    "approach": "uniform Idempotency-Key header + server dedupe table",
+    "status": "decided (§225) — supersedes per-entity natural-key upsert",
+    "clientRule": "client generates a stable key per user-action (UUID v4), held across retries/replays, sent on every POST/PATCH write",
+    "gate": "§220-B — reads may shadow; writes may not dual-run and may not reach wired until this exists"
+  },
+  "objectModel": {
+    "multiThreadChat": {
+      "decision": "deferred to v1.1",
+      "rationale": "v1 chat stays one-thread-per-scope; adopting multi-thread unblocks nothing on the cutover path",
+      "affects": [
+        "xcp.chat.chat-archive",
+        "xcp.chat.rename"
+      ],
+      "ratifiedBy": "product owner",
+      "ref": "§227"
+    },
+    "firstClassPlanGoal": {
+      "decision": "deferred to v1.1",
+      "rationale": "v1 goals stay text under a project; goal-reassign-owner stays out of scope until a plan-goal object exists",
+      "affects": [
+        "xcp.plan.goal-reassign-owner"
+      ],
+      "ratifiedBy": "product owner",
+      "ref": "§227"
+    }
+  },
+  "gateWorkflow": {
+    "decision": "v1.1-descope",
+    "rationale": "gate-change stays manual for v1; the assign → notify → approve workflow lands in v1.1",
+    "affects": [
+      "xcp.authority.gate-assign",
+      "xcp.authority.gate-change"
+    ],
+    "ratifiedBy": "operator",
+    "ref": "§228"
+  },
+  "frontier": {
+    "source": {
+      "ids": 23,
+      "inst": 33,
+      "mocked": 0,
+      "backend": 23,
+      "sample": [
+        "xcp.source.settings-connect",
+        "xcp.source.settings-level",
+        "xcp.source.settings-resync",
+        "xcp.source.settings-disconnect-confirm",
+        "xcp.source.profile-photo",
+        "xcp.source.attach-file"
+      ]
+    },
+    "event": {
+      "ids": 22,
+      "inst": 33,
+      "mocked": 0,
+      "backend": 22,
+      "sample": [
+        "xcp.event.decision",
+        "xcp.event.review",
+        "xcp.event.lens-accept",
+        "xcp.event.lens-reject",
+        "xcp.event.open-event",
+        "xcp.event.open-rail"
+      ]
+    },
+    "plan": {
+      "ids": 16,
+      "inst": 20,
+      "mocked": 0,
+      "backend": 16,
+      "sample": [
+        "xcp.plan.add-inline",
+        "xcp.plan.entity-delete",
+        "xcp.plan.goal-card",
+        "xcp.plan.goal-rename",
+        "xcp.plan.goal-cycle-status",
+        "xcp.plan.delete"
+      ]
+    },
+    "account": {
+      "ids": 15,
+      "inst": 17,
+      "mocked": 12,
+      "backend": 3,
+      "sample": [
+        "xcp.account.auth-signin",
+        "xcp.account.auth-github",
+        "xcp.account.auth-google",
+        "xcp.account.auth-email",
+        "xcp.account.auth-continue",
+        "xcp.account.auth-verify"
+      ]
+    },
+    "permission": {
+      "ids": 13,
+      "inst": 13,
+      "mocked": 0,
+      "backend": 13,
+      "sample": [
+        "xcp.permission.invite",
+        "xcp.permission.invite-input",
+        "xcp.permission.share-link",
+        "xcp.permission.ov-access",
+        "xcp.permission.ov-matrix",
+        "xcp.permission.settings-copylink"
+      ]
+    },
+    "runtime": {
+      "ids": 12,
+      "inst": 14,
+      "mocked": 0,
+      "backend": 12,
+      "sample": [
+        "xcp.runtime.rt-default-change",
+        "xcp.runtime.rt-default-pick",
+        "xcp.runtime.rt-override-reset",
+        "xcp.runtime.rt-policy",
+        "xcp.runtime.rt-policy-adv",
+        "xcp.runtime.rt-connect"
+      ]
+    },
+    "chat": {
+      "ids": 7,
+      "inst": 12,
+      "mocked": 0,
+      "backend": 7,
+      "sample": [
+        "xcp.chat.chat-row",
+        "xcp.chat.rename",
+        "xcp.chat.morph",
+        "xcp.chat.chat-archive",
+        "xcp.chat.mention-opt",
+        "xcp.chat.composer-send"
+      ]
+    },
+    "project": {
+      "ids": 5,
+      "inst": 5,
+      "mocked": 0,
+      "backend": 5,
+      "sample": [
+        "xcp.project.switcher-new",
+        "xcp.project.frame-name",
+        "xcp.project.frame-goal",
+        "xcp.project.frame-lifecycle",
+        "xcp.project.frame-source"
+      ]
+    },
+    "authority": {
+      "ids": 4,
+      "inst": 4,
+      "mocked": 0,
+      "backend": 4,
+      "sample": [
+        "xcp.authority.mode-option",
+        "xcp.authority.entity-owner",
+        "xcp.authority.gate-change",
+        "xcp.authority.gate-assign"
+      ]
+    },
+    "evidence": {
+      "ids": 4,
+      "inst": 5,
+      "mocked": 0,
+      "backend": 4,
+      "sample": [
+        "xcp.evidence.promote",
+        "xcp.evidence.promote-contrib",
+        "xcp.evidence.exclude",
+        "xcp.evidence.make-source"
+      ]
+    },
+    "system": {
+      "ids": 2,
+      "inst": 2,
+      "mocked": 0,
+      "backend": 2,
+      "sample": [
+        "xcp.system.feedback-submit",
+        "xcp.system.assign-task-input"
+      ]
+    },
+    "billing": {
+      "ids": 1,
+      "inst": 1,
+      "mocked": 0,
+      "backend": 1,
+      "sample": [
+        "xcp.billing.request-upgrade"
+      ]
+    }
+  },
+  "routes": {
+    "source": "/api/v1/mcp/sources · /api/v1/source/*",
+    "plan": "/api/v1/plan/*",
+    "project": "/api/v1/project/*",
+    "event": "/api/v1/events · /api/v1/sign-offs · PATCH /approvals/:id",
+    "evidence": "/api/v1/evidence · /api/v1/mcp/evidence · PATCH /documents/:id/admissibility",
+    "chat": "/api/v1/customer-chat · /api/v1/cockpit-chat",
+    "permission": "/api/v1/permission/*",
+    "runtime": "/api/v1/runtime/*",
+    "authority": "/api/v1/session · spine_authority envelope",
+    "account": "Clerk-owned — no backend route",
+    "billing": "blockedOn commercial — flag-off metering v0 only",
+    "system": "/api/v1/feedback"
+  },
+  "blockedOn": {
+    "account": "Clerk (identity-owned)",
+    "billing": "commercial — no Stripe substrate"
+  },
+  "consultFirst": [
+    {
+      "id": "xcp.system.assign-task-input",
+      "cat": "buildable",
+      "owner": "design-ratified",
+      "status": "decided",
+      "reason": "Cleanest — task_packets.assignee_id already exists (001_init.sql:105), zero migration.",
+      "disp": "Reuse assignee_id (v1, zero migration). Ready for backend on ratification."
+    },
+    {
+      "id": "xcp.runtime.rt-validate",
+      "cat": "buildable",
+      "owner": "design-ratified",
+      "status": "decided",
+      "reason": "Schema-only dry-run against the model-runtimes schema.",
+      "disp": "Schema-only dry-run for v1; live-ping the provider behind a later flag."
+    },
+    {
+      "id": "xcp.event.comment",
+      "cat": "buildable",
+      "owner": "design-ratified",
+      "status": "decided",
+      "reason": "Member-level write, one migration.",
+      "disp": "Member-level write — a comment is discussion, not a governed state-change (keep the spine for verdicts)."
+    },
+    {
+      "id": "xcp.authority.entity-owner",
+      "cat": "buildable",
+      "owner": "design-ratified",
+      "status": "decided",
+      "reason": "Reuse assignee_id, or add a first-class owner field?",
+      "disp": "Reuse assignee_id for v1; add a distinct owner only when governance accountability must differ from the worker."
+    },
+    {
+      "id": "xcp.authority.gate-assign",
+      "cat": "decision",
+      "owner": "operator",
+      "status": "decided",
+      "reason": "The assign → notify → approve workflow needs an Operator product call.",
+      "disp": "v1.1-descope (ratified) — the assign → notify → approve workflow lands in v1.1; gate-change stays manual for v1."
+    },
+    {
+      "id": "xcp.authority.gate-change",
+      "cat": "decision",
+      "owner": "operator",
+      "status": "decided",
+      "reason": "Paired with gate-assign — the same gate-workflow decision governs it.",
+      "disp": "v1.1 (ratified) — manual for v1, paired with gate-assign."
+    },
+    {
+      "id": "xcp.plan.goal-reassign-owner",
+      "cat": "blocked",
+      "owner": "andrey-marat",
+      "status": "decided",
+      "reason": "No first-class plan-goal object exists.",
+      "disp": "Deferred to v1.1 — goals stay text under a project in v1; no first-class plan-goal object."
+    },
+    {
+      "id": "xcp.chat.chat-archive",
+      "cat": "blocked",
+      "owner": "andrey-marat",
+      "status": "decided",
+      "reason": "Chat is one-thread-per-scope — nothing to archive. Would reuse the 044 soft-delete pattern IF a thread object existed.",
+      "disp": "Deferred to v1.1 — chat stays one-thread-per-scope in v1; nothing to archive."
+    },
+    {
+      "id": "xcp.chat.rename",
+      "cat": "nonfeature",
+      "owner": "andrey-marat",
+      "status": "decided",
+      "reason": "Nothing to rename at one-thread-per-scope.",
+      "disp": "Deferred to v1.1 — one-thread-per-scope in v1; nothing to rename."
+    }
+  ],
+  "reconcile": {
+    "frontendIds": 124,
+    "clerkMocked": 12,
+    "needRoute": 112,
+    "backendLedgerActions": 111,
+    "ssot": "DESIGN-STAGE0-CONTRACT-RECONCILIATION-260711.md",
+    "ref": "§222"
+  },
+  "totals": {
+    "distinctContracts": 124,
+    "domains": 12,
+    "consultFirst": 9,
+    "decided": 9,
+    "open": 0
+  }
+}

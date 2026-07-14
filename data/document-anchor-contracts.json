@@ -1,0 +1,55 @@
+{
+  "schema_version": "xlooop.document_anchor_contracts.v1",
+  "generated_at": "2026-05-18T04:35:00.000Z",
+  "source_mode": "browser_safe_contract",
+  "writeback_policy": "proposal_only_until_governed_backend_writeback",
+  "adapters": [
+    {
+      "id": "MarkdownAnchorAdapter",
+      "source_type": "markdown",
+      "status": "live",
+      "supported_anchors": [
+        "document",
+        "heading",
+        "section",
+        "line",
+        "selection_excerpt"
+      ],
+      "comment_policy": "comments create scoped interactions/proposal receipts; source files are not overwritten",
+      "source_writeback": "disabled_browser_direct"
+    },
+    {
+      "id": "PdfPageAnchorAdapter",
+      "source_type": "pdf",
+      "status": "planned",
+      "preview_mode": "preview_read_only",
+      "supported_anchors": [
+        "document",
+        "page",
+        "region"
+      ],
+      "disabled_reason": "PDF renderer and stable page/region anchor map are not implemented in the browser-safe demo yet.",
+      "source_writeback": "disabled_until_backend_adapter"
+    },
+    {
+      "id": "DocxParagraphAnchorAdapter",
+      "source_type": "docx",
+      "status": "planned",
+      "preview_mode": "preview_read_only",
+      "supported_anchors": [
+        "document",
+        "paragraph",
+        "comment_range"
+      ],
+      "disabled_reason": "DOCX renderer and paragraph anchor map are not implemented in the browser-safe demo yet.",
+      "source_writeback": "disabled_until_backend_adapter"
+    }
+  ],
+  "required_runtime_behaviour": [
+    "Markdown heading anchors are visible in Project Operating Space inspector.",
+    "Markdown heading and selected text comments create scoped interactions.",
+    "PDF/DOCX actions remain visibly planned or disabled with reasons.",
+    "PDF/DOCX anchor UI is preview-read-only until stable anchor maps and renderers exist.",
+    "Browser never overwrites source repository documents directly."
+  ]
+}

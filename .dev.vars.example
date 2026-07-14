@@ -1,0 +1,37 @@
+# .dev.vars.example — template for local `wrangler dev` secrets
+#
+# Copy to .dev.vars (gitignored) and fill in real values.
+# Production secrets are set via `wrangler secret put <NAME>`, NOT this file.
+
+# ---- Clerk (auth) ----
+# From Clerk Dashboard → API Keys
+CLERK_SECRET_KEY=sk_test_REPLACE_ME
+CLERK_PUBLISHABLE_KEY=pk_test_REPLACE_ME
+# Optional override (auto-derived from publishable key if omitted)
+CLERK_JWKS_URL=https://<your-clerk-app>.clerk.accounts.dev/.well-known/jwks.json
+
+# ---- Neon (database) ----
+# From Neon Dashboard → Project → Connection Details
+# Use the HTTPS connection URL (NOT the standard pgsql URL)
+DATABASE_URL=postgres://USER:PASSWORD@HOST.neon.tech/DBNAME?sslmode=require
+
+# ---- R40 entitlement gate ----
+# Comma-separated Clerk user_ids that have admin privilege (bypass DB lookup).
+ADMIN_USER_IDS=user_REPLACE_ME_with_your_clerk_id
+
+# Admin notification destinations (R40 stub logs to console; R41 will wire Resend).
+ADMIN_NOTIFICATION_EMAIL=marat@xlooop.com
+
+# ---- R43.7 · MB-P projection endpoint ----
+# Clerk user_id of the platform operator. Single value (not a list).
+# This user is the ONLY one allowed to read real MB-P operations data via
+# /api/v1/mbp-projection + /api/v1/mbp-live-stream.
+MBP_OWNER_USER_ID=user_REPLACE_ME_with_your_clerk_id
+
+# Optional: Resend wiring (leave blank in R40)
+# RESEND_API_KEY=re_REPLACE_ME
+# RESEND_FROM_EMAIL=notifications@xlooop.com
+
+# ---- Optional: development overrides ----
+ENVIRONMENT=development
+LOG_LEVEL=debug

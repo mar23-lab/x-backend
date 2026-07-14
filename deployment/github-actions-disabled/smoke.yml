@@ -1,0 +1,82 @@
+# DISABLED TEMPLATE ONLY.
+# GitHub Actions is unpaid/unavailable for this private repository.
+# Do not move this file back to .github/workflows until owner approval and
+# runner-health proof exist. Canonical gates are local pre-commit/local npm verifiers.
+
+# Phase 9 P9.7 · GitHub Actions CI · mirror of pre-commit gates.
+# Closes D17 (no second-line defense beyond pre-commit). Single-user
+# mitigant erodes; CI defends future contributors + branch protection.
+#
+# === Phase 10A P10A.0.5 · NICE-TO-HAVE, NOT GATE · 2026-04-28 ===
+# GitHub Actions billing on the mar23-lab account is blocked at the
+# spending-limit; both runs for `e6d5c7b` (Phase 9 close) and
+# `1c524e7` (Phase 10A P10A.0) aborted in 2s with the annotation
+# "recent account payments have failed." Until billing is restored,
+# this workflow is documentation, not a gate. Phase 10A merge
+# decisions rest solely on local pre-commit (cwd-anchor + smoke-cli)
+# + Playwright. See L56 in docs/learnings.md for the full story.
+# === END P10A.0.5 BANNER ===
+
+name: smoke
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cwd anchor
+        run: node scripts/cwd-anchor.mjs
+        env: { XLOOP_CI: 'true' }
+
+      - name: Smoke (static)
+        run: node scripts/smoke-cli.mjs
+
+      - name: Inventory
+        run: node scripts/inventory-gen.mjs
+
+      - name: Repo schema (P10B.4 freshness gate)
+        run: |
+          node scripts/repo-schema-gen.mjs --check || (
+            echo "✗ docs/REPO-SCHEMA.{md,yaml} stale. Run \`node scripts/repo-schema-gen.mjs\` and commit." &&
+            exit 1
+          )
+
+      - name: Agent navigability (7-question schema test)
+        run: node --test tests/smoke/agent-navigability.test.mjs
+
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: smoke
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with: { node-version: '22' }
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      - name: Install Playwright (Chromium only)
+        run: npx playwright install chromium --with-deps
+
+      - name: Run e2e suite
+        run: npx playwright test --project=chromium
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            playwright-report.json
+            test-results/playwright-report/
+          retention-days: 14

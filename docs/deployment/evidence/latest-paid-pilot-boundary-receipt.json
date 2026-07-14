@@ -1,0 +1,63 @@
+{
+  "schema_version": "xlooop.paid_pilot_boundary_receipt.v1",
+  "status": "PASS",
+  "generated_at": "2026-06-16T06:01:46.958Z",
+  "ttl_expires_at": "2026-06-23T06:01:46.959Z",
+  "go_with_restrictions": true,
+  "base_url": "https://xlooop-test.pages.dev",
+  "legal_commercial_signoff_ref": "owner-approved-controlled-paid-pilot-go-with-restrictions-no-public-self-serve-no-autonomous-ops-20260616",
+  "incident_sla_owner": "Marat Basyrov / Xlooop owner-admin / customer-zero incident-SLA owner / 2026-06-16",
+  "redaction_scan_ref": "gate:verify:status-redaction#pass@99282262 (scripts/verify-status-redaction.mjs)",
+  "action_smoke_ref": "action-b345bf9c-7a9d-411c-847f-41668ef9880d",
+  "checks": {
+    "access_unauthenticated_fail_closed": {
+      "status": "pass"
+    },
+    "access_signed_jwt_positive": {
+      "status": "pass"
+    },
+    "access_malformed_denied": {
+      "status": "pass"
+    },
+    "xlooop_only_denied_from_xcp": {
+      "status": "pass"
+    },
+    "xcp_admin_allowed": {
+      "status": "pass"
+    },
+    "customer_operator_denied_default": {
+      "status": "pass"
+    },
+    "entitled_operator_execute_allowlisted": {
+      "status": "pass"
+    },
+    "non_allowlisted_action_denied": {
+      "status": "pass"
+    },
+    "markdown_writeback_proposal_first": {
+      "status": "pass"
+    },
+    "markdown_writeback_adapter_receipt": {
+      "status": "pass"
+    },
+    "redaction_scan": {
+      "status": "pass"
+    },
+    "monitoring_events": {
+      "status": "pass"
+    },
+    "incident_sla_owner": {
+      "status": "pass"
+    },
+    "legal_commercial_signoff": {
+      "status": "pass"
+    }
+  },
+  "failures": [],
+  "blocked_claims": [
+    "production_saas",
+    "autonomous_operations",
+    "raw_tenant_access",
+    "unrestricted_source_writeback"
+  ]
+}

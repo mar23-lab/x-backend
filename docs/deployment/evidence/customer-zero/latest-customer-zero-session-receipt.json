@@ -1,0 +1,109 @@
+{
+  "schema_version": "xlooop.customer_zero_session_receipt.v1",
+  "status": "learning_evidence_only",
+  "generated_at": "2026-06-13T04:05:13.586Z",
+  "mutates_product_state": false,
+  "strict_paid_pilot_satisfies": false,
+  "private_operator_claim_allowed": false,
+  "production_saas_claim_allowed": false,
+  "reason": "Customer Zero captures Marat usage as real learning evidence, but strict paid-pilot/private Operator remains blocked until the strict receipt passes.",
+  "scope": {
+    "operator_ref": "Marat Basyrov / MB-P Customer Zero",
+    "workspace_id": "xlooop",
+    "project_id": "xlooop-commercial",
+    "mode": "watch_test",
+    "guided_pilot_posture": "controlled_pilot_watch_test_operator_guided"
+  },
+  "canonical_flow": {
+    "source_bindings": [
+      "source:mbp-projection",
+      "source:operations-live-stream",
+      "source:github"
+    ],
+    "workspace_project": "xlooop/xlooop-commercial",
+    "goal_ref": "self-serve-production-readiness",
+    "roadmap_ref": "W1/W2 self-serve cockpit",
+    "intent_ref": "capture Customer Zero learning after evidence and freshness hardening",
+    "role_skill_route": "chief-of-staff + delivery-readiness + xlooop-design-review",
+    "packet_ref": "customer-zero:2026-06-13T04-05-13-586Z",
+    "event_refs": [
+      "Customer Zero evidence capture tool added",
+      "Runtime live-stream push receipt added",
+      "Cron freshness gate now passes from runtime receipt"
+    ],
+    "decision_ref": "guided-watch-test-only-until-strict-receipt",
+    "evidence_refs": [
+      "npm run verify:current-integrity PASS 64/64",
+      "npm run ci-local PASS 38/38",
+      "npm run verify:cron-freshness PASS from runtime push receipt",
+      "npm run projection-cron-liveness PASS",
+      "npm run verify:live-stream-ingest PASS 8/8",
+      "npm run verify:commercial-controlled-pilot-readiness PASS",
+      "npm run paid-pilot:evidence:preflight blocked=9",
+      "npm run verify:paid-pilot-boundary:strict expected FAIL strict external evidence missing"
+    ],
+    "signoff_ref": "blocked_until_strict_paid_pilot_receipt",
+    "metric_ref": "customer-zero-learning-capture"
+  },
+  "observed_state": {
+    "operations_live_stream_rows": 55,
+    "operations_live_stream_receipt_id": "operations-live-stream-20260613025335",
+    "gateway_poll_sla": {
+      "state": "green",
+      "cadence_seconds": 300,
+      "stale_after_seconds": 900,
+      "last_successful_poll_at": "2026-06-13T12:45:07+10:00",
+      "next_poll_due_at": "2026-06-13T12:50:07+10:00"
+    },
+    "operations_live_stream_push_receipt_status": "PASS",
+    "operations_live_stream_push_pushed_at": "2026-06-13T04:03:47.398Z",
+    "operations_live_stream_push_generated_at": "2026-06-13T04:03:36.000Z",
+    "operations_live_stream_push_source_mode": "staged_snapshot",
+    "operations_live_stream_push_rows": 55,
+    "paid_pilot_receipt_status": "pending_cloud_evidence",
+    "paid_pilot_strict_status": "FAIL",
+    "paid_pilot_strict_failure_count": 17,
+    "paid_pilot_strict_failures": [
+      "strict_status_pass",
+      "strict_go_with_restrictions",
+      "strict_ttl_fresh",
+      "strict_check:access_unauthenticated_fail_closed",
+      "strict_check:access_signed_jwt_positive",
+      "strict_check:access_malformed_denied",
+      "strict_check:xlooop_only_denied_from_xcp",
+      "strict_check:xcp_admin_allowed",
+      "strict_check:customer_operator_denied_default",
+      "strict_check:entitled_operator_execute_allowlisted",
+      "strict_check:non_allowlisted_action_denied",
+      "strict_check:markdown_writeback_proposal_first",
+      "strict_check:markdown_writeback_adapter_receipt",
+      "strict_check:redaction_scan",
+      "strict_check:monitoring_events",
+      "strict_check:incident_sla_owner",
+      "strict_check:legal_commercial_signoff"
+    ],
+    "paid_pilot_receipt_generated_at": "2026-05-19T00:00:00.000Z",
+    "freshness_visible": true,
+    "writeback_status": "proposal_only_no_direct_writeback"
+  },
+  "observations": [
+    "Customer Zero usage is real pilot learning evidence and must be captured without overclaiming production readiness",
+    "Cron freshness should be proven by runtime push receipt while tracked snapshots stay deterministic",
+    "Local operator auth smoke is clean through localhost-only operator_stub; production auth remains Cloudflare Access"
+  ],
+  "frictions": [
+    "Strict paid-pilot evidence still needs Cloudflare service-token checks, tenant proof refs, writeback receipt, redaction scan, monitoring, SLA owner, and legal sign-off"
+  ],
+  "next_actions": [
+    "Collect strict evidence inputs and renew paid-pilot receipt",
+    "Keep tomorrow businesses in guided Watch/Test mode",
+    "Proceed to W1 source binding manager, first-run wizard, goals-roadmap surface, scoped commands, universal drawer hardening"
+  ],
+  "blocked_claims": [
+    "production_saas",
+    "self_serve_ready",
+    "private_operator_ready",
+    "autonomous_writeback",
+    "roi_validated"
+  ]
+}

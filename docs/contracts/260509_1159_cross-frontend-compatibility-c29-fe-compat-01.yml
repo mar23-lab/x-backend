@@ -1,0 +1,133 @@
+id: c29_fe_compat_01_cross_frontend_compatibility
+created_at: "2026-05-09T11:59:00+10:00"
+date_key: "260509_1159"
+timezone: Australia/Melbourne
+owner: Marat Basyrov
+status: active_decision
+lifecycle_state: sterile_active
+graph_required: true
+scope:
+  repo: Xlooop-XCP-demo
+  slice: C29-FE-COMPAT-01
+  type: cross_frontend_compatibility_matrix
+  runtime_change_authorized: false
+  xfront_import_authorized: false
+  xfront_mutation_authorized: false
+  xcp_platform_mutation_authorized: false
+  archive_delete_move_authorized: false
+role_panel:
+  - chief-of-staff
+  - cto
+  - ux
+  - product-manager
+  - knowledge-architect
+  - ai-governed-infrastructure-manager
+  - devsecops
+  - lead-engineer
+skills_used:
+  - product-engineering-router
+  - xlooop-design-review
+  - frontend-architecture-review
+  - integration-boundary-contracts
+  - component-contract-storybook
+  - delivery-readiness-gates
+frontends:
+  xlooop_xcp_demo:
+    path: /Users/maratbasyrov/WIP/Xlooop/Xlooop-XCP-demo
+    role: governed_delivery_workspace_current_product_shell
+    stack:
+      react: "^18.3.1"
+      vite: "^6.2.0"
+      storybook: "^8.6.12"
+    current_source: src
+    story_count_observed: 35
+    contract_json_count_observed: 17
+  xfront:
+    path: /Users/maratbasyrov/WIP/Xlooop/x-front
+    role: ilmir_active_engine_editor_implementation_reference_source
+    stack:
+      react: "^18.3.1"
+      vite: "^6.2.1"
+      storybook: "^8.6.12"
+      mui: "^6.4.6"
+    current_head_short: "401e6d4"
+    story_count_observed: 107
+    direct_import_allowed: false
+  xcp_platform:
+    path: /Users/maratbasyrov/WIP/xcp-platform
+    role: xcp_producer_substrate_design_system_control_plane
+    stack:
+      react_family: "18.0/18.2"
+      vite_family: "5.x/6.x"
+      storybook_family: "8.x"
+    direct_admin_embed_allowed: false
+compatibility_scores:
+  react_runtime: 88
+  vite_build_family: 78
+  storybook_version: 88
+  storybook_strategy: 62
+  storybook_providers: 58
+  design_tokens: 72
+  ui_primitives: 65
+  widget_contracts: 68
+  event_bus: 72
+  evidence_lineage: 82
+  permissions: 76
+  graph_contracts: 70
+  data_access: 74
+  bisync_code_ui: 45
+  xcp_admin_control_plane: 35
+  client_invited_workflow: 78
+portable_contract_surfaces:
+  - product_workflow
+  - storybook_maturity
+  - event_contracts
+  - evidence_store
+  - permission_model
+  - graph_node_edge_contract
+  - ui_primitives
+  - design_tokens
+  - bisync_port_sandbox_contract
+non_portable_surfaces:
+  - xfront_global_storybook_provider_chain
+  - xfront_editor_compiler_iframe_runtime
+  - xfront_mui_heavy_ui
+  - xcp_platform_control_plane_admin_ui
+  - xcp_platform_design_research_html_as_runtime
+  - app_level_vite_storybook_config_copying
+required_reuse_contract_fields:
+  - source_frontend
+  - target_frontend
+  - product_role
+  - public_api
+  - events
+  - state
+  - permissions
+  - evidence
+  - data_boundary
+  - runtime_dependencies
+  - storybook_maturity
+  - compatibility_score
+  - decision
+  - stop_conditions
+decisions:
+  use_xfront_as_current_head_reference_evidence: go
+  use_xcp_platform_as_producer_contract_reference: go
+  define_shared_compatibility_contract_and_scoring: go
+  import_xfront_storybook_component_runtime_source: no_go
+  embed_xcp_platform_admin_control_plane_in_demo_shell: no_go
+next_slice:
+  id: C29-STORY-P0-CHAIN-01
+  title: Storybook proof for first-30-second product chain
+  scope: storybook_proof_no_xfront_import
+  required_workspaces:
+    - MB-P
+    - Xlooop
+    - xcp-platform
+    - Client / invited
+stop_conditions:
+  - direct_xfront_source_import
+  - xcp_platform_admin_ui_embedded_in_product_shell
+  - cross_repo_shared_store
+  - broad_storybook_globs_across_repos
+  - missing_actor_role_visibility_sensitivity_context

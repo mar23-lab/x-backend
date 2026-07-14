@@ -1,0 +1,101 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://xlooop.dev/schemas/operations-live-stream.v1.schema.json",
+  "title": "operations-live-stream.v1",
+  "description": "Round 13 R13.1 (2026-05-20). Contract for data/operations-live-stream.json — the per-row events stream consumed by InlineEventsBoard + LiveStreamRailV3. Producer: scripts/generate-operations-live-stream.mjs. The schema pins the load-bearing identity + envelope fields; permissive additionalProperties: true so producer-side additions remain forward-compat. R13.4 will inject the _meta envelope; until then both shapes are accepted.",
+  "type": "object",
+  "additionalProperties": true,
+  "anyOf": [
+    { "required": ["schema_version", "stream_id", "generated_at"] },
+    { "required": ["_meta", "stream_id"] }
+  ],
+  "properties": {
+    "_meta": {
+      "type": "object",
+      "description": "R13.4 envelope — declared by the producer at generation time. Optional in R13.1 to keep the existing builds passing; R13.4+ will inject it for all producer outputs.",
+      "additionalProperties": true,
+      "required": ["schema", "generated_at", "producer"],
+      "properties": {
+        "schema": {
+          "type": "string",
+          "const": "operations-live-stream.v1"
+        },
+        "generated_at": {
+          "type": "string",
+          "description": "ISO-8601 timestamp at producer-run time. For tracked freshness snapshots, git_sha may be empty to avoid consumer-commit feedback loops."
+        },
+        "producer": {
+          "type": "string",
+          "description": "Producer script path relative to repo root."
+        },
+        "git_sha": {
+          "type": "string",
+          "description": "Git commit SHA when safe to stamp. Empty string allowed for dev runs or tracked freshness snapshots where consumer HEAD would create a commit feedback loop.",
+          "pattern": "^[0-9a-f]{0,40}$"
+        }
+      }
+    },
+    "schema_version": {
+      "type": "string",
+      "description": "Legacy producer-side schema string. R13.4 keeps this in sync with _meta.schema."
+    },
+    "schema_id": { "type": "string" },
+    "contract_kind": { "type": "string" },
+    "contract_version": { "type": "string" },
+    "stream_id": {
+      "type": "string",
+      "description": "Unique identifier per producer run. Used by readers to detect stale snapshots."
+    },
+    "authority_source": { "type": "string" },
+    "authority_model": { "type": "string" },
+    "source_repo": { "type": ["string", "null"] },
+    "consumer_repo": { "type": ["string", "null"] },
+    "source_mode": {
+      "type": "string",
+      "description": "staged_snapshot | fallback_fixture | generated_public_safe_projection — declares what the reader is seeing."
+    },
+    "claim_posture": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Public-claim-safety descriptor; required by xlooop public claim safety."
+    },
+    "generated_at": {
+      "type": "string",
+      "description": "ISO-8601 timestamp; legacy top-level (mirrored into _meta.generated_at by R13.4)."
+    },
+    "valid_until": {
+      "type": ["string", "null"],
+      "description": "Optional staleness boundary; readers warn after this."
+    },
+    "fallback_fixture_used": { "type": "boolean" },
+    "direct_mbp_repo_write_allowed": { "type": "boolean" },
+    "private_mbp_data_allowed_by_owner": { "type": "boolean" },
+    "source_files": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "row_count": { "type": "integer", "minimum": 0 },
+    "rows": {
+      "type": "array",
+      "description": "Per-row events. Permissive on row shape: only the identity + lane fields are load-bearing for the UI.",
+      "items": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {
+          "id": { "type": "string" },
+          "event_id": { "type": "string" },
+          "title": { "type": "string" },
+          "body": { "type": ["string", "null"] },
+          "state": { "type": "string" },
+          "lane": { "type": "string" },
+          "actor": { "type": ["string", "null"] },
+          "workspace": { "type": ["string", "null"] },
+          "project": { "type": ["string", "null"] },
+          "visibility": { "type": ["string", "null"] },
+          "when": { "type": ["string", "null"] },
+          "createdAt": { "type": ["string", "null"] }
+        }
+      }
+    }
+  }
+}

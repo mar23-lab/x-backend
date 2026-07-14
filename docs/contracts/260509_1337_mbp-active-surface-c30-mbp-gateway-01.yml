@@ -1,0 +1,55 @@
+id: c30_mbp_gateway_01
+title: C30-MBP-GATEWAY-01 MB-P Active Surface And Intake Gateway
+created_at: "2026-05-09T13:37:00+10:00"
+date_key: "260509_1337"
+timezone: Australia/Melbourne
+status: implemented_active_surface
+lifecycle_state: active_reference
+owner_roles:
+  - Product Manager
+  - UX Lead
+  - Chief-of-Staff
+  - AI Governed Infrastructure Manager
+domains:
+  - xlooop_xcp_demo
+  - mbp
+  - xcp_platform
+source_files:
+  - data/spaces.json
+  - data/ws-projects.json
+  - data/home.json
+  - data/ws-detail.json
+  - data/workspace.json
+  - src/pages/personal/Personal.jsx
+  - src/widgets/AdminMenu/AdminMenu.jsx
+  - src/app/App.jsx
+  - tests/e2e/c29-web-gateway-routing.spec.ts
+  - tests/e2e/v3-demo-presets.spec.ts
+  - tests/e2e/v3-skills-policy.spec.ts
+  - tests/e2e/v3-policy-gated-signoff.spec.ts
+  - playwright.config.ts
+evidence:
+  smoke: "npm run smoke -> 322/322 passed"
+  build: "npm run build:standalone -> passed"
+  focused_e2e: "7/7 passed"
+  current_e2e: "23 passed, 4 skipped"
+implemented:
+  active_workspace_data: mbp_xcp_only
+  first_viewport_gateway: mbp_default
+  free_text_intake_draft: front_end_route_only
+  policy_manifest: mbp_active
+  legacy_fixture_state: retained_until_replaced
+gaps:
+  - id: c30_intake_persistence
+    severity: high
+    recommendation: Persist intake drafts to intent packet with owner confirmation.
+  - id: c30_fixture_replacement
+    severity: medium
+    recommendation: Replace Trinity/Acme fixture coverage with MB-P/XCP equivalents.
+  - id: c30_external_collab
+    severity: medium
+    recommendation: Reintroduce external collaboration through owner-approved collaborator permissions.
+next:
+  - C30-INTAKE-02
+  - C30-FIXTURE-02
+  - C30-COLLAB-01

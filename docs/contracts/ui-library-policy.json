@@ -1,0 +1,265 @@
+{
+  "phase": "P10C.10",
+  "kind": "ui-library-policy",
+  "policy_name": "ui_library_policy",
+  "policy_version": "0.1.0",
+  "generated_at": "2026-04-28T18:00:00Z",
+  "source_pin": "8f62f6b",
+  "source_pin_resolves": true,
+  "scope": "policy ratification ONLY · no runtime mutation · no wrapper implementation · no x-front source change",
+  "boundary": "P10C.10 converts the P10C.7 future-adoption decision into an enforceable contract of record. It does NOT implement wrappers, import x-front, modify v2/app.html, modify v2/src runtime, modify x-front source, or start Phase 10D.",
+  "runtime_mutation": false,
+  "xfront_source_mutation": false,
+  "wrapper_implementation_in_p10c10": false,
+  "decision": "ratify_future_wrappers",
+  "ratification_authority": "Phase 10C.10 contract layer (this document)",
+  "ratification_effect": "P10C.7 adoption decision stands. Phase 10D wrapper implementation is unblocked after Phase 10C signoff (P10C.13). All wrappers remain READ-ONLY references until Phase 10D begins.",
+  "inputs": {
+    "p10c7_adoption_decision": "docs/_archive/audits/xfront-adoption-decision.json",
+    "p10c7_wrapper_design": "docs/design/xfront-wrapper-design.md",
+    "p10c6_scorecard": "docs/_archive/audits/xfront-component-scorecard.json",
+    "p10c6_rubric_source": "docs/evaluations/ui-library-evaluation.md §6 (frozen at c160)",
+    "p10c5a_contract_maturity": "docs/_archive/audits/xfront-contract-maturity-audit.json",
+    "p10c5_r2_dependency_audit": "docs/_archive/audits/xfront-r2-dependency-audit.json",
+    "p10c9_intake_area_decision": "docs/_archive/audits/xfront-intake-area-decision.json",
+    "adr_intake_policy": "docs/adrs/0004-xfront-intake-policy.md"
+  },
+  "summary": {
+    "approved_future_wrappers_count": 3,
+    "deferred_wrappers_count": 3,
+    "forbidden_patterns_count": 4,
+    "voiding_conditions_count": 6,
+    "smoke_checks_added_in_p10c10": 12,
+    "wrappers_implemented_in_p10c10": 0,
+    "x_front_components_imported_in_p10c10": 0,
+    "p10c7_voided": false
+  },
+  "approved_future_wrappers": [
+    {
+      "wrapper_name": "XAvatar",
+      "wrapper_owner": "Xlooop product UI",
+      "implementation_phase": "Phase 10D",
+      "implementation_location": "v2/src/ui/",
+      "source_asset": "shared/uiKit/Avatar",
+      "source_repository": "x-front",
+      "source_pin": "8f62f6b",
+      "source_policy": "wrap_only_no_direct_import",
+      "scorecard_score": 85.2,
+      "scorecard_band": "85-89 · adopt_after_minor_remediation",
+      "p10c7_decision": "approve_for_future_adoption",
+      "cto_review_required": false,
+      "status": "ratified",
+      "ratification_status": "ratified_for_future_implementation_after_phase_10c_signoff",
+      "required_before_implementation": [
+        "TypeScript prop contract (.tsx wrapper)",
+        "Storybook wrapper states (image · initials · missing image · sizes · status states)",
+        "accessibility semantics (aria-label fallback chain · semantic img tag preserved)",
+        "design-token mapping at wrapper boundary (no x-front theme leak)",
+        "unit tests (component-level · wrapper-state coverage)"
+      ],
+      "hard_gates": {
+        "r2_clean": true,
+        "mui_clean": true,
+        "forbidden_import_clean": true,
+        "not_legacy_demo": true,
+        "score_above_threshold": true,
+        "contract_maturity_eligible": true
+      },
+      "scope_constraint": "team-identity surface ONLY (per P10C.4). Cross-surface use requires a new mapping decision."
+    },
+    {
+      "wrapper_name": "XEvidenceImage",
+      "wrapper_owner": "Xlooop product UI",
+      "implementation_phase": "Phase 10D",
+      "implementation_location": "v2/src/ui/",
+      "source_asset": "shared/uiKit/Image",
+      "source_repository": "x-front",
+      "source_pin": "8f62f6b",
+      "source_policy": "wrap_only_no_direct_import",
+      "scorecard_score": 83.3,
+      "scorecard_band": "75-84 · adopt_with_wrapper · CTO review",
+      "p10c7_decision": "approve_for_future_adoption_conditional",
+      "cto_review_required": true,
+      "cto_review_gate": "Phase 10D · pre-merge of XEvidenceImage wrapper",
+      "status": "ratified_conditional",
+      "ratification_status": "ratified_for_future_implementation_after_phase_10c_signoff_and_cto_review",
+      "required_before_implementation": [
+        "TypeScript prop contract (.tsx wrapper)",
+        "alt text REQUIRED at wrapper boundary (a11y enforcement)",
+        "loading state · error state · empty state explicit",
+        "Storybook wrapper states (loading · loaded · error · empty · sizes)",
+        "unit tests (component-level · all states)"
+      ],
+      "hard_gates": {
+        "r2_clean": true,
+        "mui_clean": true,
+        "forbidden_import_clean": true,
+        "not_legacy_demo": true,
+        "score_above_threshold": true,
+        "contract_maturity_eligible": true
+      },
+      "scope_constraint": "evidence-panel + media-preview surfaces (per P10C.4). Cross-surface use requires CTO sign-off."
+    },
+    {
+      "wrapper_name": "XEvidencePreview",
+      "wrapper_owner": "Xlooop product UI",
+      "implementation_phase": "Phase 10D",
+      "implementation_location": "v2/src/ui/",
+      "source_asset": "shared/uiKit/Preview",
+      "source_repository": "x-front",
+      "source_pin": "8f62f6b",
+      "source_policy": "wrap_only_no_direct_import",
+      "scorecard_score": 81.5,
+      "scorecard_band": "75-84 · adopt_with_wrapper · CTO review",
+      "p10c7_decision": "approve_for_future_adoption_conditional",
+      "cto_review_required": true,
+      "cto_review_gate": "Phase 10D · pre-merge of XEvidencePreview wrapper",
+      "status": "ratified_conditional",
+      "ratification_status": "ratified_for_future_implementation_after_phase_10c_signoff_and_cto_review",
+      "required_before_implementation": [
+        "TypeScript prop contract (.tsx wrapper)",
+        "supported preview types declared (image · pdf · video · doc · unsupported)",
+        "status model explicit (idle · loading · ready · error · unsupported)",
+        "aria-labelledby and aria-describedby linkage",
+        "Storybook wrapper states (per type × per status)",
+        "unit tests (component-level · all type × status combinations)"
+      ],
+      "hard_gates": {
+        "r2_clean": true,
+        "mui_clean": true,
+        "forbidden_import_clean": true,
+        "not_legacy_demo": true,
+        "score_above_threshold": true,
+        "contract_maturity_eligible": true
+      },
+      "scope_constraint": "evidence-panel + media-preview surfaces (per P10C.4). Cross-surface use requires CTO sign-off."
+    }
+  ],
+  "deferred_wrappers": [
+    {
+      "wrapper_name": "XDialog",
+      "source_asset": "shared/uiKit/Dialog",
+      "status": "deferred",
+      "reason": "accessibility_blocker",
+      "blocker_detail": "no role=dialog · no aria-modal · no focus trap · no portal (per P10C.5A · P10C.6 hard-gate fail)",
+      "future_phase": "Phase 10D",
+      "required_path": "Build XDialog from @radix-ui/react-dialog OR an accessible re-implementation. The x-front Dialog is NOT the source. The wrapper does not import shared/uiKit/Dialog.",
+      "ratification_status": "not_ratified"
+    },
+    {
+      "wrapper_name": "XFieldsFamily",
+      "source_asset": "shared/uiKit/Fields",
+      "status": "deferred",
+      "reason": "component_family_and_refactor_debt",
+      "blocker_detail": "2,524 LOC component family · explicit refactor-debt comments in upstream source",
+      "future_phase": "Phase 10D",
+      "required_path": "Split into XLabel · XTextField · XSelect · XFieldList · XValidationMessage (5 separate wrappers · NOT one). Each must independently pass scorecard + maturity + R2 + license gates.",
+      "ratification_status": "not_ratified"
+    },
+    {
+      "wrapper_name": "XSidebarCode",
+      "source_asset": "widgets/sidebarCode",
+      "status": "deferred",
+      "reason": "feature_coupling_and_product_fit_pending",
+      "blocker_detail": "3 feature imports (customCodeTestDrive · customCodeSetArguments · agentChat) + Redux dispatch/selector · product-fit weak per P10C.4 (P3 priority)",
+      "future_phase": "Phase 11+",
+      "required_path": "Phase 11+ feature decoupling AND product-fit decision. If both resolve, a thin XCodeSidebar wrapper MAY be considered. Until both prerequisites resolve, no wrapper.",
+      "ratification_status": "not_ratified"
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "pattern": "direct_xfront_runtime_import",
+      "description": "Xlooop runtime UI MUST NOT import x-front components directly. All access to x-front-sourced components flows through Xlooop-owned X* wrappers in v2/src/ui/.",
+      "enforcement": "wrapper-boundary policy · enforced mechanically in Phase 10D when wrappers ship · pre-Phase-10D enforcement is documentary (this contract + ADR-0004 D2)"
+    },
+    {
+      "pattern": "mui_in_v2_runtime",
+      "description": "MUI remains forbidden in v2 runtime. ADR-0004 D2 + UI Library Evaluation §3 reaffirm MUI is a x-front user-app dependency · NOT a Xlooop product foundation. Re-introduction requires a new ADR + this policy version bump.",
+      "enforcement": "tests/smoke/no-mui-in-internal-ui.test.mjs (existing · c155+) + tests/smoke/no-mui-in-internal-ui.fires-on-violation.test.mjs (stress · c159+)"
+    },
+    {
+      "pattern": "legacy_demo_adoption",
+      "description": "Legacy demo assets (per P10C.4 inventory · 'demo-noise' tier) may NOT be routed to adoption. P10C.7 explicitly excluded all 78 remediation-routed components.",
+      "enforcement": "P10C.4 mapping invariants + scorecard threshold (≥75/100) + P10C.7 deferred-list invariant"
+    },
+    {
+      "pattern": "r2_blocked_adoption",
+      "description": "R2 Lane B (deferred) and Lane C (engine-internal) assets may NOT be adopted before R2 ratification by Ilmir. Lane A (R2-FREE) only may be considered.",
+      "enforcement": "P10C.5 R2 dependency audit + P10C.6 R2-independence hard gate + ADR-0004 D6"
+    }
+  ],
+  "voiding_conditions": [
+    "Phase 10C does not sign off cleanly at P10C.13",
+    "source_pin 8f62f6b no longer resolves at Phase 10D kickoff (re-pin required + re-ratification)",
+    "scorecard re-run drops any approved wrapper source below 75/100 normalized score",
+    "any approved wrapper source fails any of the 3 hard gates (accessibility · R2 independence · license risk) on re-verification",
+    "runtime implementation bypasses the Xlooop-owned wrapper contract (direct x-front import detected in v2/src/)",
+    "any forbidden_patterns rule is violated in v2 runtime"
+  ],
+  "voiding_effect": "If any voiding condition triggers: this policy is invalidated · P10C.7 adoption decision is voided · Phase 10D wrapper implementation is blocked until a fresh ratification cycle resolves the violation. P10C.9 intake-area decision still stands (it does not depend on wrapper ratification) but loses its immediate implementation purpose.",
+  "policy_revision_protocol": [
+    "Adding a new approved wrapper requires: scorecard pass + contract-maturity pass + R2-clean + ADR amendment + policy_version bump",
+    "Promoting a deferred wrapper to approved requires: same as above + reason-resolution evidence",
+    "Removing the no-direct-import rule requires a new ADR + executive sign-off + replacement enforcement mechanism",
+    "Changing implementation_location from v2/src/ui/ requires a new ADR + this policy version bump"
+  ],
+  "phase_10d_handoff": {
+    "implementation_unblocked_after": [
+      "Phase 10C signoff (P10C.13) lands cleanly",
+      "this policy ratification (P10C.10 · this commit) is in effect"
+    ],
+    "implementation_order_recommended": [
+      "XAvatar first (lowest friction · cleanest scorecard · no CTO review gate)",
+      "XEvidenceImage second (CTO review at pre-merge)",
+      "XEvidencePreview third (CTO review at pre-merge · widest type matrix)"
+    ],
+    "implementation_location_canonical": "v2/src/ui/",
+    "implementation_path_canonical": "v2/src/ui/<WrapperName>/",
+    "phase_10d_must_not": [
+      "import x-front components directly into v2/src/ runtime",
+      "create v2/src/integration-intake/xfront/ (forbidden by P10C.9)",
+      "implement deferred wrappers without prior ratification cycle",
+      "skip CTO review for XEvidenceImage or XEvidencePreview"
+    ]
+  },
+  "future_enforcement_placeholders": [
+    {
+      "name": "phase_10d_direct_xfront_import_check",
+      "description": "Mechanical grep/AST gate that fails CI if v2/src/ contains a direct import from x-front (any path other than wrapper-internal references). NOT implemented in P10C.10 · scheduled for Phase 10D when wrappers ship and the enforcement target becomes meaningful.",
+      "scheduled_for": "Phase 10D",
+      "implemented_in_p10c10": false
+    }
+  ],
+  "invariants_held": {
+    "p10c7_wrappers_ratified": true,
+    "phase_10d_location_recorded": true,
+    "no_runtime_mutation": true,
+    "no_xfront_source_mutation": true,
+    "no_wrapper_implementation_in_p10c10": true,
+    "no_direct_import_policy_codified": true,
+    "deferred_candidates_remain_deferred": true,
+    "voiding_conditions_recorded": true,
+    "p10c9_intake_decision_compatible": true,
+    "adr0004_d2_compatible": true,
+    "ui_library_evaluation_section_6_rubric_referenced": true
+  },
+  "next_routing": [
+    {
+      "phase": "P10C.11",
+      "purpose": "reusable skills (wrapper-policy-ratification · visual-baseline-recapture · component-scorecard-refresh · xfront-intake-audit) + Workflow §15 refinements"
+    },
+    {
+      "phase": "P10C.12",
+      "purpose": "stack compatibility audit (defer upgrades · audit-only · no runtime mutation)"
+    },
+    {
+      "phase": "P10C.13",
+      "purpose": "Phase 10C signoff + audit"
+    },
+    {
+      "phase": "Phase 10D",
+      "purpose": "wrapper implementation under v2/src/ui/ (XAvatar · then XEvidenceImage with CTO review · then XEvidencePreview with CTO review) · only after P10C.13 signoff + this policy in effect + Phase 10D direct-import enforcement check landed"
+    }
+  ]
+}

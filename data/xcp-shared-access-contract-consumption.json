@@ -1,0 +1,38 @@
+{
+  "schema_version": "xlooop.xcp_shared_access_contract_consumption.v1",
+  "consumer": "xlooop",
+  "authority": "xcp-platform",
+  "governance_authority": "MB-P",
+  "contract_pack_path": "data/xcp-shared-access-contract-pack.v1.json",
+  "contract_pack_file_sha256": "194799c0f21ee366d23bf3bfe9491d9e345c930814916dcd7c877f7ad89e8a41",
+  "contract_pack_sha256": "46bfea3a4e61af92a439bbcc83bec8c4d689204bf0ce86f0f238ca84ebd23b8a",
+  "pack_version": "2026.05.21",
+  "consumption_mode": "vendored_public_safe_contract_pack",
+  "cloud_deploy_policy": "no_sibling_file_dependency_to_xcp_platform",
+  "required_runtime_guards": [
+    "xlooop_entitlement_does_not_grant_xcp",
+    "xcp_default_disabled",
+    "auth_session_mode_split_from_operating_mode",
+    "test_mode_feedback_only_non_mutating",
+    "backend_enforcement_required_before_private_operator_mode",
+    "commercial_readiness_operator_gate",
+    "public_self_serve_not_claimed",
+    "private_operator_disabled_until_marat_decision"
+  ],
+  "required_source_authority_fields": [
+    "current_source_authority",
+    "legacy_provenance",
+    "local_clone_authority",
+    "owner_boundary"
+  ],
+  "blocked_patterns": [
+    "file_dependency_to_xcp_platform_shared_access_packages",
+    "xlooop_access_implies_xcp_access",
+    "feedback_mode_as_independent_authority",
+    "operator_mode_without_receipt_policy",
+    "bitbucket_as_active_source_authority",
+    "repo_inferred_from_local_path_without_mbp_route",
+    "public_claim_without_operator_signoff",
+    "private_operator_mode_without_operator_onboarding_decision"
+  ]
+}

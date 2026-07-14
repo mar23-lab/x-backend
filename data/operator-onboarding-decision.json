@@ -1,0 +1,7 @@
+{
+  "schema_version": "xlooop.operator_onboarding_decision_state.v1",
+  "status": "not_recorded",
+  "operator_id": "Marat",
+  "active_decision": null,
+  "rule": "Private paid Operator mode cannot activate until active_decision satisfies xcp.operator_onboarding_decision.v1 and evidence_refs is non-empty."
+}

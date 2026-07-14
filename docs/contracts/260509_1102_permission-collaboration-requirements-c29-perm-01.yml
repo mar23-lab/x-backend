@@ -1,0 +1,154 @@
+id: c29_perm_01_permission_collaboration_requirements
+created_at: "2026-05-09T11:02:00+10:00"
+date_key: "260509_1102"
+owner: Marat Basyrov
+scope: contract_design_documentation_only
+source_xfront:
+  repo_path: /Users/maratbasyrov/WIP/Xlooop/x-front
+  head_sha: 401e6d40a0befc683a7a410f1ed0aee0afd6f492
+  head_short: 401e6d4
+decision:
+  verdict: adopt_requirements_not_implementation
+  xfront_code_import_authorized: false
+  xfront_file_mutation_authorized: false
+  demo_runtime_change_authorized: false
+  archive_delete_move_authorized: false
+role_panel:
+  - chief-of-staff
+  - cto
+  - ux
+  - product-manager
+  - knowledge-architect
+  - ai-governed-infrastructure-manager
+  - devsecops
+  - lead-engineer
+skills_used:
+  - product-engineering-router
+  - integration-boundary-contracts
+  - existing-artifact-discovery
+source_evidence:
+  xfront:
+    - path: /Users/maratbasyrov/WIP/Xlooop/x-front/src/entities/actorRole/api/actorRole.data.js
+      finding: member_and_agent_role_pairing_exists_but_not_contract_complete
+      use: requirement_input
+    - path: /Users/maratbasyrov/WIP/Xlooop/x-front/src/entities/actorMember/api/member.data.js
+      finding: workspace_scoped_membership_exists_with_demo_fields_mixed_in
+      use: requirement_input
+    - path: /Users/maratbasyrov/WIP/Xlooop/x-front/src/entities/workspace/api/workspace.data.js
+      finding: workspace_boundary_exists_without_policy_expiry_or_sensitivity
+      use: requirement_input
+    - path: /Users/maratbasyrov/WIP/Xlooop/x-front/src/features/settings/memberAndAgentRoleSettings/ui/components/PermissionSettings.jsx
+      finding: permission_settings_placeholder_only
+      use: do_not_copy
+  demo:
+    - path: src/entities/actor/model.ts
+      finding: actor_session_membership_role_expires_at_base_exists
+      use: extend_contract_required
+    - path: src/entities/workspace/model.ts
+      finding: workspace_kind_identity_ttl_compliance_defaults_exist
+      use: extend_contract_required
+    - path: src/runtime/signed-url.ts
+      finding: client_review_claims_and_ttl_exist
+      use: extend_contract_required
+    - path: src/app/App.jsx
+      finding: reducer_policy_gates_exist_but_are_not_unified_contract
+      use: hardening_input
+actor_kinds:
+  - id: owner
+    authority_source: owner_record_or_organisation_policy
+    expiry_required: false
+    owner_only_actions:
+      - grant_revoke
+      - owner_gated_signoff
+      - archive_delete_approval
+  - id: employee
+    authority_source: workspace_membership_or_employment_policy
+    expiry_required: review_due_or_policy_link_required
+  - id: contractor
+    authority_source: owner_invitation_or_project_contract
+    expiry_required: true
+  - id: partner_client
+    authority_source: client_invitation_partner_workspace_or_signed_url
+    expiry_required: true
+  - id: family_friend_personal_collaborator
+    authority_source: owner_invitation_personal_domain
+    expiry_required: true
+  - id: github_collaborator
+    authority_source: github_repo_permission
+    expiry_required: governed_by_github_plus_xlooop_review_due
+    notes:
+      - Ilmir_GraphicDigger_has_github_access_to_x_docs_and_x_front
+      - github_access_is_not_xcp_invitation
+  - id: agent
+    authority_source: role_skill_assignment_and_task_policy
+    expiry_required: run_scoped
+  - id: system
+    authority_source: deterministic_system_policy
+    expiry_required: schedule_or_run_scoped
+permission_contract_required_fields:
+  - permission_id
+  - schema_version
+  - actor_id
+  - actor_kind
+  - authority_source
+  - workspace_id
+  - project_id
+  - subject_type
+  - subject_id
+  - role
+  - actions
+  - visibility_ceiling
+  - sensitivity_ceiling
+  - granted_by_actor_id
+  - granted_at
+  - expires_at
+  - revoked_at
+  - revocation_reason
+  - review_due
+  - source_refs
+  - evidence_refs
+  - status
+  - created_at
+  - updated_at
+edge_requirements:
+  - has_permission
+  - granted_by
+  - revoked_by
+  - bounded_by_repo_permission
+  - delegates_to
+  - expires_at
+  - evidenced_by
+gaps:
+  - id: no_single_permission_contract
+    risk: 70
+    correction: define_contract_before_ui_expansion
+  - id: xfront_permission_ui_placeholder
+    risk: 85
+    correction: do_not_import_use_as_requirement_prompt_only
+  - id: github_access_not_modeled_separately
+    risk: 80
+    correction: add_github_repo_permission_authority_source
+  - id: collaborator_expiry_missing_from_membership
+    risk: 75
+    correction: require_expiry_or_review_due_for_non_owner_grants
+  - id: policy_gates_not_contract_backed
+    risk: 65
+    correction: future_schema_and_tests_before_production_claims
+  - id: sensitivity_ceiling_missing
+    risk: 80
+    correction: add_visibility_and_sensitivity_to_permission_contract
+acceptance_criteria:
+  - every_non_owner_permission_grant_has_granted_at_granted_by_expiry_or_review_due_scope_authority_source
+  - github_collaborator_access_is_external_authority_not_xcp_invitation
+  - client_signed_url_access_cannot_exceed_client_visibility_or_sensitivity_ceiling
+  - agent_system_permissions_are_run_scoped_and_no_owner_substitution
+  - workspace_membership_and_action_permission_are_separate_concepts
+  - permission_edges_are_graph_visible_and_testable_before_settings_ui_depends_on_them
+  - xcp_platform_infrastructure_admin_permissions_stay_outside_xlooop_product_ui
+stop_conditions:
+  - stop_on_direct_xfront_source_import
+  - stop_on_xfront_file_edit_requirement
+  - stop_on_treating_github_access_as_xcp_invitation
+  - stop_on_permission_without_expiry_for_non_owner
+  - stop_on_agent_or_system_owner_approval_substitution
+recommended_next_slice: C29-STORY-01

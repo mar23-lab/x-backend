@@ -1,0 +1,107 @@
+{
+  "projection_kind": "mbp_operations_projection",
+  "projection_contract_version": "v0.1.0",
+  "projection_id": "projection:mbp:xlooop:c49-overnight",
+  "authority_source": "mbp_governance_projection",
+  "source_repo": "MB-P",
+  "source_mode": "read_only_projection",
+  "operator_workspace_id": "mbp-private",
+  "consumer_workspace_id": "xlooop",
+  "generated_at": "2026-05-09T23:40:00+10:00",
+  "valid_until": "2026-05-10T07:40:00+10:00",
+  "health": "connected_snapshot",
+  "redaction_state": "metadata_only",
+  "private_raw_content_included": false,
+  "writes_back_to_mbp_allowed": false,
+  "quality_gates": [
+    "redacted_projection_only",
+    "no_writeback_to_mbp",
+    "owner_workspace_scope_only",
+    "graph_visibility_declared"
+  ],
+  "blocked_actions": [
+    "write_mbp_repo",
+    "copy_private_payload",
+    "expose_raw_owner_notes",
+    "mutate_xcp_platform",
+    "mutate_xfront_or_xdocs"
+  ],
+  "packets": [
+    {
+      "packet_id": "packet-260509-c49-mbp-live-ops",
+      "intent_id": "intent-260509-c49-mbp-live-ops",
+      "title": "MB-P live operations bridge for Xlooop workspace",
+      "workspace_id": "mbp-private",
+      "project_id": "mbp-intake",
+      "lifecycle_state": "candidate_owner_review_required",
+      "owner_confirmation_state": "required",
+      "sterility_state": "sterile_quarantined",
+      "graph_layer": "lean_context",
+      "evidence_state": "not_ready",
+      "signoff_state": "not_ready",
+      "xcp_feedback_state": "waits_for_owner_decision",
+      "source_refs": [
+        {
+          "ref_id": "source:mbp:intake:c49",
+          "label": "Unified intake metadata projection",
+          "uri": "mbp://intake/packet-260509-c49-mbp-live-ops",
+          "ref_kind": "intake",
+          "raw_content_included": false
+        },
+        {
+          "ref_id": "source:mbp:graph:c49",
+          "label": "Lean graph visibility declaration",
+          "uri": "mbp://graph/lean-context/operations-bridge",
+          "ref_kind": "governance",
+          "raw_content_included": false
+        }
+      ]
+    },
+    {
+      "packet_id": "packet-260509-c50-capability-discoverability",
+      "intent_id": "intent-260509-c50-capability-discoverability",
+      "title": "Agent-agnostic overnight and caffeine capability discoverability",
+      "workspace_id": "mbp-private",
+      "project_id": "mbp-ops",
+      "lifecycle_state": "work_item_created",
+      "owner_confirmation_state": "confirmed",
+      "sterility_state": "sterile_active",
+      "graph_layer": "jump_graph",
+      "evidence_state": "ready",
+      "signoff_state": "ready",
+      "xcp_feedback_state": "ready_for_substrate",
+      "source_refs": [
+        {
+          "ref_id": "source:mbp:overnight-skill",
+          "label": "Overnight capability discovered in MB-P graph",
+          "uri": "mbp://capability/xcp-localbrain-overnight-batch",
+          "ref_kind": "governance",
+          "raw_content_included": false
+        }
+      ]
+    },
+    {
+      "packet_id": "packet-260509-c39-xlooop-ops",
+      "intent_id": "intent-260509-c39-xlooop-ops",
+      "title": "Xlooop operational product workspace",
+      "workspace_id": "mbp-private",
+      "project_id": "xlooop-product",
+      "lifecycle_state": "evidence_ready",
+      "owner_confirmation_state": "confirmed",
+      "sterility_state": "sterile_active",
+      "graph_layer": "audit_evidence",
+      "evidence_state": "ready",
+      "signoff_state": "ready",
+      "xcp_feedback_state": "waits_for_owner_decision",
+      "source_refs": [
+        {
+          "ref_id": "source:xlooop:ops-workspace",
+          "label": "Xlooop Operations current-product proof",
+          "uri": "xlooop://workspace/xlooop/operations",
+          "ref_kind": "work_item",
+          "raw_content_included": false
+        }
+      ]
+    }
+  ]
+}

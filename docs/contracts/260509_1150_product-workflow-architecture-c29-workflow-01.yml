@@ -1,0 +1,139 @@
+id: c29_workflow_01_product_workflow_architecture
+created_at: "2026-05-09T11:50:00+10:00"
+date_key: "260509_1150"
+timezone: Australia/Melbourne
+owner: Marat Basyrov
+status: active_decision
+lifecycle_state: sterile_active
+graph_required: true
+scope:
+  repo: Xlooop-XCP-demo
+  slice: C29-WORKFLOW-01
+  type: product_workflow_architecture_decision
+  runtime_change_authorized: false
+  xfront_import_authorized: false
+  archive_delete_move_authorized: false
+role_panel:
+  - chief-of-staff
+  - cto
+  - ux
+  - product-manager
+  - knowledge-architect
+  - ai-governed-infrastructure-manager
+  - devsecops
+  - lead-engineer
+skills_used:
+  - product-engineering-router
+  - xlooop-design-review
+  - frontend-architecture-review
+  - integration-boundary-contracts
+  - component-contract-storybook
+  - delivery-readiness-gates
+decision:
+  covers_previous_path_with_new_perspective: true
+  previous_path:
+    - C29-GRAPH-01
+    - C29-PERM-01
+    - C29-STORY-01
+    - C29-UIKIT-01
+    - C29-BISYNC-01
+    - C29-BISYNC-02
+  new_perspective:
+    - product_workflow_architecture
+    - web_first_user_journey
+    - cross_frontend_compatibility_without_blending
+    - workspace_role_permission_governance_flow
+  product_workflow_model: workspace_first_role_driven_graph_backed_capability_modular
+  visible_first_30_seconds_chain:
+    - workspace
+    - project_or_domain
+    - intent
+    - governed_triage
+    - work_item
+    - build_evidence
+    - sign_off
+    - learning_xcp_substrate
+workspace_classes:
+  - id: mbp
+    class: owner_private
+    purpose: private_marat_owned_proving_workspace
+  - id: xlooop
+    class: company_product
+    purpose: commercial_product_company_delivery_workspace
+  - id: xcp_platform
+    class: platform_producer
+    purpose: platform_roadmap_and_substrate_visibility_not_admin_ui
+  - id: client_invited
+    class: external_collaboration
+    purpose: permissioned_review_and_signoff
+  - id: small_team_personal
+    class: lightweight_workspace
+    purpose: same_governance_model_with_lighter_defaults
+workflow_control_model:
+  core_navigation: hardcoded_product_spine
+  workspace_project_setup: configurable_templates
+  permissions_actions: role_driven
+  evidence_lineage_dependencies: graph_driven
+  capability_modules: contract_driven_plugins_widgets
+cross_frontend_compatibility:
+  goal: leverage_not_merger
+  surfaces:
+    xlooop_xcp_demo: governed_delivery_product_shell
+    xfront: heavier_engine_editor_product_implementation_with_valuable_patterns
+    xcp_platform: reusable_substrate_control_plane_platform_family
+  required_contract_surfaces:
+    - design_tokens
+    - ui_primitives
+    - widgets
+    - event_bus
+    - evidence
+    - permissions
+    - storybook
+    - graph
+    - data_access
+gaps:
+  - id: no_single_cross_frontend_compatibility_matrix
+    severity: 80
+    next_action: C29-FE-COMPAT-01
+  - id: storybook_maturity_levels_differ_by_repo
+    severity: 75
+    next_action: standardize_state_matrix_and_dod_scoring
+  - id: event_evidence_permission_fields_not_portable
+    severity: 75
+    next_action: use_graph_and_permission_contracts_as_portable_layer
+  - id: xfront_engine_scope_still_moving
+    severity: 85
+    next_action: keep_investigation_only_until_owner_ilmir_handoff_stabilizes
+  - id: xcp_platform_substrate_separate_from_product_shell
+    severity: 70
+    next_action: surface_substrate_status_without_admin_operations
+  - id: first_viewport_not_proving_product_thesis
+    severity: 90
+    next_action: C29-STORY-P0-CHAIN-01
+required_next_sequence:
+  - id: C29-FE-COMPAT-01
+    title: Cross-frontend compatibility matrix
+    scope: docs_contracts_only
+    runtime_change_authorized: false
+  - id: C29-STORY-P0-CHAIN-01
+    title: Storybook proof for first-30-second product chain
+    scope: storybook_proof
+    runtime_change_authorized: false
+  - id: C29-WEB-GATEWAY-01
+    title: Web-first workspace/workflow gateway implementation
+    scope: current_root_app_only
+    runtime_change_authorized: true
+  - id: C29-BISYNC-03
+    title: Synthetic bi-sync Storybook/state-matrix proof
+    scope: no_runtime_engine_import
+    runtime_change_authorized: false
+  - id: C29-XFRONT-ABSORB-OWNER-01
+    title: Owner and Ilmir-reviewed x-front absorption backlog
+    scope: backlog_only
+    runtime_change_authorized: false
+stop_conditions:
+  - direct_xfront_runtime_editor_iframe_import_required
+  - xcp_platform_infrastructure_admin_blended_into_product_shell
+  - workspace_context_missing_actor_role_visibility_sensitivity
+  - storybook_cannot_show_evidence_signoff_state
+  - module_missing_public_api_events_state_dependency_boundaries

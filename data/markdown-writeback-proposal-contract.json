@@ -1,0 +1,35 @@
+{
+  "schema_version": "MarkdownWritebackProposal.v1",
+  "source_mode": "browser_safe_contract",
+  "status": "proposal_only",
+  "browser_direct_write_allowed": false,
+  "backend_governed_writeback_enabled": false,
+  "required_fields": [
+    "proposal_id",
+    "receipt_id",
+    "workspace_id",
+    "project_id",
+    "source_ref",
+    "draft_version_id",
+    "diff_summary",
+    "diff_patch_preview",
+    "approval_state",
+    "rollback_note",
+    "created_at"
+  ],
+  "states": [
+    "draft_saved",
+    "review_requested",
+    "approval_required",
+    "approved_pending_backend",
+    "rejected",
+    "blocked_backend_missing"
+  ],
+  "runtime_behaviour": [
+    "Submit review opens a diff preview before creating a proposal receipt.",
+    "Watch Mode creates preview-only state.",
+    "Operator Mode creates a proposal receipt and keeps source writeback blocked.",
+    "Proposal history is visible in the document panel and inspector.",
+    "Rollback path is metadata only until backend governed writeback is enabled."
+  ]
+}

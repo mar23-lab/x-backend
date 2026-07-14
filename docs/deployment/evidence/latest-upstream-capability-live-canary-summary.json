@@ -1,0 +1,100 @@
+{
+  "schema_id": "xlooop.external_capability_live_canary_summary.v1",
+  "source_report": "/private/tmp/xlooop-external-capability-live-upstream-results-all-after-aggregate-fix.json",
+  "source_report_schema_id": "xlooop.external_capability_runtime_results.v1",
+  "evidence_kind": "live_upstream_sandbox_canary",
+  "generated_at": "2026-06-22T06:30:49.267Z",
+  "sandbox_python": "/tmp/xlooop-upstream-capability-venv/bin/python",
+  "sandbox_markitdown_cli": "/tmp/xlooop-upstream-capability-venv/bin/markitdown",
+  "aggregate_status": "FAIL",
+  "upstream_tool_execution": true,
+  "default_adoption_recommendation": "NO",
+  "opt_in_canary_recommendation": "NO",
+  "capability_results": [
+    {
+      "capability": "markitdown",
+      "execution_mode": "upstream_markitdown_cli_sandbox_canary",
+      "upstream_tool_execution": true,
+      "default_adoption_allowed": false,
+      "opt_in_canary_allowed": true,
+      "decision": "live_upstream_canary_executed_not_default",
+      "case_count": 9,
+      "corpus_target_case_count": 16,
+      "skipped_case_count": 7,
+      "extraction_fidelity_pct": 100,
+      "citation_source_span_coverage_pct": 100,
+      "redaction_invariant_pct": 100,
+      "sensitive_leakage_count": 0,
+      "p95_small_doc_conversion_ms": 496.79,
+      "replayability_pct": 100,
+      "license_security_sbom_status": "PASS",
+      "residual": "MarkItDown 0.1.6 from microsoft/markitdown runs in the Python 3.13 sandbox as opt-in review-only; binary Office/PDF/image/audio coverage and strict default gates are still required before default adoption."
+    },
+    {
+      "capability": "hyper_extract",
+      "execution_mode": "xlooop_native_graph_suggestion_live_canary",
+      "upstream_tool_execution": false,
+      "default_adoption_allowed": false,
+      "opt_in_canary_allowed": true,
+      "decision": "native_rebuild_preferred_not_external_graph_authority",
+      "case_count": 17,
+      "extraction_fidelity_pct": 97,
+      "typed_extraction_fidelity_pct": 97,
+      "citation_source_span_coverage_pct": 100,
+      "redaction_invariant_pct": 100,
+      "sensitive_leakage_count": 0,
+      "graph_suggestion_authoritative_count": 0,
+      "direct_upstream_mcp_exposure_count": 0,
+      "replayability_pct": 100,
+      "license_security_sbom_status": "PASS",
+      "residual": "Upstream graph/MCP/export/search/talk surfaces are intentionally not executed or exposed; only native typed GraphSuggestion posture is allowed."
+    },
+    {
+      "capability": "headroom",
+      "execution_mode": "upstream_headroom_library_sandbox_canary",
+      "upstream_tool_execution": true,
+      "default_adoption_allowed": false,
+      "opt_in_canary_allowed": false,
+      "decision": "live_upstream_canary_failed_not_default",
+      "case_count": 8,
+      "extraction_fidelity_pct": 0,
+      "citation_source_span_coverage_pct": 0,
+      "redaction_invariant_pct": 0,
+      "sensitive_leakage_count": 0,
+      "replayability_pct": 0,
+      "license_security_sbom_status": "PASS",
+      "residual": "Headroom remains benchmark-only: registry source install from chopratejas/headroom currently needs Cargo >=1.85 for Rust edition2024 and no supported headroom.compress API is available in the sandbox.",
+      "failures": [
+        {
+          "id": "headroom_library_execution_failed",
+          "status": 1,
+          "stderr": "Traceback (most recent call last):\n  File \"<string>\", line 3, in <module>\n    import headroom\nModuleNotFoundError: No module named 'headroom'\n",
+          "stdout": ""
+        }
+      ]
+    }
+  ],
+  "aggregate_failures": [
+    {
+      "id": "headroom_library_execution_failed",
+      "capability": "headroom",
+      "source": "capability_result",
+      "status": 1,
+      "stderr": "Traceback (most recent call last):\n  File \"<string>\", line 3, in <module>\n    import headroom\nModuleNotFoundError: No module named 'headroom'\n",
+      "stdout": ""
+    },
+    {
+      "id": "capability_opt_in_canary_not_allowed",
+      "capability": "headroom",
+      "source": "capability_result",
+      "decision": "live_upstream_canary_failed_not_default"
+    }
+  ],
+  "warnings": [
+    "Default adoption remains blocked for every capability.",
+    "MarkItDown is now package-identity checked and executable as an opt-in sandbox canary only.",
+    "The aggregate all-capability canary must fail while any requested capability has result-level failures or opt-in canary disallowance.",
+    "Headroom upstream source remains blocked until Cargo >=1.85 can build the registry source and a supported compression API or CLI contract is proven.",
+    "Live canary evidence is sandbox-only and does not replace owner approval, feature flags, full corpus coverage, rollback proof, tenant-safe production receipts, or API/MCP scoped canary credentials."
+  ]
+}

@@ -1,0 +1,57 @@
+# agent-roles.yml · the agent identity -> {role, skills, write-surface, approval} contract (S2)
+# Authority: docs/audits/operator-stability/roles-skills-contract-recommendation.md (OS-4 P4),
+# operator-approved 2026-06-12 ("proceed with everything").
+#
+# WHY A FILE, NOT A TABLE: this is code-reviewed configuration (one SSOT, mirrors MB-P
+# skills-index.yaml); a DB table would be a second writable SSOT (HR-NO-PARALLEL-MODEL-1) and
+# would open agent self-registration (forbidden: HR-AGENT-NO-SELF-PATCH / ADR-0079).
+#
+# CONTRACT (enforced by scripts/verify-agent-roles-parity.mjs, ci-local):
+#   - every `*_AGENT_ID` constant in src/workers/services/operations-queue-consumer.ts MUST have
+#     an entry here (no unregistered automation identity ever stamps operation_events rows);
+#   - every `executor_verbs` entry MUST be a key of the executor's VERB_HANDLERS registry
+#     (a registered claim to RUN a verb that does not exist is drift, and vice-versa a new verb
+#     must be claimed here in the same PR).
+#
+# FIELDS:
+#   role          one of: executor | drafter | owner | connector
+#   skills        human-legible capability names (chat/lineage rendering; NOT parity-checked)
+#   executor_verbs  the execute:<verb> handlers this agent runs (parity-checked, executor only)
+#   writes        tables the agent may APPEND to (ia-001: never content mutation)
+#   approval      operator-gated = every output lands pending/needs_review; POST /sign-offs to act
+
+schema_id: xlooop.agent_role_runtime_manifest.v1  # T3/P5 (260710) - promoted to the role-to-skill runtime manifest
+schema: xlooop.agent-roles.v1
+
+agents:
+  "xlooop:operations-executor":
+    role: executor
+    skills: [queue-drain, governed-proposal]
+    executor_verbs: [digest, roadmap]
+    writes: [operation_events]
+    approval: operator-gated
+
+  "xlooop:digest-agent":
+    role: drafter
+    skills: [workspace-digest]
+    writes: [operation_events]
+    approval: operator-gated
+
+  # W3 Track A · synthesizes a roadmap proposal from the workspace plan (domains -> roadmaps + goals).
+  # Sibling of digest-agent: reads via dal.listWorkspacePlan, drafts a governed needs_review/pending
+  # proposal the operator approves via /sign-offs. Runs the executor's 'roadmap' verb.
+  "xlooop:roadmap-agent":
+    role: drafter
+    skills: [workspace-roadmap]
+    writes: [operation_events]
+    approval: operator-gated
+
+  # A10 (260713, OAR-W0 F5 fix) · the review-cadence scheduler (crons/review-schedule.ts, flag
+  # REVIEW_SCHEDULER_ENABLED default OFF). Surfaces due goal-reviews as needs_review proposals in the
+  # events rail; also advances synthetic_domain_goals.review_due to the next cadence slot — a
+  # SCHEDULING-METADATA bump (never goal content mutation; ia-001 intact).
+  "xlooop:review-scheduler":
+    role: drafter
+    skills: [review-cadence]
+    writes: [operation_events]
+    approval: operator-gated

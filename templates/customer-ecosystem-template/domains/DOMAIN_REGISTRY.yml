@@ -1,0 +1,19 @@
+schema: customer_domain_registry_v1
+status: draft
+domains:
+  - id: identity_compliance
+    name: Identity and compliance
+    sensitivity: medium
+    source_posture: public_first
+  - id: lead_intake
+    name: Lead intake
+    sensitivity: medium
+    source_posture: authority_pending
+  - id: delivery_reporting
+    name: Delivery and reporting
+    sensitivity: high
+    source_posture: authority_pending
+  - id: payments_finance
+    name: Payments and finance
+    sensitivity: high
+    source_posture: authority_pending

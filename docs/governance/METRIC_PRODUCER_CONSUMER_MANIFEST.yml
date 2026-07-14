@@ -1,0 +1,70 @@
+# METRIC_PRODUCER_CONSUMER_MANIFEST.yml · T3/P5-P6 (260710) · every metric names its producer + consumer.
+#
+# schema_id: xlooop.metric_producer_consumer_manifest.v1
+# RULE (Codex plan P6): no metric without a producer, consumer, cadence, and owner — a number nobody
+# produces mechanically or nobody reads is deleted, not displayed. Two metric classes:
+#   (a) DB-aggregated panels (telemetry.ts → GET /api/v1/inference-health)
+#   (b) structured log events (lib/observability.ts emitEvent — the greppable ObservabilityKind catalog)
+# DRIFT-GATED: scripts/verify-governance-manifests.mjs asserts every observability kind listed here exists
+# in lib/observability.ts (and vice-versa), so the event catalog cannot drift from the code.
+# owner: backend seat · freshness: update when a panel/kind is added (gate fails otherwise).
+
+schema_id: xlooop.metric_producer_consumer_manifest.v1
+verify: node scripts/verify-governance-manifests.mjs
+
+panels:  # class (a) — producer: src/workers/telemetry.ts (6-panel aggregate); consumer: operator dashboard
+  - id: inference_signal_evals
+    producer_table: inference_signal_evals
+    consumer: GET /api/v1/inference-health (operator dashboard)
+    cadence: on-request
+  - id: recommendations_state
+    producer_table: synthetic_domain_recommendations
+    consumer: GET /api/v1/inference-health
+    cadence: on-request
+  - id: source_connections_health
+    producer_table: user_source_connections
+    consumer: GET /api/v1/inference-health
+    cadence: on-request
+  - id: inference_runs
+    producer_table: inference_runs
+    consumer: GET /api/v1/inference-health
+    cadence: on-request
+
+observability_kinds:  # class (b) — producer: the named emission site; consumer: Workers Logs / future sink
+  - kind: tool_event_reported
+    producer: routes/mcp-gateway.ts (report_tool_event)
+  - kind: source_sync_completed
+    producer: routes/sources.ts (sync success)
+  - kind: source_sync_failed
+    producer: routes/sources.ts (sync failure)
+  - kind: chat_fact_bundle
+    producer: routes/customer-chat.ts (after answerCockpitChat)
+  - kind: document_uploaded
+    producer: routes/documents.ts (upload 201)
+  - kind: evidence_created
+    producer: routes/mcp-gateway.ts (submit_evidence)
+  - kind: approval_requested
+    producer: routes/mcp-gateway.ts (request_approval)
+  - kind: signoff_decided
+    producer: routes/sign-offs.ts (createSignOff)
+  - kind: feedback_submitted
+    producer: routes/feedback.ts (POST /feedback)
+  - kind: mcp_customer_read
+    producer: routes/mcp-customer-reads.ts (auditRead · L2 260710-D, flag MCP_READ_AUDIT_ENABLED)
+  - kind: llm_usage
+    producer: routes/customer-chat.ts (post-answer metering · G2 260711, flag LLM_USAGE_METERING_ENABLED; durable row = dal/llm-usage-store.ts → llm_usage_log mig 064)
+  - kind: policy_shadow_decision
+    producer: lib/policy-shadow.ts (observePolicyShadow · A7 260713, flag POLICY_ENGINE_ENABLED; SHADOW-only, never enforces; wired at routes/synthetic-domains.ts goal.create/complete)
+  - kind: role_skill_resolution
+    producer: lib/role-skill-shadow.ts (observeRoleSkillResolution · OAR-W2 260713, flag ROLE_SKILL_RESOLVER_ENABLED; SHADOW-only at lib/spine-authority.ts authorizeSpineWrite; durable rows = dal/role-skill-resolution-store.ts → role_skill_resolutions + authority_denial_receipts, mig 070)
+  - kind: role_skill_receipt_write_failed
+    producer: lib/role-skill-shadow.ts (swallowWithTelemetry · Track A 260713; fires when a deferred shadow receipt write rejects — evidence loss is telemetered, never silent; safe fields only, no tenant payload)
+
+pre_existing_kinds:  # emitted before this manifest (inline console.log sites; catalogued for completeness)
+  - spine_authority.deny
+  - role_scoped_context
+  - source_truth_override
+  - cockpit_chat_claude_fallthrough
+  - cockpit_chat_llm_short
+  - cockpit_chat_llm_error
+  - member_authority_provisioning.failed

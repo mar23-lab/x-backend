@@ -1,0 +1,78 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://xlooop.dev/schemas/mbp-operations-projection.v1.schema.json",
+  "title": "mbp-operations-projection.v1",
+  "description": "Round 13 R13.1 (2026-05-20). Contract for data/mbp-operations-projection.json — MB-P-owned read-model snapshot exported under owner-approved internal-full claim posture. Per Xlooop boundary rules (R12.30 critique pillar #2): writes_back_to_mbp_allowed MUST be false, source_repo MUST be MB-P. The schema enforces these load-bearing boundary fields so any producer drift trips smoke. R13.4 will inject the _meta envelope.",
+  "type": "object",
+  "additionalProperties": true,
+  "anyOf": [
+    { "required": ["projection_kind", "projection_id", "authority_source"] },
+    { "required": ["_meta", "projection_id"] }
+  ],
+  "properties": {
+    "_meta": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["schema", "generated_at", "producer"],
+      "properties": {
+        "schema": {
+          "type": "string",
+          "const": "mbp-operations-projection.v1"
+        },
+        "generated_at": { "type": "string" },
+        "producer": { "type": "string" },
+        "git_sha": { "type": "string", "pattern": "^[0-9a-f]{0,40}$" }
+      }
+    },
+    "projection_kind": {
+      "type": "string",
+      "const": "mbp_operations_projection"
+    },
+    "projection_contract_version": { "type": "string" },
+    "projection_id": { "type": "string" },
+    "authority_source": { "type": "string" },
+    "source_repo": {
+      "type": "string",
+      "description": "MUST be MB-P — projection is MB-P-owned. Drift here means an upstream tool wrote the wrong producer header.",
+      "const": "MB-P"
+    },
+    "source_mode": { "type": "string" },
+    "operator_workspace_id": { "type": "string" },
+    "consumer_workspace_id": { "type": "string" },
+    "generated_at": { "type": "string" },
+    "valid_until": { "type": ["string", "null"] },
+    "health": { "type": "string" },
+    "redaction_state": { "type": "string" },
+    "private_raw_content_included": { "type": "boolean" },
+    "writes_back_to_mbp_allowed": {
+      "type": "boolean",
+      "description": "MUST be false — Xlooop session cannot write back to MB-P (hard constraint, work item 260515). Drift here means producer side is leaking the wrong claim posture.",
+      "const": false
+    },
+    "operation_mode": { "type": "string" },
+    "quality_gates": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "blocked_actions": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "packets": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {
+          "packet_id": { "type": "string" },
+          "intent_id": { "type": ["string", "null"] },
+          "title": { "type": "string" },
+          "workspace_id": { "type": ["string", "null"] },
+          "project_id": { "type": ["string", "null"] },
+          "lifecycle_state": { "type": ["string", "null"] },
+          "owner_confirmation_state": { "type": ["string", "null"] }
+        }
+      }
+    }
+  }
+}

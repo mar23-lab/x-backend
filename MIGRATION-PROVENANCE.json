@@ -1,0 +1,3873 @@
+{
+  "schema_id": "xlooop.backend_shadow_seed_provenance.v1",
+  "generated_at": "2026-07-14T13:18:03.918Z",
+  "source_repo": "mar23-lab/Xlooop-XCP-demo",
+  "source_commit": "db21b95d08753861e01935f1622e1c2fd570f397",
+  "authority": "shadow_only_no_production_cutover",
+  "copy_method": "decommission-ledger-plus-current-backend-roots",
+  "copied_blob_count": 963,
+  "transformed_files": [
+    "data/orphan-test-baseline.json",
+    "package-lock.json",
+    "package.json",
+    "scripts/ci-local.mjs",
+    "scripts/verify-no-orphan-worker-tests.mjs",
+    "src/workers/__tests__/api-facade.test.ts",
+    "src/workers/__tests__/iam-parity.test.ts",
+    "src/workers/__tests__/session-facade.test.ts"
+  ],
+  "files": [
+    {
+      "path": ".dev.vars.example",
+      "source_blob": "d1a556b91af428081a6c928ef1af367bae236b43"
+    },
+    {
+      "path": ".gitignore",
+      "source_blob": "ac3ef369488fad8b28833acf8c8e94ee25eea64c"
+    },
+    {
+      "path": ".nvmrc",
+      "source_blob": "2bd5a0a98a36cc08ada88b804d3be047e6aa5b8a"
+    },
+    {
+      "path": "data/_tenant-manifests/aps-pty-ltd.json",
+      "source_blob": "03173749b6d467135e82e14ba7bc9feb8e62ece5"
+    },
+    {
+      "path": "data/_tenant-manifests/operator-mbp.json",
+      "source_blob": "44dfadb57aaebe10906e75d6f5717f26328d1c17"
+    },
+    {
+      "path": "data/autonomous-overnight-run.example.json",
+      "source_blob": "009cae131469c085ad2c385342cd997f8b873c87"
+    },
+    {
+      "path": "data/backend-proposal-receipt-contract.json",
+      "source_blob": "e0b78ac714230c7747eb4e5750eedcc888353bc8"
+    },
+    {
+      "path": "data/cloud-deployment-readiness.json",
+      "source_blob": "654a10e1fe88180c501a152904f43fd343e60157"
+    },
+    {
+      "path": "data/cloudflare-deployment-signal.json",
+      "source_blob": "872f94075249acd3e84722e5ce3135cd400beea0"
+    },
+    {
+      "path": "data/commercial-controlled-pilot-readiness.json",
+      "source_blob": "7261997d7d2013ea48dabf6fa7d5b6d628d1fde7"
+    },
+    {
+      "path": "data/customer-data-lifecycle-policy.json",
+      "source_blob": "a5ba413e867d7061a68b866d9f47b02280628d5b"
+    },
+    {
+      "path": "data/customer-health-value-read-model.json",
+      "source_blob": "a68f4216e8ff48bf4316ddd210f34d9db4fdf5eb"
+    },
+    {
+      "path": "data/customer-onboarding-read-model.json",
+      "source_blob": "8402bfb577381dcd3102aa85086fc7d6a95f7a77"
+    },
+    {
+      "path": "data/customer-safe-export-manifest.json",
+      "source_blob": "85f65b2cd9209b42a4b7b4998b3a5294aa20afdc"
+    },
+    {
+      "path": "data/document-anchor-contracts.json",
+      "source_blob": "15f65bfc21103bde23af92d4846a398d187185f9"
+    },
+    {
+      "path": "data/document-context-read-model.json",
+      "source_blob": "7517edb9f7a54d0d385f0451f1e4ba14c5ed78b5"
+    },
+    {
+      "path": "data/ecosystem-capability-consumer-manifest.json",
+      "source_blob": "40bda8cff5a46169a1af8f982b01e51347dedb4d"
+    },
+    {
+      "path": "data/fixtures/FRONTIER-MANIFEST-260711.pinned.json",
+      "source_blob": "5d95a5f7c57a3b0920b1d0f091c002836d589a14"
+    },
+    {
+      "path": "data/fixtures/frontend-seed-contract.json",
+      "source_blob": "f01a7b31b3cc3240aa84c1f3eb30ff999a311a2b"
+    },
+    {
+      "path": "data/governed-chat-capture-projection.example.json",
+      "source_blob": "acb4ee6273a74cedcaa9403ec7e5736e501a8b67"
+    },
+    {
+      "path": "data/governed-proposal-ledger.example.json",
+      "source_blob": "e777e5a5f2f75efa9d994635a1e6a45957fd820e"
+    },
+    {
+      "path": "data/hosted-ci-runner-health.json",
+      "source_blob": "e82f9466da772492eef578233745f7c77ef2cb71"
+    },
+    {
+      "path": "data/hosted-deployment-evidence.json",
+      "source_blob": "5f1c67b3286a7366e97e3e187de34c7b2b147fb7"
+    },
+    {
+      "path": "data/investor-data-room-authority.json",
+      "source_blob": "b739519b49bf446a9bec7e2a6ccbe1b567488c2c"
+    },
+    {
+      "path": "data/investor-safe-pack-manifest.example.json",
+      "source_blob": "fd17c02085630dcd108e2755b7be66c59c249da6"
+    },
+    {
+      "path": "data/markdown-source-writeback-contract.json",
+      "source_blob": "db91573aa0da542ce27567a6e71a3a2a150323d0"
+    },
+    {
+      "path": "data/markdown-writeback-proposal-contract.json",
+      "source_blob": "c790be0e54d95f0b5aa42f444d8747223b062242"
+    },
+    {
+      "path": "data/mbp-gateway-receipts.example.json",
+      "source_blob": "befa62e13abac885ed6d03d9bd3667075191fa7a"
+    },
+    {
+      "path": "data/mbp-gateway-receipts.json",
+      "source_blob": "b1bcc9a35575373ef7eabe36f3c719ad61c9f7da"
+    },
+    {
+      "path": "data/mbp-messy-intake-benchmark-readiness.example.json",
+      "source_blob": "e2ba22ae2e0c749a12458aa35f500a7e619a40a1"
+    },
+    {
+      "path": "data/mbp-operations-projection.example.json",
+      "source_blob": "2169fa55c20f2a6cd01f96e8dcde218b978b0f4e"
+    },
+    {
+      "path": "data/mbp-operations-projection.json",
+      "source_blob": "17a73e7dffdfe9f5e43009dc5e54b3a5d629a9e0"
+    },
+    {
+      "path": "data/mbp-projection-export-manifest.example.json",
+      "source_blob": "caec67591831875f66572e9c2d8909e985932b4f"
+    },
+    {
+      "path": "data/mbp-projection-export-manifest.json",
+      "source_blob": "c073c33d3b13449d6150b1d8066745d030f4f3ab"
+    },
+    {
+      "path": "data/me.json",
+      "source_blob": "bfb58ccb5aeefa966a1bcf6bf860bfbc9eab4238"
+    },
+    {
+      "path": "data/nav-config.json",
+      "source_blob": "11525590bfff0ee81c52a9fadd39ea9778e8ba77"
+    },
+    {
+      "path": "data/operations-live-stream-source-coverage.json",
+      "source_blob": "22a1fe9a0bc80f0fe9c9519c83b2c48c8a47cc4c"
+    },
+    {
+      "path": "data/operations-live-stream.json",
+      "source_blob": "8b501d8eabc092f987e8d89a51247e4e7560e29a"
+    },
+    {
+      "path": "data/operator-onboarding-decision.example.json",
+      "source_blob": "e79c978af78505e73674225d2f33cdfb4f9713af"
+    },
+    {
+      "path": "data/operator-onboarding-decision.json",
+      "source_blob": "35227750a54e3830dd2749e0124441b1a128fc87"
+    },
+    {
+      "path": "data/packet-persistence-collaboration-boundary.example.json",
+      "source_blob": "ee29ab7188ca6ffaf5dc7ec86b3a71e8303e077e"
+    },
+    {
+      "path": "data/paid-pilot-action-policy.json",
+      "source_blob": "9ac39ed0e81cd0cfaa7cc87ef614feeeacc85367"
+    },
+    {
+      "path": "data/paid-pilot-authority-contract.json",
+      "source_blob": "effa95654fc1a1a0d65e1428fe0095e89a164732"
+    },
+    {
+      "path": "data/production-pilot-readiness.json",
+      "source_blob": "0000a5f378ffd8656d963f900c73cd93f647f69e"
+    },
+    {
+      "path": "data/projects/mbp-intake/manifest.json",
+      "source_blob": "75de8881820334af900fd25dff7ec81f2a47c6ac"
+    },
+    {
+      "path": "data/projects/mbp-ops/manifest.json",
+      "source_blob": "2aaea4a4f3bdbdb69c5a528d15787567a08e0f4c"
+    },
+    {
+      "path": "data/projects/xcp-control-plane/manifest.json",
+      "source_blob": "1fb0fb1892cfd79a31005d372579ad0858b7b24d"
+    },
+    {
+      "path": "data/projects/xcp-roadmap/manifest.json",
+      "source_blob": "f863adf22d13ca2c861f0849cdead1452c3cedf6"
+    },
+    {
+      "path": "data/projects/xlooop-commercial/manifest.json",
+      "source_blob": "bcba4e7abb942d64a1fd9da134b9ed95ab905341"
+    },
+    {
+      "path": "data/projects/xlooop-product/manifest.json",
+      "source_blob": "ad3d23d6d8310a11b1b65d2e6ee36d9b4904ecc8"
+    },
+    {
+      "path": "data/public-private-claim-posture.json",
+      "source_blob": "a1e203b5ed4488aff1e591e7dd87ee3b3e83dcfe"
+    },
+    {
+      "path": "data/runtime-export-budget-policy.json",
+      "source_blob": "62d4aa0f6590ae9402e7e848fce5929c79b24f5c"
+    },
+    {
+      "path": "data/schemas/README.md",
+      "source_blob": "3e49716d0be0601382795d2d8b0571930e1f466b"
+    },
+    {
+      "path": "data/schemas/document-context-read-model.v1.schema.json",
+      "source_blob": "936d40a8861966b36461df09d620b8e5a35182ce"
+    },
+    {
+      "path": "data/schemas/mbp-operations-projection.v1.schema.json",
+      "source_blob": "15f3ff83538a3c85ac865c9aec75d967ccee05a4"
+    },
+    {
+      "path": "data/schemas/operations-live-stream.v1.schema.json",
+      "source_blob": "6b716bb25f5a00e98b49cfc6ad6145d5f64140fc"
+    },
+    {
+      "path": "data/security-headers.manifest.json",
+      "source_blob": "8567e9e90ac723fbf808fbafa126f7b79f60a9be"
+    },
+    {
+      "path": "data/server-tenant-policy-contract.json",
+      "source_blob": "4f3b6a00d3d978cc5812f9bf2bebe5849fa5baff"
+    },
+    {
+      "path": "data/spaces.json",
+      "source_blob": "7e2bcd8a4c7face8188c08c6e1fec1f9eeecf456"
+    },
+    {
+      "path": "data/spine-authority-vocabulary.v1.json",
+      "source_blob": "3aa5698720f26ae976f9ae2166fe756db6bec9ec"
+    },
+    {
+      "path": "data/visual-verification-morning-addendum.example.json",
+      "source_blob": "1be77abcf0e6b151713b1d41982bfe4880102c65"
+    },
+    {
+      "path": "data/ws-detail.json",
+      "source_blob": "0133f258d5f40305b77ed29b069aaa399b859d58"
+    },
+    {
+      "path": "data/ws-projects.json",
+      "source_blob": "9f9281b8123993f47a6cf208a12b14de131d028e"
+    },
+    {
+      "path": "data/xcp-ecosystem-leverage-contract-pack.v1.json",
+      "source_blob": "9b83ff1dd93191294703d9e3abd51049fe045464"
+    },
+    {
+      "path": "data/xcp-shared-access-contract-consumption.json",
+      "source_blob": "d5a26f831924ef9dac41c2099d96094bd9fce937"
+    },
+    {
+      "path": "data/xcp-shared-access-contract-pack.v1.json",
+      "source_blob": "22484b0cf0e5889019cb5159fcc3597af81d438a"
+    },
+    {
+      "path": "deployment/cloudflare/customer-safe-export-manifest.example.json",
+      "source_blob": "1e3209fb0e594220bcbff0d71bc7c76fd92d1953"
+    },
+    {
+      "path": "deployment/cloudflare/environments.json",
+      "source_blob": "dc68dbfb62f06bd87c630f36e277ce1f2d49ae1a"
+    },
+    {
+      "path": "deployment/cloudflare/tenant-entitlements.example.json",
+      "source_blob": "ae1c8a86880c4c37bee5fe011b387cea5f2f5e76"
+    },
+    {
+      "path": "deployment/github-actions-disabled/cloudflare-feedback-d1.yml",
+      "source_blob": "b2f3f3a8a210837520f274e9f4dc1ebc445d5844"
+    },
+    {
+      "path": "deployment/github-actions-disabled/cloudflare-pages.yml",
+      "source_blob": "811bd718eacd9279ef9eedb31e3e9c55c9214d86"
+    },
+    {
+      "path": "deployment/github-actions-disabled/smoke.yml",
+      "source_blob": "9805ce9c00fa17ca442739c3e46cb34a60f41130"
+    },
+    {
+      "path": "docs/adrs/ADR-V3-001-v3-canonical-saas-frontend.md",
+      "source_blob": "1d8d8e56d75c06cc6d5fec2e495d2d6d6679f791"
+    },
+    {
+      "path": "docs/adrs/ADR-V3-002-dal-adapters.md",
+      "source_blob": "960f38e23de1320f450bc4231fa80285c69d6e7b"
+    },
+    {
+      "path": "docs/adrs/ADR-V3-003-fabric-vs-tokens.md",
+      "source_blob": "5d7b23e44915e7e5bf4b1d9837888e12b21e0802"
+    },
+    {
+      "path": "docs/adrs/ADR-V3-004-multi-tenant-identity.md",
+      "source_blob": "b1d88b11bd3996b5eb001461a6686dc6d09a1ff7"
+    },
+    {
+      "path": "docs/adrs/ADR-V3-005-skills-hierarchy.md",
+      "source_blob": "6aab9659950fcb7ecc63f931d2a63ed2c2b574af"
+    },
+    {
+      "path": "docs/adrs/ADR-V3-006-typescript-migration.md",
+      "source_blob": "a5ee72ecce0410d3a69edc77a94cd1be99647665"
+    },
+    {
+      "path": "docs/adrs/ADR-V3-007-foundation-first-sequencing.md",
+      "source_blob": "567bfc5387ffc533c1ee670c67b84987234d0bee"
+    },
+    {
+      "path": "docs/adrs/ADR-V3-008-fsd-layout.md",
+      "source_blob": "73fa9ab8723528f862390be84a320fb989ca8362"
+    },
+    {
+      "path": "docs/adrs/ADR-V3-009-eventbus-topic-registry.md",
+      "source_blob": "9130a41f520cd8b64b43c86fef53fe85871d0aac"
+    },
+    {
+      "path": "docs/adrs/ADR-V3-010-store-adapter-shim.md",
+      "source_blob": "5e85e11d1e9fab39790aa9f8888b787a91e63687"
+    },
+    {
+      "path": "docs/adrs/ADR-V3-011-tdd-discipline.md",
+      "source_blob": "f9fa577d77ec6c3af8cd08c2a070f6cfe1a8fa06"
+    },
+    {
+      "path": "docs/adrs/ADR-V3-012-storybook-adoption.md",
+      "source_blob": "4ea2e703684874ef101a953e98f7ae70f9403a41"
+    },
+    {
+      "path": "docs/adrs/ADR-V3-013-port-mirror-pattern.md",
+      "source_blob": "77cf309cb0bbc31e573e91b80d9657e58c399880"
+    },
+    {
+      "path": "docs/adrs/ADR-V3-014-substrate-widget-mount.md",
+      "source_blob": "d26398c9e6a8b2eb87ff1563534b17fce2b0b59d"
+    },
+    {
+      "path": "docs/adrs/ADR-V3-015-cross-repo-http-boundary.md",
+      "source_blob": "4d2642c992beb555f9bb65d3accd305f54d1918a"
+    },
+    {
+      "path": "docs/adrs/ADR-V3-016-http-surface-security-deferral.md",
+      "source_blob": "d2c16649be582199c2ef476a7bd9041544beeb74"
+    },
+    {
+      "path": "docs/adrs/ADR-V3-017-fsd-features-layer-decision.md",
+      "source_blob": "790159bd3b3603fc01f350f06f5c620d5c2eaf12"
+    },
+    {
+      "path": "docs/adrs/ADR-V3-018-skills-bridge-over-http.md",
+      "source_blob": "fad37b3b73cf551cd22dae067fdcdf0aa168050a"
+    },
+    {
+      "path": "docs/adrs/ADR-V3-019-http-hmac-replay-cors-log.md",
+      "source_blob": "5a43954551ba32ceb13a179ddbed1f7676a30a57"
+    },
+    {
+      "path": "docs/adrs/ADR-V3-020-real-session-ingest.md",
+      "source_blob": "fe4f0c16b03f0d3ad9be092fb07129f81f33d790"
+    },
+    {
+      "path": "docs/adrs/ADR-V3-021-pilot-deploy-runbook.md",
+      "source_blob": "d31cd29b62d4a6020f68d1a9887b4b512a9e33d5"
+    },
+    {
+      "path": "docs/adrs/ADR-V3-022-rate-limit-token-bucket.md",
+      "source_blob": "eaab6a10751f014211cb05e56fe8226a7bea9790"
+    },
+    {
+      "path": "docs/adrs/ADR-V3-023-hermes-memory-browser-pattern.md",
+      "source_blob": "fab324f032f1c6b4348c1ee4daaaf5853653052b"
+    },
+    {
+      "path": "docs/adrs/ADR-V3-024-workbench-shell-and-pane-registry.md",
+      "source_blob": "d05dcc20adcd9686ee22ac6d162b2c2a774d5a3f"
+    },
+    {
+      "path": "docs/adrs/ADR-V3-025-w0-three-surface-ia-takeover.md",
+      "source_blob": "cdd68c4de7e1e1928c192a3a6794515d4f608c2f"
+    },
+    {
+      "path": "docs/adrs/ADR-V3-026-source-domain-binding.md",
+      "source_blob": "e85be1957ab1fb17daeb1f83c5870958d886de24"
+    },
+    {
+      "path": "docs/adrs/ADR-V3-027-cockpit-operating-workbench-build-by-extension.md",
+      "source_blob": "1e436966f9c95cf14d27b3c0ff23e8f8e670f52e"
+    },
+    {
+      "path": "docs/adrs/ADR-V3-028-merge-generated-files-no-x-ours.md",
+      "source_blob": "c554e1daebde5111d6977ef74fcd0484b2822f53"
+    },
+    {
+      "path": "docs/adrs/ADR-V3-029-single-intake-rbac.md",
+      "source_blob": "11876f8f3cb5e1ef011c492d73214f13b3655b5d"
+    },
+    {
+      "path": "docs/adrs/ADR-V3-030-customer-action-resolution.md",
+      "source_blob": "488b7344b62e18f8dbcb10c50eb6cc9749c67647"
+    },
+    {
+      "path": "docs/architecture/CUSTOMER_CONTEXT_BACKUP_ROLLBACK_DESIGN.md",
+      "source_blob": "86a773abd816d72b9b8467d2deff0123dc06c64d"
+    },
+    {
+      "path": "docs/architecture/GOVERNED_LINEAGE_MAP_260711H.md",
+      "source_blob": "fd2a1a5f998c7e0e5be61be66ee6ca2de410316b"
+    },
+    {
+      "path": "docs/architecture/R50.3D_SOURCE_SYNC_CRON_DESIGN.md",
+      "source_blob": "b04fbd211d6e73b20fd8f76eae128269f045ba7a"
+    },
+    {
+      "path": "docs/architecture/backend/API_CONTRACT_V1.md",
+      "source_blob": "f1c446c7b7b3ad062b27a0d65e5010486fcd8864"
+    },
+    {
+      "path": "docs/architecture/backend/AUTH_TENANCY_MODEL.md",
+      "source_blob": "04d8053de52114ae3549d16bca22a4d9dd6e4c2f"
+    },
+    {
+      "path": "docs/architecture/backend/BACKEND_ADR_001.md",
+      "source_blob": "074dec9be60a9f4a0350133767dea09416fa936a"
+    },
+    {
+      "path": "docs/architecture/backend/BACKEND_ROLE_DEFINITION.md",
+      "source_blob": "ade0770c0671e8e6748fbb807b9d7344970a6975"
+    },
+    {
+      "path": "docs/architecture/backend/CUSTOMER_LEARNING_PERSONALIZATION_ARCHITECTURE.md",
+      "source_blob": "f95e294eeeff057edf9e3a70c8e1c70febdbb429"
+    },
+    {
+      "path": "docs/architecture/backend/DATABASE_SCHEMA_V1.md",
+      "source_blob": "84bbd9e022b5eb8221a2123cdd079641db57fb1d"
+    },
+    {
+      "path": "docs/architecture/backend/EXTERNAL_CAPABILITY_ADOPTION_NATIVE_ADAPTERS.md",
+      "source_blob": "b9c722efd16b9cf786425adeadfaa4ef40d7d4f0"
+    },
+    {
+      "path": "docs/architecture/backend/EXTERNAL_CAPABILITY_BENCHMARK_CORPUS.json",
+      "source_blob": "24d68e27baab57c85bb747a81767fd6ac4230a84"
+    },
+    {
+      "path": "docs/architecture/backend/EXTERNAL_CAPABILITY_REGISTRY.json",
+      "source_blob": "042737f5dbb519e5ee1768099a8889a55a54ee3d"
+    },
+    {
+      "path": "docs/architecture/backend/GOVERNANCE_PROJECTION_COVERAGE.json",
+      "source_blob": "53c680989279f149e659f9c8bd080359bd54018a"
+    },
+    {
+      "path": "docs/architecture/backend/PRODUCTION_DEPENDENCIES.md",
+      "source_blob": "f8f81db043de4cbff0a13f5cd365e3b6ee851a8f"
+    },
+    {
+      "path": "docs/architecture/backend/PRODUCTION_LAUNCH_PLAN.md",
+      "source_blob": "03cad17ea792448b435cd49eb8c92d91f89f1d52"
+    },
+    {
+      "path": "docs/audits/OAR_W2_ACTIVATION_READINESS.md",
+      "source_blob": "24d11dbce43533e52bf39d8454d50138ae888a1c"
+    },
+    {
+      "path": "docs/audits/OAR_W3_EVIDENCE_PACKET.md",
+      "source_blob": "88fa6fcc9ad5586a2656c16c19dad9e88454f5de"
+    },
+    {
+      "path": "docs/audits/OPERATING_ARCHITECTURE_RUNTIME_AUDIT.md",
+      "source_blob": "5656277038077e5a8816a32dabe4fc09d0d87949"
+    },
+    {
+      "path": "docs/contracts/260509_1102_permission-collaboration-requirements-c29-perm-01.md",
+      "source_blob": "c45767ac31dfebf5ff5d39aa923db59e88c33637"
+    },
+    {
+      "path": "docs/contracts/260509_1102_permission-collaboration-requirements-c29-perm-01.yml",
+      "source_blob": "b3b95fcfb64e32c18f4ac903b0b75c06d5fdcad9"
+    },
+    {
+      "path": "docs/contracts/260509_1109_storybook-dod-state-matrix-c29-story-01.md",
+      "source_blob": "0906603f42f75f50cc948927abbac986b6a09f8f"
+    },
+    {
+      "path": "docs/contracts/260509_1109_storybook-dod-state-matrix-c29-story-01.yml",
+      "source_blob": "59ac4f7ca44e031fc740044780160ca6dc333198"
+    },
+    {
+      "path": "docs/contracts/260509_1112_xfront-graph-contract-mapping-c29-graph-01.md",
+      "source_blob": "d09514c896fd1e7a8c69c073be4d13a878fb0ff9"
+    },
+    {
+      "path": "docs/contracts/260509_1112_xfront-graph-contract-mapping-c29-graph-01.yml",
+      "source_blob": "caf48433448170b4216ed4389efa8b250546035f"
+    },
+    {
+      "path": "docs/contracts/260509_1119_uikit-wrapper-reconciliation-c29-uikit-01.md",
+      "source_blob": "2b4cc525295b52877ab88e04b65c083b9bef1d20"
+    },
+    {
+      "path": "docs/contracts/260509_1119_uikit-wrapper-reconciliation-c29-uikit-01.yml",
+      "source_blob": "8d4971e32af2fe21f68ca4ec7d59ca818008714d"
+    },
+    {
+      "path": "docs/contracts/260509_1128_xfront-bisync-engine-investigation-c29-bisync-01.md",
+      "source_blob": "95181d7daec730ba796030c5f6ebc1b329279d6b"
+    },
+    {
+      "path": "docs/contracts/260509_1128_xfront-bisync-engine-investigation-c29-bisync-01.yml",
+      "source_blob": "39f24aff815cdd55118eeb3d1a2ff300ad0dd4ad"
+    },
+    {
+      "path": "docs/contracts/260509_1137_bisync-contract-skeleton-c29-bisync-02.md",
+      "source_blob": "0c5205664173e7f8867a58200549729532ef3eed"
+    },
+    {
+      "path": "docs/contracts/260509_1137_bisync-contract-skeleton-c29-bisync-02.yml",
+      "source_blob": "55969217971212507f8b13a42b734b200738164a"
+    },
+    {
+      "path": "docs/contracts/260509_1150_product-workflow-architecture-c29-workflow-01.md",
+      "source_blob": "6c2aa036e11df324259c6b596cc4098d1621c277"
+    },
+    {
+      "path": "docs/contracts/260509_1150_product-workflow-architecture-c29-workflow-01.yml",
+      "source_blob": "15bf600aaf873a3b2a055a8ce51fda54dbd00a55"
+    },
+    {
+      "path": "docs/contracts/260509_1159_cross-frontend-compatibility-c29-fe-compat-01.md",
+      "source_blob": "76e0dc0d6ba992878dd2cb997617f0b289b5494e"
+    },
+    {
+      "path": "docs/contracts/260509_1159_cross-frontend-compatibility-c29-fe-compat-01.yml",
+      "source_blob": "2b751a0e4f14c205a5b088a69e86fad0420a7a74"
+    },
+    {
+      "path": "docs/contracts/260509_1209_storybook-p0-chain-c29-story-p0-chain-01.md",
+      "source_blob": "12ca4799aa99bebd53d3153a6fcba099d39ea65c"
+    },
+    {
+      "path": "docs/contracts/260509_1209_storybook-p0-chain-c29-story-p0-chain-01.yml",
+      "source_blob": "ca1d7c2770fb14c4fdd1228da1c560127a87985f"
+    },
+    {
+      "path": "docs/contracts/260509_1222_web-gateway-c29-web-gateway-01.md",
+      "source_blob": "22313cf0b21b522942a39b224e61fa873ab0f8ed"
+    },
+    {
+      "path": "docs/contracts/260509_1222_web-gateway-c29-web-gateway-01.yml",
+      "source_blob": "d583dab3fb2aec588ed82eda4b155f842823953e"
+    },
+    {
+      "path": "docs/contracts/260509_1234_web-gateway-status-c29-web-gateway-02.md",
+      "source_blob": "7a0875b2b290d05b98911d52a00172fe9f42b7b9"
+    },
+    {
+      "path": "docs/contracts/260509_1234_web-gateway-status-c29-web-gateway-02.yml",
+      "source_blob": "edd714166f970f73cce8bd5acd1e50b5b49f17d7"
+    },
+    {
+      "path": "docs/contracts/260509_1244_web-gateway-routing-c29-web-gateway-03.md",
+      "source_blob": "4543d92ac3b906e9c42cd1a1b47e37616dd285ce"
+    },
+    {
+      "path": "docs/contracts/260509_1244_web-gateway-routing-c29-web-gateway-03.yml",
+      "source_blob": "9e80d00579219b6b449fbb15059458e5c9a859c4"
+    },
+    {
+      "path": "docs/contracts/260509_1258_web-gateway-assertions-c29-web-gateway-04.md",
+      "source_blob": "137e0e1d36142021a8f1807a824f51865279b67a"
+    },
+    {
+      "path": "docs/contracts/260509_1258_web-gateway-assertions-c29-web-gateway-04.yml",
+      "source_blob": "a6cd5aa6dd279c14e1156f305cdd2d70c4f8abaa"
+    },
+    {
+      "path": "docs/contracts/260509_1337_mbp-active-surface-c30-mbp-gateway-01.md",
+      "source_blob": "c5a74bee74f9c460708f4308d5e99324bf0eb20a"
+    },
+    {
+      "path": "docs/contracts/260509_1337_mbp-active-surface-c30-mbp-gateway-01.yml",
+      "source_blob": "a359f3cdb1d4a634c98d8b8f01c9b170cd99f989"
+    },
+    {
+      "path": "docs/contracts/260509_1410_mbp-fixture-intake-collaboration-c30.md",
+      "source_blob": "56aa30a061a949a0903db21a8b68646a3ca78245"
+    },
+    {
+      "path": "docs/contracts/260509_1410_mbp-fixture-intake-collaboration-c30.yml",
+      "source_blob": "e67b52eeda281e3ea1d326e178fd353101d897e6"
+    },
+    {
+      "path": "docs/contracts/260509_1438_seed-contracts-golden-path-mbp-c30.md",
+      "source_blob": "b8a3047449bd5db25464883b9d7dafb9d6f11790"
+    },
+    {
+      "path": "docs/contracts/260509_1438_seed-contracts-golden-path-mbp-c30.yml",
+      "source_blob": "6085bcaa740fb464cc6bdb266d391c701e57184d"
+    },
+    {
+      "path": "docs/contracts/OLD_UI_TRUTH_ENVELOPE_MAP.md",
+      "source_blob": "a43b9f80c08fe35fad47648781d1585aed153159"
+    },
+    {
+      "path": "docs/contracts/READINESS_CONTRACT.md",
+      "source_blob": "e1e3aabb167795aa224ad0ef63b3d6436938483d"
+    },
+    {
+      "path": "docs/contracts/agent-roles.yml",
+      "source_blob": "9880ad4ecc4738f60afe111d7fd988e8690e174a"
+    },
+    {
+      "path": "docs/contracts/api-contract.v1.json",
+      "source_blob": "f0dd7c5721ec6950d1727e94671b869b60104b42"
+    },
+    {
+      "path": "docs/contracts/context-packet.v1.json",
+      "source_blob": "526aaa0a92e2be4e0d633e7cb3bd243b0ccaaeae"
+    },
+    {
+      "path": "docs/contracts/role-skill-catalog.json",
+      "source_blob": "ea0c2149bde87fdd5a072a3c84f2c63fbdcb4cf8"
+    },
+    {
+      "path": "docs/contracts/ui-library-policy.json",
+      "source_blob": "1e80a606bb9f8d7cb6942c1e7dc18ba2a5955703"
+    },
+    {
+      "path": "docs/contracts/ui-library-policy.md",
+      "source_blob": "715c7ea45afa34f1addaf4cdc2602b4003ac1ee3"
+    },
+    {
+      "path": "docs/customer-onboarding/CLAUDE_CODE_API_ONBOARDING.md",
+      "source_blob": "04254abad87ca3d7858ef82f3556e9cb6999de32"
+    },
+    {
+      "path": "docs/customer-onboarding/CONNECTOR_TOKEN_AND_MCP_ACTIVATION_RUNBOOK.md",
+      "source_blob": "698c0d2052842e8cafd55f3778d18e60ca452f23"
+    },
+    {
+      "path": "docs/deployment/ACTIVATION_SHEET_260711.md",
+      "source_blob": "d83f086603548aef07498d598e55924b88b5668f"
+    },
+    {
+      "path": "docs/deployment/BACKEND_REPOSITORY_CUTOVER_PREFLIGHT.md",
+      "source_blob": "28159e5ce80d5d18a08582a28d7999e1ecbf95b1"
+    },
+    {
+      "path": "docs/deployment/BACKEND_REPOSITORY_OWNERSHIP.yml",
+      "source_blob": "1d159b85a447237c78df77738915f34dd8712c06"
+    },
+    {
+      "path": "docs/deployment/BACKEND_SURFACE_MANIFEST_260711H.md",
+      "source_blob": "5b0641ff491563382cf427c0a703d429bf2896ea"
+    },
+    {
+      "path": "docs/deployment/BACKEND_SURFACE_MANIFEST_DELTA_260713.md",
+      "source_blob": "0e5c16233597a8d5ec654716df007411a1872bc8"
+    },
+    {
+      "path": "docs/deployment/CLOUDFLARE_ACCESS_EVIDENCE_CHECKLIST.md",
+      "source_blob": "fdb7072cf1747ee17c2bbab8cccc233503390119"
+    },
+    {
+      "path": "docs/deployment/CLOUDFLARE_DEPLOYMENT_PLAN.md",
+      "source_blob": "b9a392556e58cae0b9362c900f570cfefa7184c6"
+    },
+    {
+      "path": "docs/deployment/COMMERCIAL_OPERATOR_GATED_READINESS.md",
+      "source_blob": "1ecf78b89d2f4fec12c751ffc22f6c77e52b02fd"
+    },
+    {
+      "path": "docs/deployment/CUSTOMER_FEEDBACK_INCIDENT_SLA_RUNBOOK.md",
+      "source_blob": "1224b60716edf84c83c196b754a1ab32d1f01ae8"
+    },
+    {
+      "path": "docs/deployment/CUSTOMER_FEEDBACK_PRODUCTION_BOUNDARY.md",
+      "source_blob": "67244b1112ecacb9141602a551f9881b388004a5"
+    },
+    {
+      "path": "docs/deployment/DEPLOYED_SURFACES.yml",
+      "source_blob": "24f0c2f712e41be3e24e75f0756a7445e934f018"
+    },
+    {
+      "path": "docs/deployment/EXECUTOR_ACTIVATION_RUNBOOK.md",
+      "source_blob": "5946a03377ca2745b6d7fece65b8c9009db7ffb2"
+    },
+    {
+      "path": "docs/deployment/EXTERNAL_ONBOARDING_READINESS_CLOSEOUT.md",
+      "source_blob": "680f0219c472817395592b2ef75c32f8c0bd286c"
+    },
+    {
+      "path": "docs/deployment/FEEDBACK_ANNOTATIONS_D1.md",
+      "source_blob": "0a88b2133aff3efd51048c4d31c0b01b5bc2ef57"
+    },
+    {
+      "path": "docs/deployment/FREEZE_PROTOCOL_260711H.md",
+      "source_blob": "6c3470f4e3a81034c7807f16f364f557852f5e7d"
+    },
+    {
+      "path": "docs/deployment/GATE_DISPOSITION_LEDGER_260711H.md",
+      "source_blob": "52193982ec2a7a9b87f9f6551319d52c9ac6439b"
+    },
+    {
+      "path": "docs/deployment/LAUNCH_ACTIVATION.md",
+      "source_blob": "ea82824fdb9d6abfc501c7b33f1c08241bf9a9a8"
+    },
+    {
+      "path": "docs/deployment/LIVE_AUTHORITY_INPUTS_RUNBOOK.md",
+      "source_blob": "67db8339855c8d387e263d9985d00fc08f1e662a"
+    },
+    {
+      "path": "docs/deployment/MODEL_RUNTIMES_ACTIVATION.md",
+      "source_blob": "6166e39471677fccd72ae040a607628ff38f54b9"
+    },
+    {
+      "path": "docs/deployment/PRODUCTION_HARDENING_CHECKLIST_260710E.md",
+      "source_blob": "e9625fe224302831ea70d7c2719c34b753b3c7e2"
+    },
+    {
+      "path": "docs/deployment/PRODUCTION_READINESS_STATE.md",
+      "source_blob": "92edcb94c3e8dc4259094144f0d69174c53bd8ba"
+    },
+    {
+      "path": "docs/deployment/PRODUCTION_READINESS_STATE.yml",
+      "source_blob": "38593128bf620fae97e935c6ab6f945131c05a74"
+    },
+    {
+      "path": "docs/deployment/PUBLIC_SELF_SERVE_EVIDENCE_GATES.md",
+      "source_blob": "a6e4620645e866bf117973dd146f60e82db0b51f"
+    },
+    {
+      "path": "docs/deployment/SAFETY_FLOOR_ACTIVATION_260711.md",
+      "source_blob": "791d04f84c35f7b7b4a0749ee4391a9a308e9e05"
+    },
+    {
+      "path": "docs/deployment/SECRETS_AND_CONNECTIONS_MANIFEST.yml",
+      "source_blob": "0da764bafd3db14287b54a558c4910ae8e11a00f"
+    },
+    {
+      "path": "docs/deployment/SEED_REHEARSAL_RECEIPT_260711I.md",
+      "source_blob": "eb2279ecffebe9c3094e598aaa1cb715bc7e2f7c"
+    },
+    {
+      "path": "docs/deployment/TENANT_ENTITLEMENT_PROOF.md",
+      "source_blob": "fecfc93680782ef0e4c502df6ef4ef849d6d7bcc"
+    },
+    {
+      "path": "docs/deployment/evidence/.gitkeep",
+      "source_blob": "8b137891791fe96927ad78e64b0aad7bded08bdc"
+    },
+    {
+      "path": "docs/deployment/evidence/AUDIT_EXPORT_SAMPLE.md",
+      "source_blob": "c3f9d50552d110d832360f100661e79c87654b11"
+    },
+    {
+      "path": "docs/deployment/evidence/aps-pilot-deploy-receipt-2026-06-22T17-20-20+10-00-b8d19428.json",
+      "source_blob": "6512d9d5f7c10ea9e69ebda5fbd4a6dc8b4fde9a"
+    },
+    {
+      "path": "docs/deployment/evidence/audit-export-sample.csv",
+      "source_blob": "583a9178f5eb8549ab3e59f1aec809d9adf970bc"
+    },
+    {
+      "path": "docs/deployment/evidence/audit-export-sample.jsonl",
+      "source_blob": "bf27c8a962405f093bc2cca31e9de9b04302e064"
+    },
+    {
+      "path": "docs/deployment/evidence/cloudflare-api-deploy-receipt.json",
+      "source_blob": "2a010f511ce69dbe49eb9568b4666ffd973bae93"
+    },
+    {
+      "path": "docs/deployment/evidence/cloudflare-prod-deploy-receipt-2026-06-22T17-20-20+10-00-b8d19428.json",
+      "source_blob": "683cf1bea395577c92d1b710ff9a7a869343b893"
+    },
+    {
+      "path": "docs/deployment/evidence/customer-zero/customer-zero-session-2026-06-13T04-05-13-586Z.json",
+      "source_blob": "871bda5dc6eaced9d6a9c55384d9bd5fc6df8dce"
+    },
+    {
+      "path": "docs/deployment/evidence/customer-zero/latest-customer-zero-session-receipt.json",
+      "source_blob": "871bda5dc6eaced9d6a9c55384d9bd5fc6df8dce"
+    },
+    {
+      "path": "docs/deployment/evidence/ecosystem-evaluation-260710F.json",
+      "source_blob": "b73ac64c846370bc5161effa005d862089dd1b32"
+    },
+    {
+      "path": "docs/deployment/evidence/ecosystem-evaluation-260711H.json",
+      "source_blob": "abc63546f7dfe80be04b961e3a700959251fa8a1"
+    },
+    {
+      "path": "docs/deployment/evidence/latest-cloudflare-prod-deploy-receipt.json",
+      "source_blob": "354e5c5cb753c96c5ac6a9bfebd461b25651714b"
+    },
+    {
+      "path": "docs/deployment/evidence/latest-customer-feedback-production-boundary-receipt.json",
+      "source_blob": "dd8cabb03917179f822c3a3504a97a12749b0358"
+    },
+    {
+      "path": "docs/deployment/evidence/latest-delete-export-object-storage-receipt.synthetic.json",
+      "source_blob": "3fa10aa22ae94356a9cbbc0ad6d3c9006897effe"
+    },
+    {
+      "path": "docs/deployment/evidence/latest-paid-pilot-boundary-receipt.json",
+      "source_blob": "98c714688cebdc791bb9e71231c26d3473a29c15"
+    },
+    {
+      "path": "docs/deployment/evidence/latest-upstream-capability-live-canary-summary.json",
+      "source_blob": "ba3d4febc2c2d0fb5c8aaa3cebd2142ccc8fb6b1"
+    },
+    {
+      "path": "docs/deployment/evidence/two-company-live-pilot-evidence.input.example.json",
+      "source_blob": "343903e3a49a40a9bfbd943a9f57153e487e3943"
+    },
+    {
+      "path": "docs/deployment/evidence/two-company-live-pilot-evidence.schema.example.json",
+      "source_blob": "16256895b49f767a63c84f175cafb0d315b19aff"
+    },
+    {
+      "path": "docs/governance/CUSTOMER_FACT_BUNDLE_MANIFEST.yml",
+      "source_blob": "8d71430bfbc0e8aebffb65577bb8c613df8a7335"
+    },
+    {
+      "path": "docs/governance/DESIGN_DECISIONS_REGISTER.md",
+      "source_blob": "533af28ebc22951f657a8ff24b759de5c5d4064e"
+    },
+    {
+      "path": "docs/governance/DOCUMENT_VERSION_CHAIN.md",
+      "source_blob": "f7f08e95aed4bc33e776e44833ff4d338d9cd988"
+    },
+    {
+      "path": "docs/governance/FEATURE_FLAGS.md",
+      "source_blob": "5e04c24d44bedbfebc1ca233601d4364ffc94e73"
+    },
+    {
+      "path": "docs/governance/GOVERNANCE_PILLARS.yml",
+      "source_blob": "206c3ed555645964b7949386d9c6cb51a571be7a"
+    },
+    {
+      "path": "docs/governance/HR_DRAFTS_SURFACE_PLANE_AND_RAW_WIDGET.md",
+      "source_blob": "dc33e7ad47c6f531b9037b9409cfc83cecda4818"
+    },
+    {
+      "path": "docs/governance/METRIC_PRODUCER_CONSUMER_MANIFEST.yml",
+      "source_blob": "9bcbde68f73468a46852a4066822f867d3f0b8a1"
+    },
+    {
+      "path": "docs/governance/OPERATOR_AXIS_AUTHORITY.md",
+      "source_blob": "82858da7c13f9ca3eeedaf508a4dae4483f0ee70"
+    },
+    {
+      "path": "docs/governance/PRINCIPAL_INSTRUMENT_LINEAGE.md",
+      "source_blob": "844dc70542862343289ed7b7f969f76da9595a2b"
+    },
+    {
+      "path": "docs/governance/SOURCE_PROVIDER_REGISTRY.yml",
+      "source_blob": "3967d6fb8335ac4f103e2e827031485d948d38be"
+    },
+    {
+      "path": "docs/governance/TENANT_PERSONALIZATION_POLICY.md",
+      "source_blob": "c9ee253a3ff22f0e22fc0acf35d6d0f2858183a5"
+    },
+    {
+      "path": "docs/graph/GRAPH_SUBSTRATE_MANIFEST.yml",
+      "source_blob": "5c13a08aa1110ebefc4fd08201571cc02ee756ec"
+    },
+    {
+      "path": "docs/onboarding/ASP_FIRST_CUSTOMER_PROVISIONING_RUNBOOK.md",
+      "source_blob": "177553cb4f852cbc9504f9ea2cade70973ec8be9"
+    },
+    {
+      "path": "docs/security/ACCESS_CONTROL_MATRIX.md",
+      "source_blob": "9ff6df2d5cf9b75a67b8cf71e3b5ebabb40b60e7"
+    },
+    {
+      "path": "docs/security/DATA_CLASSIFICATION.md",
+      "source_blob": "8a9de8ae4716b6c5fff33daa015a001f036f2595"
+    },
+    {
+      "path": "docs/security/PROMPT_INJECTION_E2E_FIXTURES.json",
+      "source_blob": "ae2a2b898a45dc8492b7e8f4b3a1c8dd6547162d"
+    },
+    {
+      "path": "docs/security/RETENTION_POLICY.md",
+      "source_blob": "219187287b11ab097e9596d0aa1aa884d5f4b70a"
+    },
+    {
+      "path": "docs/standards/FILE_SIZE_STANDARD.md",
+      "source_blob": "1ad02cede1f97d52f5863ae2b55b14069a54eed2"
+    },
+    {
+      "path": "docs/standards/PLATFORM_FACADE_SPEC.md",
+      "source_blob": "827dbb9e236b14c1655fc98d1a41aaded963966a"
+    },
+    {
+      "path": "functions/_lib/customer-feedback-authority.js",
+      "source_blob": "e32fd8d21796de15afa379d1a9df80f72ad19102"
+    },
+    {
+      "path": "functions/_lib/paid-pilot-authority.js",
+      "source_blob": "8f55b533934684092b254c2d1b04c5023aa3c724"
+    },
+    {
+      "path": "functions/_middleware.js",
+      "source_blob": "2042220745d699aff8f9a4fbbfeedc81e2e56517"
+    },
+    {
+      "path": "functions/api/actions/[id].js",
+      "source_blob": "ddb70c4d81da4fe20b1602e4f52131301984f3d9"
+    },
+    {
+      "path": "functions/api/actions/approve.js",
+      "source_blob": "aef3c5e87a4506428b8f3b6366612a649a374ec7"
+    },
+    {
+      "path": "functions/api/actions/execute.js",
+      "source_blob": "94a0d1d09aeddebec3a19175f412b922e1476d41"
+    },
+    {
+      "path": "functions/api/actions/propose.js",
+      "source_blob": "6b9676d5c4546ced9bbbdac6f9c490d689e41bd7"
+    },
+    {
+      "path": "functions/api/actions/rollback.js",
+      "source_blob": "b67dbf52472af50e004f85826365d02cd4f45653"
+    },
+    {
+      "path": "functions/api/csp-report.js",
+      "source_blob": "d5381f6fc1f1b2a78bc1070f9cd99208e6f7baea"
+    },
+    {
+      "path": "functions/api/feedback.js",
+      "source_blob": "fadcde28b25bd69f5f6f7329542d34fcf09ce8ba"
+    },
+    {
+      "path": "functions/api/health/customer-feedback.js",
+      "source_blob": "d38b71185cc5f43cc4e4f29e19d9b91b581b3e21"
+    },
+    {
+      "path": "functions/api/paid-pilot/session.js",
+      "source_blob": "c9b738db7e2f33e1dc21216a11021fe27aac2a1d"
+    },
+    {
+      "path": "functions/api/proposals.js",
+      "source_blob": "fd55df558a7fabf796ed4e488c1612583ff9f9f8"
+    },
+    {
+      "path": "functions/api/receipts.js",
+      "source_blob": "908d72ff2079c5b3ec0522f7ad9bca055c66f066"
+    },
+    {
+      "path": "functions/api/session.js",
+      "source_blob": "c74cae5ba3c9bbc4e1717e302a1d521ecd044b49"
+    },
+    {
+      "path": "functions/api/telemetry/company.js",
+      "source_blob": "3ef80223c706babeb7b165837e18b5e0731991a3"
+    },
+    {
+      "path": "migrations/0001_feedback_annotations.sql",
+      "source_blob": "e06ad18cce7a1ce66b315927a139e0990f594bda"
+    },
+    {
+      "path": "migrations/0002_customer_feedback_authority.sql",
+      "source_blob": "fcdb8f19f74af6c5dbc200f12b60c5a3ba4d3a29"
+    },
+    {
+      "path": "migrations/0003_paid_pilot_authority.sql",
+      "source_blob": "f159be21bb0fe8b90c64bfc1691128c27c14bc1b"
+    },
+    {
+      "path": "migrations/0004_investor_portal_stage_c.sql",
+      "source_blob": "69beb6633026f919bedad42aa5cd8920be22d121"
+    },
+    {
+      "path": "packages/xlooop-mcp-server/.env.example",
+      "source_blob": "8da13e8189a2033079adada7c9f01b59a9ea7968"
+    },
+    {
+      "path": "packages/xlooop-mcp-server/.gitignore",
+      "source_blob": "8c8ea4cb3166b3027e94dfe8f7e937713fee5fef"
+    },
+    {
+      "path": "packages/xlooop-mcp-server/README.md",
+      "source_blob": "815e6ba7b14138a176ddf06e6255879b8ac4021d"
+    },
+    {
+      "path": "packages/xlooop-mcp-server/docs/tool-reference.md",
+      "source_blob": "ce1782b6fa2bac90d5f13ac7c3ecf9b6653c8f9b"
+    },
+    {
+      "path": "packages/xlooop-mcp-server/package-lock.json",
+      "source_blob": "720f0e0fcf4f377646605a084087498334ebe2b7"
+    },
+    {
+      "path": "packages/xlooop-mcp-server/package.json",
+      "source_blob": "b8b711463a533952296034c9d81b3d99e01f0e58"
+    },
+    {
+      "path": "packages/xlooop-mcp-server/src/api-client.ts",
+      "source_blob": "fec7373c6940585ec5aca27fb5b6395ef7a0bea1"
+    },
+    {
+      "path": "packages/xlooop-mcp-server/src/auth.ts",
+      "source_blob": "6caae9dbc7cd260270f6b920aeb0a48d084e03b8"
+    },
+    {
+      "path": "packages/xlooop-mcp-server/src/bin/cli.ts",
+      "source_blob": "8b36b5c278deb5116a10e3a6873a5a8ccc1093a2"
+    },
+    {
+      "path": "packages/xlooop-mcp-server/src/errors.ts",
+      "source_blob": "8071e44e33e3c418dd71eca49c8108e6c1a29e4e"
+    },
+    {
+      "path": "packages/xlooop-mcp-server/src/index.ts",
+      "source_blob": "78e6531010c2ea5f62090577a7f38c4b3d258ae2"
+    },
+    {
+      "path": "packages/xlooop-mcp-server/src/server.ts",
+      "source_blob": "95387ab340fb6dc452f9871a46a6965e21f70de2"
+    },
+    {
+      "path": "packages/xlooop-mcp-server/src/tools/board-read.ts",
+      "source_blob": "aa0585c19579e8dd987251ec3332537ffdd1d469"
+    },
+    {
+      "path": "packages/xlooop-mcp-server/src/tools/event-append.ts",
+      "source_blob": "35c29be498e3be969c758e6ab98f50211c642112"
+    },
+    {
+      "path": "packages/xlooop-mcp-server/src/tools/event-list.ts",
+      "source_blob": "887bfc58e9a09f5417d6f95b84e380b46340b915"
+    },
+    {
+      "path": "packages/xlooop-mcp-server/src/tools/index.ts",
+      "source_blob": "5e5b535476acd2277334c62b894c9b60c703bb23"
+    },
+    {
+      "path": "packages/xlooop-mcp-server/src/tools/project-get.ts",
+      "source_blob": "5a6834421cd5d062d1315d1a70596a29aa2787ae"
+    },
+    {
+      "path": "packages/xlooop-mcp-server/src/tools/project-list.ts",
+      "source_blob": "f28207617ef65025f38fc98dce068180f20c9d8b"
+    },
+    {
+      "path": "packages/xlooop-mcp-server/src/tools/project-set-scope.ts",
+      "source_blob": "377edf5e06d63fee772393382dbc189a4d4b450b"
+    },
+    {
+      "path": "packages/xlooop-mcp-server/src/tools/signoff-await.ts",
+      "source_blob": "53192592ee328ec62ae7724246721bee5209f0b3"
+    },
+    {
+      "path": "packages/xlooop-mcp-server/src/tools/signoff-create.ts",
+      "source_blob": "16ac6d7c52eb783b85d01bf3f38e7af771256385"
+    },
+    {
+      "path": "packages/xlooop-mcp-server/src/tools/workspace-context.ts",
+      "source_blob": "2b50e5f3358492e7ae3e88a585763c880d2914fa"
+    },
+    {
+      "path": "packages/xlooop-mcp-server/src/types.ts",
+      "source_blob": "798c516afc3a25724d36f9233b944b53dfb73577"
+    },
+    {
+      "path": "packages/xlooop-mcp-server/src/validate.ts",
+      "source_blob": "8230d97bdd31ee53029af6e8fe15b56af9171c58"
+    },
+    {
+      "path": "packages/xlooop-mcp-server/tests/tools.test.mjs",
+      "source_blob": "dcefe1e7661e015b3c45944883c1ee011a788737"
+    },
+    {
+      "path": "packages/xlooop-mcp-server/tsconfig.json",
+      "source_blob": "a3177756b34654120b982d31412124aaf8c87573"
+    },
+    {
+      "path": "scripts/admin-access.mjs",
+      "source_blob": "b53e544eb721833f1876fdd23b7ff9a22852be7d"
+    },
+    {
+      "path": "scripts/benchmark-external-capabilities-runtime.mjs",
+      "source_blob": "3f0725f555f6f0cffa03971571272a294d573739"
+    },
+    {
+      "path": "scripts/benchmark-external-capabilities.mjs",
+      "source_blob": "be4bee89856750f89f99ff892f166cd52db32ab6"
+    },
+    {
+      "path": "scripts/build-production-readiness-state.mjs",
+      "source_blob": "d0add31a852cbbd088bed490f4fcfc132a7c7117"
+    },
+    {
+      "path": "scripts/classify-dirty-worktree.mjs",
+      "source_blob": "42f30d45767a5bb29537427efbbe9f6ef7205180"
+    },
+    {
+      "path": "scripts/compare-registry-to-ledger.mjs",
+      "source_blob": "acce583022a6a8b7e6e480f8fca333d95ee992c2"
+    },
+    {
+      "path": "scripts/cwd-anchor.mjs",
+      "source_blob": "7ad96fc27ecddd501f2dfe2125b7040f7bfa4029"
+    },
+    {
+      "path": "scripts/emit-api-contract.mjs",
+      "source_blob": "d0debf4dffde199dca24536c2250329cc279d7c3"
+    },
+    {
+      "path": "scripts/emit-deploy-receipt.mjs",
+      "source_blob": "f4acb7d65f55ac5103c6131820888da0bd41f7fe"
+    },
+    {
+      "path": "scripts/emit-routes-manifest.mjs",
+      "source_blob": "f9410c445fe5cab97f794f54943e2607ee10838b"
+    },
+    {
+      "path": "scripts/ensure-mbp-projection-fresh.mjs",
+      "source_blob": "62445e00d6b925fe4e004ddba7f060ae1888f96a"
+    },
+    {
+      "path": "scripts/ensure-operations-live-stream-fresh.mjs",
+      "source_blob": "4095424362b177b2fd953fd5755e36eb68683bd2"
+    },
+    {
+      "path": "scripts/folder-sync.mjs",
+      "source_blob": "abdfee92ae26f46cd3250a7f040e6d49060091c1"
+    },
+    {
+      "path": "scripts/generate-live-read-models.mjs",
+      "source_blob": "5dc4847374a450cb21d75b7f2768ae8bdcdb38ef"
+    },
+    {
+      "path": "scripts/generate-operations-live-stream.mjs",
+      "source_blob": "44810a563cf5c008ffe54327909271df074f00f1"
+    },
+    {
+      "path": "scripts/git-hooks/pre-push",
+      "source_blob": "f3fcab04c87a30b27b97521c5033bf64689bdcd6"
+    },
+    {
+      "path": "scripts/install-hooks.sh",
+      "source_blob": "1630b0a8627a71f3f0115ecdb6d0ec5c8e3025f2"
+    },
+    {
+      "path": "scripts/land.mjs",
+      "source_blob": "3416edd321d23581574ba29f329afb5e9ee8b9c0"
+    },
+    {
+      "path": "scripts/lib/build-timestamp.mjs",
+      "source_blob": "7e13c3dde3566764e5147185b94bc137fd493c08"
+    },
+    {
+      "path": "scripts/lib/commercial-release-dirty-policy.mjs",
+      "source_blob": "9d8e13f9f501dfecceba9c7f60c1eae07db19283"
+    },
+    {
+      "path": "scripts/lib/data-projection-meta.mjs",
+      "source_blob": "34f7b823b0235dc2b1c3042c5d5eda7871ecd91c"
+    },
+    {
+      "path": "scripts/lib/ensure-sidecar-tags.mjs",
+      "source_blob": "29275bbdd189716dd926ad3891430d398da60733"
+    },
+    {
+      "path": "scripts/lib/expected-sidecars.mjs",
+      "source_blob": "014cfeebc89962317abc80d9630bad7b1e04f3bf"
+    },
+    {
+      "path": "scripts/lib/generated-artifact-lock.mjs",
+      "source_blob": "d0092d0be6784258729530aeb11fb019c4650777"
+    },
+    {
+      "path": "scripts/lib/regen-mechanical-drift.mjs",
+      "source_blob": "d68f046ff540a405f69e2261f01cdf111bd71f60"
+    },
+    {
+      "path": "scripts/lib/role-skill-catalog.mjs",
+      "source_blob": "940ae2c6b0a28e9383019812bab65722b14df344"
+    },
+    {
+      "path": "scripts/lib/stable-generated-artifact.mjs",
+      "source_blob": "b423df4dcaf83781501ea6ca75d4ab95d92134bd"
+    },
+    {
+      "path": "scripts/lib/xcp-build-aliases.mjs",
+      "source_blob": "8b8b21c2eaa94e4cdf3b0d15b5a02669435f538c"
+    },
+    {
+      "path": "scripts/livestream-push-cron.sh",
+      "source_blob": "21455b690538aa0cd47c150fe44ebd6fcf90c247"
+    },
+    {
+      "path": "scripts/log-activity.mjs",
+      "source_blob": "f20eaebcad79c21c512dd1545a90d74bfecd0fdb"
+    },
+    {
+      "path": "scripts/onboard-customer.mjs",
+      "source_blob": "6bdbbe59e4083a8d6d173fef16c6b531bc79c339"
+    },
+    {
+      "path": "scripts/operations-live-stream-heartbeat.mjs",
+      "source_blob": "f0db6156d08060c8634205786b0aa023c6782d5a"
+    },
+    {
+      "path": "scripts/paid-pilot-evidence-doctor.mjs",
+      "source_blob": "79d5ba18b6488ad72f1414aba74b184619d4d5ef"
+    },
+    {
+      "path": "scripts/paid-pilot-evidence-preflight.mjs",
+      "source_blob": "a5ba8f49f52d2bf66ea4a5e5c40a38aff2ef908d"
+    },
+    {
+      "path": "scripts/perf-budget.mjs",
+      "source_blob": "a01e845b5ab0c32c55482f46cce0890e0356756d"
+    },
+    {
+      "path": "scripts/poll-mbp-operations-live-stream.mjs",
+      "source_blob": "b25ce7a9ac2e735b4883c82f04de5e4178abc537"
+    },
+    {
+      "path": "scripts/provision-feedback-d1-cloudflare.mjs",
+      "source_blob": "03dbfb41fa7ba65df1e27e190975e584834667f1"
+    },
+    {
+      "path": "scripts/publish-role-skill-catalog.mjs",
+      "source_blob": "a99d23fbcda1494f2894969a3f5ea51af799c86a"
+    },
+    {
+      "path": "scripts/push-mbp-projection-to-workers.mjs",
+      "source_blob": "87a9822a7ae5ed45364612f82e949818caf27072"
+    },
+    {
+      "path": "scripts/push-operations-live-stream-to-workers.mjs",
+      "source_blob": "2dde0cd2505220f0da4139ba8fecd7fa326b2e23"
+    },
+    {
+      "path": "scripts/repo-schema-gen.mjs",
+      "source_blob": "595b9d42381e30c45de2f4188662c5d8cbf56277"
+    },
+    {
+      "path": "scripts/report-wave-to-spine.mjs",
+      "source_blob": "b15bd1ce2bc2e723c0490a7b1cb15026117fec70"
+    },
+    {
+      "path": "scripts/rls-shadow-soak.mjs",
+      "source_blob": "1ef4e9b3192efb3fb374067599e6046d7ceb52b7"
+    },
+    {
+      "path": "scripts/run-trust-proofs.mjs",
+      "source_blob": "6d0f4fa0d3e21b4309f89aa17ecaedee714bfcff"
+    },
+    {
+      "path": "scripts/run-upstream-capability-live-canary.mjs",
+      "source_blob": "9b7ee98f554a53c01b7a23c60ecc9c7a8a813589"
+    },
+    {
+      "path": "scripts/seam-gates/manifest.json",
+      "source_blob": "6ee3fa08a7186e69772c9143a20fc942255ec3ad"
+    },
+    {
+      "path": "scripts/seam-gates/run.mjs",
+      "source_blob": "193d34dba667e1ee42ba361b2ff69f2b95de3034"
+    },
+    {
+      "path": "scripts/secret-scan.mjs",
+      "source_blob": "22c43861e44a0bb15e5d729efbf43c3b68bd40aa"
+    },
+    {
+      "path": "scripts/seed-legitimate-mbp-catalog.mjs",
+      "source_blob": "b2a5e8ad0e2b02a8c6326b23783c59dff2633b46"
+    },
+    {
+      "path": "scripts/sync-identity-contracts-from-xcp.mjs",
+      "source_blob": "46df9f3c24f13230afe95614d9ddac1aa797f18f"
+    },
+    {
+      "path": "scripts/verify-activity-ingest-contract.mjs",
+      "source_blob": "6a2b4560c5e44a503c019c05b1118de8b986f78d"
+    },
+    {
+      "path": "scripts/verify-admissibility-enum-ssot.mjs",
+      "source_blob": "e791eee1d5de0ea0eff39be7c57b347e89ff2571"
+    },
+    {
+      "path": "scripts/verify-agent-capability-projection.mjs",
+      "source_blob": "d7750d1d22dee965f982a8ae472bd1b20924462e"
+    },
+    {
+      "path": "scripts/verify-agent-roles-parity.mjs",
+      "source_blob": "d85c03b2e4d8f0d499c95862257cb298b1ebde88"
+    },
+    {
+      "path": "scripts/verify-allowed-actions-server-derived.mjs",
+      "source_blob": "1ca10fb60a4c30c22407a258d61545fad2ee4ab5"
+    },
+    {
+      "path": "scripts/verify-api-contract-artifact.mjs",
+      "source_blob": "87adb0d3661206b505a49fba83e9b999a78db045"
+    },
+    {
+      "path": "scripts/verify-api-mcp-lifecycle-parity.mjs",
+      "source_blob": "264354f3f720846b19a6b4b3d53f21c15fdbe050"
+    },
+    {
+      "path": "scripts/verify-api-mcp-live-canary-hard-stop.mjs",
+      "source_blob": "51dffd93bccb871c5f05217da60cb4dc096115fe"
+    },
+    {
+      "path": "scripts/verify-app-security-header-parity.mjs",
+      "source_blob": "abd2bb56a0e6843109d1c39399117611b9c5b6c3"
+    },
+    {
+      "path": "scripts/verify-audit-coverage.mjs",
+      "source_blob": "4d3c34c344402260a01212a8e26e5f6c44cd5721"
+    },
+    {
+      "path": "scripts/verify-backend-effective-template-consumption.mjs",
+      "source_blob": "d28bcf83852697d36aa6d6a93bcffcee188260fe"
+    },
+    {
+      "path": "scripts/verify-backend-ui-contracts.mjs",
+      "source_blob": "ac0ffa13fddf47c36ccde6490ce9f05793675c28"
+    },
+    {
+      "path": "scripts/verify-causation-traceability.mjs",
+      "source_blob": "35bddc0e3e538d087da74039c09597b5e9d91ac3"
+    },
+    {
+      "path": "scripts/verify-ces-math.mjs",
+      "source_blob": "e1b595adf91338b3bbb495187604dd80c5af6e7b"
+    },
+    {
+      "path": "scripts/verify-claude-code-user-binding.mjs",
+      "source_blob": "3d1dd60c452d614baf671297fe78dcc7fdc07266"
+    },
+    {
+      "path": "scripts/verify-cloud-deployment-readiness.mjs",
+      "source_blob": "197c26515e8dc88c75896eaf0bdd6eb798f12b2e"
+    },
+    {
+      "path": "scripts/verify-cloudflare-access-evidence.mjs",
+      "source_blob": "2716b4706b765a209aa05fd09c70a4901aa802ed"
+    },
+    {
+      "path": "scripts/verify-cloudflare-access-remote.mjs",
+      "source_blob": "546e23511ab9fce5436918a149bc0801df8a275f"
+    },
+    {
+      "path": "scripts/verify-cloudflare-deployment-signal.mjs",
+      "source_blob": "2dd343aeb8dfc60a86468e4f4c85151189b1af6d"
+    },
+    {
+      "path": "scripts/verify-cloudflare-pages-dev-safe-preview.mjs",
+      "source_blob": "de79f20ba7c43a2166cdea285fe82cb42c690073"
+    },
+    {
+      "path": "scripts/verify-commercial-governance-hardening.mjs",
+      "source_blob": "39018edce95951599ca07bb0a9c0509a84acc9a6"
+    },
+    {
+      "path": "scripts/verify-connector-provider-ssot.mjs",
+      "source_blob": "12d10aaf34a34433a922f850ce35ddf1c64f57a4"
+    },
+    {
+      "path": "scripts/verify-context-reaches-consumer.mjs",
+      "source_blob": "c5cf5f2af7eb1fee6c29ec4472686023e9f11516"
+    },
+    {
+      "path": "scripts/verify-cron-freshness.mjs",
+      "source_blob": "5020488fadaf2b41edd77905c8aa6496ff5fe4ba"
+    },
+    {
+      "path": "scripts/verify-cron-source-mode.mjs",
+      "source_blob": "16fa89c597de85f901f3daf3f4729e867697961e"
+    },
+    {
+      "path": "scripts/verify-customer-ai-ready-scorecard.mjs",
+      "source_blob": "d2503eba9dc84cd39a3380cee08fc4b901370930"
+    },
+    {
+      "path": "scripts/verify-customer-connector-token-safety.mjs",
+      "source_blob": "ab1ef2a2c72eae6a4a42334a4cc707149bbbe51d"
+    },
+    {
+      "path": "scripts/verify-customer-ecosystem-template.mjs",
+      "source_blob": "4c784b9e0390ce87024769fb48510defe3c269a6"
+    },
+    {
+      "path": "scripts/verify-customer-feedback-api-scenarios.mjs",
+      "source_blob": "8b1b1ef6bff9e4eeb226a02eac96c4afa0a5e45c"
+    },
+    {
+      "path": "scripts/verify-customer-feedback-backend-authority.mjs",
+      "source_blob": "182a3dbc435d64ecae57667897abdef050d8b10f"
+    },
+    {
+      "path": "scripts/verify-customer-feedback-production-boundary.mjs",
+      "source_blob": "cf084b48f0ad3083f24b9ef9472c126e50b7d086"
+    },
+    {
+      "path": "scripts/verify-customer-feedback-redaction-monitoring.mjs",
+      "source_blob": "428a045b75597604ca7340da8732bfc39ec54159"
+    },
+    {
+      "path": "scripts/verify-customer-health-value-read-model.mjs",
+      "source_blob": "4b2152b0bbdc3827f82be8db8021c9b1036e7b51"
+    },
+    {
+      "path": "scripts/verify-customer-ip-boundary.mjs",
+      "source_blob": "d479e358bc9ab85f883a3cf801b067e953f3e326"
+    },
+    {
+      "path": "scripts/verify-customer-learning-personalization.mjs",
+      "source_blob": "95e1a811d800692c265167b306f85e355868d76f"
+    },
+    {
+      "path": "scripts/verify-customer-mcp-rpc-contract.mjs",
+      "source_blob": "de16ecbd45144475a5cf307b82f6e78b968522f9"
+    },
+    {
+      "path": "scripts/verify-customer-onboarding-composed-gate.mjs",
+      "source_blob": "cb55345621ec9171545b7a2d4887d91c16cabd26"
+    },
+    {
+      "path": "scripts/verify-customer-onboarding-standard.mjs",
+      "source_blob": "4cea6fba9ce24948e3051ecbdc2212955b431306"
+    },
+    {
+      "path": "scripts/verify-customer-projection-honesty.mjs",
+      "source_blob": "3d5dbca191858d67b159fb0f522a05061132f1cc"
+    },
+    {
+      "path": "scripts/verify-customer-registration-boundary.mjs",
+      "source_blob": "ea7667f2a1fb1ee9a2424274ae558ac3d79f126b"
+    },
+    {
+      "path": "scripts/verify-customer-revocation-end-to-end.mjs",
+      "source_blob": "6a7d21b26a07ec86543289e59fb77d9f955145ca"
+    },
+    {
+      "path": "scripts/verify-customer-team-invite-boundary.mjs",
+      "source_blob": "ff5a45750527ddb11543a94ea0a6a4357c8f9da0"
+    },
+    {
+      "path": "scripts/verify-customer-workflow-opportunity-radar.mjs",
+      "source_blob": "988fd9e6298d111e9f1b7b62e79966f98e48abb5"
+    },
+    {
+      "path": "scripts/verify-customer-zero-evidence-capture.mjs",
+      "source_blob": "1898917d53b0d06eb47cc6235303b1cc7f1fb565"
+    },
+    {
+      "path": "scripts/verify-customer-zero-journey-governed.mjs",
+      "source_blob": "afa23eca88f064db2599e67bb8af41b7eb22a904"
+    },
+    {
+      "path": "scripts/verify-data-class-declared.mjs",
+      "source_blob": "17a07e012a5497af39082e80f971fc34f64c8959"
+    },
+    {
+      "path": "scripts/verify-data-projection-taxonomy-boundary.mjs",
+      "source_blob": "8dd926bd5a6c73095bb6517706d0c4d6511f427b"
+    },
+    {
+      "path": "scripts/verify-data-schemas.mjs",
+      "source_blob": "243277f20d85a699a119d8ea3e15d256fa6cfc91"
+    },
+    {
+      "path": "scripts/verify-day-1-operator-loop.mjs",
+      "source_blob": "2e45c8f2b1ef38cdf659b65dab8bffedf1f1bccb"
+    },
+    {
+      "path": "scripts/verify-delete-export-execution.mjs",
+      "source_blob": "a7d5609d65186856aa4cb70ed7c8110e44d1ac0f"
+    },
+    {
+      "path": "scripts/verify-deploy-sha-current.mjs",
+      "source_blob": "4a9b1df1088e8cfd8e15589bd5317753db163112"
+    },
+    {
+      "path": "scripts/verify-detector-engine.mjs",
+      "source_blob": "3923cdd02634afc9d25cc5e3a1712022da01d601"
+    },
+    {
+      "path": "scripts/verify-document-version-chain.mjs",
+      "source_blob": "58bb4aeb7f597f45441a3644c18e9e048197b87e"
+    },
+    {
+      "path": "scripts/verify-domain-scaffold-honest-empty.mjs",
+      "source_blob": "4c4123e0dec6a62183c61dc6104ef1ecb4ede579"
+    },
+    {
+      "path": "scripts/verify-domain-template-catalog.mjs",
+      "source_blob": "b49167dac0a217e49ad572e0d3044a40f6172f46"
+    },
+    {
+      "path": "scripts/verify-ecosystem-leverage-consumption.mjs",
+      "source_blob": "a716da9bf908fb40b61c97da335c9a05aaf53d7a"
+    },
+    {
+      "path": "scripts/verify-effective-template-resolution.mjs",
+      "source_blob": "2191763e65edf4f1722e74b1f37e6fbc3a78ff10"
+    },
+    {
+      "path": "scripts/verify-events-operator-overlay-isolation.mjs",
+      "source_blob": "e40560eacdf2b2c1eb803818431257854f57a9ea"
+    },
+    {
+      "path": "scripts/verify-external-capability-default-hard-stop.mjs",
+      "source_blob": "c56f2687494cca4029313063cfec248c6550168b"
+    },
+    {
+      "path": "scripts/verify-external-capability-live-prereqs.mjs",
+      "source_blob": "2bc05d22ecdbff3bf5468ce6312395ac07799ef6"
+    },
+    {
+      "path": "scripts/verify-external-capability-runtime-decision.mjs",
+      "source_blob": "86036b393a69d13ab9cca1f22600b70f84307acf"
+    },
+    {
+      "path": "scripts/verify-external-capability-runtime-results.mjs",
+      "source_blob": "9b5ea6e4cde9c2f1c33ac80b6787919e80ba6b3c"
+    },
+    {
+      "path": "scripts/verify-flag-parse-hygiene.mjs",
+      "source_blob": "01694c817b6bb1cde2bf2ee94c3c23f55d159840"
+    },
+    {
+      "path": "scripts/verify-frontend-worker-import-ban.mjs",
+      "source_blob": "0cfb836367166c62c6e77e30074b92384b2d4861"
+    },
+    {
+      "path": "scripts/verify-generated-artifact-policy.mjs",
+      "source_blob": "26a77b1fdb046c9f4841b5a7946f91303c69ba8a"
+    },
+    {
+      "path": "scripts/verify-github-actions-disabled.mjs",
+      "source_blob": "84346d888ba9596fdcdfde1b97c01188d4d57fcd"
+    },
+    {
+      "path": "scripts/verify-github-actions-runner-infra.mjs",
+      "source_blob": "a01a424455126e9c1aa90b3b0c2cd33604884b5b"
+    },
+    {
+      "path": "scripts/verify-github-webhook-contract.mjs",
+      "source_blob": "261b101bba70b92698db25e3eb91993790d67795"
+    },
+    {
+      "path": "scripts/verify-governance-manifests.mjs",
+      "source_blob": "261b429bf13661354b7998f4eb0ab372f70c785c"
+    },
+    {
+      "path": "scripts/verify-governance-pillars.mjs",
+      "source_blob": "efdfaca2d826478bb72c8bcaeb55323f7a844eca"
+    },
+    {
+      "path": "scripts/verify-governed-chat-capture-projection.mjs",
+      "source_blob": "0e4e1a00172343c126f72a5c361b4c52b7be4d2a"
+    },
+    {
+      "path": "scripts/verify-graph-context-slice.mjs",
+      "source_blob": "ba5ddabb7e62139ea267846cc11c3fd3ad084f80"
+    },
+    {
+      "path": "scripts/verify-hierarchy-contracts.mjs",
+      "source_blob": "6207785999cf7f95466de3edd45f8855508dc470"
+    },
+    {
+      "path": "scripts/verify-hosted-ci-runner-health.mjs",
+      "source_blob": "287e791dbb2539d711e445ef17a2572f40eece39"
+    },
+    {
+      "path": "scripts/verify-hosted-deployment-evidence.mjs",
+      "source_blob": "14d8e03f14bdb96f499bbe551a548931375d5665"
+    },
+    {
+      "path": "scripts/verify-ia-001-model-invariants.mjs",
+      "source_blob": "fffedce3286bd19cf7f0e73c0932432d8d59a7e6"
+    },
+    {
+      "path": "scripts/verify-internal-company-a-b-canary.mjs",
+      "source_blob": "c8a15ccea0894b98c7636585302c95b157dcde17"
+    },
+    {
+      "path": "scripts/verify-investor-safe-pack-manifest.mjs",
+      "source_blob": "620d4ffb344769b8fd1f303eca176174efc2a323"
+    },
+    {
+      "path": "scripts/verify-lem-v4-migrations.mjs",
+      "source_blob": "7ef77f9d43fd2132ec5259d01535d2db3b08ce44"
+    },
+    {
+      "path": "scripts/verify-live-authority-inputs.mjs",
+      "source_blob": "45db6900242e73af179239a1e393b9b8e4f7b0d3"
+    },
+    {
+      "path": "scripts/verify-live-evidence-authority-matrix.mjs",
+      "source_blob": "70079f9cfe908fb333b2d5429d62928fe8e27224"
+    },
+    {
+      "path": "scripts/verify-live-scoped-usefulness.mjs",
+      "source_blob": "e9edb2c5a51c8dd19f9b82ff9d0681eaddac90b2"
+    },
+    {
+      "path": "scripts/verify-live-stream-ingest.mjs",
+      "source_blob": "faf22fcd48c35e627062b1f3aadb54f36c2ef21e"
+    },
+    {
+      "path": "scripts/verify-member-directory-human-only.mjs",
+      "source_blob": "c9c05e657d85ebcb8447866070153b64ae9662e1"
+    },
+    {
+      "path": "scripts/verify-member-directory-read-model.mjs",
+      "source_blob": "b4c986261ef43c769c50a3e519880d99543d623c"
+    },
+    {
+      "path": "scripts/verify-merged-contract-ledger.mjs",
+      "source_blob": "5bc91a7e1ce1bdd26db72d628a2c5910c3d34eae"
+    },
+    {
+      "path": "scripts/verify-migration-state-ssot.mjs",
+      "source_blob": "517fceb888dd5676de9a35e63228b1d0a5add0bb"
+    },
+    {
+      "path": "scripts/verify-model-runtime-secret-safety.mjs",
+      "source_blob": "1062a2866ef760668c43f29e75c4354cc3d1deb0"
+    },
+    {
+      "path": "scripts/verify-no-hard-delete-customer-tables.mjs",
+      "source_blob": "6b2359de26c5eb884f22e5e9907c17fbb58016e1"
+    },
+    {
+      "path": "scripts/verify-no-mbp-runtime-dependency.mjs",
+      "source_blob": "7c0c4a59ca1481533c5eeb6b32694a5f3a910704"
+    },
+    {
+      "path": "scripts/verify-no-raw-governance-template-exposure.mjs",
+      "source_blob": "9508d4c10ec0654b42c051b4bb102ab9373de19a"
+    },
+    {
+      "path": "scripts/verify-no-raw-operation-events-insert.mjs",
+      "source_blob": "82407ecd3849c4814189cd114a063fd766f319fb"
+    },
+    {
+      "path": "scripts/verify-old-ui-consumes-envelope.mjs",
+      "source_blob": "79c8e4ac76efb99bb86e4d7c77f60f82f17538fd"
+    },
+    {
+      "path": "scripts/verify-operation-events-append-only.mjs",
+      "source_blob": "e20dc668df462bde324a8329d19d517d901ef072"
+    },
+    {
+      "path": "scripts/verify-operational-area-source-map.mjs",
+      "source_blob": "1b1158f07ed636a8d5e3c33cea9b06c88678b427"
+    },
+    {
+      "path": "scripts/verify-operational-liveness.mjs",
+      "source_blob": "ad4c2d74d50ddfa7e9b8a8944b357f7dbb467f1f"
+    },
+    {
+      "path": "scripts/verify-operations-live-stream-row-ids.mjs",
+      "source_blob": "35bd8758a3c695797ac15172cb45c5e03b03febc"
+    },
+    {
+      "path": "scripts/verify-operations-live-stream-source-coverage.mjs",
+      "source_blob": "f3bf1cdf1a608c8559cadd2625d224179370efcd"
+    },
+    {
+      "path": "scripts/verify-operator-deploy-no-customer-tenants.mjs",
+      "source_blob": "75b9750ee614ef267767106098738a3942a8a3a6"
+    },
+    {
+      "path": "scripts/verify-operator-onboarding-decision.mjs",
+      "source_blob": "e0d94d7f7c2679b9fb81b8d6774252e34111a0f4"
+    },
+    {
+      "path": "scripts/verify-paid-pilot-access-identity.mjs",
+      "source_blob": "5817de0e7947af243c18cf414669c27f53dc9a86"
+    },
+    {
+      "path": "scripts/verify-paid-pilot-authority.mjs",
+      "source_blob": "54d90a0fba9d9f676c5f64adc1eaa701b69cf94a"
+    },
+    {
+      "path": "scripts/verify-paid-pilot-boundary.mjs",
+      "source_blob": "5bb8e3fe5a1ebd5b555098c83db3807d2a5bbdf8"
+    },
+    {
+      "path": "scripts/verify-paid-pilot-evidence-doctor.mjs",
+      "source_blob": "c512cb5cbb704cd8f3b662946885455c71cb1693"
+    },
+    {
+      "path": "scripts/verify-paid-pilot-execution-gateway.mjs",
+      "source_blob": "0e1bb5f2c608dde662a5c14aa66b83de4764fdf5"
+    },
+    {
+      "path": "scripts/verify-paid-pilot-source-writeback.mjs",
+      "source_blob": "1715c7866f1ff2693aab47bba0d39c8bee470103"
+    },
+    {
+      "path": "scripts/verify-postgres-rls-phase2.mjs",
+      "source_blob": "c6294c0856dc9fb52ea5401fd86c930d92e8d181"
+    },
+    {
+      "path": "scripts/verify-principal-instrument-lineage.mjs",
+      "source_blob": "a32081bf698999ef9e3ecfe41d4f2bb93ad43c61"
+    },
+    {
+      "path": "scripts/verify-principal-redaction.mjs",
+      "source_blob": "698b53a59193d5f7e28d94ccd8ce8acae08bdcc9"
+    },
+    {
+      "path": "scripts/verify-prod-migrations.mjs",
+      "source_blob": "93074c2b64f6260fe1b1b3aaf5d92f52df779112"
+    },
+    {
+      "path": "scripts/verify-production-db-live-authority.mjs",
+      "source_blob": "3199679019af1862be473f0e0eca387551e47aec"
+    },
+    {
+      "path": "scripts/verify-production-readiness-state.mjs",
+      "source_blob": "94a905a3226c2ffa372813a78bd74c373e583a04"
+    },
+    {
+      "path": "scripts/verify-project-events-visibility-floor.mjs",
+      "source_blob": "d9d72faa80caa90810b806e62cf1f824ca54bde9"
+    },
+    {
+      "path": "scripts/verify-projection-cron-liveness.mjs",
+      "source_blob": "9c5a9ad6893cba628994fb80cd8974f9a981a142"
+    },
+    {
+      "path": "scripts/verify-projection-substrate-evidence.mjs",
+      "source_blob": "d79ac57bd50273d102a391937cd9c01b73b5daa3"
+    },
+    {
+      "path": "scripts/verify-prompt-injection-regression.mjs",
+      "source_blob": "6ce9ae671ade9b1a43167ad6b082d23a328a4c4f"
+    },
+    {
+      "path": "scripts/verify-public-private-claim-gate.mjs",
+      "source_blob": "54e257c30db1306ffe843bbe8df1b8d4c1b4708a"
+    },
+    {
+      "path": "scripts/verify-public-production-readiness-hard-stop.mjs",
+      "source_blob": "b63296b7f22a7c16031330affe0674c523215a56"
+    },
+    {
+      "path": "scripts/verify-public-self-serve-production-receipts.mjs",
+      "source_blob": "37a346417e1ac74ebc591c2e7ade9d3b3f8758de"
+    },
+    {
+      "path": "scripts/verify-rls-runtime-enforcement.mjs",
+      "source_blob": "a2c5726676e02e4a424a73ccd6ce4afac99012fa"
+    },
+    {
+      "path": "scripts/verify-role-skill-catalog-parity.mjs",
+      "source_blob": "efdb5494a78226074ec13047a77adc7d4b77c60b"
+    },
+    {
+      "path": "scripts/verify-role-skill-evidence-rls.mjs",
+      "source_blob": "a22fb6cad835d6217560e718289c558ab7f834e9"
+    },
+    {
+      "path": "scripts/verify-seed-contract-parity.mjs",
+      "source_blob": "43524139eda99a683c5d2fe4168fc714409a7bcb"
+    },
+    {
+      "path": "scripts/verify-sentry-wired.mjs",
+      "source_blob": "4912cef932c56af3b8eefbe64f8abed82f27d44d"
+    },
+    {
+      "path": "scripts/verify-session-event-audit.mjs",
+      "source_blob": "6df1ae7107ecbcbf8d8f1e1cb741bd929051af40"
+    },
+    {
+      "path": "scripts/verify-session-identity-axes.mjs",
+      "source_blob": "4f8dfd1711b05b398be743e533123b49f1c39afc"
+    },
+    {
+      "path": "scripts/verify-spine-vocabulary.mjs",
+      "source_blob": "d7d4d783b55e7adda167d0a4a2fd27b04d4f6d62"
+    },
+    {
+      "path": "scripts/verify-synthetic-domain-derivation-identity.mjs",
+      "source_blob": "35fe46aaff7397b1fe9a4bb4fc144e2b7cf81726"
+    },
+    {
+      "path": "scripts/verify-template-admin-mutation-auth.mjs",
+      "source_blob": "26eaee36807335933707c5bed9a2fab5853d9a08"
+    },
+    {
+      "path": "scripts/verify-template-policy-registry.mjs",
+      "source_blob": "44abfd39619a0eae19bd26bd0bf66661a3ad05a4"
+    },
+    {
+      "path": "scripts/verify-template-policy-suite.mjs",
+      "source_blob": "55460e2179d3fe08980e8dd8a86f22d09cc26c83"
+    },
+    {
+      "path": "scripts/verify-tenant-source-isolation.mjs",
+      "source_blob": "2b75a0ea0cbda08609cb3dd3916fcd82646b6a29"
+    },
+    {
+      "path": "scripts/verify-track-b-investor-session.mjs",
+      "source_blob": "e8b099df04e03e6b54c76f04243961ee93b3add6"
+    },
+    {
+      "path": "scripts/verify-translator-live-verification.mjs",
+      "source_blob": "fb538a9f47c1cfaf53f10806e0f30dde20aa8bbf"
+    },
+    {
+      "path": "scripts/verify-two-company-live-pilot-evidence.mjs",
+      "source_blob": "939ed67acfdd36e62ccb12bc1015151b6efcf419"
+    },
+    {
+      "path": "scripts/verify-two-tenant-commercial-pilot.mjs",
+      "source_blob": "428ccdff791496fc4efb9a7389d590c48909058b"
+    },
+    {
+      "path": "scripts/verify-unified-graph-invariants.mjs",
+      "source_blob": "04be790199f158db603b74e4b5632695aa9478e0"
+    },
+    {
+      "path": "scripts/verify-upstream-capability-sandbox-canary.mjs",
+      "source_blob": "73f92c73c32814a9b53f540e16e6a38adba5bfae"
+    },
+    {
+      "path": "scripts/write-customer-feedback-production-boundary-receipt.mjs",
+      "source_blob": "a802e1dd0c07ecc33c6ea0ca0ea7305de8837c70"
+    },
+    {
+      "path": "scripts/write-paid-pilot-boundary-receipt.mjs",
+      "source_blob": "898aa5479117e74b3d5877acbddfc7f331f82fcb"
+    },
+    {
+      "path": "src/workers/README.md",
+      "source_blob": "665698f7019d7a031821aead207eeb0d3fd5237b"
+    },
+    {
+      "path": "src/workers/__tests__/__mocks__/snakecase-keys.mjs",
+      "source_blob": "a16bd6d2a92b81328483797e2282421d842be1f4"
+    },
+    {
+      "path": "src/workers/__tests__/access-request-dedup-update.test.ts",
+      "source_blob": "10f0ca55dd5b92e7b7fbf048862eff77e2bcbe56"
+    },
+    {
+      "path": "src/workers/__tests__/action-recording.test.ts",
+      "source_blob": "4354867ab4647b602e1639988a6a266e8d299676"
+    },
+    {
+      "path": "src/workers/__tests__/activity-webhook-route.test.ts",
+      "source_blob": "f1692e489b48025b7343f54ce69287f48067bbfa"
+    },
+    {
+      "path": "src/workers/__tests__/actor-lineage.test.ts",
+      "source_blob": "3c057ca704faa380ee9c79c4194c9d158a9d38fa"
+    },
+    {
+      "path": "src/workers/__tests__/admin-health-connectors.test.ts",
+      "source_blob": "7e672a90f08634e4087187d699791e2b16c46c36"
+    },
+    {
+      "path": "src/workers/__tests__/admissibility.test.ts",
+      "source_blob": "0fde1ed75b35116e1e521a3eb52ae3cddc8f93f9"
+    },
+    {
+      "path": "src/workers/__tests__/agent-digest-route.test.ts",
+      "source_blob": "250d5563256845acaac29005fe14e4c98f20b9aa"
+    },
+    {
+      "path": "src/workers/__tests__/agent-digest.test.ts",
+      "source_blob": "c9c905e68f4333f95c608803935d7724f8aeab8d"
+    },
+    {
+      "path": "src/workers/__tests__/agent-roadmap.test.ts",
+      "source_blob": "8cf406eb4b3102d71051dcf379236749670c1273"
+    },
+    {
+      "path": "src/workers/__tests__/allowed-actions.test.ts",
+      "source_blob": "0ca42af01638a59bcac20d42973d4b5005b3a0c7"
+    },
+    {
+      "path": "src/workers/__tests__/assert-workspace-scope.test.ts",
+      "source_blob": "53cf5e7a28bb66fc911fc2ad735d0b75b9be0dcb"
+    },
+    {
+      "path": "src/workers/__tests__/audit-export.test.ts",
+      "source_blob": "f28e3d4e638e8a2290983c5f5766dcc4f629ef6b"
+    },
+    {
+      "path": "src/workers/__tests__/audit-log-route.test.ts",
+      "source_blob": "9870c0faec6cfc1a56f3e4d1c8af37f177713c8d"
+    },
+    {
+      "path": "src/workers/__tests__/auth.test.ts",
+      "source_blob": "aac2162670b555441853693560838d2405b1039d"
+    },
+    {
+      "path": "src/workers/__tests__/board-cards-layout-route.test.ts",
+      "source_blob": "4f617cf8dae92179268450ff24c9868fe43ae3f1"
+    },
+    {
+      "path": "src/workers/__tests__/bridge-parity.test.ts",
+      "source_blob": "fc50dc20e34a9052a2d203e321a139e1c2590c73"
+    },
+    {
+      "path": "src/workers/__tests__/chat-assembly-trace-operator.test.ts",
+      "source_blob": "ab7d2059570c76a6e3798b5477c8a69527820e46"
+    },
+    {
+      "path": "src/workers/__tests__/chat-assembly-trace.test.ts",
+      "source_blob": "33b61ded9e9f2745aebd5ab82a20624e0aa45bc6"
+    },
+    {
+      "path": "src/workers/__tests__/chat-graph-context.test.ts",
+      "source_blob": "f3cea3b8a7a44fae9225bce244917bf79d18d3fe"
+    },
+    {
+      "path": "src/workers/__tests__/chat-receipt-route.test.ts",
+      "source_blob": "9aeb47f800925c398c2529a34f2534b61c546a3d"
+    },
+    {
+      "path": "src/workers/__tests__/clerk-org.test.ts",
+      "source_blob": "b0eb32c06bd2803716ee8ba1cddc52db692e04e7"
+    },
+    {
+      "path": "src/workers/__tests__/cockpit-chat-route.test.ts",
+      "source_blob": "9fbf99093e9c1e08178f4dbc87d26b988e2bcd1c"
+    },
+    {
+      "path": "src/workers/__tests__/cockpit-chat.test.ts",
+      "source_blob": "42a7b626bed91652efdba03193216d16e02de0eb"
+    },
+    {
+      "path": "src/workers/__tests__/completion-contract.test.ts",
+      "source_blob": "a93bac49e714808abde24a656449019d0da69004"
+    },
+    {
+      "path": "src/workers/__tests__/connect-tasks-wave-c.test.ts",
+      "source_blob": "80d5bd58ed8e75d4803b2c335f244b855d38f42f"
+    },
+    {
+      "path": "src/workers/__tests__/context-packet-store.test.ts",
+      "source_blob": "6e20cb7c3a45f52fef18843e50fee1955867c6ec"
+    },
+    {
+      "path": "src/workers/__tests__/context-packet.test.ts",
+      "source_blob": "1108f9b7e44a3518ecd3e09a44e2aa324b81fee9"
+    },
+    {
+      "path": "src/workers/__tests__/context-resolver.test.ts",
+      "source_blob": "6f9ad00701fcfbbd51237e1692423221f24fbf10"
+    },
+    {
+      "path": "src/workers/__tests__/cors-methods.test.ts",
+      "source_blob": "3673f0982a370675a41bb1bc00016926f78b5c11"
+    },
+    {
+      "path": "src/workers/__tests__/cron-observability.test.ts",
+      "source_blob": "6fc79b919514a2b2b76802947f6b09fa748ba56e"
+    },
+    {
+      "path": "src/workers/__tests__/current-work-route.test.ts",
+      "source_blob": "7baed0bb430ffd892d505abd2abb42f62733fb9f"
+    },
+    {
+      "path": "src/workers/__tests__/customer-approvals-inbox.test.ts",
+      "source_blob": "c9ab1104116a7057a8f679d5a2bc0dac8cb8f21f"
+    },
+    {
+      "path": "src/workers/__tests__/customer-approved-email.test.ts",
+      "source_blob": "549627f9666ffcb4f1da15a38570ef82989a2466"
+    },
+    {
+      "path": "src/workers/__tests__/customer-chat-route.test.ts",
+      "source_blob": "c77a07aae99ec44474284cbdc47d1d28a911a221"
+    },
+    {
+      "path": "src/workers/__tests__/customer-context-profile.test.ts",
+      "source_blob": "0c5c177d625ea8b6579b152d9a4bf594532c68d5"
+    },
+    {
+      "path": "src/workers/__tests__/customer-lineage-authority.test.ts",
+      "source_blob": "b6e3ca21be1635d61b985c6027eddda5ba359f2c"
+    },
+    {
+      "path": "src/workers/__tests__/customer-provisioning-store.test.ts",
+      "source_blob": "95f74d6c61a8026eef96934b1297e67b0833056a"
+    },
+    {
+      "path": "src/workers/__tests__/customer-safe-decision.test.ts",
+      "source_blob": "76800aa733e59d8ace805a5b36cf7670aa4bf65f"
+    },
+    {
+      "path": "src/workers/__tests__/customer.test.ts",
+      "source_blob": "ec929ed455a5dce93f21c30667b3e62d91f4bc34"
+    },
+    {
+      "path": "src/workers/__tests__/data-graph.test.ts",
+      "source_blob": "08ec11efc42d449f00a32a2c7b85d20df7d15fa6"
+    },
+    {
+      "path": "src/workers/__tests__/decision-graph-projection.test.ts",
+      "source_blob": "57034ac18e13d627b6d6ad5de56e4657f8c6ac12"
+    },
+    {
+      "path": "src/workers/__tests__/decisions-route.test.ts",
+      "source_blob": "c6b7c20e6b8ea2020fad41e2806eaa7fd51d844b"
+    },
+    {
+      "path": "src/workers/__tests__/destructive-op-event-mirror.test.ts",
+      "source_blob": "380362682909f6296c3bddc5032ada027c3bc143"
+    },
+    {
+      "path": "src/workers/__tests__/developer-access-route.test.ts",
+      "source_blob": "1d8dff9e9e71d90189233bd1861ff8f9fe7c2471"
+    },
+    {
+      "path": "src/workers/__tests__/digest-posting.test.ts",
+      "source_blob": "f1a7ef38ae71f73da9a9dd1249159c6ff976e89a"
+    },
+    {
+      "path": "src/workers/__tests__/documents-route.test.ts",
+      "source_blob": "15000a8237c2672bf74a1e0f9f0b381507a129ef"
+    },
+    {
+      "path": "src/workers/__tests__/domain-archetypes.test.ts",
+      "source_blob": "3ed696e661ae5c5055625e81db806f60e8fcc2b4"
+    },
+    {
+      "path": "src/workers/__tests__/email-notifier.test.ts",
+      "source_blob": "839109c835f772b6de3bc482de6f05b9d9997195"
+    },
+    {
+      "path": "src/workers/__tests__/enrichment-wave-b.test.ts",
+      "source_blob": "0ac0f5b11f7f14c1f35f89b7879eb767d580618f"
+    },
+    {
+      "path": "src/workers/__tests__/entitlement-hydration.test.ts",
+      "source_blob": "1fda12cb0923bb321ade5c8d15d5ec71ce52000e"
+    },
+    {
+      "path": "src/workers/__tests__/entitlement-source-gap.test.ts",
+      "source_blob": "c5c569e409210434277bb162c0fab68847efe9c2"
+    },
+    {
+      "path": "src/workers/__tests__/entitlement.test.ts",
+      "source_blob": "5b4232632eb5260a3d0ef18dec09e20eb15ea7e2"
+    },
+    {
+      "path": "src/workers/__tests__/error-envelope.test.ts",
+      "source_blob": "fc867677cbdb64aa0ca742d46f043ce662c5747e"
+    },
+    {
+      "path": "src/workers/__tests__/event-threading.test.ts",
+      "source_blob": "848f62fbcc440b9a4b5bfb3f65a246107fa9ce39"
+    },
+    {
+      "path": "src/workers/__tests__/event-validation.test.ts",
+      "source_blob": "4d722fcfbf2faa26e9afaf1bbedcdc4e45dafff5"
+    },
+    {
+      "path": "src/workers/__tests__/events-operator-write-overlay.test.ts",
+      "source_blob": "a7c13ea5c8a6c8cd842c54e387ba3c0a2dffaa61"
+    },
+    {
+      "path": "src/workers/__tests__/events-self-service.test.ts",
+      "source_blob": "c3ecb93868d7f091a636805f7bc43d29c55328cb"
+    },
+    {
+      "path": "src/workers/__tests__/feedback-route.test.ts",
+      "source_blob": "f613e39baa3b4a20b683ffbcb377c27f52586974"
+    },
+    {
+      "path": "src/workers/__tests__/folder-connector.test.ts",
+      "source_blob": "2aa1dc02c51b96896bf6caaee1a1a1c9b33afe6c"
+    },
+    {
+      "path": "src/workers/__tests__/folder-promote-route.test.ts",
+      "source_blob": "4bd51641d24e47baf5337805663d24956a7fc7d6"
+    },
+    {
+      "path": "src/workers/__tests__/folder-sources-route.test.ts",
+      "source_blob": "6662fe57f8e2b4bd98109d61a617f6a17a29e6ad"
+    },
+    {
+      "path": "src/workers/__tests__/github-repos.test.ts",
+      "source_blob": "a1009e2c5c46dbfef1593ff8e30dd875b15522eb"
+    },
+    {
+      "path": "src/workers/__tests__/github-webhook-split.test.ts",
+      "source_blob": "8e38ada933d525e5d42e988552bc2b5258e2d480"
+    },
+    {
+      "path": "src/workers/__tests__/gmail-translator-wave-c.test.ts",
+      "source_blob": "008f92bb46a41e62acd59d21cabd7bf26d93c1d7"
+    },
+    {
+      "path": "src/workers/__tests__/graph-document-nodes.test.ts",
+      "source_blob": "e4826b496640951a512f247592271f7e37cd1b3d"
+    },
+    {
+      "path": "src/workers/__tests__/graph-rebuild-cron.test.ts",
+      "source_blob": "0f5b36c02507d92ae5772db95c00b490b98cdc8a"
+    },
+    {
+      "path": "src/workers/__tests__/health.test.ts",
+      "source_blob": "033b7e6033589b25c0309362b51ef5f84b20173d"
+    },
+    {
+      "path": "src/workers/__tests__/heartbeat.test.ts",
+      "source_blob": "90b9c8c35e5ffe07b5cf7eb778cd13bf71fff113"
+    },
+    {
+      "path": "src/workers/__tests__/idempotency.test.ts",
+      "source_blob": "166900479a244d833d6363d7cadeb1c1cfbe272a"
+    },
+    {
+      "path": "src/workers/__tests__/infer-source-context.test.ts",
+      "source_blob": "f9b36d64528320cab1237e329a8b3bc85d9e020f"
+    },
+    {
+      "path": "src/workers/__tests__/intent-edit.test.ts",
+      "source_blob": "0976b65f468bac1536863820830b5cfff361144d"
+    },
+    {
+      "path": "src/workers/__tests__/intent-enrichment.test.ts",
+      "source_blob": "70dfd70c4611388d450b589ea3a8569ece74dcd5"
+    },
+    {
+      "path": "src/workers/__tests__/intent-repoint.test.ts",
+      "source_blob": "679a05969f6436e98f3b4655a6734bc3952dde02"
+    },
+    {
+      "path": "src/workers/__tests__/intents-route.test.ts",
+      "source_blob": "ea1de1120887eeee4229349412f6da4ab5057ad1"
+    },
+    {
+      "path": "src/workers/__tests__/investor-tier-grant-coercion.test.ts",
+      "source_blob": "a4bb659b74a3d1c7d6650e8c2f291be95eff736a"
+    },
+    {
+      "path": "src/workers/__tests__/llm-usage-metering.test.ts",
+      "source_blob": "0d0098fd8df7588a39d69cd38c657e77f1ecc119"
+    },
+    {
+      "path": "src/workers/__tests__/mbp-projection-diagnose-route.test.ts",
+      "source_blob": "0f04cd77abab97e29d2a27227b157370fbced762"
+    },
+    {
+      "path": "src/workers/__tests__/mbp-projection-live-rail.test.ts",
+      "source_blob": "884c7c978f43d39f142723f98e08f2c70a18c816"
+    },
+    {
+      "path": "src/workers/__tests__/mcp-customer-reads.test.ts",
+      "source_blob": "cba70cd0d718d15f9e188c5e5376c4a1802d4193"
+    },
+    {
+      "path": "src/workers/__tests__/mcp-gateway-route.test.ts",
+      "source_blob": "543a0310511a281d4253ec66d078b72125ae7c25"
+    },
+    {
+      "path": "src/workers/__tests__/mcp-read-audit.test.ts",
+      "source_blob": "e3bd7c1f1822059cafe18aec90c6a481340dd835"
+    },
+    {
+      "path": "src/workers/__tests__/mcp-rpc-route.test.ts",
+      "source_blob": "1a6149a30c7c0a3532bc7418e7c72ad02c04a42c"
+    },
+    {
+      "path": "src/workers/__tests__/member-authority-provisioning.test.ts",
+      "source_blob": "f2c7b447377ea9d9e930bf64c3c8485c9fab8f41"
+    },
+    {
+      "path": "src/workers/__tests__/member-remove-route.test.ts",
+      "source_blob": "cd2c05415dc44eaab5d7886a4997bf71b7acbfad"
+    },
+    {
+      "path": "src/workers/__tests__/members-role-mutation.test.ts",
+      "source_blob": "5f41bffede5c25157e75337b145d188b813b8ec5"
+    },
+    {
+      "path": "src/workers/__tests__/members-route.test.ts",
+      "source_blob": "a609185a2146ba1a5115b4b1d6f2a970e918350f"
+    },
+    {
+      "path": "src/workers/__tests__/model-runtime-crypto.test.ts",
+      "source_blob": "ca1be014c59225b1e7498e531727962fc025c9f6"
+    },
+    {
+      "path": "src/workers/__tests__/model-runtime-enforcement.test.ts",
+      "source_blob": "b5205c40bd6255f970ac273f6f2de66254687d80"
+    },
+    {
+      "path": "src/workers/__tests__/model-runtime-store.test.ts",
+      "source_blob": "49006069d72e909f5a37c76706fa1b476bd8cf06"
+    },
+    {
+      "path": "src/workers/__tests__/model-runtimes-route.test.ts",
+      "source_blob": "21c69ce88056b385beb57413ca5a052b609953ba"
+    },
+    {
+      "path": "src/workers/__tests__/onboarding-provisioner.test.ts",
+      "source_blob": "cf34a12dcfef98f5a5bda7128a1c6bb1b9d3261e"
+    },
+    {
+      "path": "src/workers/__tests__/onboarding-roadmap.test.ts",
+      "source_blob": "c6013be6c57cce73f2dad0fd36a018da0fa39e84"
+    },
+    {
+      "path": "src/workers/__tests__/onboarding-welcome.test.ts",
+      "source_blob": "d4406f334b8642ceeb8e9bbf0f9d9521a2d5f5de"
+    },
+    {
+      "path": "src/workers/__tests__/operational-spine-live-rls.test.ts",
+      "source_blob": "8267ed499c393bd2b59303a501fee85b48d2649e"
+    },
+    {
+      "path": "src/workers/__tests__/operational-spine-rls-context.test.ts",
+      "source_blob": "207fc1b5dba1a50f3641af649ee5d5fda0fe652b"
+    },
+    {
+      "path": "src/workers/__tests__/operational-spine-route.test.ts",
+      "source_blob": "cd795f05835818e46bbd140b7664335dad1c557c"
+    },
+    {
+      "path": "src/workers/__tests__/operational-spine-unification.test.ts",
+      "source_blob": "8d84515d77e7446f4b476809baa31f5b895138fa"
+    },
+    {
+      "path": "src/workers/__tests__/operations-queue-consumer.test.ts",
+      "source_blob": "1d0bbf7806e2c61ed0a3856af0cd5aaf7db50504"
+    },
+    {
+      "path": "src/workers/__tests__/operator-axis-route-contract.test.ts",
+      "source_blob": "08e67f0fdc3142b7f675ad7da1132b3ddce69c6f"
+    },
+    {
+      "path": "src/workers/__tests__/operator-workspace-scope.test.ts",
+      "source_blob": "93bd3189725bfae2d1da4f5d13edac5a76931f4e"
+    },
+    {
+      "path": "src/workers/__tests__/outlook-translator-wave-c.test.ts",
+      "source_blob": "fbf82993ea9ccdf2b856d0a0499efc790e77baa3"
+    },
+    {
+      "path": "src/workers/__tests__/packet-intent-quality.test.ts",
+      "source_blob": "f8c1fbab447d8f46860aad5df1ac0da14eb4f755"
+    },
+    {
+      "path": "src/workers/__tests__/pdf-extraction.test.ts",
+      "source_blob": "484460f629206d1155c6999d84f0d1ba84b9618d"
+    },
+    {
+      "path": "src/workers/__tests__/permissions-operator-axis.test.ts",
+      "source_blob": "5724d77db51440a69c52948db052ce6255578353"
+    },
+    {
+      "path": "src/workers/__tests__/permissions.test.ts",
+      "source_blob": "bb3568b6f568c0129348e4352af34be4a9cd6c01"
+    },
+    {
+      "path": "src/workers/__tests__/persist-data-graph.test.ts",
+      "source_blob": "754093a7d38c8e0e593789fe949b73cf72c49981"
+    },
+    {
+      "path": "src/workers/__tests__/plan-route.test.ts",
+      "source_blob": "6419bee3a9c0ec2cab1b35ceac0752dee1fa7b81"
+    },
+    {
+      "path": "src/workers/__tests__/pmf-route.test.ts",
+      "source_blob": "d60a3fed37f008c1c1fd827daf0c94f6ceab1ed3"
+    },
+    {
+      "path": "src/workers/__tests__/pmf-store.test.ts",
+      "source_blob": "e515929f93ebfdb4a71d67bec21d10077ad425c8"
+    },
+    {
+      "path": "src/workers/__tests__/policy-engine-shadow.test.ts",
+      "source_blob": "6abf9bbafc9ecd075d17a9de6e7c5cd9ab47c24a"
+    },
+    {
+      "path": "src/workers/__tests__/policy-engine.test.ts",
+      "source_blob": "42d0b4a3680aebe95a5d98201daa82ca0436f875"
+    },
+    {
+      "path": "src/workers/__tests__/principal-adapter.test.ts",
+      "source_blob": "ae9ceaf716947dc05349818e5662f2135502ad7a"
+    },
+    {
+      "path": "src/workers/__tests__/principal-contract.test.ts",
+      "source_blob": "f0c4f51c890dfdbd69453f6b650e8717c167b75a"
+    },
+    {
+      "path": "src/workers/__tests__/principal-redaction.test.ts",
+      "source_blob": "6fec319730174f443e3b97f409393437cb49256b"
+    },
+    {
+      "path": "src/workers/__tests__/profile-route.test.ts",
+      "source_blob": "2ab23d4104a7986fe9dc28868d71433944ef8dd8"
+    },
+    {
+      "path": "src/workers/__tests__/projects-detail-operator-overlay.test.ts",
+      "source_blob": "abd74fbfc33d707d8dd87bfa5dc9d048cdbcac66"
+    },
+    {
+      "path": "src/workers/__tests__/projects-events-operator-overlay.test.ts",
+      "source_blob": "d14ea29c88352e24c4a0cbd367391b4982856517"
+    },
+    {
+      "path": "src/workers/__tests__/projects-lifecycle.test.ts",
+      "source_blob": "2924e4025dc517d42fb49bca53bb9f2350925a44"
+    },
+    {
+      "path": "src/workers/__tests__/prompt-refine.test.ts",
+      "source_blob": "0212d4f9e3e65ca40030ebb2e087118ccf1fe101"
+    },
+    {
+      "path": "src/workers/__tests__/prompt-tags-route.test.ts",
+      "source_blob": "74efe8c7ecc9eb2c9ba10924a0e5cdb307477730"
+    },
+    {
+      "path": "src/workers/__tests__/propagation-store.test.ts",
+      "source_blob": "d47718ac3dce0d602cf4c907ed7aa3156d79532e"
+    },
+    {
+      "path": "src/workers/__tests__/purge-deleted-cron.test.ts",
+      "source_blob": "39a102dfeb701081cb964add12ac2b50c2f79999"
+    },
+    {
+      "path": "src/workers/__tests__/rate-limit.test.ts",
+      "source_blob": "3137df0d7222f398fd635cf2f7f1ea4d2064cb07"
+    },
+    {
+      "path": "src/workers/__tests__/readiness-route.test.ts",
+      "source_blob": "e9d16bcba7b947562f19e353204238fe90a76821"
+    },
+    {
+      "path": "src/workers/__tests__/reclassify-unattributed-store.test.ts",
+      "source_blob": "533cf6db887e368af3109c3c8624e378710a35c9"
+    },
+    {
+      "path": "src/workers/__tests__/reclassify-unattributed.test.ts",
+      "source_blob": "0b6f32093cf3a6477232a823d57cc440cb2415a7"
+    },
+    {
+      "path": "src/workers/__tests__/recommendations-write-scope.test.ts",
+      "source_blob": "01a1587b5b50720b96fa97307f8c46d5f6cf1c63"
+    },
+    {
+      "path": "src/workers/__tests__/request-access-readiness.test.ts",
+      "source_blob": "9d94b4356313ea468895bc95aa92016c1c4c54e4"
+    },
+    {
+      "path": "src/workers/__tests__/request-access.test.ts",
+      "source_blob": "abc3bef82ff8497ab1e96c23bfea2fc0b12924fa"
+    },
+    {
+      "path": "src/workers/__tests__/request-guards.test.ts",
+      "source_blob": "9912421fd7d367ed0ef260cc546b118ec6394f55"
+    },
+    {
+      "path": "src/workers/__tests__/review-schedule-cron.test.ts",
+      "source_blob": "5c0f8b94632cd6dcdee273545155da98dc8f81a7"
+    },
+    {
+      "path": "src/workers/__tests__/review-scheduler.test.ts",
+      "source_blob": "0851533539908fe7dbcb3128642d6954e6f4ee07"
+    },
+    {
+      "path": "src/workers/__tests__/roadmap-soft-delete.test.ts",
+      "source_blob": "6385a11d61839ecf54e254285ad4704a5f0e5a84"
+    },
+    {
+      "path": "src/workers/__tests__/role-scoped-context.test.ts",
+      "source_blob": "71c0d6196f0ecf8aaa639851da4511502cbe67b8"
+    },
+    {
+      "path": "src/workers/__tests__/role-skill-catalog-loader.test.ts",
+      "source_blob": "eccb22534209aa200ce650781c44ae4695b425ab"
+    },
+    {
+      "path": "src/workers/__tests__/role-skill-catalog-publisher.test.ts",
+      "source_blob": "e2b3d19d0c3cbbf3dc45c0205d53c9548f41ae90"
+    },
+    {
+      "path": "src/workers/__tests__/role-skill-evidence-live-rls.test.ts",
+      "source_blob": "d2298bf01e99a2ee347c6f489e349cc7f46ed949"
+    },
+    {
+      "path": "src/workers/__tests__/role-skill-resolution-store.test.ts",
+      "source_blob": "9e10c35b29a8157bb0c080c8a921e0fa3305dc12"
+    },
+    {
+      "path": "src/workers/__tests__/role-skill-resolver.test.ts",
+      "source_blob": "4afb0e48e5c55f41e855946556aecb9ba651367a"
+    },
+    {
+      "path": "src/workers/__tests__/role-skill-shadow.test.ts",
+      "source_blob": "ab6fdf4fde279f99d33433acf25c336333972781"
+    },
+    {
+      "path": "src/workers/__tests__/route-auth-coverage.test.ts",
+      "source_blob": "cc3d0198c522b5f21e4d9ce2e907307cd857a9f1"
+    },
+    {
+      "path": "src/workers/__tests__/scheduled-digest-sweep.test.ts",
+      "source_blob": "b1b95ba6ff129a67a9a1485abdec2c0bf5a28743"
+    },
+    {
+      "path": "src/workers/__tests__/session-env-flag.test.ts",
+      "source_blob": "e126e20b4491a7c4e49ccc59e56991b0abd8e92a"
+    },
+    {
+      "path": "src/workers/__tests__/session-mode.test.ts",
+      "source_blob": "a6f39e47f28e1e27f20b460313a839d130451246"
+    },
+    {
+      "path": "src/workers/__tests__/session-readiness-gate.test.ts",
+      "source_blob": "c63b2226095b44e6f40aaf9a6f261c1d4f986f84"
+    },
+    {
+      "path": "src/workers/__tests__/setup-cjs-compat.ts",
+      "source_blob": "b6bc102047de74f084112852564633251d5689c1"
+    },
+    {
+      "path": "src/workers/__tests__/source-tier-grounding.test.ts",
+      "source_blob": "1baf05786fc0741a4d052b11446c0c809c08f08f"
+    },
+    {
+      "path": "src/workers/__tests__/source-tier.test.ts",
+      "source_blob": "e37448e58acc1067c0d2f36ec48746d171109d7a"
+    },
+    {
+      "path": "src/workers/__tests__/source-truth-override.test.ts",
+      "source_blob": "ce8c55a01ed41f09e562be4faa544bda96b0ed06"
+    },
+    {
+      "path": "src/workers/__tests__/sources-authority-gate.test.ts",
+      "source_blob": "f68e8c47fec36bd7356f308caba6d5932de88f63"
+    },
+    {
+      "path": "src/workers/__tests__/sources-connect-sync.test.ts",
+      "source_blob": "0f2ed914af851ec7deb447e9f01621ec083e06e6"
+    },
+    {
+      "path": "src/workers/__tests__/sources-read-policy-route.test.ts",
+      "source_blob": "13b67c1a797e16ae6bb86c8ec0dd5fac94f8f37a"
+    },
+    {
+      "path": "src/workers/__tests__/sources-repos-route.test.ts",
+      "source_blob": "db9f7d6666c82485a607f557499e318044217a62"
+    },
+    {
+      "path": "src/workers/__tests__/spine-authority-seeded.test.ts",
+      "source_blob": "2e902aa1951b27f8a008e6646f9c5465880693a6"
+    },
+    {
+      "path": "src/workers/__tests__/spine-authority.test.ts",
+      "source_blob": "b6af6291e76ee7f6d91e80f78ca175422666f272"
+    },
+    {
+      "path": "src/workers/__tests__/synthetic-binding-source-filters.test.ts",
+      "source_blob": "8d67aad90326b1760da0e8308f46915d879d7885"
+    },
+    {
+      "path": "src/workers/__tests__/synthetic-domains-ip-boundary.test.ts",
+      "source_blob": "ebb11eb729e832a1c0b0758fe3fb117f42cb8c56"
+    },
+    {
+      "path": "src/workers/__tests__/synthetic-domains-kind-create.test.ts",
+      "source_blob": "a413de43c947e935cd827c5263e15093a61cf96f"
+    },
+    {
+      "path": "src/workers/__tests__/synthetic-domains-recommendations.test.ts",
+      "source_blob": "a3c0003603f752a635f3404a7bda04dd1748fdcf"
+    },
+    {
+      "path": "src/workers/__tests__/template-policy-registry-route.test.ts",
+      "source_blob": "b5899ef1555dd9307c092fb69714d2871ea7ce7e"
+    },
+    {
+      "path": "src/workers/__tests__/turnstile.test.ts",
+      "source_blob": "a0308bf954f4add3a59756598d3f8325f001eed2"
+    },
+    {
+      "path": "src/workers/__tests__/usage-route.test.ts",
+      "source_blob": "3049c0ac2f4baa4b8b17fbba61bcb83a58e88e75"
+    },
+    {
+      "path": "src/workers/__tests__/visibility.test.ts",
+      "source_blob": "474c2d5f9f87998c48b6785d8e224c19edd8761a"
+    },
+    {
+      "path": "src/workers/__tests__/workspace-activity-route.test.ts",
+      "source_blob": "07aa0fdf9705d1a12058de01c07548d21b019bb6"
+    },
+    {
+      "path": "src/workers/__tests__/workspace-activity-store.test.ts",
+      "source_blob": "5e01589a3216cf4889b48b2cc764392a7c88ad24"
+    },
+    {
+      "path": "src/workers/__tests__/workspace-store-list.test.ts",
+      "source_blob": "5c6414c58bd003b52d0df5878d956c9c48749fed"
+    },
+    {
+      "path": "src/workers/__tests__/workspace-upgrade-route.test.ts",
+      "source_blob": "6753cd9307ccdbaabf190becc9104e00d0fad820"
+    },
+    {
+      "path": "src/workers/crons/calibration-retrain.ts",
+      "source_blob": "f1773d1ef2175321ea32d00f32ac37377e8d3454"
+    },
+    {
+      "path": "src/workers/crons/graph-rebuild.ts",
+      "source_blob": "d16a60579a0bf70e4f5c8d87d467da30f2848416"
+    },
+    {
+      "path": "src/workers/crons/index.ts",
+      "source_blob": "53da2d6ad759e6b6a7b4d73caf65680362a45516"
+    },
+    {
+      "path": "src/workers/crons/pattern-suspend.ts",
+      "source_blob": "52ca796aae9c121353d20ae83c98d0fb5d163fd0"
+    },
+    {
+      "path": "src/workers/crons/permanent-suppress.ts",
+      "source_blob": "912b253ed50d27ad25d19fdfb93ec59dd910aced"
+    },
+    {
+      "path": "src/workers/crons/propagation-tick.ts",
+      "source_blob": "1e0fe11d16a630392b6bd4560e5daf7d460a4841"
+    },
+    {
+      "path": "src/workers/crons/purge-deleted.ts",
+      "source_blob": "1eff0dfa7914bffb911ccb0cd6004eab842fdfc5"
+    },
+    {
+      "path": "src/workers/crons/reclassify-unattributed.ts",
+      "source_blob": "5698e589ea935058e13f33ee17acc2ff872c40d2"
+    },
+    {
+      "path": "src/workers/crons/review-schedule.ts",
+      "source_blob": "017ae37d5d66201e4fb7775449982d7c525ff64c"
+    },
+    {
+      "path": "src/workers/crons/shadow-eval.ts",
+      "source_blob": "2da49d2f8d14323ee1d50209157d71b920c91b57"
+    },
+    {
+      "path": "src/workers/crons/threshold-retune.ts",
+      "source_blob": "620faa3e2519b337e40b37824dfdf2a97e3e39e0"
+    },
+    {
+      "path": "src/workers/crons/types.ts",
+      "source_blob": "f38fb8cc40980be06841270fd11c7a7df72c5af6"
+    },
+    {
+      "path": "src/workers/crons/weight-retune.ts",
+      "source_blob": "c6dc9ebded759930f2914dd345775238c9d2782a"
+    },
+    {
+      "path": "src/workers/dal/DalAdapter.ts",
+      "source_blob": "d9d9f71ef2b4ec2806206e2dd7d02e7450edc28f"
+    },
+    {
+      "path": "src/workers/dal/WorkersDalAdapter.ts",
+      "source_blob": "92ba8d0fc20fba13ab10e655a3fa24f67099e35f"
+    },
+    {
+      "path": "src/workers/dal/access-store.ts",
+      "source_blob": "b4fe768b20b3200019c63b2f418439e701556ec0"
+    },
+    {
+      "path": "src/workers/dal/chat-store.ts",
+      "source_blob": "4e148f8e63b9c90e73cf1e89fcf102343e778d4c"
+    },
+    {
+      "path": "src/workers/dal/clerk-oauth-adapter.ts",
+      "source_blob": "6ae1f6d8e30a1519bfae8e7fe9b6d46a70d830a2"
+    },
+    {
+      "path": "src/workers/dal/context-packet-store.ts",
+      "source_blob": "5ee0c26e1608ce7ed7fcae04b383b5ec129708f8"
+    },
+    {
+      "path": "src/workers/dal/context-resolver.ts",
+      "source_blob": "0e3d4e08107f54d3394c23730a3eb0cc9d29e4bc"
+    },
+    {
+      "path": "src/workers/dal/customer-audit-store.ts",
+      "source_blob": "3123162312b56a6e5f3438c8a4d6daa1484b62c5"
+    },
+    {
+      "path": "src/workers/dal/customer-authority-store.ts",
+      "source_blob": "f26e72e37f75cb6a1df4583de9c99511705aae83"
+    },
+    {
+      "path": "src/workers/dal/customer-context-store.ts",
+      "source_blob": "76ca8e93d3d4d491133fadbd6b96d0afbc652542"
+    },
+    {
+      "path": "src/workers/dal/customer-provisioning-store.ts",
+      "source_blob": "567e3f5c50632077e9ebcf960bed2fae4ba234f0"
+    },
+    {
+      "path": "src/workers/dal/customer-readiness-store.ts",
+      "source_blob": "937cadf0786da558ac93fd0019dac4e5aeb17644"
+    },
+    {
+      "path": "src/workers/dal/customer-token-store.ts",
+      "source_blob": "2639140d204d1a1b20f6bf1f4e582320c78f8302"
+    },
+    {
+      "path": "src/workers/dal/decision-store.ts",
+      "source_blob": "970dfe5ede102d657a5fe526331d8d42d1e2776c"
+    },
+    {
+      "path": "src/workers/dal/detector-store.ts",
+      "source_blob": "f795fe5bb0003ceb1f1b8f3a8432a9d269e14d76"
+    },
+    {
+      "path": "src/workers/dal/document-access-store.ts",
+      "source_blob": "4c31d21b56ae9434b8dcafa7e43196957c6f574e"
+    },
+    {
+      "path": "src/workers/dal/engagement-store.ts",
+      "source_blob": "c32648f303e2c9fba9b72bd8ec47049a1c3cca53"
+    },
+    {
+      "path": "src/workers/dal/enrichment-store.ts",
+      "source_blob": "07c287f6528c53eba7f34345f2ef95b7f0f419e5"
+    },
+    {
+      "path": "src/workers/dal/entitlement-store.ts",
+      "source_blob": "f5b729db4091658690956e5ba0fcd1f70fb851c6"
+    },
+    {
+      "path": "src/workers/dal/event-store.ts",
+      "source_blob": "8c1d3446e8b47eabf5e48932317b5a226df5ed4b"
+    },
+    {
+      "path": "src/workers/dal/feedback-store.ts",
+      "source_blob": "1012a48add19f4e8a2b878aa9ef0fd1226eeb030"
+    },
+    {
+      "path": "src/workers/dal/folder-snapshot-store.ts",
+      "source_blob": "e6f2ab7352cdfbb8877a60a87b3c2d7740aff4c2"
+    },
+    {
+      "path": "src/workers/dal/governance-store.ts",
+      "source_blob": "3e3af795210866e0e8c7e757953e7a7e376aa02a"
+    },
+    {
+      "path": "src/workers/dal/graph-store.ts",
+      "source_blob": "212c72afd8fc56f2270404676cc779c36cf8f5f2"
+    },
+    {
+      "path": "src/workers/dal/heartbeat-store.ts",
+      "source_blob": "09a750a55598bf4f696466d05bc6f6bfd8266339"
+    },
+    {
+      "path": "src/workers/dal/idempotency-store.ts",
+      "source_blob": "10f919a2cd48fa9c3f7cb17d9b72f12b0b420758"
+    },
+    {
+      "path": "src/workers/dal/inference-store.ts",
+      "source_blob": "0cb76649ab2bfd87920f677f6138fed5d4c33778"
+    },
+    {
+      "path": "src/workers/dal/intent-store.ts",
+      "source_blob": "33ceea695d8bb3f6b6e8cd16b6fb1c58d34df459"
+    },
+    {
+      "path": "src/workers/dal/investor-store.ts",
+      "source_blob": "62762ed6467e81d7b43831440d35430dfca3debd"
+    },
+    {
+      "path": "src/workers/dal/llm-usage-store.ts",
+      "source_blob": "d72c8246ee7a544fbd6d89604943a51daf823898"
+    },
+    {
+      "path": "src/workers/dal/mcp-access-store.ts",
+      "source_blob": "ccc47912d3a48956ca38132a7373dc1a20b1b19b"
+    },
+    {
+      "path": "src/workers/dal/member-authority-provisioning.ts",
+      "source_blob": "6d0cefec1a5a1b863915cf0100ddb6ccfc784069"
+    },
+    {
+      "path": "src/workers/dal/model-runtime-facade.ts",
+      "source_blob": "1a14b29624ef582f5d7980e7f2689edb239ccd8e"
+    },
+    {
+      "path": "src/workers/dal/model-runtime-store.ts",
+      "source_blob": "3de5e41f5a52fbe71513ad272a5e5b75871adb83"
+    },
+    {
+      "path": "src/workers/dal/operational-spine-methods.ts",
+      "source_blob": "38a85896ccb1f858b7550ab3722bf5d33bb3f17f"
+    },
+    {
+      "path": "src/workers/dal/operational-spine-store.ts",
+      "source_blob": "e287899f4459355a42a8a4c71568d7e2b1f413b2"
+    },
+    {
+      "path": "src/workers/dal/operations-store.ts",
+      "source_blob": "1e5c03d823e4336d7ab18a4d6f17f62c0166f696"
+    },
+    {
+      "path": "src/workers/dal/plan-entities-facade.ts",
+      "source_blob": "7038407caedd07d97c89ff6df0b32d931993a14b"
+    },
+    {
+      "path": "src/workers/dal/plan-store.ts",
+      "source_blob": "67ecff23631e56e2f3ca7c85030389b001df9540"
+    },
+    {
+      "path": "src/workers/dal/pmf-store.ts",
+      "source_blob": "6844f88a909f9001d467975351b019dd02b7e611"
+    },
+    {
+      "path": "src/workers/dal/principal-adapter.ts",
+      "source_blob": "58ec44af30851c2947e819b4657ba99a901390b3"
+    },
+    {
+      "path": "src/workers/dal/principal-hydration.ts",
+      "source_blob": "10790896990792e9c2c41a3b30a42a60decfd175"
+    },
+    {
+      "path": "src/workers/dal/project-store.ts",
+      "source_blob": "74768a76383662df408bd3aa042b3f51dac16776"
+    },
+    {
+      "path": "src/workers/dal/prompt-tags-store.ts",
+      "source_blob": "2caee4d5bbb83e46c2860fca31f258b806bfb6ac"
+    },
+    {
+      "path": "src/workers/dal/propagation-store.ts",
+      "source_blob": "09de07f97b710814b902956ec73773bacaa8899c"
+    },
+    {
+      "path": "src/workers/dal/reclassify-store.ts",
+      "source_blob": "bfb10467dbdc6f584dfe7579f6a6d4375dcb8d25"
+    },
+    {
+      "path": "src/workers/dal/roadmap-store.ts",
+      "source_blob": "214486c08347e6016cc98e08bb31c564485f0444"
+    },
+    {
+      "path": "src/workers/dal/role-skill-resolution-store.ts",
+      "source_blob": "af6f23b829cc21c91520a7e474f5b68d88dfc779"
+    },
+    {
+      "path": "src/workers/dal/session-preferences-facade.ts",
+      "source_blob": "b6ec3e88df805994f4180cf087208644b8797dbe"
+    },
+    {
+      "path": "src/workers/dal/session-preferences-store.ts",
+      "source_blob": "21e7fb1404463ec107685353ae7c0a22fd6be1c1"
+    },
+    {
+      "path": "src/workers/dal/session-store.ts",
+      "source_blob": "8ee53743067032864d0f2b10531851c7695c0835"
+    },
+    {
+      "path": "src/workers/dal/shared-helpers.ts",
+      "source_blob": "82d173d4e3c2f9168d007a068369e2bd7dbabee8"
+    },
+    {
+      "path": "src/workers/dal/source-store.ts",
+      "source_blob": "c0bd2a8ca45ce921dfb3a60285ef1fde4c965698"
+    },
+    {
+      "path": "src/workers/dal/synthetic-domain-identity.ts",
+      "source_blob": "4a4ddd1b46c3f8f1f7acb2292f7065af346a1531"
+    },
+    {
+      "path": "src/workers/dal/synthetic-domain-store.ts",
+      "source_blob": "ee0f4fcdc2932acc2b53672c6c6248700debd2d5"
+    },
+    {
+      "path": "src/workers/dal/template-policy-methods.ts",
+      "source_blob": "816b6f46dfa0ea2a8e6399b52c94393273e3fbea"
+    },
+    {
+      "path": "src/workers/dal/template-policy-store.ts",
+      "source_blob": "fdc90289d69bedfc49269bf067dcad2ee1342f09"
+    },
+    {
+      "path": "src/workers/dal/types.ts",
+      "source_blob": "8ea1bccea9c23c2512dbee3a32ea973e96f32252"
+    },
+    {
+      "path": "src/workers/dal/types/access.ts",
+      "source_blob": "5995ee37351e9f80e116853c15d0edfb6b7bda03"
+    },
+    {
+      "path": "src/workers/dal/types/auth.ts",
+      "source_blob": "1d476f8c80b24830a546ab77275d48f98fa4422c"
+    },
+    {
+      "path": "src/workers/dal/types/event.ts",
+      "source_blob": "c399884dc3097ea1a40b180bb8aed24ae6847718"
+    },
+    {
+      "path": "src/workers/dal/types/identity.ts",
+      "source_blob": "f9edf12815cd864991a65a673aab19666976674a"
+    },
+    {
+      "path": "src/workers/dal/types/inference.ts",
+      "source_blob": "0b9167634ca1135bdac0ba5e5f4c018684655bb3"
+    },
+    {
+      "path": "src/workers/dal/types/investor.ts",
+      "source_blob": "7f65eec4eae4181f4011d93006286e77396db7dc"
+    },
+    {
+      "path": "src/workers/dal/types/oauth.ts",
+      "source_blob": "cadf3a0ee4f9cb971a99f83bf1fc4ee633e02103"
+    },
+    {
+      "path": "src/workers/dal/types/operational-spine.ts",
+      "source_blob": "1c2081a578b0e29a717c96f12a192eeb9b6e320e"
+    },
+    {
+      "path": "src/workers/dal/types/plan-entity.ts",
+      "source_blob": "2cbb3499cb212f655413236a742ae0ba52881f39"
+    },
+    {
+      "path": "src/workers/dal/types/planning.ts",
+      "source_blob": "3ccaaf17c355be38026899b78c020ccdbe756f75"
+    },
+    {
+      "path": "src/workers/dal/types/project-source.ts",
+      "source_blob": "3da6317c0efbec9f61561959c73417ca5429a95c"
+    },
+    {
+      "path": "src/workers/dal/types/propagation.ts",
+      "source_blob": "23644c4e87a3fb97aaf65c1663d75a959dcaec1d"
+    },
+    {
+      "path": "src/workers/dal/types/synthetic-domain.ts",
+      "source_blob": "5eec1ae4886d49836d4adecc085a52b332b29930"
+    },
+    {
+      "path": "src/workers/dal/types/template-policy.ts",
+      "source_blob": "f261841b75d7defbe336a8fb00eff9157dd291f8"
+    },
+    {
+      "path": "src/workers/dal/types/xcp-identity-contracts.ts",
+      "source_blob": "81e0b967fa258917ab6d55c3294419db8489d0e4"
+    },
+    {
+      "path": "src/workers/dal/unified-store.ts",
+      "source_blob": "0ac75976980387db9ecf470e0f1b7edcf26f4335"
+    },
+    {
+      "path": "src/workers/dal/usage-store.ts",
+      "source_blob": "5a39689f969d81534a36cdf4fc5c14a208bbffc0"
+    },
+    {
+      "path": "src/workers/dal/user-store.ts",
+      "source_blob": "cc715065547dd4d6ff3372eaedb244d85aa0f3b4"
+    },
+    {
+      "path": "src/workers/dal/visibility.ts",
+      "source_blob": "60b7fb0e91f3af9fd612580566c42670d6ad4639"
+    },
+    {
+      "path": "src/workers/dal/workspace-activity-store.ts",
+      "source_blob": "036338e1dae972f464bf2ef3eedb613bd8307db4"
+    },
+    {
+      "path": "src/workers/dal/workspace-member-facade.ts",
+      "source_blob": "606f2297bdae954a85a14bcd530a5f776ed9e8d7"
+    },
+    {
+      "path": "src/workers/dal/workspace-member-store.ts",
+      "source_blob": "67f3e696ccd0f44541f718f679f9d990a3855368"
+    },
+    {
+      "path": "src/workers/dal/workspace-store.ts",
+      "source_blob": "e314628487146064b2c5efae9540a53568872476"
+    },
+    {
+      "path": "src/workers/db/client.ts",
+      "source_blob": "50115639f7fd1df8e944e493843dd998d0c8cfba"
+    },
+    {
+      "path": "src/workers/db/migrations/001_init.sql",
+      "source_blob": "47b31a4d7474f9cb669fe1244bdffb1ffa4379f8"
+    },
+    {
+      "path": "src/workers/db/migrations/002_entitlement_gate.sql",
+      "source_blob": "c53ba4503e295d9d9dc39dcc051066b6dfc852fa"
+    },
+    {
+      "path": "src/workers/db/migrations/003_project_scope_binding.sql",
+      "source_blob": "6365e48f20a09940f5f80d2c79534e3f5167758c"
+    },
+    {
+      "path": "src/workers/db/migrations/004_project_nesting.sql",
+      "source_blob": "8375d60e08a1183e6c0ec96562d514bdb1c28062"
+    },
+    {
+      "path": "src/workers/db/migrations/005_synthetic_domains.sql",
+      "source_blob": "de94dd4189c3714ad69882ffc7a8ea6eba30f2b6"
+    },
+    {
+      "path": "src/workers/db/migrations/006_synthetic_domain_planning.sql",
+      "source_blob": "a469f931ab4847f8a581bbe16987dd6a76b9e86e"
+    },
+    {
+      "path": "src/workers/db/migrations/007_propagation_engine.sql",
+      "source_blob": "071291a5a1e41487b13754bd6d63c39d490ad9c2"
+    },
+    {
+      "path": "src/workers/db/migrations/008_user_source_connections.sql",
+      "source_blob": "84cc7511975111ea6bcbfd26e4a2c00a224f1be5"
+    },
+    {
+      "path": "src/workers/db/migrations/009_lem_v4_inference_audit.sql",
+      "source_blob": "a630ecaea7269f9ca12f68f7fe02f87580d869ec"
+    },
+    {
+      "path": "src/workers/db/migrations/010_lem_v4_detector_config_seed.sql",
+      "source_blob": "19597f3e87a291c5ae111a038858430e81bb8dbe"
+    },
+    {
+      "path": "src/workers/db/migrations/011_personal_life_seed.sql",
+      "source_blob": "0d69e7b75d88446b50d765c31855cf27e91195ef"
+    },
+    {
+      "path": "src/workers/db/migrations/012_operator_layout.sql",
+      "source_blob": "87b3324cc7e4f7d5af2c9d85f12971deb4b8b7c7"
+    },
+    {
+      "path": "src/workers/db/migrations/013_operations_live_stream_snapshots.sql",
+      "source_blob": "01960b3a79fc68afafeaa85b09d7e346d83ed87f"
+    },
+    {
+      "path": "src/workers/db/migrations/014_operation_events_domain.sql",
+      "source_blob": "6eafdeb7e5c95cefbdd330ef9668b24eb1ab1723"
+    },
+    {
+      "path": "src/workers/db/migrations/015_synthetic_domain_derivation_identity.sql",
+      "source_blob": "bcd89473bdda0aa60eba42a3b4cf6fed716399ac"
+    },
+    {
+      "path": "src/workers/db/migrations/016_project_source_bindings.sql",
+      "source_blob": "8454e6fa50c9cfc965a2e2729942e874e15d2104"
+    },
+    {
+      "path": "src/workers/db/migrations/017_user_source_connections_schema_realign.sql",
+      "source_blob": "c4928d35aac909fbdb93951d2ff3131d93a957fa"
+    },
+    {
+      "path": "src/workers/db/migrations/018_customer_registration.sql",
+      "source_blob": "dbadafe057c9ea4a8fa5d8456701d59c2edeb3b4"
+    },
+    {
+      "path": "src/workers/db/migrations/019_pmf_responses.sql",
+      "source_blob": "5ae253fed4e3ce8487afb43eed8e88f9a6d80eca"
+    },
+    {
+      "path": "src/workers/db/migrations/020_cockpit_chat_threads.sql",
+      "source_blob": "438f0784edbf443b7aa4b23b5c52e56609093ae7"
+    },
+    {
+      "path": "src/workers/db/migrations/021_governance_audit.sql",
+      "source_blob": "99de3931c5a50b6772c73ca1fadfb991038a8325"
+    },
+    {
+      "path": "src/workers/db/migrations/022_operations_unified.sql",
+      "source_blob": "56985f8c28c172cb4acd0b6052449d8c0b1491da"
+    },
+    {
+      "path": "src/workers/db/migrations/023_first_class_intents.sql",
+      "source_blob": "c71b57a24fc7ce2ee3879bde86930fdc3134d410"
+    },
+    {
+      "path": "src/workers/db/migrations/024_usage_events.sql",
+      "source_blob": "1d08b8058e2e7a324f346211788308b3d1267ae3"
+    },
+    {
+      "path": "src/workers/db/migrations/025_prompt_tags.sql",
+      "source_blob": "c403a01aa6b3f620ba8fb9e2930c9b7c27941c5a"
+    },
+    {
+      "path": "src/workers/db/migrations/026_folder_source.sql",
+      "source_blob": "ce1af17c9efc05aceb8898c290175bbc7a37ecec"
+    },
+    {
+      "path": "src/workers/db/migrations/027_folder_binding_fk.sql",
+      "source_blob": "b1a9cadcbb342b3a65ba184ac98a99a46e7b2a91"
+    },
+    {
+      "path": "src/workers/db/migrations/028_synthetic_domain_source_context.sql",
+      "source_blob": "9e219e8819106af89a43deefdf801d63fa6f44e3"
+    },
+    {
+      "path": "src/workers/db/migrations/029_graph_snapshots.sql",
+      "source_blob": "816f757dd7a018dcdc84287885d9150ad361c1fa"
+    },
+    {
+      "path": "src/workers/db/migrations/030_decisions.sql",
+      "source_blob": "20b0f5037408b5decc2e2f5df903619b4fa62090"
+    },
+    {
+      "path": "src/workers/db/migrations/031_intent_enrichments.sql",
+      "source_blob": "48ba15cce3a585f205c7e1d8d4ded8524665a544"
+    },
+    {
+      "path": "src/workers/db/migrations/032_event_threading.sql",
+      "source_blob": "9ade14d31539da2ca31e1a910afab394703d16eb"
+    },
+    {
+      "path": "src/workers/db/migrations/033_project_source_domain_link.sql",
+      "source_blob": "f2fd786ccbffde494da9b0874d117176b19e8c3f"
+    },
+    {
+      "path": "src/workers/db/migrations/034_operational_spine_rls_phase2.sql",
+      "source_blob": "0adbad6a7d9c550fb34f1d1dc4661f23bb835e64"
+    },
+    {
+      "path": "src/workers/db/migrations/035_template_policy_registry.sql",
+      "source_blob": "ede91263f7ab711a9ecbbb381e0a51645fe0e816"
+    },
+    {
+      "path": "src/workers/db/migrations/036_customer_learning_personalization.sql",
+      "source_blob": "5a611fab35bb65595b895847b819358cdc58793b"
+    },
+    {
+      "path": "src/workers/db/migrations/037_customer_api_tokens.sql",
+      "source_blob": "edbb1951a9a2d7dbad04373b5d1726d7fee15363"
+    },
+    {
+      "path": "src/workers/db/migrations/037_rls_app_role.sql",
+      "source_blob": "63bf8a5c089cd869eb05f6543d43c2b4019374fc"
+    },
+    {
+      "path": "src/workers/db/migrations/038_documents.sql",
+      "source_blob": "e6ad52836f9765dcf1d8736b12f24060ed61df9f"
+    },
+    {
+      "path": "src/workers/db/migrations/039_gmail_source.sql",
+      "source_blob": "d16ddbba3749ed4856f1d1dfee9692dd4436131b"
+    },
+    {
+      "path": "src/workers/db/migrations/040_outlook_source.sql",
+      "source_blob": "640ece4ac4cce6daeae254d180b7fe0408c7783c"
+    },
+    {
+      "path": "src/workers/db/migrations/041_operation_events_source_tool_document_upload.sql",
+      "source_blob": "db33c4865e85f349e61a9a706a5ed6601a1e395d"
+    },
+    {
+      "path": "src/workers/db/migrations/042_operation_events_append_only_trigger.sql",
+      "source_blob": "debf3faed524460dfa95b8cd3cd6372e4ec674a6"
+    },
+    {
+      "path": "src/workers/db/migrations/043_operation_events_rls.sql",
+      "source_blob": "edfba873dfcc5884133ffd203afe075d70dc0035"
+    },
+    {
+      "path": "src/workers/db/migrations/044_customer_recoverability_soft_delete.sql",
+      "source_blob": "88eb8e002eb571c14d66786e70c94412c1ac4422"
+    },
+    {
+      "path": "src/workers/db/migrations/045_projects_rls.sql",
+      "source_blob": "b7a46a4200dce4454b2693674ed96bcb5a433ed5"
+    },
+    {
+      "path": "src/workers/db/migrations/046_documents_rls.sql",
+      "source_blob": "c5c5f28a7f34346c9a32db5c56bedc94732766ac"
+    },
+    {
+      "path": "src/workers/db/migrations/047_board_cards_source_bindings_rls.sql",
+      "source_blob": "0efb723d0c5450dad0220f68a07f5795d16466dc"
+    },
+    {
+      "path": "src/workers/db/migrations/048_audit_session_target_types.sql",
+      "source_blob": "b9e54dd101ce3ef0911018f740726d1f89938058"
+    },
+    {
+      "path": "src/workers/db/migrations/049_documents_admissibility.sql",
+      "source_blob": "9574ad7905e00f363ec55121c56dafb01286a4de"
+    },
+    {
+      "path": "src/workers/db/migrations/050_principal_instrument_lineage.sql",
+      "source_blob": "b6851cdf251516ed53191dea0babd3fabe8e590c"
+    },
+    {
+      "path": "src/workers/db/migrations/051_documents_version_chain.sql",
+      "source_blob": "018b623d098db2c6e1f3146afb8f64bc3b2b3976"
+    },
+    {
+      "path": "src/workers/db/migrations/052_user_session_preferences.sql",
+      "source_blob": "27d5aff966eaff05a249904268ba003ab68cb3ca"
+    },
+    {
+      "path": "src/workers/db/migrations/053_model_runtimes.sql",
+      "source_blob": "6df0a613371a0c80fa0e16114035f26fae0e2db3"
+    },
+    {
+      "path": "src/workers/db/migrations/054_customer_entitlements_workspace_grain.sql",
+      "source_blob": "49a5c489a6263904af8e41e1ee6e1f4915d6d054"
+    },
+    {
+      "path": "src/workers/db/migrations/055_customer_entitlements_role_backfill.sql",
+      "source_blob": "19f49e1aac6100545e54acdbeb4255d78bf99c6a"
+    },
+    {
+      "path": "src/workers/db/migrations/056_session_mode_operator_backfill.sql",
+      "source_blob": "df4f98880e0a6bb507deb9f60ef9b771f187592a"
+    },
+    {
+      "path": "src/workers/db/migrations/057_tool_events_spine_link.sql",
+      "source_blob": "015cf2a198a4c59b16008b36330ab48c493b14fc"
+    },
+    {
+      "path": "src/workers/db/migrations/058_chat_receipt_grounding.sql",
+      "source_blob": "9dbcc40313f383726a156a6e70f34dba6b2784b9"
+    },
+    {
+      "path": "src/workers/db/migrations/059_document_access_log.sql",
+      "source_blob": "17c81e80456c98950b5990196da6fd8b99a6800e"
+    },
+    {
+      "path": "src/workers/db/migrations/060_customer_entitlements_lifecycle_columns.sql",
+      "source_blob": "6805a68e3539a6c579b76c65c57a61b2627bf263"
+    },
+    {
+      "path": "src/workers/db/migrations/061_feedback.sql",
+      "source_blob": "ee7fabcdba32a69241d17b9a94b0960e571604d6"
+    },
+    {
+      "path": "src/workers/db/migrations/062_workspace_member_soft_remove.sql",
+      "source_blob": "9ab185654f9a4afa69cfe69f24ea3e991639ed52"
+    },
+    {
+      "path": "src/workers/db/migrations/063_mcp_access_log.sql",
+      "source_blob": "cc5b26f4eb7c9dd625bde353d41641436afd47e4"
+    },
+    {
+      "path": "src/workers/db/migrations/064_llm_usage_log.sql",
+      "source_blob": "4a1bc71b8264668bdef29d01a65537539e733657"
+    },
+    {
+      "path": "src/workers/db/migrations/065_idempotency_keys.sql",
+      "source_blob": "7cecf38a52fe5ff259ae01f89a032ef79c6cf0c2"
+    },
+    {
+      "path": "src/workers/db/migrations/066_plan_entities.sql",
+      "source_blob": "c0eb3a8ae2f12a18c39c1238428b6a275390a734"
+    },
+    {
+      "path": "src/workers/db/migrations/067_user_source_connection_read_policy.sql",
+      "source_blob": "1650219394757ef05bb7d57aae1f38dd4fba879c"
+    },
+    {
+      "path": "src/workers/db/migrations/068_plan_hierarchy_repair.sql",
+      "source_blob": "8fdf3982723bc2b80e58c22d3153ab501797f47c"
+    },
+    {
+      "path": "src/workers/db/migrations/069_smart_er_goal_schema.sql",
+      "source_blob": "b0e7ea3ecda4a1d6c46e5d6ae35ab0c732584e82"
+    },
+    {
+      "path": "src/workers/db/migrations/070_role_skill_evidence_plane.sql",
+      "source_blob": "93057409271b27301ff7b39daaf9917f56387a5a"
+    },
+    {
+      "path": "src/workers/db/migrations/071_context_packets.sql",
+      "source_blob": "6a6bf2ff417beff4b4464537c0441ae5a465a621"
+    },
+    {
+      "path": "src/workers/db/migrations/072_heartbeat_plane.sql",
+      "source_blob": "72055bcad54fed009e5874a614b9a8a47baace76"
+    },
+    {
+      "path": "src/workers/db/migrations/README.md",
+      "source_blob": "f07875c2a7d577288f47a022061212ef002c1462"
+    },
+    {
+      "path": "src/workers/db/seed/README.md",
+      "source_blob": "ed7392a0625350df88ebfec5da4c85bba2d70541"
+    },
+    {
+      "path": "src/workers/db/seed/customer-template.sql",
+      "source_blob": "45e9f81fe0b78216601268b287e57772479c753b"
+    },
+    {
+      "path": "src/workers/db/seed/mbp-domain-catalog-expand.sql",
+      "source_blob": "088cf64ecd1321c7269b858da7a69ec6cb4f51bf"
+    },
+    {
+      "path": "src/workers/db/seed/operator-mbp-projects.sql",
+      "source_blob": "204894fd9e736ed1e522be2036ce74ad63b0bf8f"
+    },
+    {
+      "path": "src/workers/graph/data-graph.ts",
+      "source_blob": "d87628624bd3901b87c1874b86c1ce3dab10903e"
+    },
+    {
+      "path": "src/workers/graph/persist-data-graph.ts",
+      "source_blob": "81d4b07cea8fff149591ce601146f5c1f74d1fc8"
+    },
+    {
+      "path": "src/workers/index.ts",
+      "source_blob": "9c1c5743e7642ba47992780e5f0f9c41017f9d62"
+    },
+    {
+      "path": "src/workers/inference/composite-evidence-score.ts",
+      "source_blob": "14e37c35ce83f65852c309a05011c4e36dd29063"
+    },
+    {
+      "path": "src/workers/inference/detector-engine.ts",
+      "source_blob": "d688875568daef06941eeb9b14d0f1ce1a71e595"
+    },
+    {
+      "path": "src/workers/inference/signals/behavioral/actor_co_occurrence.ts",
+      "source_blob": "7cd6599cb5e477f3dd7637357da2ec62dfe53b45"
+    },
+    {
+      "path": "src/workers/inference/signals/behavioral/artifact_cross_reference.ts",
+      "source_blob": "17f4e80223dbd2f3ae16d0eb6f9f0f65787d08f6"
+    },
+    {
+      "path": "src/workers/inference/signals/behavioral/dwell_concentration.ts",
+      "source_blob": "bc9a9db2ab17906f3c3c2cb83691e44a0136a66c"
+    },
+    {
+      "path": "src/workers/inference/signals/behavioral/sequence_pattern.ts",
+      "source_blob": "e56d4b6b62f06cb97becf2fb57ff655b4ba6e1ee"
+    },
+    {
+      "path": "src/workers/inference/signals/behavioral/temporal_co_occurrence.ts",
+      "source_blob": "01e3bc3a2b785acf25ae2bd52f692463bfdffd9d"
+    },
+    {
+      "path": "src/workers/inference/signals/goal/rollup_alignment.ts",
+      "source_blob": "5984aab185dcc97bb7c3cac28f724bd91caf43db"
+    },
+    {
+      "path": "src/workers/inference/signals/goal/stated_goal_keyword_overlap.ts",
+      "source_blob": "563e095d56e60e8bf7c55066a49aba5e433b59ee"
+    },
+    {
+      "path": "src/workers/inference/signals/index.ts",
+      "source_blob": "d9bba4178398b0cd60a09c3e69b29b81cf246400"
+    },
+    {
+      "path": "src/workers/inference/signals/semantic/embedding_similarity.ts",
+      "source_blob": "c3fa81279a1bbd1d838b0cfb0a0fd38a33a98e72"
+    },
+    {
+      "path": "src/workers/inference/signals/semantic/intent_keyword_density.ts",
+      "source_blob": "0550ba7d8dee33381e27ec915407acba5ed968fa"
+    },
+    {
+      "path": "src/workers/inference/signals/semantic/keyword_co_occurrence.ts",
+      "source_blob": "2ad93d4e32ab4ae7a8abf9dfb19f33bfa23e54c3"
+    },
+    {
+      "path": "src/workers/inference/signals/semantic/tag_overlap.ts",
+      "source_blob": "088dd39246073950aa66f3ec08828c15e7934398"
+    },
+    {
+      "path": "src/workers/inference/signals/structural/actor_jaccard.ts",
+      "source_blob": "56aea3cba1cd4223210d7fb4e964a493ca9fc0af"
+    },
+    {
+      "path": "src/workers/inference/signals/structural/membership_overlap.ts",
+      "source_blob": "b7b6619e314d8cc34d8326e403db21cfdb31410c"
+    },
+    {
+      "path": "src/workers/inference/signals/structural/parent_distance.ts",
+      "source_blob": "48e29980aa1a9a160297b7c539e7e7f571355043"
+    },
+    {
+      "path": "src/workers/inference/signals/types.ts",
+      "source_blob": "3ab07be92345bb8d01feb94a3878ff3903c540ef"
+    },
+    {
+      "path": "src/workers/lib/__tests__/classify-body-of-work.test.ts",
+      "source_blob": "4d2447d016905152a57039a1d245e7d087a10d70"
+    },
+    {
+      "path": "src/workers/lib/actor-lineage.ts",
+      "source_blob": "2694b770daa8ffe9c7c074d8d74778cf990cd52f"
+    },
+    {
+      "path": "src/workers/lib/admissibility.ts",
+      "source_blob": "2e1b1275dba7f7028102dd6cbbb60610f812d170"
+    },
+    {
+      "path": "src/workers/lib/allowed-actions.ts",
+      "source_blob": "6e1bc9df6d562f4caa844e3c92016f03baac1e42"
+    },
+    {
+      "path": "src/workers/lib/audit-export.ts",
+      "source_blob": "ce3f30564d29e38c8a1d64a80ab4a45ae28b379c"
+    },
+    {
+      "path": "src/workers/lib/bridge-parity.ts",
+      "source_blob": "0f6202a2ff22f4eb378b2479b676905f7f1c6135"
+    },
+    {
+      "path": "src/workers/lib/classify-body-of-work.ts",
+      "source_blob": "191ac1d129aeb6de92b6192814b6c348b9160c1d"
+    },
+    {
+      "path": "src/workers/lib/completion-contract.ts",
+      "source_blob": "34c517a5eae0d6cb3a6bcea2809607ecb09ae671"
+    },
+    {
+      "path": "src/workers/lib/connector-registry.ts",
+      "source_blob": "822007227eb02ed54f7cd28eb7a28dd5c3decf57"
+    },
+    {
+      "path": "src/workers/lib/context-packet.ts",
+      "source_blob": "e1855847dc75b5db4052ac457ca17a95d41793c3"
+    },
+    {
+      "path": "src/workers/lib/cron-observability.ts",
+      "source_blob": "5c26805cf4f4c33ddacdc53f1974db19a60a2a57"
+    },
+    {
+      "path": "src/workers/lib/customer-safe-decision.ts",
+      "source_blob": "1b38de23cd68ea38fd8bcf7ec3edc4e707038ec0"
+    },
+    {
+      "path": "src/workers/lib/document-store.ts",
+      "source_blob": "3affb9095d96eabd4787de2c11a65abf0cdab513"
+    },
+    {
+      "path": "src/workers/lib/env-flag.ts",
+      "source_blob": "e5cf907f0eb6dce9fe90fdbb0e9b1a6a8cc3742c"
+    },
+    {
+      "path": "src/workers/lib/event-validation.ts",
+      "source_blob": "5c789285c8802d177357bb7a9d1ea75c4deede33"
+    },
+    {
+      "path": "src/workers/lib/heartbeat.ts",
+      "source_blob": "9e53065c43d1dd73ee8f90d7edba9d11c42e6717"
+    },
+    {
+      "path": "src/workers/lib/idempotency.ts",
+      "source_blob": "dc5975cb081c266223bdad4b1c45b3abe1b138e6"
+    },
+    {
+      "path": "src/workers/lib/infer-source-context.ts",
+      "source_blob": "5283105e921602ccf9bc5b9fecc4ace7197be91b"
+    },
+    {
+      "path": "src/workers/lib/mbp-projection-live-rail.ts",
+      "source_blob": "f0b5bc0161a37bdcdeacbd27460df4404a67699e"
+    },
+    {
+      "path": "src/workers/lib/model-runtime-crypto.ts",
+      "source_blob": "36526b476872324b7b73fa2eaf69404e61a16c50"
+    },
+    {
+      "path": "src/workers/lib/observability.ts",
+      "source_blob": "8f8f2780b8d57ed9b114d01b9603e83e01767dd0"
+    },
+    {
+      "path": "src/workers/lib/operator-workspace-scope.ts",
+      "source_blob": "c7be582e2169ad7cbcdda37254b0a397e91f3f12"
+    },
+    {
+      "path": "src/workers/lib/permissions.ts",
+      "source_blob": "4be5ff7d1314d5b4e29b821493ecea682f33020e"
+    },
+    {
+      "path": "src/workers/lib/policy-shadow.ts",
+      "source_blob": "d4e6efca40284e1e1675f1184e2732605c0d9ce8"
+    },
+    {
+      "path": "src/workers/lib/response-envelope.ts",
+      "source_blob": "146a5cf8729970f390c11d66c18d657edb6c0aea"
+    },
+    {
+      "path": "src/workers/lib/role-skill-catalog-loader.ts",
+      "source_blob": "b79a6210f30bc62ecea3a6b7ad74dcb81e33ee90"
+    },
+    {
+      "path": "src/workers/lib/role-skill-resolver.ts",
+      "source_blob": "2b5f9ee863947d93fb2f1a8ba03be97945b6cc3f"
+    },
+    {
+      "path": "src/workers/lib/role-skill-shadow.ts",
+      "source_blob": "db8cb274dd5877ba7f0927bd714aad81ec2865d9"
+    },
+    {
+      "path": "src/workers/lib/self-service.ts",
+      "source_blob": "94f9138eaa6fc071e3d2146f22d361b1745ae87a"
+    },
+    {
+      "path": "src/workers/lib/spine-authority.ts",
+      "source_blob": "2bcd522212de61f27637ed0d3ec387109722f0cc"
+    },
+    {
+      "path": "src/workers/lib/workspace-gates.ts",
+      "source_blob": "e6e33f98876a8d7536eb77d31c5904865c9fe0cf"
+    },
+    {
+      "path": "src/workers/middleware/admin.ts",
+      "source_blob": "d8149890863e861980734fd024a76215c5627768"
+    },
+    {
+      "path": "src/workers/middleware/auth.ts",
+      "source_blob": "330b75cfc07960571cddb5eee12107d9a8fb20d8"
+    },
+    {
+      "path": "src/workers/middleware/cors.ts",
+      "source_blob": "8cd7b96f44d680d19665cd4041cf43f39dfd0291"
+    },
+    {
+      "path": "src/workers/middleware/error.ts",
+      "source_blob": "53b4dec86f68e81a2ecc566c1374e9ba23081e05"
+    },
+    {
+      "path": "src/workers/middleware/rate-limit.ts",
+      "source_blob": "b28ca9f46f901afc8c04b6eb8259fa8a1285364c"
+    },
+    {
+      "path": "src/workers/middleware/request-guards.ts",
+      "source_blob": "5f18249d0aba5c158e516324e551e2064bc5d2bc"
+    },
+    {
+      "path": "src/workers/middleware/security-headers.ts",
+      "source_blob": "6722206b64be183ffe7f99093a43cb6c474a0f40"
+    },
+    {
+      "path": "src/workers/routes/activity-webhook.ts",
+      "source_blob": "e6ee6bbf6ee98159054ada33df872cba91d2eef6"
+    },
+    {
+      "path": "src/workers/routes/admin.ts",
+      "source_blob": "5fe9b416636f97c9f72939ca6bb7e6ef816c417e"
+    },
+    {
+      "path": "src/workers/routes/board-cards.ts",
+      "source_blob": "bb29c13668c965edf88e9631eb5af81eee8e308c"
+    },
+    {
+      "path": "src/workers/routes/chat-receipt.ts",
+      "source_blob": "dba0c2d7819538523dc0bbbad2a23a1fcb4a9496"
+    },
+    {
+      "path": "src/workers/routes/current-work.ts",
+      "source_blob": "0f8ce04c9e4c832a3389ae9427785b42807269f6"
+    },
+    {
+      "path": "src/workers/routes/customer-audit-log.ts",
+      "source_blob": "5049097ed81fb4591d68c635dbed7591bd86ac48"
+    },
+    {
+      "path": "src/workers/routes/customer-chat.ts",
+      "source_blob": "abdf9a84655911194c35695ac70244f0fea618d2"
+    },
+    {
+      "path": "src/workers/routes/customer-lineage.ts",
+      "source_blob": "74fbccad973fb2adc2de0be34b2f17c9b3feb8cd"
+    },
+    {
+      "path": "src/workers/routes/customer-workspace-feed.ts",
+      "source_blob": "840a14a37fec1ce2f907d8edc19b44666eb779c5"
+    },
+    {
+      "path": "src/workers/routes/customer.ts",
+      "source_blob": "1e1542c15f99db7fa0974986e9e5dad8c5393c30"
+    },
+    {
+      "path": "src/workers/routes/developer-access.ts",
+      "source_blob": "aa166dace5d74c4bb62a088d103d05afa77a6b57"
+    },
+    {
+      "path": "src/workers/routes/diagnose.ts",
+      "source_blob": "b93c70f879b432684fd239c655fc51d3797c7986"
+    },
+    {
+      "path": "src/workers/routes/documents.ts",
+      "source_blob": "cf4f810026872f5ef5c166ef6a68208c7808a672"
+    },
+    {
+      "path": "src/workers/routes/events.ts",
+      "source_blob": "ba8dd607c17dd0844cdbb747f89ec87fda434757"
+    },
+    {
+      "path": "src/workers/routes/feedback.ts",
+      "source_blob": "257d16d3871e9af1c62852661afdcf93cafddedd"
+    },
+    {
+      "path": "src/workers/routes/github-webhook.ts",
+      "source_blob": "92f674dd35c05e155bc847248d955371bee88d7e"
+    },
+    {
+      "path": "src/workers/routes/graph.ts",
+      "source_blob": "dbfd7e07bf2a6b3a02f128d5aa0a827dcef50e73"
+    },
+    {
+      "path": "src/workers/routes/health.ts",
+      "source_blob": "24e6781613f8bb2f07cdc1307f0c3295641a3609"
+    },
+    {
+      "path": "src/workers/routes/investor.ts",
+      "source_blob": "db5b1e8ce25536c7059c926c8c7024967f9a97ad"
+    },
+    {
+      "path": "src/workers/routes/layout.ts",
+      "source_blob": "6e1958fe20d526f6dbbfaa1f88b597900cf4fede"
+    },
+    {
+      "path": "src/workers/routes/llm-usage.ts",
+      "source_blob": "77e89fd21e3ce1b45b007b9d6aeeeaabc99c20c1"
+    },
+    {
+      "path": "src/workers/routes/mbp-projection.ts",
+      "source_blob": "ee47249f5e76d2f282a6f3f698edd19701e04b2d"
+    },
+    {
+      "path": "src/workers/routes/mcp-customer-reads.ts",
+      "source_blob": "9e4aa3a3af8a10dbe60b0e99b1ecb777473977fb"
+    },
+    {
+      "path": "src/workers/routes/mcp-gateway.ts",
+      "source_blob": "ede4a4ff2f9f1182de24458a149e83c10f195193"
+    },
+    {
+      "path": "src/workers/routes/mcp-rpc.ts",
+      "source_blob": "e491025d38f6f6846f669cf2c117fc05c035a917"
+    },
+    {
+      "path": "src/workers/routes/members.ts",
+      "source_blob": "75b7f6ab4f54f956dce69f3d4ce45e1da6f1da9c"
+    },
+    {
+      "path": "src/workers/routes/model-runtimes.ts",
+      "source_blob": "348e015e3f0cc872aba7399f3178f8bc4ebaf714"
+    },
+    {
+      "path": "src/workers/routes/operational-spine.ts",
+      "source_blob": "6b9d59c89bda3e5f4173fc6922aa2bd807faa829"
+    },
+    {
+      "path": "src/workers/routes/plan.ts",
+      "source_blob": "f7c48ef610bdce2de6d7e8a66e1d59aada9c774e"
+    },
+    {
+      "path": "src/workers/routes/pmf.ts",
+      "source_blob": "16dd2176ce671488e0344475e19e851b680468a6"
+    },
+    {
+      "path": "src/workers/routes/profile.ts",
+      "source_blob": "94ff17c64d0067584037277c64d2e458cfebb513"
+    },
+    {
+      "path": "src/workers/routes/projects.ts",
+      "source_blob": "7efd5c4eb21b6a27d4024001d05dcf2d54676127"
+    },
+    {
+      "path": "src/workers/routes/readiness.ts",
+      "source_blob": "bd04efbf643b0272c55fe1e4f15abcac928e9696"
+    },
+    {
+      "path": "src/workers/routes/request-access.ts",
+      "source_blob": "54a922ea44b408988c974655fae66be8aef66e1c"
+    },
+    {
+      "path": "src/workers/routes/session-mode.ts",
+      "source_blob": "8c1bc3f980a170e2261f0ed5d2b8bef3e5bb8c6b"
+    },
+    {
+      "path": "src/workers/routes/session.ts",
+      "source_blob": "5f376ae2eb421ec6eaeea9ba3ed094833532e382"
+    },
+    {
+      "path": "src/workers/routes/sign-offs.ts",
+      "source_blob": "694a5e8e14ae197f65ac3a08c4e34257709ecb89"
+    },
+    {
+      "path": "src/workers/routes/sources.ts",
+      "source_blob": "d530487be02f54710c620ae737b63bd8bb6b3e1d"
+    },
+    {
+      "path": "src/workers/routes/synthetic-domains.ts",
+      "source_blob": "dbc6c2bbbafa3932fc133dd75fae8da7d11e0751"
+    },
+    {
+      "path": "src/workers/routes/template-policy-registry.ts",
+      "source_blob": "0724802d7694f3e05e17003f07bfc3ded3c8315a"
+    },
+    {
+      "path": "src/workers/routes/workspace-upgrade.ts",
+      "source_blob": "c13cf5a915b71396edb3b4f832f9eafbde33a9aa"
+    },
+    {
+      "path": "src/workers/routes/workspaces.ts",
+      "source_blob": "0e7c4cca2bc4a30391d68755c7578b4f077da85e"
+    },
+    {
+      "path": "src/workers/sentry.ts",
+      "source_blob": "2b7114c2ae85eca189d86968dca6d95b4ea205ec"
+    },
+    {
+      "path": "src/workers/services/agent-digest.ts",
+      "source_blob": "4905b8201439952ec9231dcae713da9caaeb2de8"
+    },
+    {
+      "path": "src/workers/services/agent-roadmap.ts",
+      "source_blob": "e88066fe764a9af2e8494ef92cc4212d1e685812"
+    },
+    {
+      "path": "src/workers/services/chat-assembly-trace.ts",
+      "source_blob": "ab4acfc717d87596d01d4130b9ca83ef53194cbd"
+    },
+    {
+      "path": "src/workers/services/chat-graph-context.ts",
+      "source_blob": "784b56522b8974839aa465d18de5cf6196e116a7"
+    },
+    {
+      "path": "src/workers/services/clerk-org.ts",
+      "source_blob": "1c9c8a5c03a5889c02495536ae296446cb8d6d15"
+    },
+    {
+      "path": "src/workers/services/cockpit-chat.ts",
+      "source_blob": "bec620b973c893296e91cf81d21e350c2bbd0ebf"
+    },
+    {
+      "path": "src/workers/services/domain-archetypes.ts",
+      "source_blob": "06bb519a2327c90f7ba8f1e33d089950c960e89c"
+    },
+    {
+      "path": "src/workers/services/email-notifier.ts",
+      "source_blob": "157452b463d69b39630c1b7b2704a79e3626136f"
+    },
+    {
+      "path": "src/workers/services/enrichment-service.ts",
+      "source_blob": "f2f39ac19342e8e8443ec935d0929de6c5872ed0"
+    },
+    {
+      "path": "src/workers/services/onboarding-provisioner.ts",
+      "source_blob": "c4e0eea54e488e12c9c597f9a117a7a8ee1ba911"
+    },
+    {
+      "path": "src/workers/services/onboarding-roadmap.ts",
+      "source_blob": "dabd98ab6a588f0b19f21fe4fb9982f2028e17ff"
+    },
+    {
+      "path": "src/workers/services/operations-queue-consumer.ts",
+      "source_blob": "a0cbff122b6bca6e6baf8280b8629e27cd506f10"
+    },
+    {
+      "path": "src/workers/services/packet-enrichment.ts",
+      "source_blob": "2123077d93c3671df3e01ac96917c6fb3079f13a"
+    },
+    {
+      "path": "src/workers/services/policy-engine.ts",
+      "source_blob": "17f4fd4c8c926b406e8682a97af3b294e807a899"
+    },
+    {
+      "path": "src/workers/services/prompt-refine.ts",
+      "source_blob": "815c244221fafa0396da220e4607ffc088242534"
+    },
+    {
+      "path": "src/workers/services/review-scheduler.ts",
+      "source_blob": "553c3196938f663423fc499d431eec370724652d"
+    },
+    {
+      "path": "src/workers/services/role-scoped-context.ts",
+      "source_blob": "9e6d0c8285c7623a6a1a9f5ba30d4f4a719f9f38"
+    },
+    {
+      "path": "src/workers/services/scheduled-digest-sweep.ts",
+      "source_blob": "208bc100999467af0ae2c8db0d62780d6123ffb8"
+    },
+    {
+      "path": "src/workers/services/source-tier.ts",
+      "source_blob": "a440a58ba07ce0f430d30829f7d6ae710a21e9ae"
+    },
+    {
+      "path": "src/workers/services/source-truth-override.ts",
+      "source_blob": "e5f8bc62f03c068130b0eada1bf0948a970e95b1"
+    },
+    {
+      "path": "src/workers/services/turnstile.ts",
+      "source_blob": "81088604ea25b31e9602121d686e536fc609726e"
+    },
+    {
+      "path": "src/workers/sources/contract-enforcer.ts",
+      "source_blob": "ebe964c953354cda4a9271633346168cf6f7a434"
+    },
+    {
+      "path": "src/workers/sources/folder-pickers.ts",
+      "source_blob": "75d20e95a90184ba95ddfd15adc2ddde9c7ddbde"
+    },
+    {
+      "path": "src/workers/sources/folder-snapshot-core.ts",
+      "source_blob": "79058736e099ffe6d0554c28268f1cd7163a5229"
+    },
+    {
+      "path": "src/workers/sources/translators/dropbox.ts",
+      "source_blob": "204c9fc0e95c8d542b4e6a7f2eef9392d0912c57"
+    },
+    {
+      "path": "src/workers/sources/translators/folder.ts",
+      "source_blob": "8a1b43d6d66bba5d3d50cecef2dc5100e2ab4a3c"
+    },
+    {
+      "path": "src/workers/sources/translators/github.ts",
+      "source_blob": "f4cc418aacbe7887d947dc79872db1de567c5f44"
+    },
+    {
+      "path": "src/workers/sources/translators/gitlab.ts",
+      "source_blob": "8e8594295e7d2de819caa3fc2017dd48b7d96e99"
+    },
+    {
+      "path": "src/workers/sources/translators/gmail.ts",
+      "source_blob": "e7f1b707a9b3be2c9cffb93519c62e765e9b0c74"
+    },
+    {
+      "path": "src/workers/sources/translators/google_drive.ts",
+      "source_blob": "095e604ca3740a3847a89d2a78d2cb5ca6424588"
+    },
+    {
+      "path": "src/workers/sources/translators/index.ts",
+      "source_blob": "ec1d4e1aee57e0d3593b91edb5ef6410f8f01955"
+    },
+    {
+      "path": "src/workers/sources/translators/microsoft_onedrive.ts",
+      "source_blob": "eebc79d5379b37772f30ba827d45c6fe1a2ced02"
+    },
+    {
+      "path": "src/workers/sources/translators/outlook.ts",
+      "source_blob": "667d069bf761493dc33dd9bc6ab19bc4b2bfa002"
+    },
+    {
+      "path": "src/workers/sources/translators/types.ts",
+      "source_blob": "fb642f18986979da5e911c74014b259ab35d3f4d"
+    },
+    {
+      "path": "src/workers/telemetry.ts",
+      "source_blob": "a2ceaae910a25a3dc89169dc2f7f011687ce5473"
+    },
+    {
+      "path": "templates/customer-ecosystem-template/ONBOARDING.md",
+      "source_blob": "dbb8e10b47e6a880c6ebdbed8ea7e9aa643f2f4c"
+    },
+    {
+      "path": "templates/customer-ecosystem-template/README.md",
+      "source_blob": "e6ff29b8476a2438e40d2793bb5acb02114c887e"
+    },
+    {
+      "path": "templates/customer-ecosystem-template/activities/ACTIVITY_LOG.md",
+      "source_blob": "2683e3ff99193ad1ace657de9acd8f20488041ab"
+    },
+    {
+      "path": "templates/customer-ecosystem-template/domains/DOMAIN_REGISTRY.yml",
+      "source_blob": "cb5f070a9c52aaaa6cbfbec2b8176f4d63cf6bef"
+    },
+    {
+      "path": "templates/customer-ecosystem-template/goals/GOALS.md",
+      "source_blob": "337d173fb2b772018945e9425e0f842c1c842207"
+    },
+    {
+      "path": "templates/customer-ecosystem-template/governance/AI_TOOL_READINESS.md",
+      "source_blob": "057c0f4d33c735f077ee882f46dcd8e57fa3a8f3"
+    },
+    {
+      "path": "templates/customer-ecosystem-template/governance/PRIVACY_AND_CONSENT.md",
+      "source_blob": "2468ecc468f9d119271f3465d10b4f860ec3334b"
+    },
+    {
+      "path": "templates/customer-ecosystem-template/governance/ROLE_AND_INVITE_POLICY.md",
+      "source_blob": "6897191cc42c86a92899f8c9d2fe44613326d1f3"
+    },
+    {
+      "path": "templates/customer-ecosystem-template/identity/authority-and-consent.md",
+      "source_blob": "b66a47b434aa965f1988acbb13e3d6369f131c29"
+    },
+    {
+      "path": "templates/customer-ecosystem-template/identity/owner-and-roles.md",
+      "source_blob": "1e76b8dd7282ed11baba3ea2ba40839edf0c187b"
+    },
+    {
+      "path": "templates/customer-ecosystem-template/reports/CUSTOMER_HEALTH_VALUE_REALISATION_REPORT.md",
+      "source_blob": "940176444dd29a0b0c35765fbeab01d0bcb486d6"
+    },
+    {
+      "path": "templates/customer-ecosystem-template/retrospectives/ONBOARDING_LEARNINGS.md",
+      "source_blob": "baa039eec845d4edf05aa9bb36fafbf0cac462c3"
+    },
+    {
+      "path": "templates/customer-ecosystem-template/roadmap/ROADMAP.md",
+      "source_blob": "0372f861e4064e0ad2d289a5e8ba8fa63814fbfe"
+    },
+    {
+      "path": "templates/customer-ecosystem-template/sources/DO_NOT_INGEST.yml",
+      "source_blob": "ca763b98bcf051e2a4941404640aa4247925d1d4"
+    },
+    {
+      "path": "templates/customer-ecosystem-template/sources/SOURCE_REGISTER.yml",
+      "source_blob": "97c88bb7734ddc51009deadc69e022c4f352e457"
+    },
+    {
+      "path": "templates/customer-ecosystem-template/todos/TODOS.md",
+      "source_blob": "6bb3b3ee97ca03029f17bd2f048808d3479bf68a"
+    },
+    {
+      "path": "templates/customer-ecosystem-template/value/REALISATION_LEDGER.yml",
+      "source_blob": "240e202fd0b69144f76d8fa053142a1ddaa29a09"
+    },
+    {
+      "path": "templates/customer-ecosystem-template/workflows/workflow-opportunity-radar.md",
+      "source_blob": "650fd8f3a63da0ce5943729024831c518e529cc8"
+    },
+    {
+      "path": "tsconfig.workers.json",
+      "source_blob": "d390fbd640136067e8bfaf0e2574c20df8cfe8cd"
+    },
+    {
+      "path": "vitest.workers.config.ts",
+      "source_blob": "ce0ea5aa8dd57dbdc98f61d5d64a10510f926a74"
+    },
+    {
+      "path": "wrangler.jsonc",
+      "source_blob": "8ca0a281941e8916a5abcc5e88d9a744c56d3607"
+    },
+    {
+      "path": "wrangler.toml",
+      "source_blob": "a715d150a3783ab886b0af1264b1b9b36239929b"
+    }
+  ]
+}

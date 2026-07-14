@@ -1,0 +1,40 @@
+{
+  "schema_version": "xlooop.hosted_deployment_evidence.v1",
+  "last_updated": "2026-06-03",
+  "product": "Xlooop",
+  "technical_repo_name": "Xlooop-XCP-demo",
+  "canonical_deploy_surface": "cloudflare_pages_direct_upload",
+  "hosted_commit_artifact": "dist-cloudflare/deployment-manifest.json",
+  "local_evidence": "pass",
+  "hosted_evidence": "not_evidenced",
+  "remote_ci": "not_authoritative_cost_deferred",
+  "public_self_serve_readiness": "not_claimed",
+  "paid_private_operator": "operator_gated",
+  "xcp_second_level_access_default": "disabled",
+  "evidence_policy": "The Cloudflare bundle writes a deployment manifest with source commit and claim posture. Hosted evidence becomes pass only after a protected domain serves a manifest whose source_commit matches the expected commit.",
+  "environments": [
+    {
+      "environment": "dev",
+      "domain": "dev.xlooop.com",
+      "pages_project": "xlooop-dev",
+      "access_policy": "internal devs",
+      "served_commit_status": "not_evidenced",
+      "served_commit_sha": null
+    },
+    {
+      "environment": "test",
+      "domain": "test.xlooop.com",
+      "pages_project": "xlooop-test",
+      "access_policy": "named testers",
+      "served_commit_status": "not_evidenced",
+      "served_commit_sha": null
+    }
+  ],
+  "claim_posture": {
+    "static_commercial_demo": "go",
+    "controlled_pilot": "go_with_restrictions",
+    "public_self_serve_claim_allowed": false,
+    "paid_private_operator_claim_allowed_without_operator_decision": false,
+    "xlooop_access_grants_xcp": false
+  }
+}

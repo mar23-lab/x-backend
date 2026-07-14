@@ -1,0 +1,716 @@
+{
+  "run_kind": "autonomous_execution_program",
+  "run_contract_version": "v0.1.0",
+  "run_id": "run-260510-0018-xlooop-mbp-overnight",
+  "created_at": "2026-05-10T00:18:00+10:00",
+  "timezone": "Australia/Melbourne",
+  "approval_state": "owner_approved",
+  "owner_operator": "Marat Basyrov",
+  "timebox_hours": 8,
+  "runtime_controls": {
+    "keep_awake_required": true,
+    "keep_awake_command": "caffeinate -dimsu",
+    "morning_report_required": true,
+    "unattended_start_requires_final_owner_phrase": true
+  },
+  "roadmap_binding": {
+    "north_star_refs": [
+      "MB-P semantic/governance control plane",
+      "XCP-platform productised substrate target",
+      "Xlooop commercial product/company direction"
+    ],
+    "domain_roadmap_refs": [
+      "Xlooop-XCP-demo current product track",
+      "MB-P operational validation track",
+      "Xlooop operations UX track"
+    ],
+    "workstream_goal": "Make Xlooop-XCP-demo fully operational with MB-P ecosystem workflows, typed packet state, navigable UX, and recoverable autonomous execution.",
+    "dynamic_plan_refs": [
+      "specs/003-autonomous-execution-program/plan.md",
+      "docs/_archive/audits/260510_0018_xlooop-mbp-overnight-plan-c50.md"
+    ],
+    "drift_policy": "stop_on_parent_conflict"
+  },
+  "boundaries": {
+    "writable_repos": [
+      "Xlooop-XCP-demo"
+    ],
+    "read_only_repos": [
+      "MB-P"
+    ],
+    "forbidden_repos": [
+      "x-front",
+      "x-docs",
+      "XCP-platform",
+      "archives"
+    ],
+    "forbidden_actions": [
+      "archive",
+      "delete",
+      "move",
+      "copy_private_mbp_payload",
+      "mutate_ilmir_work",
+      "mutate_xcp_platform_contracts"
+    ],
+    "protected_data": [
+      "raw MB-P private notes",
+      "private owner records",
+      "Ilmir implementation IP",
+      "x-front source internals",
+      "x-docs protected drafts"
+    ]
+  },
+  "merge_policy": {
+    "mode": "local_authoritative_with_ci_classification",
+    "github_ci_required": false,
+    "github_ci_blocks_only_when": [
+      "real_failure_with_logs",
+      "security_scan_failure",
+      "branch_protection_required"
+    ],
+    "github_ci_does_not_block_when": [
+      "zero_step_runner_failure",
+      "log_not_found",
+      "skipped_due_to_external_runner"
+    ],
+    "rerun_external_ci_once": true,
+    "local_gates_required": "maximum",
+    "local_gate_commands": [
+      "npm run build:standalone",
+      "npm run smoke",
+      "npm run test:contracts",
+      "npm run verify:event-contracts",
+      "npm run verify:xlooop-operational-workspace",
+      "npm run verify:mbp-operations-bridge",
+      "npm run verify:mbp-projection-export",
+      "npm run verify:mbp-live-projection-adapter",
+      "npm run verify:autonomous-execution-program",
+      "npm run verify:autonomous-role-skill-attestation",
+      "npm run verify:overnight-frontend-gate",
+      "npm run verify:e2e-current-scope",
+      "npm run test:e2e",
+      "npm run scan:secrets",
+      "git diff --check"
+    ],
+    "evidence_required": true,
+    "auto_merge_allowed": true
+  },
+  "role_skill_attestation": {
+    "state": "partial_gap_identified",
+    "required_roles": [
+      "role-route:ecosystem-status-brief",
+      "role-route:frontend-architecture-review",
+      "role-route:integration-boundary-contracts",
+      "role-route:delivery-readiness-gates"
+    ],
+    "required_skills": [
+      "critical-intake-review",
+      "xcp-ecosystem-skill-router",
+      "parallel-session-branch-guard",
+      "xlooop-design-review",
+      "frontend-architecture-review",
+      "delivery-readiness-gates",
+      "component-contract-storybook"
+    ],
+    "invoked_skills": [
+      "critical-intake-review",
+      "parallel-session-branch-guard",
+      "xlooop-design-review",
+      "frontend-architecture-review",
+      "delivery-readiness-gates"
+    ],
+    "missing_or_weak": [
+      "Overnight run did not persist a per-slice role/skill invocation ledger before C74.",
+      "Stale local skill docs still referenced old v2 active surfaces before C74 correction.",
+      "C53-C55 queue feature_packet_path values drifted from the actual retained Feature Execution Packet folders.",
+      "Several Operations affordances were technically tested but not obvious enough to owner users from the first visible path."
+    ],
+    "enforcement_gates": [
+      "npm run verify:autonomous-role-skill-attestation",
+      "npm run verify:autonomous-execution-program",
+      "visible UI E2E for Xlooop Operations"
+    ],
+    "evidence_refs": [
+      "specs/027-autonomous-role-skill-attestation/evidence.md",
+      "docs/_archive/audits/260510_0805_xlooop-operational-ux-readiness-review-c74.md",
+      "tests/e2e/c74-xlooop-autonomous-role-skill-attestation.spec.ts"
+    ],
+    "operator_visibility_requirement": "Xlooop Operations must show role/skill attestation, missing or weak harness findings, enforcement gates, and stale-doc corrections before an overnight run can be considered owner-reviewable."
+  },
+  "queue": [
+    {
+      "id": "C50-AUTONOMOUS-EXECUTION-PROGRAM-01",
+      "title": "Autonomous execution program contract and verifier",
+      "state": "merged",
+      "repository": "Xlooop-XCP-demo",
+      "feature_packet_path": "specs/003-autonomous-execution-program",
+      "acceptance_summary": "Run queue, local-authoritative merge policy, replenishment policy, recovery policy, verifier, and night plan are present and tested.",
+      "required_gates": [
+        "npm run test:contracts",
+        "npm run verify:autonomous-execution-program"
+      ],
+      "stop_conditions": [
+        "parent roadmap conflict",
+        "contract cannot distinguish real CI failure from external runner issue"
+      ]
+    },
+    {
+      "id": "C51-MBP-PROJECTION-EXPORT-CONTRACT-02",
+      "title": "MB-P projection export contract",
+      "state": "merged",
+      "repository": "Xlooop-XCP-demo",
+      "feature_packet_path": "specs/004-mbp-projection-export-contract",
+      "acceptance_summary": "Define how MB-P can emit approved read-only operational projections consumed by Xlooop without raw private content.",
+      "required_gates": [
+        "npm run verify:mbp-projection-export",
+        "npm run verify:mbp-operations-bridge",
+        "npm run test:contracts"
+      ],
+      "stop_conditions": [
+        "MB-P write required",
+        "raw private content required"
+      ]
+    },
+    {
+      "id": "C52-XLOOOP-LIVE-PROJECTION-ADAPTER-03",
+      "title": "Xlooop live projection adapter",
+      "state": "merged",
+      "repository": "Xlooop-XCP-demo",
+      "feature_packet_path": "specs/005-xlooop-live-projection-adapter",
+      "acceptance_summary": "Replace static projection usage with a typed adapter boundary while preserving metadata-only read mode.",
+      "required_gates": [
+        "npm run verify:mbp-live-projection-adapter",
+        "npm run verify:mbp-operations-bridge",
+        "npm run test:e2e"
+      ],
+      "stop_conditions": [
+        "adapter needs MB-P write access",
+        "adapter leaks private payload"
+      ]
+    },
+    {
+      "id": "C53-UI-ACTION-AUDIT-04",
+      "title": "Xlooop operational projection UI",
+      "state": "merged",
+      "repository": "Xlooop-XCP-demo",
+      "feature_packet_path": "specs/006-xlooop-operational-projection-ui",
+      "acceptance_summary": "Make the MB-P metadata-only projection operational inside the Xlooop workspace without creating a write path back to MB-P.",
+      "required_gates": [
+        "npm run smoke",
+        "npm run test:e2e"
+      ],
+      "stop_conditions": [
+        "broad UI rewrite required",
+        "mobile-only work becomes prerequisite"
+      ]
+    },
+    {
+      "id": "C54-WORKFLOW-OPERABILITY-05",
+      "title": "MB-P projection view model",
+      "state": "merged",
+      "repository": "Xlooop-XCP-demo",
+      "feature_packet_path": "specs/007-mbp-projection-view-model",
+      "acceptance_summary": "Move projected MB-P packet operation interpretation into a runtime view-model helper so the UI consumes a stable contract.",
+      "required_gates": [
+        "npm run verify:xlooop-operational-workspace",
+        "npm run test:e2e"
+      ],
+      "stop_conditions": [
+        "requires x-front import",
+        "requires XCP-platform mutation"
+      ]
+    },
+    {
+      "id": "C55-STORY-E2E-COVERAGE-06",
+      "title": "MB-P projection freshness",
+      "state": "merged",
+      "repository": "Xlooop-XCP-demo",
+      "feature_packet_path": "specs/008-mbp-projection-freshness",
+      "acceptance_summary": "Make approved MB-P projection freshness visible in Xlooop Operations so stale metadata cannot look like current operational truth.",
+      "required_gates": [
+        "npm run verify:e2e-current-scope",
+        "npm run test:e2e"
+      ],
+      "stop_conditions": [
+        "test scope becomes legacy-fictional again"
+      ]
+    },
+    {
+      "id": "C56-MBP-PROJECTION-REFRESH-REQUEST-07",
+      "title": "MB-P projection refresh request",
+      "state": "merged",
+      "repository": "Xlooop-XCP-demo",
+      "feature_packet_path": "specs/009-mbp-projection-refresh-request",
+      "acceptance_summary": "Expired MB-P projection can create a Xlooop-local owner review packet without MB-P writeback.",
+      "required_gates": [
+        "npm run verify:mbp-projection-refresh-request",
+        "npm run test:e2e"
+      ],
+      "stop_conditions": [
+        "refresh path requires MB-P write access",
+        "projection refresh leaks private payload"
+      ]
+    },
+    {
+      "id": "C57-MBP-REFRESH-LIFECYCLE-PROOF-08",
+      "title": "Refresh lifecycle proof",
+      "state": "merged",
+      "repository": "Xlooop-XCP-demo",
+      "feature_packet_path": "specs/010-mbp-refresh-lifecycle-proof",
+      "acceptance_summary": "Projection refresh request confirms into a Xlooop work item through typed reducer/events.",
+      "required_gates": [
+        "npm run verify:mbp-refresh-lifecycle-proof",
+        "npm run test:e2e"
+      ],
+      "stop_conditions": [
+        "owner confirmation bypasses typed packet reducer",
+        "work item id collision is possible"
+      ]
+    },
+    {
+      "id": "C58-XLOOOP-REFRESH-WORKITEM-TIMELINE-09",
+      "title": "Refresh work item timeline",
+      "state": "merged",
+      "repository": "Xlooop-XCP-demo",
+      "feature_packet_path": "specs/011-xlooop-refresh-workitem-timeline",
+      "acceptance_summary": "Generated refresh work item exposes source lineage, permission lineage, evidence readiness, sign-off readiness, and XCP feedback readiness from Operations.",
+      "required_gates": [
+        "npm run verify:xlooop-refresh-workitem-timeline",
+        "npm run test:e2e"
+      ],
+      "stop_conditions": [
+        "timeline becomes a visual-only card",
+        "permission lineage is hidden"
+      ]
+    },
+    {
+      "id": "C59-XLOOOP-OPS-SIGNOFF-FEEDBACK-10",
+      "title": "Operations sign-off and XCP feedback",
+      "state": "merged",
+      "repository": "Xlooop-XCP-demo",
+      "feature_packet_path": "specs/012-xlooop-ops-signoff-feedback",
+      "acceptance_summary": "Operations timeline can sign the refresh work item and expose XCP feedback readiness.",
+      "required_gates": [
+        "npm run verify:xlooop-ops-signoff-feedback",
+        "npm run test:e2e"
+      ],
+      "stop_conditions": [
+        "sign-off bypasses existing signoff reducer",
+        "XCP feedback readiness is selected from stale packet state"
+      ]
+    },
+    {
+      "id": "C60-XLOOOP-OPS-OVERNIGHT-RUN-REPORT-11",
+      "title": "Operations overnight run report",
+      "state": "merged",
+      "repository": "Xlooop-XCP-demo",
+      "feature_packet_path": "specs/013-xlooop-overnight-run-report",
+      "acceptance_summary": "Approved autonomous overnight run boundaries, caffeinate control, local-authoritative merge policy, completed slices, and next queue are visible inside Xlooop Operations.",
+      "required_gates": [
+        "npm run verify:xlooop-overnight-run-report",
+        "npm run verify:autonomous-execution-program",
+        "npm run test:e2e"
+      ],
+      "stop_conditions": [
+        "overnight state requires MB-P mutation",
+        "run report hides writable/read-only boundaries",
+        "merge policy is not visible to the operator"
+      ]
+    },
+    {
+      "id": "C61-XLOOOP-OPS-RUN-RECOVERY-QUEUE-12",
+      "title": "Operations run recovery queue",
+      "state": "merged",
+      "repository": "Xlooop-XCP-demo",
+      "feature_packet_path": "specs/014-xlooop-run-recovery-queue",
+      "acceptance_summary": "Run report exposes resume rule, state files, replenishment policy, and next approved queue so overnight work can recover without chat memory.",
+      "required_gates": [
+        "npm run verify:xlooop-run-recovery-queue",
+        "npm run verify:autonomous-execution-program",
+        "npm run test:e2e"
+      ],
+      "stop_conditions": [
+        "recovery state depends on chat transcript only",
+        "replenishment expands beyond approved Xlooop-XCP-demo scope",
+        "next queue requires MB-P mutation"
+      ]
+    },
+    {
+      "id": "C62-XLOOOP-OPS-MORNING-REPORT-13",
+      "title": "Operations morning report surface",
+      "state": "merged",
+      "repository": "Xlooop-XCP-demo",
+      "feature_packet_path": "specs/015-xlooop-operations-morning-report",
+      "acceptance_summary": "Create a compact morning report surface summarising merged slices, local gates, CI classifications, boundaries, and remaining queue.",
+      "required_gates": [
+        "npm run verify:xlooop-operations-morning-report",
+        "npm run test:e2e"
+      ],
+      "stop_conditions": [
+        "report claims work without local evidence",
+        "report includes raw MB-P private content"
+      ]
+    },
+    {
+      "id": "C63-XLOOOP-OPS-PACKET-ACTIVITY-14",
+      "title": "Operations packet activity ledger",
+      "state": "merged",
+      "repository": "Xlooop-XCP-demo",
+      "feature_packet_path": "specs/016-xlooop-packet-activity-ledger",
+      "acceptance_summary": "Expose recent governance packet reducer/EventBus activity in Operations for packet recovery and audit navigation.",
+      "required_gates": [
+        "npm run verify:xlooop-packet-activity-ledger",
+        "npm run test:e2e"
+      ],
+      "stop_conditions": [
+        "activity ledger bypasses typed reducer events",
+        "activity surface leaks protected source data"
+      ]
+    },
+    {
+      "id": "C64-XLOOOP-OPS-MORNING-CLOSEOUT-15",
+      "title": "Operations morning closeout and next-plan surface",
+      "state": "merged",
+      "repository": "Xlooop-XCP-demo",
+      "feature_packet_path": "specs/017-xlooop-operations-morning-closeout",
+      "acceptance_summary": "Turn the morning report into a navigable closeout surface showing owner review focus, merged evidence, active next plan, and protected boundaries.",
+      "required_gates": [
+        "npm run verify:xlooop-operations-morning-closeout",
+        "npm run test:e2e"
+      ],
+      "stop_conditions": [
+        "closeout invents work outside the approved overnight scope",
+        "owner review surface hides local-authoritative CI classification",
+        "next-plan surface requires MB-P mutation"
+      ]
+    },
+    {
+      "id": "C65-XLOOOP-OPS-CLOSEOUT-OWNER-ACTION-16",
+      "title": "Operations closeout owner acknowledgement action",
+      "state": "merged",
+      "repository": "Xlooop-XCP-demo",
+      "feature_packet_path": "specs/018-xlooop-operations-closeout-owner-action",
+      "acceptance_summary": "Make the morning closeout owner-review affordance actionable through the existing typed packet reducer/EventBus path.",
+      "required_gates": [
+        "npm run verify:xlooop-operations-closeout-owner-action",
+        "npm run test:e2e"
+      ],
+      "stop_conditions": [
+        "owner acknowledgement mutates MB-P",
+        "button bypasses typed packet reducer/events",
+        "acknowledgement creates ungoverned state outside Xlooop packet flow"
+      ]
+    },
+    {
+      "id": "C66-XLOOOP-CLOSEOUT-REVIEW-QUEUE-17",
+      "title": "Operations closeout review queue handoff",
+      "state": "merged",
+      "repository": "Xlooop-XCP-demo",
+      "feature_packet_path": "specs/019-xlooop-closeout-review-queue",
+      "acceptance_summary": "Show the closeout owner-review packet as a dedicated Operations queue item and confirm it into a recoverable work item through typed reducer/EventBus events.",
+      "required_gates": [
+        "npm run verify:xlooop-closeout-review-queue",
+        "npm run test:e2e"
+      ],
+      "stop_conditions": [
+        "closeout confirmation bypasses the owner review reducer",
+        "queue handoff creates state outside Xlooop project packet lifecycle",
+        "handoff requires MB-P writeback"
+      ]
+    },
+    {
+      "id": "C67-XLOOOP-CLOSEOUT-SIGNOFF-CHAIN-18",
+      "title": "Operations closeout evidence and sign-off chain",
+      "state": "merged",
+      "repository": "Xlooop-XCP-demo",
+      "feature_packet_path": "specs/020-xlooop-closeout-signoff-chain",
+      "acceptance_summary": "Advance the closeout work item from owner-confirmed to evidence-ready, signed, and XCP-feedback-ready through Operations using typed reducer/EventBus events.",
+      "required_gates": [
+        "npm run verify:xlooop-closeout-signoff-chain",
+        "npm run test:e2e"
+      ],
+      "stop_conditions": [
+        "evidence or sign-off bypasses typed reducer/events",
+        "closeout sign-off mutates MB-P",
+        "XCP feedback readiness emits unapproved platform events"
+      ]
+    },
+    {
+      "id": "C68-XLOOOP-CLOSEOUT-COMPLETION-SUMMARY-19",
+      "title": "Operations closeout completion summary",
+      "state": "merged",
+      "repository": "Xlooop-XCP-demo",
+      "feature_packet_path": "specs/021-xlooop-closeout-completion-summary",
+      "acceptance_summary": "Signed closeout work item exposes a recoverable completion receipt with packet, evidence, decision, XCP feedback, graph, recovery, and navigation context.",
+      "required_gates": [
+        "npm run verify:xlooop-closeout-completion-summary",
+        "npm run test:e2e"
+      ],
+      "stop_conditions": [
+        "completion summary creates a second closeout state machine",
+        "completion summary mutates MB-P",
+        "completion summary hides the signed evidence or decision chain"
+      ]
+    },
+    {
+      "id": "C69-XLOOOP-CLOSEOUT-AUDIT-EXPORT-20",
+      "title": "Operations closeout audit export readiness",
+      "state": "merged",
+      "repository": "Xlooop-XCP-demo",
+      "feature_packet_path": "specs/022-xlooop-closeout-audit-export",
+      "acceptance_summary": "Signed closeout work item exposes a redacted metadata-only audit packet export surface without MB-P writeback.",
+      "required_gates": [
+        "npm run verify:xlooop-closeout-audit-export",
+        "npm run test:e2e"
+      ],
+      "stop_conditions": [
+        "audit export includes raw private content",
+        "audit export allows MB-P writeback",
+        "audit export claims real backend persistence"
+      ]
+    },
+    {
+      "id": "C70-XLOOOP-AUDIT-EXPORT-CONTRACT-21",
+      "title": "Closeout audit export contract boundary",
+      "state": "merged",
+      "repository": "Xlooop-XCP-demo",
+      "feature_packet_path": "specs/023-xlooop-audit-export-contract",
+      "acceptance_summary": "Promote the closeout audit export payload from inline UI logic into a typed Xlooop-owned runtime contract, validator, and UI selector boundary.",
+      "required_gates": [
+        "npm run verify:xlooop-audit-export-contract",
+        "npm run test:contracts",
+        "npm run test:e2e"
+      ],
+      "stop_conditions": [
+        "contract increases runtime beyond perf budget",
+        "audit export permits private raw content",
+        "audit export allows MB-P writeback",
+        "UI bypasses typed runtime contract"
+      ]
+    },
+    {
+      "id": "C71-XLOOOP-AUDIT-EXPORT-DOWNLOAD-22",
+      "title": "Closeout audit export metadata download",
+      "state": "merged",
+      "repository": "Xlooop-XCP-demo",
+      "feature_packet_path": "specs/024-xlooop-audit-export-download",
+      "acceptance_summary": "Make the metadata-only closeout audit packet downloadable from Operations using the existing typed payload without backend persistence or MB-P writeback.",
+      "required_gates": [
+        "npm run verify:xlooop-audit-export-download",
+        "npm run test:e2e"
+      ],
+      "stop_conditions": [
+        "download includes raw private content",
+        "download bypasses typed audit payload",
+        "download requires backend persistence",
+        "download mutates MB-P or protected repos"
+      ]
+    },
+    {
+      "id": "C72-RUNTIME-EXPORT-BUDGET-GUARD-23",
+      "title": "Runtime export budget guard",
+      "state": "merged",
+      "repository": "Xlooop-XCP-demo",
+      "feature_packet_path": "specs/025-runtime-export-budget-guard",
+      "acceptance_summary": "Freeze new runtime export surfaces while the runtime bundle has low budget headroom, with a deterministic policy verifier.",
+      "required_gates": [
+        "npm run verify:runtime-export-budget-policy",
+        "npm run scan:perf",
+        "npm run verify:current-integrity"
+      ],
+      "stop_conditions": [
+        "new runtime export surface is added without policy decision",
+        "runtime bundle exceeds budget",
+        "guard weakens existing perf budget",
+        "slice mutates MB-P or protected repos"
+      ]
+    },
+    {
+      "id": "C73-XLOOOP-OPS-DISCOVERABILITY-24",
+      "title": "Visible Xlooop Operations discoverability",
+      "state": "merged",
+      "repository": "Xlooop-XCP-demo",
+      "feature_packet_path": "specs/026-xlooop-ops-discoverability",
+      "acceptance_summary": "Make Personal Home expose the Xlooop workspace and route to Operations without relying on test-only navigation hooks.",
+      "required_gates": [
+        "npm run verify:xlooop-ops-discoverability",
+        "npm run test:e2e"
+      ],
+      "stop_conditions": [
+        "visible route relies on test-only navigation hooks",
+        "Xlooop workspace disappears from the first-viewport gateway",
+        "runtime budget guard becomes hidden again"
+      ]
+    },
+    {
+      "id": "C74-AUTONOMOUS-ROLE-SKILL-ATTESTATION-25",
+      "title": "Autonomous run role/skill attestation and UX readiness review",
+      "state": "in_progress",
+      "repository": "Xlooop-XCP-demo",
+      "feature_packet_path": "specs/027-autonomous-role-skill-attestation",
+      "acceptance_summary": "Make overnight role/skill invocation gaps visible in Operations and enforce run-state, packet-path, and stale-skill-doc checks before future autonomous runs can look complete.",
+      "required_gates": [
+        "npm run verify:autonomous-role-skill-attestation",
+        "npm run verify:autonomous-execution-program",
+        "npm run test:e2e"
+      ],
+      "stop_conditions": [
+        "role/skill attestation remains hidden from the owner",
+        "Feature Execution Packet paths drift from existing folders",
+        "stale skill docs continue to point agents at v2/current-legacy surfaces",
+        "slice requires MB-P, x-front, x-docs, or XCP-platform mutation"
+      ]
+    }
+  ],
+  "replenishment_policy": {
+    "enabled": true,
+    "trigger_when_remaining_queue_pct_below": 40,
+    "replenish_to_pct": 100,
+    "source_priority": [
+      "domain roadmap",
+      "approved workstream plan",
+      "current product gaps",
+      "verification failures",
+      "owner corrections"
+    ],
+    "requires_parent_roadmap_alignment": true,
+    "requires_owner_review_when_scope_expands": true
+  },
+  "recovery_policy": {
+    "state_files": [
+      "data/autonomous-overnight-run.example.json",
+      "specs/003-autonomous-execution-program/evidence.md",
+      "docs/_archive/audits/260510_0018_xlooop-mbp-overnight-plan-c50.md"
+    ],
+    "every_commit_pushes_branch": true,
+    "every_pr_has_evidence": true,
+    "morning_report_required": true,
+    "resume_rule": "read_run_state_then_continue_next_safe_item"
+  },
+  "morning_report": {
+    "report_id": "morning-report-260510-xlooop-overnight",
+    "state": "ready_for_owner_review",
+    "generated_at": "2026-05-10T05:55:00+10:00",
+    "summary": "Approved overnight run is active in Xlooop-XCP-demo with MB-P read-only projection use, local-authoritative evidence, and recoverable queue state.",
+    "merged_item_ids": [
+      "C50-AUTONOMOUS-EXECUTION-PROGRAM-01",
+      "C51-MBP-PROJECTION-EXPORT-CONTRACT-02",
+      "C52-XLOOOP-LIVE-PROJECTION-ADAPTER-03",
+      "C53-UI-ACTION-AUDIT-04",
+      "C54-WORKFLOW-OPERABILITY-05",
+      "C55-STORY-E2E-COVERAGE-06",
+      "C56-MBP-PROJECTION-REFRESH-REQUEST-07",
+      "C57-MBP-REFRESH-LIFECYCLE-PROOF-08",
+      "C58-XLOOOP-REFRESH-WORKITEM-TIMELINE-09",
+      "C59-XLOOOP-OPS-SIGNOFF-FEEDBACK-10",
+      "C60-XLOOOP-OPS-OVERNIGHT-RUN-REPORT-11",
+      "C61-XLOOOP-OPS-RUN-RECOVERY-QUEUE-12",
+      "C62-XLOOOP-OPS-MORNING-REPORT-13",
+      "C63-XLOOOP-OPS-PACKET-ACTIVITY-14",
+      "C64-XLOOOP-OPS-MORNING-CLOSEOUT-15",
+      "C65-XLOOOP-OPS-CLOSEOUT-OWNER-ACTION-16",
+      "C66-XLOOOP-CLOSEOUT-REVIEW-QUEUE-17",
+      "C67-XLOOOP-CLOSEOUT-SIGNOFF-CHAIN-18",
+      "C68-XLOOOP-CLOSEOUT-COMPLETION-SUMMARY-19",
+      "C69-XLOOOP-CLOSEOUT-AUDIT-EXPORT-20",
+      "C70-XLOOOP-AUDIT-EXPORT-CONTRACT-21",
+      "C71-XLOOOP-AUDIT-EXPORT-DOWNLOAD-22",
+      "C72-RUNTIME-EXPORT-BUDGET-GUARD-23",
+      "C73-XLOOOP-OPS-DISCOVERABILITY-24"
+    ],
+    "remaining_item_ids": [
+      "C74-AUTONOMOUS-ROLE-SKILL-ATTESTATION-25"
+    ],
+    "local_gate_evidence": [
+      "C61 npm run verify:xlooop-run-recovery-queue PASS",
+      "C61 npm run test:e2e PASS 38 passed / 3 skipped",
+      "C61 npm run verify:current-integrity PASS 34/34",
+      "C61 npm run storybook:gate PASS 14/14",
+      "C61 npm run scan:secrets PASS",
+      "C62 npm run verify:xlooop-operations-morning-report PASS",
+      "C62 npm run test:e2e PASS 39 passed / 3 skipped",
+      "C62 npm run verify:current-integrity PASS 34/34",
+      "C63 npm run verify:xlooop-packet-activity-ledger PASS",
+      "C63 npm run test:e2e PASS 40 passed / 3 skipped",
+      "C63 npm run storybook:gate PASS 14/14",
+      "C64 npm run verify:xlooop-operations-morning-closeout PASS",
+      "C64 npm run test:e2e PASS 41 passed / 3 skipped",
+      "C64 npm run verify:current-integrity PASS 34/34",
+      "C65 npm run verify:xlooop-operations-closeout-owner-action PASS",
+      "C65 npm run test:e2e PASS 42 passed / 3 skipped",
+      "C65 npm run verify:current-integrity PASS 34/34",
+      "C65 npm run storybook:gate PASS 14/14",
+      "C66 npm run verify:xlooop-closeout-review-queue PASS",
+      "C66 npm run test:e2e PASS 43 passed / 3 skipped",
+      "C66 npm run verify:current-integrity PASS 34/34",
+      "C66 npm run storybook:gate PASS 14/14",
+      "C67 npm run verify:xlooop-closeout-signoff-chain PASS",
+      "C67 npm run test:e2e PASS 44 passed / 3 skipped",
+      "C67 npm run verify:current-integrity PASS 34/34",
+      "C67 npm run storybook:gate PASS 14/14",
+      "C68 npm run verify:xlooop-closeout-completion-summary PASS",
+      "C68 npm run test:e2e PASS 45 passed / 3 skipped",
+      "C68 npm run verify:current-integrity PASS 34/34",
+      "C68 npm run storybook:gate PASS 14/14",
+      "C69 npm run verify:xlooop-closeout-audit-export PASS",
+      "C69 npm run test:e2e PASS 46 passed / 3 skipped",
+      "C69 npm run verify:current-integrity PASS 34/34",
+      "C69 npm run storybook:gate PASS 14/14",
+      "C70 npm run verify:xlooop-audit-export-contract PASS",
+      "C70 npm run test:e2e PASS 47 passed / 3 skipped",
+      "C70 npm run verify:current-integrity PASS 34/34",
+      "C70 npm run storybook:gate PASS 14/14",
+      "C71 npm run verify:xlooop-audit-export-download PASS",
+      "C71 npm run test:e2e PASS 48 passed / 3 skipped",
+      "C71 npm run verify:current-integrity PASS 34/34",
+      "C71 npm run storybook:gate PASS 14/14",
+      "C72 npm run verify:runtime-export-budget-policy PASS",
+      "C72 npm run verify:xlooop-runtime-budget-guard PASS",
+      "C73 npm run verify:xlooop-ops-discoverability PASS",
+      "C73 npm run test:e2e PASS"
+    ],
+    "github_ci_classifications": [
+      "PR #88 smoke log_not_found external zero-step runner issue after rerun",
+      "PR #89 smoke log_not_found external zero-step runner issue after rerun",
+      "PR #90 smoke log_not_found external zero-step runner issue after rerun",
+      "PR #91 smoke log_not_found external zero-step runner issue after rerun",
+      "PR #92 smoke log_not_found external zero-step runner issue after rerun",
+      "PR #93 smoke log_not_found external zero-step runner issue after rerun",
+      "PR #94 smoke log_not_found external zero-step runner issue after rerun",
+      "PR #95 smoke log_not_found external zero-step runner issue after rerun",
+      "PR #96 smoke log_not_found external zero-step runner issue after rerun",
+      "PR #97 smoke log_not_found external zero-step runner issue after rerun",
+      "PR #98 smoke log_not_found external zero-step runner issue after rerun",
+      "PR #99 smoke log_not_found external zero-step runner issue after rerun"
+    ],
+    "boundary_confirmations": [
+      "Xlooop-XCP-demo writable only",
+      "MB-P remained read-only projection/fixture consumption only",
+      "No x-front, x-docs, or XCP-platform mutation",
+      "No archive/delete/move"
+    ],
+    "next_recommended_item_id": "C74-AUTONOMOUS-ROLE-SKILL-ATTESTATION-25",
+    "protected_scope_breach": false,
+    "owner_review_focus": [
+      "Review the merged C50-C73 Operations chain in the browser",
+      "Confirm local-authoritative CI classifications remain acceptable",
+      "Confirm runtime export freeze remains acceptable until runtime weight is reduced",
+      "Review C74 role/skill attestation gaps before approving another unattended run"
+    ],
+    "closeout_plan": {
+      "active_item_id": "C74-AUTONOMOUS-ROLE-SKILL-ATTESTATION-25",
+      "next_decision": "make autonomous run role/skill invocation visible and enforceable before the next overnight approval",
+      "handoff_state": "recoverable_from_run_state",
+      "scope": "Xlooop-XCP-demo writable only with MB-P read-only projection consumption"
+    }
+  },
+  "stop_conditions": [
+    "protected scope breach",
+    "parent roadmap conflict",
+    "real failing local gate",
+    "real GitHub failure with logs",
+    "security scan failure",
+    "merge conflict",
+    "owner approval required for expanded scope"
+  ]
+}

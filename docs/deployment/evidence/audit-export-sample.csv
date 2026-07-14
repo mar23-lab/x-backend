@@ -1,0 +1,4 @@
+occurred_at,actor_user_id,action,target_type,target_id,workspace_id,reason,causation_id
+2026-07-07T04:00:10Z,user_operator_SYNTHETIC,member_role_change,workspace_member,user_member_SYNTHETIC,org_DEMO,role -> operator,
+2026-07-07T11:47:03Z,user_operator_SYNTHETIC,operating_mode_change,session,user_operator_SYNTHETIC,org_DEMO,mode -> operator,
+2026-07-07T12:15:00Z,system,sd_recommendation_accept,synthetic_domain_recommendation,rec_SYNTHETIC,org_DEMO,"accepted; propagated to 3 goals, 1 roadmap",cause_SYNTHETIC

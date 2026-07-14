@@ -1,0 +1,23 @@
+{
+  "schema": "xlooop.ecosystem_evaluation_sidecar.v1",
+  "wave": "260710-F",
+  "purpose": "HR-EVIDENCE-FIRST-DISCOVERY-1 sidecar for the cross-ecosystem alignment plan (260710-F). Survey was READ-ONLY across 8 git boundaries before any cross-repo conclusion shipped.",
+  "surveyed_at": "2026-07-11 (AEST morning)",
+  "canonical_sidecar_deferral": "The MB-P-canonical path (_sys/xcp-system/derivative/ecosystem-evaluation-runs/) is inside an ACTIVE parallel session's repo (tip 0b9d78e7, 95 dirty files, live lease/hooks) — writing there would violate parallel-session boundary discipline. Emitted here instead; the MB-P session may ingest/mirror it.",
+  "launch_gate_compliance": "harness_session_start recorded via gateway + registry mark-started (session de5ad190…, adapter=claude, status=started) + work claim claim-a6d63e7d1bef8230 (WRITE_TRACKED, sibling-normalized Xlooop-worktree owned_paths, worktree lease PASS). NOTES for the MB-P seat (their lane): (1) the MCP gateway's harness_session_start does NOT stamp the collaboration-registry row the Wave C-1 pre-edit hook checks — xcp_harness_session_start.py --mark-started had to be invoked directly; (2) make agent-session-gate reports control_plane runtime_parity_failed (pre-existing); (3) cross-repo owned_paths must use the hook's sibling:<repo>/<path> normalized form — absolute AND relative forms both silently fail coverage.",
+  "repos": [
+    { "path": "/Users/maratbasyrov/WIP", "branch": "main", "head": "a39beeb 2026-06-05 X-SCP Stage 3 brand-vocab gate", "commits_48h": 0, "dirty": 0, "note": "WIP Workspace Guard Root — local git boundary containing nested repos, not a product repo" },
+    { "path": "/Users/maratbasyrov/WIP/MB-P", "branch": "main", "head": "0b9d78e7 2026-07-11 Wave C-1 hook-liveness gate + event-classes SSOT", "commits_48h": 16, "dirty": 95, "note": "ACTIVE parallel session; tip advanced past the transcript's 3ee20ea2 claim (now HEAD~1); dirty = 77 untracked + 18 modified, concentrated in derivative ledgers + cross_repo_drafts (incl. the FRESH Jul-11 mbp-operations-projection.json — the H1 source)" },
+    { "path": "/Users/maratbasyrov/WIP/Xlooop/Xlooop-XCP-demo", "branch": "main (local, unfetched)", "head": "local main 88975ca3; REMOTE origin/main ec327964 (ls-remote-verified)", "commits_48h": 14, "dirty": 2, "note": "Primary checkout's local main merely unfetched — no action taken there (no git state-change in primary). Active worktree _wt/codex-precutover-hardening-20260709 at ec327964 == origin/main. Deployed API /health .build == ca7d225b (docs-only commits above)" },
+    { "path": "/Users/maratbasyrov/WIP/Xlooop/x-front", "branch": "main", "head": "d004adf2 2026-05-21", "commits_48h": 0, "dirty": 0 },
+    { "path": "/Users/maratbasyrov/WIP/Xlooop/x-docs", "branch": "main", "head": "eb3cf65 2026-06-09", "commits_48h": 0, "dirty": 0 },
+    { "path": "/Users/maratbasyrov/WIP/Xlooop/x-biz", "branch": "main-synced (non-default)", "head": "53fb54e 2026-06-15", "commits_48h": 0, "dirty": 0 },
+    { "path": "/Users/maratbasyrov/WIP/Xlooop/x-web", "branch": "main", "head": "b4af798 2026-06-29", "commits_48h": 0, "dirty": 0 },
+    { "path": "/Users/maratbasyrov/WIP/xcp-platform", "branch": "main", "head": "53ce976 2026-06-23", "commits_48h": 0, "dirty": 0 }
+  ],
+  "cross_cutting_conclusions_backed": [
+    "Only MB-P (16/48h) and Xlooop-XCP-demo (14/48h) are active; all other repos quiet+clean — the 260710-F wave's cross-repo claims are scoped to those two.",
+    "The B2-projection defect copies diverge exactly as the parallel session reported, with corrected mechanics: MB-P source FRESH (Jul 11 03:30), Xlooop repo copy EXPIRED (generated Jul 9, valid_until Jul 10), worker-inlined copy = last deploy's snapshot of the repo copy, public Pages copy = the BY-DESIGN 305-byte redacted stub (prepare-cloudflare-pages.mjs:398).",
+    "x-biz is the only repo not on its default branch (main-synced) — pre-existing, noted for the operator."
+  ]
+}

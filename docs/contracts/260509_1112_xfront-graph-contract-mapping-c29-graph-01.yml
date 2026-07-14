@@ -1,0 +1,171 @@
+id: c29_graph_01_xfront_graph_contract_mapping
+created_at: "2026-05-09T11:12:00+10:00"
+date_key: "260509_1112"
+owner: Marat Basyrov
+scope: contract_design_documentation_only
+source_xfront_head: 401e6d40a0befc683a7a410f1ed0aee0afd6f492
+decision:
+  verdict: adopt_contract_idea_not_file
+  copy_xfront_source_allowed: false
+  runtime_code_allowed_this_slice: false
+  proceed_to_permission_requirements_after_merge: true
+c38_update:
+  updated_at: "2026-05-09T19:15:00+10:00"
+  slice_id: c38-graph-contract-parity-03
+  verdict: preserve_c29_decision_and_make_stricter
+  xfront_origin_main_head: 401e6d40a0befc683a7a410f1ed0aee0afd6f492
+  xfront_ast_proxy_2_head: 995d0b23a5b0d9c4d139c441d06f1d2ade8e3794
+  xfront_ast_proxy_2_divergence: "58 81"
+  inspected_xfront_paths:
+    - src/shared/contracts/graph/base.ts
+    - src/shared/contracts/graph/index.ts
+  read_only_against_ilmir_work: true
+  conclusion: "x-front GraphLayer/BaseNodeContract/EdgeContract are useful vocabulary inputs, not sufficient XCP product governance contracts."
+xfront_fields:
+  adopt:
+    - id
+    - type
+    - tenantId
+    - schemaVersion
+    - lifecycleState
+    - graphLayer
+    - createdAt
+    - updatedAt
+    - sourceId
+    - targetId
+  adapt:
+    tenantId: tenant_id_plus_workspace_id
+    schemaVersion: schema_version
+    lifecycleState: lifecycle_state_extended_soft_delete
+    graphLayer: graph_layer
+    data: typed_payload_with_governance_fields_top_level
+    metadata: edge_metadata_only_for_noncritical_fields
+  reject_as_sufficient:
+    - minimal_base_contract_without_permission_expiry
+    - critical_governance_in_metadata_only
+required_product_fields:
+  - tenant_id
+  - workspace_id
+  - project_id
+  - owner_actor_id
+  - created_by_actor_id
+  - updated_by_actor_id
+  - visibility
+  - sensitivity
+  - permission_scope
+  - permission_granted_at
+  - permission_expires_at
+  - source_refs
+  - evidence_refs
+  - actor_run_refs
+  - confidence
+  - contract_version
+c38_missing_required_fields_by_category:
+  authority:
+    - tenant_id
+    - workspace_id
+    - project_id
+    - owner_actor_id
+    - created_by_actor_id
+    - updated_by_actor_id
+  safety:
+    - visibility
+    - sensitivity
+    - permission_scope
+    - permission_granted_at
+    - permission_expires_at
+    - permission_revoked_at
+  evidence:
+    - source_refs
+    - evidence_refs
+    - confidence
+    - checksum_or_commit_ref
+  execution:
+    - actor_run_refs
+    - tool_invocation_refs
+    - decision_record_refs
+    - signoff_refs
+mvp_node_types:
+  - node_type: workspace
+    graph_layer: super
+    source: src/entities/workspace/model.ts
+    status: extend_contract_required
+  - node_type: project
+    graph_layer: middle
+    source: src/entities/project/model.ts
+    status: extend_contract_required
+  - node_type: actor
+    graph_layer: super
+    source: src/entities/actor/model.ts
+    status: extend_contract_required
+  - node_type: permission
+    graph_layer: local
+    source: actor_session_membership_fields
+    status: missing_contract
+  - node_type: intent
+    graph_layer: middle
+    source: product_workflow_data_fixtures
+    status: missing_contract
+  - node_type: work_item
+    graph_layer: local
+    source: src/entities/work_item/model.ts
+    status: extend_contract_required
+  - node_type: acceptance_criteria
+    graph_layer: local
+    source: src/entities/ac/model.ts
+    status: extend_contract_required
+  - node_type: decision_record
+    graph_layer: local
+    source: src/entities/decision_record/model.ts
+    status: extend_contract_required
+  - node_type: evidence_artifact
+    graph_layer: local
+    source: src/entities/evidence/model.ts
+    status: extend_contract_required
+  - node_type: agent_run
+    graph_layer: sub
+    source: event_runtime_evidence_only
+    status: missing_contract
+  - node_type: ui_component
+    graph_layer: local
+    source: widget_contract_json_and_uikit_contracts
+    status: extend_contract_required
+  - node_type: api_contract
+    graph_layer: local
+    source: src_contracts_runtime_event_dal_contracts
+    status: extend_contract_required
+mvp_edge_types:
+  - belongs_to
+  - owns
+  - has_permission
+  - captures_intent
+  - implements
+  - has_acceptance_criteria
+  - evidenced_by
+  - decided_by
+  - approved_by
+  - generated_by
+  - supersedes
+future_contract_files:
+  - src/contracts/graph/base-node.contract.ts
+  - src/contracts/graph/edge.contract.ts
+  - src/contracts/graph/source-ref.contract.ts
+  - src/contracts/graph/permission.contract.ts
+  - src/contracts/graph/actor-run.contract.ts
+  - src/contracts/graph/lifecycle.contract.ts
+  - src/contracts/graph/graph-layer.contract.ts
+  - src/contracts/graph/index.ts
+acceptance_criteria_for_future_implementation:
+  - node_and_edge_vocabulary_reviewed
+  - permission_fields_include_grant_time_and_expiry
+  - visibility_and_sensitivity_top_level
+  - evidence_and_source_refs_first_class
+  - agent_run_trace_modeled
+  - edge_integrity_tests_exist_before_ui_consumes_graph_nodes
+  - no_xfront_source_file_copied
+  - xfront_head_rechecked_if_changed_from_401e6d4
+  - ast_proxy_2_treated_as_evidence_or_replay_input_only_while_divergent
+  - nodes_reject_missing_authority_fields_where_required
+  - permissions_reject_missing_grant_time_and_expiry
+  - client_visible_evidence_requires_sensitivity_and_source_ref
+next_step: C39-GRAPH-CONTRACT-SKELETON-01

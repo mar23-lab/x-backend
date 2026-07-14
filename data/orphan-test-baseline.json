@@ -1,0 +1,9 @@
+{
+  "_meta": {
+    "schema": "xlooop.orphan_test_baseline.v1",
+    "created": "2026-07-14",
+    "rule": "The backend-only repository runs the complete Workers test glob in its blocking local gate. No orphan test exceptions are allowed."
+  },
+  "max_orphans": 0,
+  "exempt": []
+}

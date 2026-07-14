@@ -1,0 +1,65 @@
+{
+  "schema_id": "xlooop.customer_data_lifecycle_policy.v1",
+  "policy_id": "customer-data-lifecycle-controlled-pilot-260617",
+  "status": "backend_execution_proven_rls_phase_2_bounded",
+  "scope": "customer_tenant",
+  "applies_to": [
+    "connected_knowledge_sources",
+    "source_snapshots",
+    "packets",
+    "events",
+    "tool_events",
+    "evidence_items",
+    "metric_deltas",
+    "approvals",
+    "signoffs"
+  ],
+  "allowed_export_mode": "metadata_and_redacted_customer_records_only",
+  "blocked_exports": [
+    "raw_graph",
+    "all_tenant_search",
+    "mbp_governance_ssot",
+    "operator_private_memory",
+    "platform_internal_templates",
+    "internal_scoring_templates",
+    "secrets",
+    "raw_customer_payloads_without_acl"
+  ],
+  "writeback_policy": {
+    "mbp_writeback_allowed": false,
+    "platform_internal_mutation_allowed": false,
+    "unapproved_external_write_allowed": false
+  },
+  "requests": [
+    {
+      "request_kind": "customer_data_export_request",
+      "tenant_scope_required": true,
+      "workspace_scope_required": true,
+      "actor_required": true,
+      "approval_required": true,
+      "audit_event_required": true,
+      "raw_graph_export_allowed": false,
+      "mbp_writeback_allowed": false,
+      "platform_internal_export_allowed": false,
+      "export_mode": "metadata_redacted_backend_receipt",
+      "backend_execution_gate": "rls_phase_2_required_and_verified",
+      "execution_receipt_required": true
+    },
+    {
+      "request_kind": "customer_data_delete_request",
+      "tenant_scope_required": true,
+      "workspace_scope_required": true,
+      "actor_required": true,
+      "approval_required": true,
+      "audit_event_required": true,
+      "raw_graph_export_allowed": false,
+      "mbp_writeback_allowed": false,
+      "platform_internal_export_allowed": false,
+      "destructive_execution_allowed_without_approval": false,
+      "destructive_execution_requires_backend_rls_phase_2": true,
+      "destructive_execution_mode": "approved_packet_archive_with_audit_receipt",
+      "deletion_mode": "approved_packet_archive_with_audit_receipt",
+      "execution_receipt_required": true
+    }
+  ]
+}

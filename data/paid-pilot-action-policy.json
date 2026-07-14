@@ -1,0 +1,66 @@
+{
+  "schema_version": "xlooop.paid_pilot_action_policy.v1",
+  "default_policy": "deny",
+  "allowed_actions": [
+    {
+      "action_type": "feedback.resolve",
+      "required_mode": "operator",
+      "required_permission": "feedback:resolve",
+      "approval_required": true,
+      "receipt_policy": "durable_receipt_required"
+    },
+    {
+      "action_type": "proposal.approve",
+      "required_mode": "operator",
+      "required_permission": "proposal:approve",
+      "approval_required": false,
+      "receipt_policy": "approval_receipt_required"
+    },
+    {
+      "action_type": "proposal.reject",
+      "required_mode": "operator",
+      "required_permission": "proposal:reject",
+      "approval_required": false,
+      "receipt_policy": "approval_receipt_required"
+    },
+    {
+      "action_type": "telemetry.company.aggregate.read",
+      "required_mode": "operator",
+      "required_permission": "telemetry:company:read",
+      "approval_required": false,
+      "receipt_policy": "read_receipt_required"
+    },
+    {
+      "action_type": "document.markdown.writeback.request",
+      "required_mode": "operator",
+      "required_permission": "source_writeback:request",
+      "approval_required": false,
+      "receipt_policy": "proposal_first_required",
+      "source_kind": "markdown",
+      "path_allowlist": [
+        "docs/paid-pilot/**/*.md",
+        "docs/customer-feedback/**/*.md"
+      ]
+    },
+    {
+      "action_type": "document.markdown.writeback.apply",
+      "required_mode": "operator",
+      "required_permission": "source_writeback:apply",
+      "approval_required": true,
+      "receipt_policy": "verifier_and_rollback_required",
+      "source_kind": "markdown",
+      "path_allowlist": [
+        "docs/paid-pilot/**/*.md",
+        "docs/customer-feedback/**/*.md"
+      ]
+    }
+  ],
+  "blocked_actions": [
+    "source.write.direct_browser",
+    "document.pdf.writeback.apply",
+    "document.docx.writeback.apply",
+    "mbp.governance.write",
+    "tenant.raw.read_without_break_glass",
+    "xcp.enter_without_xcp_entitlement"
+  ]
+}

@@ -1,0 +1,142 @@
+{
+  "schema_version": "xlooop.cloud_deployment_readiness.v1",
+  "last_updated": "2026-05-17",
+  "stage": "development_and_customer_feedback",
+  "canonical_public_domain": "xlooop.com",
+  "retired_after_launch_domains": [
+    {
+      "domain": "xlooop.ai",
+      "disposition": "remove_or_301_redirect_after_xlooop_com_launch",
+      "reason": "xlooop.com is the strategic canonical brand domain; xlooop.ai is legacy visibility and must not remain a duplicate canonical site."
+    }
+  ],
+  "allowed_environments": [
+    "dev",
+    "test"
+  ],
+  "blocked_environment_names": [
+    "customer-feedback",
+    "feedback",
+    "staging",
+    "production"
+  ],
+  "github_actions": {
+    "active": false,
+    "reason": "GitHub Actions is unpaid/unavailable for this private repository; failed runs stop before job steps and logs.",
+    "canonical_deploy": "local_cloudflare_direct_upload",
+    "active_workflow_directory_policy": ".github/workflows must contain no YAML workflows while unpaid/unavailable",
+    "preserved_templates": "deployment/github-actions-disabled",
+    "required_local_gates": [
+      "verify:github-actions-disabled",
+      "verify:cloud-deployment-readiness",
+      "verify:cloudflare-deployment-signal",
+      "verify:cloudflare-access-evidence",
+      "verify:feedback-d1-cloudflare",
+      "verify:feedback-annotations",
+      "verify:feedback-cloud-smoke",
+      "verify:retrospective-closeout-composed",
+      "verify:hosted-deployment-evidence",
+      "verify:hosted-ci-runner-health",
+      "verify:external-capability-live-prereqs",
+      "verify:external-capability-default-hard-stop",
+      "verify:api-mcp-live-canary-hard-stop",
+      "verify:live-evidence-authority-matrix",
+      "verify:public-production-readiness-hard-stop"
+    ]
+  },
+  "surfaces": [
+    {
+      "surface_id": "xlooop",
+      "product_name": "Xlooop",
+      "technical_repo_name": "Xlooop-XCP-demo",
+      "purpose": "Business operations cockpit and customer feedback surface.",
+      "environments": [
+        {
+          "environment": "dev",
+          "domain": "dev.xlooop.com",
+          "access": "cloudflare_access_internal_owner",
+          "data_posture": "internal_full_owner_operations_allowed",
+          "operator_mode": "owner_operator_allowed",
+          "claim_posture": "internal_learning_testing_only"
+        },
+        {
+          "environment": "test",
+          "domain": "test.xlooop.com",
+          "access": "cloudflare_access_named_testers_plus_invitation_code",
+          "data_posture": "redacted_or_owner_approved_dataset_only",
+          "operator_mode": "watch_or_proposal_only_by_default",
+          "claim_posture": "customer_feedback_no_production_saas_claim"
+        }
+      ]
+    },
+    {
+      "surface_id": "xcp",
+      "product_name": "XCP",
+      "technical_repo_name": "xcp-platform",
+      "purpose": "AI-governed infrastructure and control-plane dashboard.",
+      "environments": [
+        {
+          "environment": "dev",
+          "domain": "xcp-dev.xlooop.com",
+          "access": "cloudflare_access_internal_admins",
+          "data_posture": "infrastructure_control_plane_internal",
+          "operator_mode": "admin_entitlement_required_per_user",
+          "claim_posture": "internal_infrastructure_testing_only"
+        },
+        {
+          "environment": "test",
+          "domain": "xcp-test.xlooop.com",
+          "access": "cloudflare_access_named_testers_plus_admin_entitlement",
+          "data_posture": "sanitized_infrastructure_read_model_only",
+          "operator_mode": "disabled_unless_admin_switch_enables_user",
+          "claim_posture": "reference_only"
+        }
+      ]
+    }
+  ],
+  "access_policy": {
+    "waiting_list": {
+      "allowed": true,
+      "purpose": "Collect external interest and issue explicit test invitations.",
+      "security_role": "lead_capture_only"
+    },
+    "access_code": {
+      "encoding": "base64url_style_opaque_code_allowed",
+      "security_role": "invitation_routing_hint_not_authentication",
+      "required_controls": [
+        "server_side_code_validation",
+        "cloudflare_access_identity",
+        "expiry",
+        "single_use_or_rate_limited",
+        "audit_log"
+      ]
+    },
+    "xlooop_first_level_access": {
+      "default_surface": "Xlooop",
+      "default_test_mode": "watch_or_proposal_only",
+      "operator_mode_requires": [
+        "owner_or_admin_approval",
+        "risk_lane",
+        "receipt_path"
+      ]
+    },
+    "xcp_second_level_access": {
+      "default": "disabled",
+      "enabled_by": "admin_per_user_entitlement",
+      "must_be_separate_from": "xlooop_first_level_access"
+    }
+  },
+  "marketing_policy": {
+    "canonical_domain": "xlooop.com",
+    "marketing_site_public_after_claim_signoff": true,
+    "forward_looking_required": true,
+    "forbidden_claims": [
+      "production SaaS",
+      "production-ready customer operations",
+      "unrestricted live MB-P operations",
+      "xlooop.ai as canonical domain",
+      "customer-feedback.xlooop.com",
+      "feedback.xlooop.com"
+    ]
+  }
+}

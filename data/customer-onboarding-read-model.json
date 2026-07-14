@@ -1,0 +1,440 @@
+{
+  "schema_version": "xlooop.customer_onboarding_read_model.v1",
+  "source_mode": "generated_public_discovery_snapshot",
+  "generated_at": "2026-05-17T04:17:00.513Z",
+  "valid_until": "2026-05-24T04:17:00.515Z",
+  "customer": {
+    "customer_id": "aps-access-property-services",
+    "owner_graph_id": "owner-graph-andrey-p",
+    "contact_actor_id": "actor:andrey-p",
+    "company_name": "Access Property Services / Access Built Pty Ltd candidate",
+    "website": "https://accesspropertyservices.com.au/",
+    "country_or_region": "Australia / NSW",
+    "industry": "building_inspection_services",
+    "status": "public_discovery",
+    "runtime_projection_allowed": "sanitized_summary_only_authority_pending"
+  },
+  "authority": {
+    "status": "pending",
+    "approver": null,
+    "known_candidates": [
+      "Andrey Petrushko",
+      "Dominic Ogburn"
+    ],
+    "blocking_gap": "Confirm who can authorise APS onboarding and private data processing."
+  },
+  "consent": {
+    "status": "pending",
+    "private_integrations_allowed": false,
+    "blocked_until": [
+      "authority_confirmed",
+      "privacy_scope_confirmed",
+      "source_register_confirmed",
+      "do_not_ingest_confirmed"
+    ]
+  },
+  "onboarding_gates": {
+    "authority_gate": {
+      "status": "pending",
+      "next_action": "Ask Andrey and Dominic to confirm who can authorise APS onboarding and private data processing."
+    },
+    "consent_gate": {
+      "status": "pending",
+      "next_action": "Confirm public-only discovery scope, do-not-ingest rules, and private integration consent before connecting Gmail, Xero, Drive, Stripe, calendar, analytics, or social APIs."
+    },
+    "source_register_gate": {
+      "status": "draft",
+      "next_action": "Customer confirms which public facts are correct and which private sources are allowed, blocked, or do-not-ingest."
+    },
+    "invite_milestone": {
+      "status": "not_ready",
+      "next_action": "First non-Xlooop team invite is allowed only after authority, role policy, and source register confirmation."
+    }
+  },
+  "role_panel": {
+    "required": [
+      "chief-of-staff",
+      "ecosystem-risk-officer",
+      "devsecops",
+      "knowledge-architect",
+      "domain-operator",
+      "commercial-claim-reviewer"
+    ],
+    "status": "required_before_private_ingestion_or_operator_mode"
+  },
+  "access_control": {
+    "environment": "test.xlooop.com",
+    "stage": "customer-feedback",
+    "security_boundary": "cloudflare_access_required",
+    "invitation_code_purpose": "routing_only_not_auth_boundary",
+    "default_mode": "watch_or_proposal_only",
+    "operator_mode": "disabled_until_authority_consent_scope_and_receipt_gates",
+    "xcp_entitlement": "second_level_disabled_by_default"
+  },
+  "public_discovery": {
+    "stage": "public_profile_ready_authority_pending",
+    "facts": [
+      {
+        "field": "website",
+        "value": "https://accesspropertyservices.com.au/",
+        "source": "operator_provided",
+        "confidence": "high",
+        "status": "confirmed_input"
+      },
+      {
+        "field": "public_service_positioning",
+        "value": "pre-settlement, off-the-plan, pre-purchase, defect, dilapidation, technical inspection, report/software-adjacent services",
+        "source": "https://accesspropertyservices.com.au/",
+        "confidence": "medium",
+        "status": "needs_customer_confirmation"
+      },
+      {
+        "field": "public_value_claim",
+        "value": "30+ years construction expertise and 100+ successful inspections are claimed on the website; verify before commercial use.",
+        "source": "https://accesspropertyservices.com.au/",
+        "confidence": "medium",
+        "status": "needs_customer_confirmation"
+      },
+      {
+        "field": "primary_public_contact",
+        "value": "Dominic Ogburn; phone 0433 124 661; dominic@accesspropertyservices.com.au",
+        "source": "https://accesspropertyservices.com.au/",
+        "confidence": "medium",
+        "status": "needs_customer_confirmation"
+      },
+      {
+        "field": "temporary_public_contact",
+        "value": "Andrey Petrushko listed as temporary contact during Dominic absence 15.05.2026-24.06.2026; phone 0459 231 411; andrey@accesspropertyservices.com.au",
+        "source": "https://accesspropertyservices.com.au/",
+        "confidence": "medium",
+        "status": "needs_customer_confirmation"
+      },
+      {
+        "field": "legal_entity_candidate",
+        "value": "ACCESS BUILT PTY LTD; ABN 98 685 345 779; active from 13 Mar 2025; GST not currently registered; NSW 2154 main business location",
+        "source": "https://abr.business.gov.au/ABN/View?id=98685345779",
+        "confidence": "high",
+        "status": "needs_customer_confirmation"
+      },
+      {
+        "field": "licence_candidate",
+        "value": "Dominic Ogburn / Access Built candidate certifier listing: BDC3241, Building inspector, NSW, current",
+        "source": "third_party_certifier_directory",
+        "confidence": "low",
+        "status": "needs_primary_registry_or_customer_confirmation"
+      },
+      {
+        "field": "public_social_candidates",
+        "value": "Facebook and Instagram handles appear linked from/associated with APS website; LinkedIn/founder profiles still need confirmation.",
+        "source": "https://accesspropertyservices.com.au/",
+        "confidence": "low",
+        "status": "needs_customer_confirmation"
+      },
+      {
+        "field": "first_workflow_candidate",
+        "value": "lead inquiry -> quote -> booking -> inspection -> report -> rectification/support -> payment/follow-up",
+        "source": "operator_provided_intake_and_public_site",
+        "confidence": "medium",
+        "status": "needs_customer_confirmation"
+      }
+    ],
+    "fields_auto_populated": 9,
+    "fields_missing": 7,
+    "provenance_coverage": 1
+  },
+  "ecosystem_backbone": {
+    "local_path": "Andrey P - Ecosystem",
+    "repo_status": "local_dedicated_repo_ready",
+    "github_status": "not_launched_authority_pending",
+    "required_files_present": 25,
+    "domain_registry_status": "draft",
+    "source_register_status": "draft",
+    "first_workflow_status": "draft"
+  },
+  "source_boundaries": {
+    "allowed_public_sources": [
+      "website",
+      "public_registry_after_lookup",
+      "public_socials_after_confirmation",
+      "public_reviews"
+    ],
+    "private_sources_not_connected_yet": [
+      "gmail",
+      "xero",
+      "stripe",
+      "drive_dropbox",
+      "calendar",
+      "website_analytics",
+      "social_apis"
+    ],
+    "do_not_ingest": [
+      "raw_client_emails",
+      "property_addresses",
+      "inspection_photos",
+      "raw_reports",
+      "legal_material",
+      "invoices_without_consent",
+      "oauth_tokens"
+    ]
+  },
+  "customer_safe_projection_policy": {
+    "projection_level": "sanitized_summary_only",
+    "redaction_marker": "customer_safe_projection_authority_pending",
+    "tenant_watermark": "tenant:aps-access-property-services",
+    "allowed_reason_fields": [
+      "blocked",
+      "risk_lane",
+      "safe_explanation",
+      "next_action",
+      "receipt_id",
+      "source_posture",
+      "timestamp"
+    ],
+    "forbidden_customer_visible_fields": [
+      "internal_hard_rule_id",
+      "engine_weight",
+      "prompt_chain",
+      "mbp_graph_reference",
+      "architecture_dependency_map",
+      "private_mbp_path"
+    ]
+  },
+  "scorecard": {
+    "onboarding_readiness": 62,
+    "ai_ready_ecosystem": 55,
+    "source_coverage": 58,
+    "privacy_safety": 82,
+    "team_invite_readiness": 42,
+    "workflow_opportunity_readiness": 86,
+    "verdict": "public_discovery_only_private_integrations_blocked"
+  },
+  "workflow_opportunity_radar": {
+    "status": "public_hypothesis",
+    "selector": {
+      "default_batch_size": 5,
+      "allow_select_one": true,
+      "allow_select_multiple": true,
+      "show_next_batch": true
+    },
+    "scoring": {
+      "model_version": "xlooop.workflow_opportunity_engine.v1",
+      "validated_savings_required_before_claims": true,
+      "unsupported_precise_savings_claims": 0
+    },
+    "ai_readiness_levels": [
+      {
+        "level": "L0",
+        "label": "publicly_discoverable",
+        "status": "complete"
+      },
+      {
+        "level": "L1",
+        "label": "sterile_backbone_ready",
+        "status": "draft"
+      },
+      {
+        "level": "L2",
+        "label": "authority_safe",
+        "status": "blocked_authority_pending"
+      },
+      {
+        "level": "L3",
+        "label": "source_connected_sterile_processing",
+        "status": "blocked_consent_pending"
+      },
+      {
+        "level": "L4",
+        "label": "workflow_intelligence",
+        "status": "public_hypothesis_only"
+      },
+      {
+        "level": "L5",
+        "label": "controlled_operations_pilot",
+        "status": "blocked"
+      }
+    ],
+    "opportunities": [
+      {
+        "id": "aps-lead-intake-quote-conversion",
+        "title": "Lead intake and quote conversion",
+        "domain": "lead_intake_and_quote",
+        "workflow_stage": "inquiry_to_quote",
+        "customer_problem": "Potential response-time, quote follow-up, and win/loss visibility gaps.",
+        "public_basis": [
+          "APS public website advertises multiple inspection services and web/contact inquiry paths.",
+          "Building inspection services usually depend on fast trust-building and quote clarity."
+        ],
+        "internal_sources_required": [
+          "gmail_or_crm",
+          "website_form_exports",
+          "quote_templates",
+          "calendar"
+        ],
+        "metrics_to_validate": [
+          "inquiry_to_first_response_time",
+          "quote_turnaround_time",
+          "quote_win_loss_rate",
+          "unanswered_or_stale_leads"
+        ],
+        "value_hypothesis": "May improve responsiveness and quote follow-up once inquiry and quote data is approved.",
+        "risk_if_wrong": "If lead volume is low or already well-managed, this should be deferred.",
+        "confidence": "medium",
+        "source_posture": "authority_pending",
+        "recommended_priority": "P0",
+        "customer_confirmation_question": "Should we model the inquiry-to-quote path first?",
+        "activation_mode": "watch_preview"
+      },
+      {
+        "id": "aps-report-production-qa-evidence",
+        "title": "Report production and QA/evidence library",
+        "domain": "report_production",
+        "workflow_stage": "inspection_to_report_delivery",
+        "customer_problem": "Report drafting, evidence consistency, and repeated defect language may be high-friction.",
+        "public_basis": [
+          "APS value depends on inspection expertise, defect reporting, and client-understandable evidence.",
+          "The provided intake highlights past reports and photo libraries as high-value sources."
+        ],
+        "internal_sources_required": [
+          "drive_or_dropbox_report_corpus",
+          "photo_folders",
+          "report_templates",
+          "qa_notes"
+        ],
+        "metrics_to_validate": [
+          "inspection_to_report_turnaround",
+          "report_rework_count",
+          "defect_category_frequency",
+          "client_questions_per_report"
+        ],
+        "value_hypothesis": "May improve report consistency and reduce repeat drafting effort after source classification.",
+        "risk_if_wrong": "This touches sensitive property reports and photos, so privacy gates must be strongest here.",
+        "confidence": "medium",
+        "source_posture": "authority_pending",
+        "recommended_priority": "P0",
+        "customer_confirmation_question": "Are reports and defect photos the highest-leverage knowledge source to process first?",
+        "activation_mode": "watch_preview"
+      },
+      {
+        "id": "aps-booking-site-access-prep",
+        "title": "Booking and site-access preparation",
+        "domain": "inspection_booking",
+        "workflow_stage": "quote_to_site_inspection",
+        "customer_problem": "Access coordination, reminders, and missing pre-inspection information may create avoidable admin load.",
+        "public_basis": [
+          "Inspection work is appointment and property-access dependent.",
+          "The building inspection lifecycle includes booking, site access, and preparation as required steps."
+        ],
+        "internal_sources_required": [
+          "calendar",
+          "gmail",
+          "booking_records",
+          "pre_inspection_checklists"
+        ],
+        "metrics_to_validate": [
+          "booking_lead_time",
+          "reschedule_rate",
+          "missing_access_incidents",
+          "prep_checklist_completion"
+        ],
+        "value_hypothesis": "May reduce scheduling friction and prevent access-related delays.",
+        "risk_if_wrong": "If bookings are already handled by a strong job system, Xlooop should integrate rather than replace it.",
+        "confidence": "medium",
+        "source_posture": "authority_pending",
+        "recommended_priority": "P1",
+        "customer_confirmation_question": "Do booking and site-access issues create repeated admin friction today?",
+        "activation_mode": "watch_preview"
+      },
+      {
+        "id": "aps-client-questions-rectification-followup",
+        "title": "Client questions and rectification follow-up",
+        "domain": "client_delivery_and_follow_up",
+        "workflow_stage": "report_delivery_to_support",
+        "customer_problem": "Repeated client explanations, defect clarification, and builder/developer follow-up may be hard to track.",
+        "public_basis": [
+          "Building inspection reports often generate follow-up questions and rectification conversations.",
+          "The provided intake names builder/developer rectification cycles and recurring client questions as discoverable from email."
+        ],
+        "internal_sources_required": [
+          "gmail",
+          "report_delivery_records",
+          "client_question_threads",
+          "defect_notice_documents"
+        ],
+        "metrics_to_validate": [
+          "questions_per_report",
+          "repeat_question_patterns",
+          "response_time",
+          "rectification_cycle_length"
+        ],
+        "value_hypothesis": "May turn repeated client support into reusable, evidence-linked guidance.",
+        "risk_if_wrong": "Legal or technical advice boundaries must be explicit before any agent assists.",
+        "confidence": "medium",
+        "source_posture": "authority_pending",
+        "recommended_priority": "P1",
+        "customer_confirmation_question": "Should Xlooop help turn repeated client questions into guided follow-up and reusable answers?",
+        "activation_mode": "watch_preview"
+      },
+      {
+        "id": "aps-payments-profitability-cash-conversion",
+        "title": "Payments, profitability, and cash conversion",
+        "domain": "payments_and_accounting",
+        "workflow_stage": "invoice_to_paid",
+        "customer_problem": "Job profitability, invoice timing, and payment delays may be invisible without accounting/payment data.",
+        "public_basis": [
+          "Inspection services are job-based and have service-specific revenue and cost patterns.",
+          "The provided intake identifies Xero and Stripe as sources for revenue, profitability, AR ageing, and payments."
+        ],
+        "internal_sources_required": [
+          "xero",
+          "stripe_or_payment_processor",
+          "invoice_line_items",
+          "supplier_or_specialist_costs"
+        ],
+        "metrics_to_validate": [
+          "invoice_to_paid_days",
+          "average_job_value",
+          "margin_by_service_type",
+          "refund_or_problem_job_rate"
+        ],
+        "value_hypothesis": "May identify cash-conversion and service-margin patterns after accounting access is approved.",
+        "risk_if_wrong": "Financial access is sensitive and should be requested only after operational value is clear.",
+        "confidence": "low",
+        "source_posture": "authority_pending",
+        "recommended_priority": "P1",
+        "customer_confirmation_question": "Is payment and profitability visibility a priority after operational workflow mapping?",
+        "activation_mode": "watch_preview"
+      }
+    ],
+    "next_batch_candidates": [
+      "review_and_referral_growth",
+      "specialist_referral_coordination",
+      "website_seo_lead_source_attribution",
+      "licensing_compliance_evidence_pack",
+      "ai_report_assistant_pilot"
+    ]
+  },
+  "next_questions_for_customer": [
+    "Are you authorised to onboard APS into Xlooop, and does Dominic also need to approve?",
+    "Is Access Built Pty Ltd / ABN 98 685 345 779 the correct legal entity for Access Property Services?",
+    "Is Andrey an owner, authorised operator, temporary contact, or onboarding delegate?",
+    "Which public social and LinkedIn profiles are correct for APS, Dominic, and Andrey?",
+    "Which systems are used today: Google Workspace/Gmail, Drive/Dropbox, Xero, Stripe, calendar, CRM/job management, report software, website analytics?",
+    "Which data must never enter the ecosystem repo or Xlooop projection?",
+    "What first APS workflow should be improved after onboarding confirmation?",
+    "At what milestone should the first non-Xlooop APS team member be invited?",
+    "Do Andrey or APS already use Claude Code, Codex, Cursor, ChatGPT, MCP, or automation tools?"
+  ],
+  "next_actions": [
+    "Show Andrey/Dominic the discovered public profile for confirm/edit.",
+    "Record authority and consent before any private integration.",
+    "Keep APS GitHub/private remote unlaunched until ownership and export policy are approved.",
+    "Use Xlooop ?owner=andrey-p session for sanitized onboarding review only.",
+    "After confirmation, run the first workflow modelling pass for APS building inspection operations."
+  ],
+  "stop_conditions": [
+    "Do not connect private sources before authority and consent.",
+    "Do not launch GitHub remote before repo ownership and export/transfer policy are accepted.",
+    "Do not show fake APS operations activity.",
+    "Do not treat APS onboarding as Xlooop commercial traction before claim review."
+  ]
+}

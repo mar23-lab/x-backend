@@ -1,0 +1,16 @@
+schema_version: customer_value_realisation_ledger_v1
+customer_id: replace_me
+status: template
+entries:
+  - metric: customer_safe_public_baseline_created
+    previous: false
+    current: false
+    source_posture: public_only
+    evidence_refs: []
+    notes: "Set to true only when a public-discovery baseline is created."
+  - metric: approved_internal_knowledge_processed
+    previous: false
+    current: false
+    source_posture: not_assessed
+    evidence_refs: []
+    notes: "Must remain false until customer authority, consent, and source boundaries are approved."

@@ -1,0 +1,246 @@
+{
+  "schema_id": "xlooop.governance_projection_coverage.v1",
+  "purpose": "Classify governance, skill, template, and onboarding sources before any customer-facing backend projection. Customer APIs consume effective redacted snapshots only, never raw MB-P files.",
+  "classification_values": [
+    "xcp_platform_template",
+    "backend_projection",
+    "private_control_plane_only",
+    "boilerplate_fixture",
+    "archive_or_ignore"
+  ],
+  "coverage_rule": "Every adopted surface in this manifest must have exactly one classification, owner, exposure policy, and verifier.",
+  "summary": {
+    "xcp_platform_template_count": 4,
+    "backend_projection_count": 8,
+    "private_control_plane_only_count": 12,
+    "boilerplate_fixture_count": 1,
+    "archive_or_ignore_count": 3,
+    "raw_mbp_customer_api_exposure_allowed": false
+  },
+  "sources": [
+    {
+      "id": "xcp.skills_templates.boundary_matrix",
+      "source_path": "/Users/maratbasyrov/WIP/xcp-platform/packages/xcp-skills-templates/templates/BOUNDARY_MATRIX.template.yml",
+      "classification": "xcp_platform_template",
+      "owner": "xcp-platform",
+      "exposure_policy": "customer_safe_after_backend_projection",
+      "verifier": "pnpm -F @xcp/skills-templates sanitise:check"
+    },
+    {
+      "id": "xcp.skills_templates.identifier_registry",
+      "source_path": "/Users/maratbasyrov/WIP/xcp-platform/packages/xcp-skills-templates/templates/IDENTIFIER_REGISTRY.template.yml",
+      "classification": "xcp_platform_template",
+      "owner": "xcp-platform",
+      "exposure_policy": "customer_safe_after_backend_projection",
+      "verifier": "pnpm -F @xcp/skills-templates sanitise:check"
+    },
+    {
+      "id": "xcp.skills_templates.relationship_vocabulary",
+      "source_path": "/Users/maratbasyrov/WIP/xcp-platform/packages/xcp-skills-templates/templates/RELATIONSHIP_VOCABULARY.template.yml",
+      "classification": "xcp_platform_template",
+      "owner": "xcp-platform",
+      "exposure_policy": "customer_safe_after_backend_projection",
+      "verifier": "pnpm -F @xcp/skills-templates sanitise:check"
+    },
+    {
+      "id": "xcp.skills_templates.skills_index",
+      "source_path": "/Users/maratbasyrov/WIP/xcp-platform/packages/xcp-skills-templates/templates/SKILLS_INDEX.template.md",
+      "classification": "xcp_platform_template",
+      "owner": "xcp-platform",
+      "exposure_policy": "customer_safe_after_backend_projection",
+      "verifier": "pnpm -F @xcp/skills-templates sanitise:check"
+    },
+    {
+      "id": "mbp.pillars",
+      "source_path": "/Users/maratbasyrov/WIP/MB-P/_sys/xcp-system/governance/PILLARS.md",
+      "classification": "backend_projection",
+      "owner": "MB-P governance",
+      "exposure_policy": "project only pillar names and public-safe summaries; keep MB-P prose private",
+      "verifier": "npm run verify:governance-projection-coverage"
+    },
+    {
+      "id": "mbp.unified_intake",
+      "source_path": "/Users/maratbasyrov/WIP/MB-P/_sys/xcp-system/operations/UNIFIED_ECOSYSTEM_INTAKE_STANDARD.md",
+      "classification": "backend_projection",
+      "owner": "MB-P governance",
+      "exposure_policy": "project customer-safe intake steps and evidence requirements only",
+      "verifier": "npm run verify:governance-projection-coverage"
+    },
+    {
+      "id": "mbp.single_intake_lineage",
+      "source_path": "/Users/maratbasyrov/WIP/MB-P/_sys/xcp-system/operations/SINGLE_INTAKE_AND_INTENT_LINEAGE_STANDARD.md",
+      "classification": "backend_projection",
+      "owner": "MB-P governance",
+      "exposure_policy": "project lineage shape only: intent to role to packet to evidence to metric",
+      "verifier": "npm run verify:governance-projection-coverage"
+    },
+    {
+      "id": "mbp.prompt_spec_v1",
+      "source_path": "/Users/maratbasyrov/WIP/MB-P/_sys/_governance/PROMPT_SPEC_v1.md",
+      "classification": "backend_projection",
+      "owner": "MB-P governance",
+      "exposure_policy": "project sanitized prompt contract constraints, never internal examples or scoring",
+      "verifier": "npm run verify:governance-projection-coverage"
+    },
+    {
+      "id": "mbp.task_contract_spec_v1",
+      "source_path": "/Users/maratbasyrov/WIP/MB-P/_sys/_governance/TASK_CONTRACT_SPEC_v1.md",
+      "classification": "backend_projection",
+      "owner": "MB-P governance",
+      "exposure_policy": "project task packet fields after redaction",
+      "verifier": "npm run verify:governance-projection-coverage"
+    },
+    {
+      "id": "mbp.domain_pack_standard_v1",
+      "source_path": "/Users/maratbasyrov/WIP/MB-P/_sys/_governance/DOMAIN_PACK_STANDARD_v1.md",
+      "classification": "backend_projection",
+      "owner": "MB-P governance",
+      "exposure_policy": "project customer-safe domain pack schema only",
+      "verifier": "npm run verify:governance-projection-coverage"
+    },
+    {
+      "id": "mbp.boundary_standard",
+      "source_path": "/Users/maratbasyrov/WIP/MB-P/_sys/_governance/BOUNDARY.md",
+      "classification": "backend_projection",
+      "owner": "MB-P governance",
+      "exposure_policy": "project customer-safe boundary categories only",
+      "verifier": "npm run verify:governance-projection-coverage"
+    },
+    {
+      "id": "mbp.memory_registry",
+      "source_path": "/Users/maratbasyrov/WIP/MB-P/_sys/xcp-system/governance/MEMORY_REGISTRY.md",
+      "classification": "backend_projection",
+      "owner": "MB-P governance",
+      "exposure_policy": "project authority labels and customer-safe memory rules only",
+      "verifier": "npm run verify:governance-projection-coverage"
+    },
+    {
+      "id": "mbp.agents_runtime_adapter",
+      "source_path": "/Users/maratbasyrov/WIP/MB-P/AGENTS.md",
+      "classification": "private_control_plane_only",
+      "owner": "MB-P governance",
+      "exposure_policy": "internal agent entry only; never customer API template",
+      "verifier": "make verify-collaboration-runtime-graph"
+    },
+    {
+      "id": "mbp.harness_agent_start_standard",
+      "source_path": "/Users/maratbasyrov/WIP/MB-P/_sys/xcp-system/governance/XCP_HARNESS_AGENT_START_STANDARD.md",
+      "classification": "private_control_plane_only",
+      "owner": "MB-P governance",
+      "exposure_policy": "internal control-plane only",
+      "verifier": "make verify-collaboration-runtime-graph"
+    },
+    {
+      "id": "mbp.session_role_manifest",
+      "source_path": "/Users/maratbasyrov/WIP/MB-P/_sys/xcp-system/governance/SESSION_ROLE_MANIFEST.yml",
+      "classification": "private_control_plane_only",
+      "owner": "MB-P governance",
+      "exposure_policy": "internal role routing only; customer receives resolved safe role label",
+      "verifier": "make verify-collaboration-runtime-graph"
+    },
+    {
+      "id": "mbp.skills_index",
+      "source_path": "/Users/maratbasyrov/WIP/MB-P/_sys/xcp-system/governance/skills-index.yaml",
+      "classification": "private_control_plane_only",
+      "owner": "MB-P governance",
+      "exposure_policy": "internal skill routing only; customer receives effective safe capability set",
+      "verifier": "make verify-collaboration-runtime-graph"
+    },
+    {
+      "id": "mbp.agent_rules",
+      "source_path": "/Users/maratbasyrov/WIP/MB-P/_sys/_governance/AGENT_RULES.md",
+      "classification": "private_control_plane_only",
+      "owner": "MB-P governance",
+      "exposure_policy": "internal operational safety only",
+      "verifier": "make verify-system-stability-telemetry"
+    },
+    {
+      "id": "mbp.master_agent_context_v1",
+      "source_path": "/Users/maratbasyrov/WIP/MB-P/_sys/_governance/MASTER_AGENT_CONTEXT_v1.md",
+      "classification": "private_control_plane_only",
+      "owner": "MB-P governance",
+      "exposure_policy": "internal context only; never customer payload",
+      "verifier": "make verify-system-stability-telemetry"
+    },
+    {
+      "id": "mbp.engine_consumption",
+      "source_path": "/Users/maratbasyrov/WIP/MB-P/_sys/_governance/ENGINE_CONSUMPTION.md",
+      "classification": "private_control_plane_only",
+      "owner": "MB-P governance",
+      "exposure_policy": "internal engine contract only",
+      "verifier": "make verify-system-stability-telemetry"
+    },
+    {
+      "id": "mbp.workflow",
+      "source_path": "/Users/maratbasyrov/WIP/MB-P/_sys/_governance/WORKFLOW.md",
+      "classification": "private_control_plane_only",
+      "owner": "MB-P governance",
+      "exposure_policy": "internal workflow governance only",
+      "verifier": "make verify-system-stability-telemetry"
+    },
+    {
+      "id": "mbp.manifest_contract",
+      "source_path": "/Users/maratbasyrov/WIP/MB-P/_sys/_governance/MANIFEST_CONTRACT.md",
+      "classification": "private_control_plane_only",
+      "owner": "MB-P governance",
+      "exposure_policy": "internal manifest contract only",
+      "verifier": "make verify-system-stability-telemetry"
+    },
+    {
+      "id": "mbp.localbrain_openbrain_artifacts",
+      "source_path": "/Users/maratbasyrov/WIP/MB-P/_sys/xcp-system/architecture/MEMORY_SSOT_AND_EXTERNAL_TOOLS.md",
+      "classification": "private_control_plane_only",
+      "owner": "MB-P governance",
+      "exposure_policy": "operator advisory only unless promoted by source-linked tenant-scoped evidence",
+      "verifier": "make verify-memory-promotion-scope-policy"
+    },
+    {
+      "id": "mbp.processed_derivatives",
+      "source_path": "/Users/maratbasyrov/WIP/MB-P/_sys/processed",
+      "classification": "private_control_plane_only",
+      "owner": "MB-P governance",
+      "exposure_policy": "derived internal evidence; never customer API surface",
+      "verifier": "make verify-cross-repo-release-truth"
+    },
+    {
+      "id": "mbp.scripts",
+      "source_path": "/Users/maratbasyrov/WIP/MB-P/_sys/scripts",
+      "classification": "private_control_plane_only",
+      "owner": "MB-P governance",
+      "exposure_policy": "internal verifier/execution code only",
+      "verifier": "make verify-system-stability-telemetry"
+    },
+    {
+      "id": "mbp.cross_repo_drafts",
+      "source_path": "/Users/maratbasyrov/WIP/MB-P/_sys/cross_repo_drafts",
+      "classification": "archive_or_ignore",
+      "owner": "MB-P governance",
+      "exposure_policy": "historical/draft only unless promoted through manifest",
+      "verifier": "npm run verify:governance-projection-coverage"
+    },
+    {
+      "id": "mbp.adr_archive",
+      "source_path": "/Users/maratbasyrov/WIP/MB-P/_sys/xcp-system/decisions",
+      "classification": "archive_or_ignore",
+      "owner": "MB-P governance",
+      "exposure_policy": "decision history; project only explicit approved outcomes",
+      "verifier": "npm run verify:governance-projection-coverage"
+    },
+    {
+      "id": "mbp.runtime_evidence_receipts",
+      "source_path": "/Users/maratbasyrov/WIP/MB-P/_sys/xcp-system/runtime",
+      "classification": "archive_or_ignore",
+      "owner": "MB-P governance",
+      "exposure_policy": "evidence store; customer APIs use redacted evidence refs only",
+      "verifier": "npm run verify:governance-projection-coverage"
+    },
+    {
+      "id": "xcp_boilerplate",
+      "source_path": "/Users/maratbasyrov/WIP/XCP-boilerplate",
+      "classification": "boilerplate_fixture",
+      "owner": "XCP boilerplate",
+      "exposure_policy": "consumer scaffold and smoke fixture only, not registry authority",
+      "verifier": "npm run verify:governance-projection-coverage"
+    }
+  ]
+}

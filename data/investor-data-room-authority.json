@@ -1,0 +1,98 @@
+{
+  "schema_version": "xlooop.investor_data_room_authority.v1",
+  "status": "planned_operator_gated",
+  "portal_active": false,
+  "public_claim_status": "not_claimed",
+  "operator_decision_authority": "Marat",
+  "commercial_stance": "prepare_controlled_investor_review_with_restrictions",
+  "access_model": {
+    "authentication_required": true,
+    "allowed_identity_sources": [
+      "cloudflare_access",
+      "oidc"
+    ],
+    "registration_is_authentication": false,
+    "invitation_code_role": "routing_hint_not_authority",
+    "required_entitlement": "xlooop:investor_data_room",
+    "tenant_membership_required": true,
+    "xcp_entitlement_default": "disabled",
+    "xlooop_access_grants_xcp": false,
+    "url_params_grant_access": false,
+    "local_storage_grants_access": false
+  },
+  "authority_chain": [
+    "authenticated_identity",
+    "tenant_membership",
+    "investor_data_room_entitlement",
+    "redaction_safe_pack",
+    "legal_or_nondisclosure_reference",
+    "monitoring_receipt",
+    "operator_onboarding_decision"
+  ],
+  "content_authority": {
+    "source_domain": "x-biz",
+    "xcp_role": "contract_and_gate_verification_only",
+    "xlooop_role": "product_portal_and_review_workflow",
+    "mbp_role": "governance_authority",
+    "allowed_source_paths": [
+      "investor/README.md",
+      "investor/ENTITY_STRUCTURE.md",
+      "investor/TEAM.md",
+      "investor/TRACTION.md",
+      "investor/FINANCIAL_MODEL.md",
+      "investor/EXECUTIVE_SUMMARY.md",
+      "marketing/01_stage1-early-launch/investor/PITCH_DECK_v3.md",
+      "marketing/01_stage1-early-launch/investor/ONE_PAGER.md",
+      "marketing/01_stage1-early-launch/investor/INVESTOR_FAQ.md",
+      "marketing/01_stage1-early-launch/investor/WHITE_PAPER.md"
+    ],
+    "required_source_verifier": "verify:xbiz-investor-readiness-source-binding",
+    "claim_safety_required": true
+  },
+  "forbidden_content": [
+    "raw MB-P private governance",
+    "XCP private control-plane internals",
+    "raw tenant/customer data",
+    "advisor/private materials without named approval",
+    "unapproved financial assumptions",
+    "secrets or local paths",
+    "public/self-serve commercial readiness claims"
+  ],
+  "required_evidence": [
+    {
+      "key": "auth",
+      "status": "operator_gated",
+      "next_action": "Bind investor identities to the shared access authority."
+    },
+    {
+      "key": "tenant_membership",
+      "status": "operator_gated",
+      "next_action": "Create explicit investor workspace membership records."
+    },
+    {
+      "key": "investor_entitlement",
+      "status": "operator_gated",
+      "next_action": "Add investor-data-room entitlement through the governed access pack."
+    },
+    {
+      "key": "redaction",
+      "status": "operator_gated",
+      "next_action": "Publish a redaction-safe investor pack from x-biz approved sources."
+    },
+    {
+      "key": "legal",
+      "status": "operator_gated",
+      "next_action": "Attach legal/NDA or approved disclosure reference for each investor group."
+    },
+    {
+      "key": "monitoring",
+      "status": "operator_gated",
+      "next_action": "Record access and download monitoring receipts."
+    },
+    {
+      "key": "owner_signoff",
+      "status": "operator_gated",
+      "next_action": "Record Marat's explicit onboarding decision before enabling access."
+    }
+  ]
+}

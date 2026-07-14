@@ -1,0 +1,24 @@
+{
+ "schema_id": "ecosystem_evaluation_evidence.v1",
+ "session_id": "de5ad190-60df-499e-888c-49c846697377",
+ "evaluation": "260711-H plan: repo restructure + retrospective (read-only survey per HR-EVIDENCE-FIRST-DISCOVERY-1; emitted here because the MB-P derivative plane is held by a parallel session - mirror to MB-P at next handoff)",
+ "repos_surveyed": {
+  "x-front": {"tip": "d004adf2", "note": "main frozen 2026-05-21; no supersession marker; Ilmir work on non-main refs"},
+  "x-web": {"tip": "b4af7984", "note": "clean, quiet since 06-29"},
+  "x-biz": {"tip": "53fb54ea", "note": "clean, quiet since 06-15"},
+  "xcp-platform": {"tip": "53ce9761", "path": "/Users/maratbasyrov/WIP/xcp-platform", "note": "clean, quiet since 06-23"},
+  "MB-P": {"tip": "7334a15f", "note": ">=8 commits Jul 10-11; dirty 97 generated derivative paths (parallel session active)"},
+  "Xlooop-XCP-demo": {"primary_tip_before_ff": "0e1ee3eb", "primary_tip_after_ff": "1611344a", "origin_main": "1611344a", "worktree": "feat/precutover-takeover-260710@1611344a", "note": "primary local ref was unfetched, NOT divergent; ff'd at Phase 0a"},
+  "x-ai-front": {"state": "empty git repo, remote x-ude/x-ai-front, 0 commits"},
+  "x-backend": {"state": "empty git repo, remote mar23-lab/x-backend, 0 commits"},
+  "x-ai-docs": {"state": "empty git repo, remote x-ude/x-ai-docs, 0 commits"}
+ },
+ "design_export": {"path": "~/Downloads/xlooop-ai-front", "snapshot": "2026-07-11T13:51:08", "files": 361, "size_mb": 58,
+  "frontier_manifest": {"distinct": 124, "domains": 12, "consult": 9, "decided": 9, "open": 0}},
+ "key_conclusions": [
+  "deploy:api cleanly backend-only (wrangler.toml no [build], zero frontend refs)",
+  "functions/ RECLASSIFIED: Pages Functions deploy with the Pages project, not the worker - live app.xlooop.com API surface",
+  "governance hooks path-scoped via REPO_TOPOLOGY_REGISTRY.yml - new repos unregistered => hook lockout reproduced live during the audit",
+  "ci-local 86 gate ids: ~30 backend-only, ~28 frontend-only (die with archive), 5 contract gates, 2 snapshot-pin"
+ ]
+}

@@ -1,0 +1,377 @@
+{
+  "_meta": {
+    "schema": "document-context-read-model.v1",
+    "generated_at": "2026-07-10T01:58:25.000Z",
+    "producer": "scripts/generate-document-context-read-model.mjs",
+    "git_sha": "ea5c958e02ee1f9b8e527ac284119450690f98e2"
+  },
+  "schema_version": "xlooop.document_context_read_model.v1",
+  "source_mode": "generated_public_safe_projection",
+  "generated_at": "2026-07-10T01:58:25.000Z",
+  "valid_until": "2026-07-11T01:58:25.000Z",
+  "producer_refs": [
+    "data/operations-live-stream.json",
+    "data/graph-context-slice.json"
+  ],
+  "public_safe": true,
+  "raw_private_content_included": false,
+  "documents": [
+    {
+      "ref_id": "mbp:_sys/scripts/verify_latest_committed_evidence_ledger.py",
+      "source_path": "_sys/scripts/verify_latest_committed_evidence_ledger.py",
+      "label": "verify_latest_committed_evidence_ledger.py",
+      "title": "verify_latest_committed_evidence_ledger.py",
+      "source_repo": null,
+      "workspace_id": "mbp-private",
+      "project_id": "mbp-ops",
+      "excerpt": "verify_latest_committed_evidence_ledger.py · Latest committed evidence ledger compliance · HR-LATEST-COMMITTED-EVIDENCE-1 active: latest/progress/blocker reports must list fetched refs plus read_full, read_partial, and…",
+      "graph_anchor_ids": []
+    },
+    {
+      "ref_id": "mbp:_sys/skills/ecosystem-status-brief/SKILL.md",
+      "source_path": "_sys/skills/ecosystem-status-brief/SKILL.md",
+      "label": "SKILL.md",
+      "title": "SKILL.md",
+      "source_repo": null,
+      "workspace_id": "mbp-private",
+      "project_id": "mbp-ops",
+      "excerpt": "SKILL.md · Latest committed evidence ledger compliance · HR-LATEST-COMMITTED-EVIDENCE-1 active: latest/progress/blocker reports must list fetched refs plus read_full, read_partial, and not_read scope before claims.",
+      "graph_anchor_ids": []
+    },
+    {
+      "ref_id": "mbp:_sys/xcp-system/cross_repo_drafts/Xlooop-XCP-demo/data/mbp-operations-projection.json",
+      "source_path": "_sys/xcp-system/cross_repo_drafts/Xlooop-XCP-demo/data/mbp-operations-projection.json",
+      "label": "MB-P operations projection",
+      "title": "MB-P operations projection",
+      "source_repo": null,
+      "workspace_id": "mbp-private",
+      "project_id": "mbp-governance",
+      "excerpt": "MB-P operations projection · MB-P skill registry: 223 canonical skills · owner=confirmed · evidence=ready · signoff=ready · xcp=ready_for_substrate",
+      "graph_anchor_ids": []
+    },
+    {
+      "ref_id": "mbp:_sys/xcp-system/derivative/active-agent-collaboration/collaboration_events.jsonl",
+      "source_path": "_sys/xcp-system/derivative/active-agent-collaboration/collaboration_events.jsonl",
+      "label": "Active agent collaboration events",
+      "title": "Active agent collaboration events",
+      "source_repo": null,
+      "workspace_id": "mbp-private",
+      "project_id": "mbp-ops",
+      "excerpt": "Active agent collaboration events · ReleaseWork · Agent collaboration registry event.",
+      "graph_anchor_ids": []
+    },
+    {
+      "ref_id": "receipt:evidence:c142-free-chat-capture",
+      "source_path": "_sys/xcp-system/derivative/chat-capture-packets/2026-05/capture-20260511-chat-contract-capture.json",
+      "label": "receipt:evidence:c142-free-chat-capture",
+      "title": "receipt:evidence:c142-free-chat-capture",
+      "source_repo": null,
+      "workspace_id": "mbp-private",
+      "project_id": "mbp-ops",
+      "excerpt": "receipt:evidence:c142-free-chat-capture · Gateway receipt · free_text_chat_capture · free_chat_text -> codex · receipt_recorded · idempotency xlooop:c142:free-chat-capture:260513:intent-to-contract",
+      "graph_anchor_ids": []
+    },
+    {
+      "ref_id": "mbp:_sys/xcp-system/derivative/discipline-scorecard-latest.json",
+      "source_path": "_sys/xcp-system/derivative/discipline-scorecard-latest.json",
+      "label": "MB-P discipline scorecard latest",
+      "title": "MB-P discipline scorecard latest",
+      "source_repo": null,
+      "workspace_id": "mbp-private",
+      "project_id": "mbp-ops",
+      "excerpt": "MB-P discipline scorecard latest · Governance discipline scorecard · M1 citation 100 · M2 parity 100 · metrics tracked 8",
+      "graph_anchor_ids": []
+    },
+    {
+      "ref_id": "mbp:_sys/xcp-system/derivative/ecosystem-graph/graph-latest-summary.json",
+      "source_path": "_sys/xcp-system/derivative/ecosystem-graph/graph-latest-summary.json",
+      "label": "MB-P ecosystem graph latest summary",
+      "title": "MB-P ecosystem graph latest summary",
+      "source_repo": null,
+      "workspace_id": "mbp-private",
+      "project_id": "mbp-ops",
+      "excerpt": "MB-P ecosystem graph latest summary · Ecosystem graph summary · 14496 nodes · 164510 edges · 50 intake events",
+      "graph_anchor_ids": []
+    },
+    {
+      "ref_id": "mbp:_sys/xcp-system/derivative/governance-events.jsonl",
+      "source_path": "_sys/xcp-system/derivative/governance-events.jsonl",
+      "label": "MB-P governance event stream",
+      "title": "MB-P governance event stream",
+      "source_repo": null,
+      "workspace_id": "mbp-private",
+      "project_id": "mbp-ops",
+      "excerpt": "MB-P governance event stream · OperatorResponseToRecommendation · Operator/governance signal captured by MB-P.",
+      "graph_anchor_ids": []
+    },
+    {
+      "ref_id": "receipt:evidence:intake-ledger-live-handoff",
+      "source_path": "_sys/xcp-system/derivative/intake-ledger/2026-05.ndjson",
+      "label": "receipt:evidence:intake-ledger-live-handoff",
+      "title": "receipt:evidence:intake-ledger-live-handoff",
+      "source_repo": null,
+      "workspace_id": "mbp-private",
+      "project_id": "mbp-ops",
+      "excerpt": "receipt:evidence:intake-ledger-live-handoff · Gateway receipt · xlooop_live_operation_handoff · xlooop_operations_ui -> codex · receipt_recorded · idempotency xlooop:c142:live-operation-handoff:projection-packet-action",
+      "graph_anchor_ids": []
+    },
+    {
+      "ref_id": "mbp:_sys/xcp-system/derivative/session-bundles/cross-repo-planner-20260710.md",
+      "source_path": "_sys/xcp-system/derivative/session-bundles/cross-repo-planner-20260710.md",
+      "label": "Session bundle cross-repo-planner-20260710.md",
+      "title": "Session bundle cross-repo-planner-20260710.md",
+      "source_repo": null,
+      "workspace_id": "mbp-private",
+      "project_id": "mbp-ops",
+      "excerpt": "Session bundle cross-repo-planner-20260710.md · Session bundle · cross-repo-planner · Latest MB-P role/session context bundle available for operator review and downstream agents.",
+      "graph_anchor_ids": []
+    },
+    {
+      "ref_id": "mbp:_sys/xcp-system/derivative/session-bundles/cross-repo-planner-260710_0300.md",
+      "source_path": "_sys/xcp-system/derivative/session-bundles/cross-repo-planner-260710_0300.md",
+      "label": "Session bundle cross-repo-planner-260710_0300.md",
+      "title": "Session bundle cross-repo-planner-260710_0300.md",
+      "source_repo": null,
+      "workspace_id": "mbp-private",
+      "project_id": "mbp-ops",
+      "excerpt": "Session bundle cross-repo-planner-260710_0300.md · Session bundle · cross-repo-planner-260710_0300 · Latest MB-P role/session context bundle available for operator review and downstream agents.",
+      "graph_anchor_ids": []
+    },
+    {
+      "ref_id": "mbp:_sys/xcp-system/derivative/session-bundles/product-manager-20260710.md",
+      "source_path": "_sys/xcp-system/derivative/session-bundles/product-manager-20260710.md",
+      "label": "Session bundle product-manager-20260710.md",
+      "title": "Session bundle product-manager-20260710.md",
+      "source_repo": null,
+      "workspace_id": "mbp-private",
+      "project_id": "mbp-ops",
+      "excerpt": "Session bundle product-manager-20260710.md · Session bundle · product-manager · Latest MB-P role/session context bundle available for operator review and downstream agents.",
+      "graph_anchor_ids": []
+    },
+    {
+      "ref_id": "mbp:_sys/xcp-system/derivative/session-bundles/product-manager-260710_0300.md",
+      "source_path": "_sys/xcp-system/derivative/session-bundles/product-manager-260710_0300.md",
+      "label": "Session bundle product-manager-260710_0300.md",
+      "title": "Session bundle product-manager-260710_0300.md",
+      "source_repo": null,
+      "workspace_id": "mbp-private",
+      "project_id": "mbp-ops",
+      "excerpt": "Session bundle product-manager-260710_0300.md · Session bundle · product-manager-260710_0300 · Latest MB-P role/session context bundle available for operator review and downstream agents.",
+      "graph_anchor_ids": []
+    },
+    {
+      "ref_id": "mbp:_sys/xcp-system/derivative/session-bundles/xlooop-product-20260710.md",
+      "source_path": "_sys/xcp-system/derivative/session-bundles/xlooop-product-20260710.md",
+      "label": "Session bundle xlooop-product-20260710.md",
+      "title": "Session bundle xlooop-product-20260710.md",
+      "source_repo": null,
+      "workspace_id": "mbp-private",
+      "project_id": "mbp-ops",
+      "excerpt": "Session bundle xlooop-product-20260710.md · Session bundle · xlooop-product · Latest MB-P role/session context bundle available for operator review and downstream agents.",
+      "graph_anchor_ids": []
+    },
+    {
+      "ref_id": "mbp:_sys/xcp-system/derivative/session-bundles/xlooop-product-260710_0300.md",
+      "source_path": "_sys/xcp-system/derivative/session-bundles/xlooop-product-260710_0300.md",
+      "label": "Session bundle xlooop-product-260710_0300.md",
+      "title": "Session bundle xlooop-product-260710_0300.md",
+      "source_repo": null,
+      "workspace_id": "mbp-private",
+      "project_id": "mbp-ops",
+      "excerpt": "Session bundle xlooop-product-260710_0300.md · Session bundle · xlooop-product-260710_0300 · Latest MB-P role/session context bundle available for operator review and downstream agents.",
+      "graph_anchor_ids": []
+    },
+    {
+      "ref_id": "mbp:_sys/xcp-system/derivative/skill-invocation-log.ndjson",
+      "source_path": "_sys/xcp-system/derivative/skill-invocation-log.ndjson",
+      "label": "MB-P skill invocation log",
+      "title": "MB-P skill invocation log",
+      "source_repo": null,
+      "workspace_id": "mbp-private",
+      "project_id": "mbp-ops",
+      "excerpt": "MB-P skill invocation log · Skill invoked · xcp-atomic-closure · git_reconstructed · builder-maintainer",
+      "graph_anchor_ids": []
+    },
+    {
+      "ref_id": "mbp:_sys/xcp-system/evidence/discoverability/mode-coverage/20260514_mode_coverage.json",
+      "source_path": "_sys/xcp-system/evidence/discoverability/mode-coverage/20260514_mode_coverage.json",
+      "label": "MB-P mode coverage report",
+      "title": "MB-P mode coverage report",
+      "source_repo": null,
+      "workspace_id": "xcp-platform",
+      "project_id": "xcp-roadmap",
+      "excerpt": "MB-P mode coverage report · Mode coverage and engine adoption · Engine-contract adoption 44% · target 25",
+      "graph_anchor_ids": []
+    },
+    {
+      "ref_id": "receipt:evidence:c161-telegram-chat-capture",
+      "source_path": "_sys/xcp-system/evidence/frontend-architecture/C161_async_collaboration_xfront_engine_roadmap.md",
+      "label": "receipt:evidence:c161-telegram-chat-capture",
+      "title": "receipt:evidence:c161-telegram-chat-capture",
+      "source_repo": null,
+      "workspace_id": "mbp-private",
+      "project_id": "mbp-ops",
+      "excerpt": "receipt:evidence:c161-telegram-chat-capture · Gateway receipt · telegram_chat_capture · telegram -> codex · receipt_recorded · idempotency xlooop:c161:telegram-chat-capture:260513:intent-to-contract",
+      "graph_anchor_ids": []
+    },
+    {
+      "ref_id": "mbp:_sys/xcp-system/governance/HARD_RULES.md",
+      "source_path": "_sys/xcp-system/governance/HARD_RULES.md",
+      "label": "HARD_RULES.md",
+      "title": "HARD_RULES.md",
+      "source_repo": null,
+      "workspace_id": "mbp-private",
+      "project_id": "mbp-ops",
+      "excerpt": "HARD_RULES.md · Latest committed evidence ledger compliance · HR-LATEST-COMMITTED-EVIDENCE-1 active: latest/progress/blocker reports must list fetched refs plus read_full, read_partial, and not_read scope before claims.",
+      "graph_anchor_ids": []
+    },
+    {
+      "ref_id": "receipt:evidence:private-telegram-direct-input-encryption",
+      "source_path": "receipt:evidence:private-telegram-direct-input-encryption",
+      "label": "receipt:evidence:private-telegram-direct-input-encryption",
+      "title": "receipt:evidence:private-telegram-direct-input-encryption",
+      "source_repo": null,
+      "workspace_id": "mbp-private",
+      "project_id": "mbp-ops",
+      "excerpt": "receipt:evidence:private-telegram-direct-input-encryption · Gateway receipt · telegram_chat_capture · telegram -> codex · receipt_recorded · idempotency xlooop:c161:telegram-chat-capture:260513:intent-to-contract",
+      "graph_anchor_ids": []
+    },
+    {
+      "ref_id": "source:mbp:engine-contract-registry",
+      "source_path": "source:mbp:engine-contract-registry",
+      "label": "ENGINE_CONTRACT_REGISTRY.yml module.comprehensive_ecosystem_review_scope",
+      "title": "ENGINE_CONTRACT_REGISTRY.yml module.comprehensive_ecosystem_review_scope",
+      "source_repo": null,
+      "workspace_id": "mbp-private",
+      "project_id": "mbp-governance",
+      "excerpt": "ENGINE_CONTRACT_REGISTRY.yml module.comprehensive_ecosystem_review_scope · MB-P comprehensive ecosystem review scope is dashboard-visible and mandatory · owner=confirmed · evidence=ready · signoff=ready · xcp=ready_for_…",
+      "graph_anchor_ids": []
+    },
+    {
+      "ref_id": "source:mbp:hard-rules",
+      "source_path": "source:mbp:hard-rules",
+      "label": "HARD_RULES.md v1.26.0",
+      "title": "HARD_RULES.md v1.26.0",
+      "source_repo": null,
+      "workspace_id": "mbp-private",
+      "project_id": "mbp-governance",
+      "excerpt": "HARD_RULES.md v1.26.0 · MB-P HARD_RULES v1.26.0 (277 HR-* IDs) · owner=confirmed · evidence=ready · signoff=ready · xcp=ready_for_substrate",
+      "graph_anchor_ids": []
+    },
+    {
+      "ref_id": "source:mbp:pillars",
+      "source_path": "source:mbp:pillars",
+      "label": "PILLARS.md v2 7-pillar maturity",
+      "title": "PILLARS.md v2 7-pillar maturity",
+      "source_repo": null,
+      "workspace_id": "mbp-private",
+      "project_id": "mbp-governance",
+      "excerpt": "PILLARS.md v2 7-pillar maturity · MB-P pillar maturity composite ~7.86; 0/7 at 10/10 · owner=confirmed · evidence=ready · signoff=ready · xcp=ready_for_substrate",
+      "graph_anchor_ids": []
+    },
+    {
+      "ref_id": "source:mbp:skills-index",
+      "source_path": "source:mbp:skills-index",
+      "label": "skills-index.yaml metadata (223 skills)",
+      "title": "skills-index.yaml metadata (223 skills)",
+      "source_repo": null,
+      "workspace_id": "mbp-private",
+      "project_id": "mbp-governance",
+      "excerpt": "skills-index.yaml metadata (223 skills) · MB-P skill registry: 223 canonical skills · owner=confirmed · evidence=ready · signoff=ready · xcp=ready_for_substrate",
+      "graph_anchor_ids": []
+    },
+    {
+      "ref_id": "source:mbp:wave:0",
+      "source_path": "source:mbp:wave:0",
+      "label": "260511-wave-r-m-d-vi-adr-0049-ratified-path-b-supabase-mermaid-diagram",
+      "title": "260511-wave-r-m-d-vi-adr-0049-ratified-path-b-supabase-mermaid-diagram",
+      "source_repo": null,
+      "workspace_id": "mbp-private",
+      "project_id": "mbp-governance",
+      "excerpt": "260511-wave-r-m-d-vi-adr-0049-ratified-path-b-supabase-mermaid-diagram · MB-P recent waves (5 most recent retrospectives) · owner=confirmed · evidence=ready · signoff=ready · xcp=ready_for_substrate",
+      "graph_anchor_ids": []
+    },
+    {
+      "ref_id": "x-biz:investor/EXECUTIVE_SUMMARY.md",
+      "source_path": "xlooop-x-biz/investor/EXECUTIVE_SUMMARY.md",
+      "label": "Executive summary",
+      "title": "Executive summary",
+      "source_repo": "xlooop-x-biz",
+      "workspace_id": "x-biz",
+      "project_id": "x-biz-investor-readiness",
+      "excerpt": "Executive summary · Executive summary · Investor summary is available for owner review with demo posture, problem, solution, traction, market, team, and ask sections. · # Xlooop -- Executive Summary (v2.0 — SUPERSEDED)…",
+      "graph_anchor_ids": [
+        "repo:xlooop-x-biz"
+      ],
+      "preview_markdown": "# Xlooop -- Executive Summary (v2.0 — SUPERSEDED)\n\n> ⚠ **SUPERSEDED 2026-05-28 (Wave R-I.7):** The current canonical investor exec summary is\n> **[`EXECUTIVE_SUMMARY_v3.0.md`](EXECUTIVE_SUMMARY_v3.0.md)** — post-pivot, regulated-SMB positioning,\n> aligned with live commercial model. This v2.0 is retained as historical record only.\n\n**Version:** 2.0 | **Date:** 260222 | **Status:** SUPERSEDED — see v3.0\n**Purpose:** 1-page cold outreach pitch for investors and strategic partners\n**Derives from:** [MASTER_POSITIONING.md](../masters/01_shared-translatable/MASTER_POSITIONING.md)\n**Historical origin (Pegasus-era CANONICAL-SOURCE docs):**\n- [`../strategy/pegasus-originals/260116_Xlooop_Solution_Overview.docx.md`](../strategy/pegasus-originals/260116_Xlooop_Solution_Overview.docx.md) — 2026-01-16 RECENT solution overview (Phase-B software-dev-agency framing); the strongest contemporary upstream for this v2.0 doc\n- [`../strategy/pegasus-originals/250605_Investor Summary_ The Xlooop Opportunity (Executive Perspective).md`](../strategy/pegasus-originals/250605_Investor%20Summary_%20The%20Xlooop%20Opportunity%20(Executive%20Perspective).md) — 2025-06-05 authoritative Pegasus investor summary\n- [`../strategy/pegasus-originals/250605_Exec Summary_ Abstraction Shell—Bridging Custom Code & No-Code.md`](../strategy/pegasus-originals/250605_Exec%20Summary_%20Abstraction%20Shell%E2%80%94Bridging%20Custom%20Code%20%26%20No-Code.md) — \"Abstraction Shell\" positioning narrative\n\n> ⚠ **AUDIT FLAG — 260519 (cascade C316):** This document is the **v2.0\n> software-dev-agency positioning** (260222) and is **NOT aligned with\n> the current commercial-launch positioning** (Phase 1; regulated SMBs;\n> tone variant C; locked operator-direction 260519).\n>\n> **Specific staleness:**\n> - \"Owner-led software agencies\" framing is pre-pivot\n> - \"62% / 1% / 58%\" stats superseded by sourced AU stats (NAIC/Fifth\n>   Quadrant 2025: 12% Leading / 43-of-100 mean; Gartner 2024: 57% data\n>   not AI-ready; RAND 2024: 80%+ failure rate; ASD 2024–25: A$56,600\n>   incident)\n> - Software-dev-agency focus deferred to Phase B (post-Phase-1 generic\n>   workspace validation)\n>\n> **For current investor / YC / partner outreach, use:**\n> [`../marketing/commercial-launch/PITCH_DECK_COMMERCIAL_LAUNCH_v1.md`](../marketing/commercial-launch/PITCH_DECK_COMMERCIAL_LAUNCH_v1.md)\n> (business-agnostic; 18 slides; sourced stats; cascade C316).\n>\n> **This document remains** as the v2.0 historical record + Phase B\n> (software-dev-agency future track) starting point. **Do not use for\n> current outreach.** See `marketing/commercial-launch/AUDIT_AND_GAPS_SWEEP.md`\n> Gap G1 + G2 for refresh queue (Wave R-I.15c).\n\n> **Demo posture (D-G1):** Investor-facing technical demos follow the **narrow-demo** path — control-plane walkthrough and honest boundaries, not a claim of full production multi-connector graph for all buyers. See [D_G1_ENGINE_DEMO_POSTURE.md](../masters/03_internal-nda-only/D_G1_ENGINE_DEMO_POSTURE.md) and [_sys/operations/DEMO_WALKTHROUGH_CONTROL_PLANE.md](../_sys/operations/DEMO_WALKTHROUGH_CONTROL_PLANE.md).\n\n---\n\n## The Problem\n\n62% of organizations are experimenting with AI agents. Only 1% have mature governance (McKinsey, 2025). 58% of executives expect their governance structures to change within three years (BCG, 2025).\n\nAI has increased software delivery velocity. It has not established who controls the agents, where accountability resides, or how decisions are traced from business intent to deployed code.\n\nIn owner-led software agencies -- where a small senior group runs many parallel client engagements under margin pressure -- this governance gap compounds into rework, coordination overhead, and delivery risk.\n\nThe mathematical reality: at 95% per-step reliability, a 20-step autonomous AI workflow succeeds only 36% of the time. Production systems require 99.9%+. The gap between AI capability and production-grade governance is the defining infrastructure challenge of 2026-2028.\n\n## The Solution\n\n**Xlooop is the Graph-Native AI Delivery Control Plane** -- a system of record for intent lineage, governed change, and cross-artifact traceability across business requirements, design, code, AI-generated outputs, testing, and delivery events. Built on four primitives: **Intent Object**, **Artifact Graph**, **Event Ledger**, **Policy Engine**.\n\n**Core principle:** AI proposes, humans govern, engineering ensures reliability.\n\n**Non-invasive:** Zero footprint in the user's codebase. No hidden files, no SDK, no build changes. Removing Xlooop leaves the codebase unchanged.\n\n**Multi-role:** Every technical concept has a visual interface accessible to non-technical stakeholders -- business analysts, designers, project managers, and clients. Not just developer tooling.\n\n## What Exists Today\n\n- **24-feature platform** (F-001–F-024) with visual UI builder, scalable board canvas, AI chat agent, component library (303 files, 56 Storybook stories), event engine, design token system\n- **AST-based bi-directional code sync** -- visual edits generate code, code changes update visual editor\n- **Transport-agnostic architecture** -- GatewayPort/Adapter pattern, Engine/Service/Strategy pattern\n- **Quality infrastructure** -- 6,461 passing tests, ESLint 0 errors, CI pipeline, Semgrep SAST baseline\n- **US patent granted** (US 11,604,641) for a collaborative AI-driven UI system with a feedback-trained algorithm; EU pending a defend-decision (~Oct 2026); AU lapsed\n\n## Traction\n\n- **200+ enterprise/agency engagements** including 50+ C-level contacts and 15+ active discussions\n- **40+ live demos** conducted at events including GITEX Asia 2025 (finalist) and SaaStr\n- **Strategic interest** from Cisco (M&A discussions)\n- **Customer validation:** Director at 120-engineer firm: *\"Oh, the way we all wanted it to be.\"* Consulting firm (1,000+ staff) called $40/user/month \"fairly cheap.\"\n- **~$170K government support** via R&D Tax Incentive and EMDG export grants (2024-2025)\n- **Pegasus Ascend Winter 2025** -- active participant (Week 10 of investment track)\n- **~$600K founder-funded** with $0 salary -- extreme capital efficiency\n\n> See [TRACTION.md](TRACTION.md) for detailed evidence with verification status.\n\n## Market\n\n- **TAM:** $2.6T-$4.4T agentic AI opportunity (McKinsey, 2025); Xlooop targets the governance layer\n- **ICP (narrowed):** Owner-led software agencies, roughly 10-80 people, running many parallel client projects; economic buyer founder, COO, Head of Deliv\n…",
+      "preview_source": "local_repo_readonly_projection",
+      "editable_preview": true
+    },
+    {
+      "ref_id": "x-biz:investor/FINANCIAL_MODEL.md",
+      "source_path": "xlooop-x-biz/investor/FINANCIAL_MODEL.md",
+      "label": "Financial model",
+      "title": "Financial model",
+      "source_repo": "xlooop-x-biz",
+      "workspace_id": "x-biz",
+      "project_id": "x-biz-investor-readiness",
+      "excerpt": "Financial model · Financial model · Pricing, ACV, unit economics, 5-year projections, and raise assumptions are available as investor-model evidence pending owner confirmation where marked. · --- stable_id: x-biz/invest…",
+      "graph_anchor_ids": [
+        "repo:xlooop-x-biz"
+      ],
+      "preview_markdown": "---\nstable_id: x-biz/investor/FINANCIAL_MODEL.md\nversion: \"2.0\"\ndate: 2026-05-28\nstatus: FINAL\npurpose: Investor-grade 5-year financial model — value-tier basis, three scenarios, A$ AUD\nsupersedes: investor/FINANCIAL_MODEL.md v1.0 (260222 per-seat model — pre-pivot)\nresolves:\n  - DRIFT-2 (pricing model contradiction with live /pricing page)\n  - DRIFT-4 (path-to-$1M ARR mechanism conflict)\n  - DR-4 (FINANCIAL_MODEL repricing decision)\n  - DR-6 (Path-to-A$1M mechanism decision)\n  - OP-11 (pricing midpoints confirmed by operator)\n  - OP-12 (TAM/SAM/SOM canonical confirmed)\n  - OP-13 (tier-pilot ramp path confirmed — Option A)\nanchored_on:\n  - marketing/01_stage1-early-launch/website/pages/10_PRICING.md (live customer-facing pricing)\n  - marketing/01_stage1-early-launch/investor/PITCH_DECK_v3.md (post-pivot canonical)\n  - investor/EXECUTIVE_SUMMARY_v3.0.md (current investor narrative)\n---\n\n# Financial Model — Xlooop\n\n**Currency:** A$ AUD throughout (consistent with live `/pricing` page, PITCH_DECK_v3, and EXECUTIVE_SUMMARY_v3.0).\n**Horizon:** 5 years (Y1 2026 → Y5 2030).\n**Basis:** Value-tier engagement model (Discovery → Pilot → Production POC → Annual licence). No per-seat fee. No multi-year lock-in. No paid integrations.\n\n---\n\n## 1. Executive overview\n\nXlooop sells value-tier engagements to regulated SMBs. Each customer enters through one of four front doors and progresses along a tier-pilot ramp: **Discovery (workshop) → Pilot (60-day fixed) → Production POC (monthly) → Annual licence (yearly)**. Revenue is a blend of transactional (Discovery, Pilot) and recurring (POC, Annual). The model self-sustains by Month 7–9 (mid scenario) on a A$750K seed, with cumulative A$1M revenue crossed at Month 17–18 and Series A trigger conditions met by Month 18–20.\n\n**Three scenarios:**\n\n| Year | Conservative (A$) | **Mid (base case, A$)** | Aggressive (A$) |\n|---|---:|---:|---:|\n| Y1 (2026) | 255K | **480K** | 850K |\n| Y2 (2027) | 665K | **1.05M** | 2.25M |\n| Y3 (2028) | 1.02M | **2.06M** | 4.38M |\n| Y4 (2029) | 1.62M | **3.09M** | 8.00M |\n| Y5 (2030) | 2.05M | **4.52M** | 15.00M+ |\n\n**Headline unit economics (Annual licence anchor, Growth tier):**\n\n| Metric | Value | Notes |\n|---|---|---|\n| Fully-loaded CAC | ~A$10K | Discovery (A$15K, GM 55%) doubles as paid qualification → effective CAC ≈ A$10K |\n| ACV (Production POC) | A$100K | Monthly billed, 30-day notice |\n| ACV (Annual Growth) | A$200K | One of 4 usage bands |\n| **Payback (gross revenue, headline)** | **0.6 months** | A$10K CAC / A$16.7K monthly Annual licence — *most-intuitive unit-economics figure for pre-revenue diligence* |\n| Gross LTV (5-yr customer journey, blended GM) | ~A$486K | 1 Pilot + 2yr POC + 2yr Annual |\n| **LTV : CAC — range** *(P2-C Wave R-I.7 Stage A correction)* | **33 : 1 (3-yr) → 48 : 1 (5-yr central) → 80 : 1+ (7-yr)** | Central case A$486K / A$10K = 48.6 : 1 (5-yr gross). 3-yr horizon (~A$329K LTV) gives 33 : 1; 7-yr retention stretches to 80 : 1+. *(Lead with payback for diligence intuition; LTV:CAC range disclosed to address optical-aggressiveness concern from doc-review.)* (REVISE-2 prior: A$486K / A$10K = 48.6 : 1 — methodology unchanged; presentation updated.)* |\n| Blended gross margin (Y3) | ~73% | Shifts from 62% (Y1, transaction-heavy) to 78% (Y5, Annual-dominant) |\n\n---\n\n## 2. Pricing architecture (OP-11 confirmed)\n\nConfirmed midpoints used for modelling. Live `/pricing` displays the ranges.\n\n| Tier | Price (A$) | Range (live) | Type | Gross margin | Notes |\n|---|---:|---|---|---:|---|\n| **Discovery** | 15K | 8–15K | One-time 90-minute workshop | 55% | Output: gap audit + scope of work + pilot price. Doubles as paid qualification |\n| **Pilot** | 40K | 25–40K | Fixed 60 days, outcome-based | 65% | Recommended start tier |\n| **Production POC** | 100K | 60–100K | Monthly, 30-day notice | 70% | Equivalent to A$8.3K/mo recurring |\n| **Annual — Foundation** | 120K | — | Annual licence | 78% | Smallest usage band |\n| **Annual — Growth** | 200K | — | Annual licence | 78% | Default modelling anchor |\n| **Annual — Multi-office** | 350K | — | Annual licence | 78% | Multi-location regulated SMB |\n| **Annual — Enterprise** | 300K+ | 300K+ | Annual licence | 78% | Custom; floor only |\n\n**No per-seat fee.** **No multi-year lock-in.** **No paid integrations.**\n\n### Tier-pilot conversion funnel (OP-13 confirmed — Option A)\n\n| Transition | Conversion rate |\n|---|---:|\n| Discovery → Pilot | 55% |\n| Pilot → Production POC | 45% |\n| Production POC → Annual licence | 65% |\n| End-to-end Discovery → Annual | ~16% |\n\nImplied: every 6.2 Discovery workshops yields 1 Annual licence customer at ~A$200K ACV. With Discovery itself at A$15K and 55% gross margin, the funnel pays for its own qualification capacity.\n\n---\n\n## 3. Revenue model — three Y1–Y5 scenarios\n\nAll revenue is shown net of churn (assumed 5% Annual / 15% POC) and includes ramp delays inherent to the tier-pilot funnel.\n\n### 3.1 Conservative scenario\n\n| Mechanic | Y1 | Y2 | Y3 | Y4 | Y5 |\n|---|---:|---:|---:|---:|---:|\n| New Discovery engagements | 7 | 11 | 14 | 18 | 22 |\n| New Pilots (55% conv) | 3 | 6 | 8 | 10 | 12 |\n| New POCs (45% conv) | 1 | 3 | 4 | 5 | 6 |\n| New Annual licences (65% conv) | 0 | 1 | 2 | 3 | 4 |\n| Annual licences active (year-end) | 0 | 1 | 3 | 6 | 9 |\n| **Revenue (A$K)** | **255** | **665** | **1,020** | **1,620** | **2,050** |\n| Blended gross margin | 58% | 64% | 70% | 73% | 76% |\n| **Gross profit (A$K)** | **148** | **426** | **714** | **1,183** | **1,558** |\n\n### 3.2 Mid scenario (base case)\n\n| Mechanic | Y1 | Y2 | Y3 | Y4 | Y5 |\n|---|---:|---:|---:|---:|---:|\n| New Discovery engagements | 11 | 18 | 24 | 30 | 36 |\n| New Pilots (55% conv) | 6 | 10 | 13 | 16 | 19 |\n| New POCs (45% conv) | 3 | 5 | 6 | 7 | 9 |\n| New Annual licences (65% conv) | 0 | 3 | 4 | 5 | 6 |\n| Annual licences active (year-end) | 0 | 3 | 7 | 11 | 16 |\n| **Revenue (A$K)** | **480** | **1,050** | **2,060** | **3,090** | **4,520** |\n| Blended gross margin | 62% | 67% | 73% | 76% | 78% |\n| **Gross profit (A$K)** | **298** | **703** | **1,504** | **2,348** | **3,526** |\n\n**Note on Y1 revenue recognition** *(REVISE-1 Wave R-I.7 doc-review clarification):* The A$480K Y1 mid-scenario revenue is **partial-year-recognised**. Pilots that begin in late Y1 (months 10-12) only recognise their first-month revenue in Y1; the remainder spreads into Y2. Production POCs that begin late Y1 similarly recognise only Q4-of-Y1 monthly fees. Full booking value of engagements that originate in Y1 is a\n…",
+      "preview_source": "local_repo_readonly_projection",
+      "editable_preview": true
+    },
+    {
+      "ref_id": "x-biz:investor/TRACTION.md",
+      "source_path": "xlooop-x-biz/investor/TRACTION.md",
+      "label": "Traction register",
+      "title": "Traction register",
+      "source_repo": "xlooop-x-biz",
+      "workspace_id": "x-biz",
+      "project_id": "x-biz-investor-readiness",
+      "excerpt": "Traction register · Traction register · Traction, recognition, strategic interest, IP, grant, customer validation, and pipeline evidence exists with verification status; do not promote unsupported items. · Related graph…",
+      "graph_anchor_ids": [
+        "repo:xlooop-x-biz"
+      ]
+    },
+    {
+      "ref_id": "xlooop-x-biz/masters/INVESTOR_EVIDENCE_PACK.md",
+      "source_path": "xlooop-x-biz/masters/INVESTOR_EVIDENCE_PACK.md",
+      "label": "INVESTOR EVIDENCE PACK",
+      "title": "INVESTOR EVIDENCE PACK",
+      "source_repo": "xlooop-x-biz",
+      "workspace_id": "x-biz",
+      "project_id": "x-biz-investor-readiness",
+      "excerpt": "INVESTOR EVIDENCE PACK · INVESTOR EVIDENCE PACK · P0 investor-readiness document projection for the Project Operating Space. · --- status: proposed owner: Marat Basyrov last_updated: 2026-04-29 source_audit: - docs/audi…",
+      "graph_anchor_ids": [
+        "repo:xlooop-x-biz"
+      ],
+      "preview_markdown": "---\nstatus: proposed\nowner: Marat Basyrov\nlast_updated: 2026-04-29\nsource_audit:\n  - docs/audits/x-biz-yc-a16z-readiness-review.md\n  - docs/audits/x-biz-master-strategy-audit-summary.md\nsources_merged:\n  - investor/EXECUTIVE_SUMMARY.md\n  - investor/TRACTION.md\n  - verticals/software-development/pitch-decks/PITCH_DECK.md\n  - masters/01_shared-translatable/PILOT_COMMERCIAL_MODEL.md\nreview_required: yes\n---\n\n# Investor Evidence Pack\n\n## Category\n\nXlooop is an AI-governed software delivery learning system that captures intent and turns it into governed, evidence-backed delivery.\n\n## Problem\n\nAI coding tools increase output velocity but do not solve context drift, handoff loss, evidence gaps, design-code mismatch, decision memory, or release confidence.\n\n## Why Now\n\nAI-assisted development is becoming mainstream, and enterprise teams need oversight, governance, trust, and quality systems around AI-assisted delivery.\n\n## Demo Proof\n\nThe demo should prove:\n\n- workspace/project context\n- intent capture\n- governed context preview\n- role spaces\n- workbench/execution\n- decision ledger\n- quality gates\n- evidence trail\n- client review\n- sign-off\n- learning update\n\n## Pilot Model\n\n4-6 weeks, one team, one project, one capability slice, paid pilot, overlay-first, with GitHub/Storybook/CI evidence integrated or simulated.\n\n## Technical Credibility\n\nCurrent supporting primitives:\n\n- feature catalog with stable IDs\n- event ledger spec\n- intent ID join-key contract\n- Storybook/component evidence path\n- skill-governed repo audit and documentation stack\n- demo-governance review criteria\n\n## Defensibility\n\nDefensibility depends on intent, context, decision memory, evidence, patterns, lineage, Storybook/component contracts, role-based governance, and delivery learning.\n\n## Traction / Validation Available\n\nStatus: source_needed before investor use.\n\nExisting docs indicate investor/traction material exists, but the evidence pack must not claim commercial traction until proof is reviewed, sourced, and approved.\n\n## Missing Proof\n\n- customer discovery notes\n- paid pilot LOI or proposal\n- pilot price validation\n- demo primitive score >=85/100\n- before/after evidence completeness measurement\n- buyer quote\n- quantified rework/review-cycle improvement\n\n## Risks\n\n| Risk | Severity | Mitigation |\n|---|---:|---|\n| category confusion | high | lead with learning system, keep graph as architecture |\n| ICP conflict | medium-high | agency wedge, regulated enterprise expansion |\n| overbuilding | high | one flywheel, one slice |\n| unsupported ROI | high | mark claims as hypothesis until pilot |\n| competitor absorption | high | avoid builder/coding assistant category |\n\n## Ask / Next Milestone\n\nNext milestone: complete investor-safe demo and one paid pilot proposal around a governed capability slice.\n\nInvestor use verdict: conditional. Use only after evidence, traction, and demo claims are reviewed.\n\n## Sales Evidence Available But Verification-Gated\n\nSource: `docs/audits/sales-evidence/` derived from `/Users/maratbasyrov/Downloads/Sales`.\n\nUseful internal signals now exist for GITEX recognition, investor/customer conversations, outreach pipeline, target-company hypotheses, and pilot-template history.\n\nDo not use these as external traction, pricing validation, or customer-demand proof until each claim is upgraded through the Evidence Gap Tracker. Internal notes about Cisco, QuantumVC, Musa, customer reactions, and price feedback remain `supported_internal` or `source_needed`.",
+      "preview_source": "local_repo_readonly_projection",
+      "editable_preview": true
+    },
+    {
+      "ref_id": "xlooop-x-biz/masters/PILOT_COMMERCIAL_MODEL.md",
+      "source_path": "xlooop-x-biz/masters/PILOT_COMMERCIAL_MODEL.md",
+      "label": "PILOT COMMERCIAL MODEL",
+      "title": "PILOT COMMERCIAL MODEL",
+      "source_repo": "xlooop-x-biz",
+      "workspace_id": "x-biz",
+      "project_id": "x-biz-investor-readiness",
+      "excerpt": "PILOT COMMERCIAL MODEL · PILOT COMMERCIAL MODEL · P0 investor-readiness document projection for the Project Operating Space. · --- status: canonical owner: Marat Basyrov last_updated: 2026-05-07 source_audit: - docs/aud…",
+      "graph_anchor_ids": [
+        "repo:xlooop-x-biz"
+      ],
+      "preview_markdown": "---\nstatus: canonical\nowner: Marat Basyrov\nlast_updated: 2026-05-07\nsource_audit:\n  - docs/audits/xbiz-owner-decisions-g2-g3-a2-20260507.md\n  - docs/audits/pilot-commercial-model-review.md\n  - docs/audits/x-biz-yc-a16z-readiness-review.md\n  - docs/audits/yc-readiness-scorecard-20260502.md\n  - docs/audits/yc-canonical-doc-priority-map-20260502.md\n  - docs/audits/yc-strategy-investor-evidence-review-20260502.md\nsources_merged:\n  - masters/01_shared-translatable/PILOT_COMMERCIAL_MODEL.md\n  - strategy/250618_Pricing Strategy and Value Proposition.md\n  - strategy/250605_GTM Strategy Update_ Incorporating Financial Targets & Commercial Stages.md\n  - investor/FINANCIAL_MODEL.md\n  - verticals/software-development/pitch-decks/260320_Xlooop Pitch Deck.pdf\nreview_required: yes\n---\n\n# Pilot Commercial Model\n\n## Pilot Purpose\n\nThe pilot proves whether Xlooop can turn one real delivery intent into governed, evidence-backed delivery with measurable business value.\n\nIt is not a broad rollout, platform migration, or feature showcase.\n\n## YC-Safe Pilot Offer\n\nXlooop starts with a focused design-partner pilot:\n\n- 4-6 weeks\n- one delivery team\n- one real project or representative project slice\n- one capability slice\n- existing stack stays in place\n- GitHub, Storybook/design evidence, and CI/test evidence are integrated or simulated as needed\n- the output is a before/after evidence and sign-off report\n\n## ICP\n\n### Primary pilot ICP\n\nOwner-led software agency or delivery organization, roughly 10-80 people, with multiple active client projects, a small group of senior owners, visible handoff/review/rework pain, GitHub or GitLab usage, Figma or design-system workflow, Storybook/component or equivalent UI evidence path, and AI-assisted coding or intent to adopt it.\n\nThe preferred first design partner is an agency or delivery team where the buyer can name a recent delivery workflow that suffered from unclear intent, repeated context explanation, senior-owner bottlenecks, review delay, or weak sign-off evidence.\n\n### Expansion ICP\n\nRegulated enterprise product/engineering teams adopting AI-assisted delivery at scale.\n\n## Buyer And Users\n\n| Role | Pilot Role |\n|---|---|\n| Head of Delivery / VP Engineering | economic buyer |\n| CTO / Architect | technical co-signer |\n| Delivery Ops / Principal Engineer | operational champion |\n| Product owner | intent and acceptance input |\n| Designer / Developer / QA | workflow users |\n| Client stakeholder | review/sign-off participant |\n\n## Pilot Scope\n\nDefault pilot:\n\n- 4-6 weeks\n- one team\n- one project\n- one capability slice\n- overlay-first; no stack replacement\n- integrate or simulate GitHub, Storybook, and CI evidence\n\nThe pilot should instrument one governed delivery flywheel:\n\nIntent -> Context Pack -> AI Task Packet -> Workbench/Execution -> Decision Ledger -> Quality Gates -> Evidence Trail -> Client Review -> Sign-off -> Learning Update.\n\n## Pilot Price And Commercial Model\n\nStatus: Marat-verified commercial model; continue collecting buyer-specific price reactions.\n\nRecommended paid pilot range:\n\n- first-wedge discovery / light instrumentation: A$4.5k 60-day pilot\n- standard owner-led agency backend-track pilot: A$25k 90-day pilot\n- higher-complexity agency or enterprise pilot: USD 25k-100k, depending on integration depth and evidence requirements\n\nHistorical pricing inputs in `strategy/250615_Customers willing to pay.md`, `strategy/250906_Chris (IT Focus) - Business Growth Strategy Call.md`, and `investor/TRACTION.md` are now treated as verified/provable for investor materials. Continue attaching buyer-specific evidence for diligence.\n\nDo not expose internal XCP-Core or XCP-Cloud packaging in public Xlooop pilot copy. Public pilot language stays Xlooop-singular.\n\nInvestor model:\n\n| Metric | Value |\n|---|---:|\n| baseline subscription | USD 40 per user/month |\n| annual contract range | USD 125K-200K |\n| fast path to USD 1M ARR | 5-8 enterprise deals |\n\n## Success Metrics\n\n| Metric | Definition | Target Direction |\n|---|---|---|\n| intent-to-task time | time from approved intent to actionable task/context packet | decrease |\n| evidence completeness | required evidence items present at review | increase |\n| handoff reduction | clarification loops or repeated context explanations | decrease |\n| review cycle time | time from delivery-ready to accepted/signed off | decrease |\n| release readiness | quality gates, evidence, and sign-off completeness | increase |\n| lineage completeness | intent/design/code/test/evidence links present | increase |\n\n## Onboarding Inputs\n\n- one project and capability slice\n- existing project intent/background\n- role list and review workflow\n- GitHub/GitLab access or exported sample\n- Storybook/component links or equivalent UI evidence\n- CI/test evidence or simulated status\n- client review/sign-off criteria\n\n## Deliverables\n\n- pilot kickoff baseline\n- capability slice map\n- governed context pack\n- decision ledger sample\n- quality gate/evidence trail\n- client-safe review pack\n- sign-off record\n- learning update\n- before/after metrics report\n- go/no-go conversion recommendation\n\n## Go / No-Go Gate\n\nGo to annual/commercial expansion only if the buyer validates the workflow value, evidence completeness improves materially, the team can use the flow without heavy hand-holding, at least one stakeholder validates before/after value, and a next capability slice is identified.\n\nNo-go if the customer cannot provide a real workflow, evidence cannot be captured, Xlooop becomes a reporting dashboard only, the pilot requires full platform rollout, or no budget owner is identifiable.\n\n## Evidence Goal\n\nTo strengthen investor/customer conversion, continue collecting:\n\n- at least 5 buyer interviews around handoff/review/evidence pain;\n- at least 2 design-partner candidates with a real workflow to test;\n- at least 2 additional explicit price reaction records with buyer role, context, date, and permission status;\n- one completed before/after pilot or simulated pilot report;\n- one clear example where Xlooop improved evidence completeness or sign-off readiness.\n\n## Risks And Assumptions\n\n| Risk | Severity | Mitigation |\n|---|---:|---|\n| pilot too broad | high | enforce one team/project/capability slice |\n| pricing evidence needs packaging | medium | attach buyer-specific evidence pack and keep collecting reactions |\n| integrations consume all effort | high | simulate where needed for proof |\n| buyer values speed more than governance | medium | qualify on eviden\n…",
+      "preview_source": "local_repo_readonly_projection",
+      "editable_preview": true
+    }
+  ],
+  "metrics": {
+    "document_count": 30,
+    "documents_with_excerpt": 30,
+    "raw_private_content_included": false
+  }
+}

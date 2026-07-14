@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "project_id": "mbp-intake",
+  "name": "Unified intake",
+  "permissions": {
+    "can_promote_wi": [
+      "Owner"
+    ],
+    "can_signoff_evidence": [
+      "Owner"
+    ]
+  },
+  "restrictions": {
+    "block_external_share_without_signoff": true,
+    "require_decision_record_on_signoff": true
+  },
+  "compliance": {
+    "evidence_validity_default_days": 30
+  }
+}

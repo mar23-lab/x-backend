@@ -1,0 +1,118 @@
+id: c29_bisync_01_xfront_engine_investigation
+created_at: "2026-05-09T11:28:00+10:00"
+date_key: "260509_1128"
+owner: Marat Basyrov
+scope: investigation_and_contract_design_only
+source_xfront:
+  repo_path: /Users/maratbasyrov/WIP/Xlooop/x-front
+  head_sha: 401e6d40a0befc683a7a410f1ed0aee0afd6f492
+  head_short: 401e6d4
+demo_base:
+  repo_path: /Users/maratbasyrov/WIP/Xlooop/Xlooop-XCP-demo
+  head_sha: 7c541cf25c0ea278286552a26aa39688c8ba16e0
+decision:
+  verdict: learn_patterns_no_absorption
+  xfront_code_import_authorized: false
+  xfront_file_mutation_authorized: false
+  demo_runtime_change_authorized: false
+  archive_delete_move_authorized: false
+  future_contract_skeleton_authorized_after_owner_review: true
+role_panel:
+  - chief-of-staff
+  - cto
+  - lead-engineer
+  - frontend-architect
+  - integration-boundary-architect
+  - devsecops
+  - ai-governed-infrastructure-manager
+  - product-manager
+skills_used:
+  - product-engineering-router
+  - frontend-architecture-review
+  - integration-boundary-contracts
+  - delivery-readiness-gates
+  - existing-artifact-discovery
+surface_inventory:
+  xfront_service_files_total: 590
+  xfront_test_files_total: 38
+  demo_current_named_engine_files: 0
+  areas:
+    - id: codeCompiler
+      source_path: /Users/maratbasyrov/WIP/Xlooop/x-front/src/shared/services/codeCompiler
+      files_inspected_count: 279
+      test_files_count: 15
+      absorption_risk: 95
+      classification: no_go_direct_absorption
+    - id: codebase
+      source_path: /Users/maratbasyrov/WIP/Xlooop/x-front/src/shared/services/codebase
+      files_inspected_count: 150
+      test_files_count: 19
+      absorption_risk: 85
+      classification: no_go_direct_absorption
+    - id: editorEngine
+      source_path: /Users/maratbasyrov/WIP/Xlooop/x-front/src/shared/services/editorEngine
+      files_inspected_count: 100
+      test_files_count: 1
+      absorption_risk: 90
+      classification: no_go_direct_absorption
+    - id: iFrameEngine
+      source_path: /Users/maratbasyrov/WIP/Xlooop/x-front/src/shared/services/iFrameEngine
+      files_inspected_count: 61
+      test_files_count: 3
+      absorption_risk: 85
+      classification: no_go_direct_absorption
+transfer_candidates:
+  - text_lane_vs_patch_lane_vocabulary
+  - source_adapter_model
+  - render_tree_and_render_patch_vocabulary
+  - host_to_sandbox_bridge_risk_model
+  - editor_read_write_focus_facade_pattern
+  - cold_start_lifecycle_status_model
+  - bidirectional_editing_storybook_qa_dod
+no_go_surfaces:
+  - direct_codeCompiler_import_or_copy
+  - direct_editorEngine_import_or_copy
+  - direct_iFrameEngine_import_or_copy
+  - direct_codebase_import_or_copy
+  - monaco_editor_runtime_absorption
+  - xfront_docs_as_current_demo_architecture
+candidate_contracts:
+  - SourceSnapshotContract
+  - SourceAdapterContract
+  - CodeDraftContract
+  - CodePatchContract
+  - RenderTreeContract
+  - PreviewSandboxMessageContract
+  - EditorSessionContract
+  - BiSyncEvidenceContract
+risk_register:
+  - id: r2_ilmir_engine_drift
+    score: 95
+    de_risking_action: require_current_head_refresh_and_owner_ilmir_signoff
+  - id: security_sandbox_leakage
+    score: 90
+    de_risking_action: define_message_contract_origin_policy_payload_sanitizer
+  - id: bundle_performance_regression
+    score: 80
+    de_risking_action: optional_lazy_lane_with_separate_budget
+  - id: contract_mismatch_with_demo_graph
+    score: 75
+    de_risking_action: contract_first_bridge_with_typed_evidence_edges
+  - id: ux_complexity
+    score: 70
+    de_risking_action: expose_proof_chain_not_raw_engine_controls
+  - id: test_insufficiency_editor_iframe
+    score: 70
+    de_risking_action: require_fixture_state_matrix_before_porting
+required_gates_before_implementation:
+  - current_xfront_head_rechecked
+  - owner_and_ilmir_scope_not_in_conflict
+  - bisync_contract_files_and_fixtures_reviewed
+  - no_private_data_or_customer_source_in_fixtures
+  - postmessage_origin_source_filtering_policy_explicit
+  - bundle_budget_separates_product_shell_from_optional_editor_lane
+  - contract_tests_cover_all_candidate_contracts
+  - storybook_state_matrix_covers_bisync_states
+  - first_runtime_proof_uses_mocked_fixtures_only
+recommended_next_slice: C29-BISYNC-02
+recommended_next_slice_scope: contract_skeleton_only_no_runtime_no_xfront_import

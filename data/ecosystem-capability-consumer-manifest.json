@@ -1,0 +1,46 @@
+{
+  "schema_version": "xcp.capability_consumer_manifest.v1",
+  "consumer_repo": "Xlooop-XCP-demo",
+  "consumed_contract_pack_path": "data/xcp-ecosystem-leverage-contract-pack.v1.json",
+  "consumed_contract_pack_sha256": "cedbfe632294a3d41adde808a2f80892612e175c90b6d9b6871edb900b4767d4",
+  "governance_authority": "MB-P",
+  "adopted_capabilities": [
+    {
+      "capability_id": "xcp.shared_access_contract_pack",
+      "reuse_class": "reuse_now",
+      "source_domain": "xcp-platform",
+      "local_surface": "data/xcp-shared-access-contract-consumption.json",
+      "evidence_ref": "data/xcp-shared-access-contract-pack.v1.json",
+      "verifier": "npm run verify:shared-access-contracts",
+      "status": "adopted"
+    },
+    {
+      "capability_id": "xcp.commercial_readiness_posture_pack",
+      "reuse_class": "reuse_now",
+      "source_domain": "xcp-platform",
+      "local_surface": "data/commercial-controlled-pilot-readiness.json",
+      "evidence_ref": "data/commercial-controlled-pilot-readiness.json",
+      "verifier": "npm run verify:commercial-controlled-pilot-readiness",
+      "status": "adopted"
+    },
+    {
+      "capability_id": "xlooop.operator_gated_pilot_workflow",
+      "reuse_class": "extract_package",
+      "source_domain": "xlooop",
+      "local_surface": "data/operator-onboarding-decision.json",
+      "evidence_ref": "data/commercial-controlled-pilot-readiness.json",
+      "verifier": "npm run verify:operator-onboarding-decision",
+      "status": "proposed"
+    },
+    {
+      "capability_id": "xlooop.production_pilot_boundary_verifiers",
+      "reuse_class": "extract_package",
+      "source_domain": "xlooop",
+      "local_surface": "scripts/verify-production-pilot-boundary.mjs",
+      "evidence_ref": "data/production-pilot-readiness.json",
+      "verifier": "npm run verify:production-pilot-boundary",
+      "status": "proposed"
+    }
+  ],
+  "consumed_contract_pack_file_sha256": "98f97f9d13ae42214d17b96417ba0a0fa66829c186346b7d8590a1e97d9625e7"
+}

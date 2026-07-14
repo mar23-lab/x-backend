@@ -1,0 +1,20 @@
+{
+  "surface": "api.xlooop.com (Cloudflare Worker: xlooop-api)",
+  "commit": "ccdc7c69",
+  "build_sha": "ccdc7c69",
+  "built_at": "20260713T092340Z",
+  "deploy_note": "emitted 2026-07-13T09:24:22.759Z by scripts/emit-deploy-receipt.mjs after live /health readback match",
+  "health_readback": {
+    "status": "ok",
+    "version": "1.0.0",
+    "build": "ccdc7c69"
+  },
+  "observability": {
+    "sentry_active": true,
+    "status": "LIVE — SDK bound to a valid, parseable DSN (isSentryActive = !!getClient().getDsn()).",
+    "incident_note": "The worker SENTRY_DSN was initially bound to a wrong ~157-char value (an auth token / non-DSN); the honest getDsn() probe (F13 fix) caught it (sentry_active:false while sentry_dsn_configured:true). Resolved by binding the project's real DSN (the publishable client key already live in the app.xlooop.com bundle). The earlier getClient()-only sentry_active:true was a false positive.",
+    "delivery_verification": "CONFIRMED 260707 via Sentry Issues (org xlooop, project 4511461876039680, xcp-platform-dev): live events arriving — xcp.sentry.provider_self_test (self-test, last seen 3min), N+1 API Call on api.xlooop.com/api/v1/members (39 events/12 users, trace), ReferenceError browser error (unhandled). Activation (sentry_active:true via getDsn) + delivery both proven. PII stripped by beforeSend (sentry.ts REDACT_FIELD_RE)."
+  },
+  "zero_5xx_smoke": "health 200; authed routes 401; no 5xx",
+  "provenance": "emitted by scripts/emit-deploy-receipt.mjs (refuses on build/HEAD mismatch — F13-honest)"
+}

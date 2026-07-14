@@ -1,0 +1,134 @@
+{
+  "schema_version": "xlooop.production_pilot_readiness.v1",
+  "generated_at": "2026-05-18T04:35:00.000Z",
+  "scope": "Xlooop-XCP Demo production paid-pilot boundary",
+  "summary": {
+    "commercial_demo_status": "go",
+    "commercial_demo_scope": "static_demo_only",
+    "commercial_demo_status_note": "Browser-safe proof is go. Controlled commercial pilot preparation is go_with_restrictions and operator-gated; public/self-serve readiness is not claimed.",
+    "paid_customer_pilot_status": "operator_gated_go_with_restrictions",
+    "runtime_position": "browser-safe commercial proof plus Cloudflare-proven customer-feedback proposal-only backend authority plus repo-side paid-pilot authority/gateway scaffolding; private Operator requires Marat onboarding decision and evidence.",
+    "hard_rule": "Customer-feedback proposal-only operation is proven by the production-boundary receipt. Do not claim production SaaS, unrestricted private customer Operator mode, autonomous operations, validated ROI, raw tenant content access, or direct source writeback until Marat onboarding decision, evidence, and strict receipts are explicitly approved.",
+    "operator_gate_required": true,
+    "public_self_serve_status": "not_claimed",
+    "operator_decision_authority": "Marat"
+  },
+  "checks": [
+    {
+      "id": "production_auth_tenant_enforcement",
+      "label": "Real auth and tenant enforcement",
+      "status": "operator_gated_strict_receipt_required",
+      "current_state": "Browser-safe AuthenticatedSessionV1, customer-feedback Cloudflare Pages Functions, and separate paid-pilot authority routes are present. URL owner params no longer grant access. Customer-feedback APIs enforce Access identity and proposal-only receipts. Paid-pilot routes require signed Cloudflare Access JWT verification, D1 identity, app entitlement, tenant membership, role permissions, operating mode, action policy, receipt policy, and redacted responses. Private Operator remains disabled until Marat records an onboarding decision and docs/deployment/evidence/latest-paid-pilot-boundary-receipt.json is renewed with npm run verify:paid-pilot-boundary:strict passing.",
+      "required_state": "Fresh strict paid-pilot receipt proving signed Access JWT positive/negative checks, tenant membership, XCP default deny, entitled operator allowlist, monitoring, incident/SLA, and legal/claim sign-off before paid customer private operations.",
+      "risk_if_ignored": "Cross-tenant data leakage or unauthorised customer access.",
+      "next_action": "Run npm run evidence:paid-pilot:renew with Cloudflare Access signed JWT evidence and legal/SLA refs, then require npm run verify:paid-pilot-boundary:strict before any paid/private Operator claim.",
+      "blocks_paid_pilot": false,
+      "blocks_private_operator": true,
+      "operator_gated": true
+    },
+    {
+      "id": "operator_execution_gateway",
+      "label": "Operator execution gateway",
+      "status": "operator_gated_gateway_present_strict_receipt_required",
+      "current_state": "Operator Mode creates backend-shaped proposal receipts locally, customer-feedback backend APIs persist proposal-only D1 records, and paid-pilot /api/actions routes are present for allowlisted propose/approve/execute/rollback with idempotency keys and audit events. Customer-feedback users remain Watch/Test proposal-only by default; paid-pilot Operator requires explicit D1 entitlement, role permission, action policy, idempotency key, approval, verifier, and rollback evidence.",
+      "required_state": "Strict cloud receipt proving allowlisted execution, non-allowlisted denial, idempotency replay, audit events, rollback receipt, monitoring, and incident/SLA ownership.",
+      "risk_if_ignored": "Buttons appear operational without an authoritative execution record.",
+      "next_action": "Run npm run verify:paid-pilot-execution-gateway and require npm run verify:paid-pilot-boundary:strict before enabling any paid/private Operator principal.",
+      "blocks_paid_pilot": false,
+      "blocks_private_operator": true,
+      "operator_gated": true
+    },
+    {
+      "id": "source_document_writeback",
+      "label": "Source document writeback",
+      "status": "operator_gated_markdown_adapter_present_strict_receipt_required",
+      "current_state": "Document editing remains a local draft/proposal flow in the browser. A backend-mediated paid-pilot Markdown writeback adapter exists for approved actions only; it requires a collaboration claim, dedicated branch, allowlisted Markdown path, verifier, rollback reference, and source-writeback receipt. Browser source overwrite remains blocked.",
+      "required_state": "Strict cloud/local adapter receipt proving proposal-first Markdown writeback, active collaboration claim, dedicated branch commit, verifier pass, rollback evidence, and D1 SourceWritebackReceipt.",
+      "risk_if_ignored": "Customer docs could be silently corrupted or edited without traceability.",
+      "next_action": "Use npm run paid-pilot:markdown-writeback:apply only for approved paid-pilot D1 actions and require npm run verify:paid-pilot-source-writeback plus npm run verify:paid-pilot-boundary:strict before claiming source writeback enabled.",
+      "blocks_paid_pilot": false,
+      "blocks_private_operator": true,
+      "operator_gated": true
+    },
+    {
+      "id": "document_workbench_anchors",
+      "label": "Full document workbench anchors",
+      "status": "partially_live",
+      "current_state": "Markdown projection, one Project Operating Space view/edit document panel, current-session saved versions, source-heading anchors, and local anchor/selection comments are live. PDF/DOCX rendering and page/paragraph anchor comments remain planned.",
+      "required_state": "Markdown, PDF, DOCX, and source document review with page/section anchors, comments, evidence links, approval/sign-off, and context graph binding.",
+      "risk_if_ignored": "The workbench proves document context, but not full professional review workflows.",
+      "next_action": "Add source-type adapters: Markdown anchors first, then PDF page anchors, then DOCX paragraph anchors.",
+      "blocks_paid_pilot": false
+    },
+    {
+      "id": "storybook_contract_lab",
+      "label": "Storybook production boundary lab",
+      "status": "live_contract_story_gated",
+      "current_state": "Runtime and production-boundary stories cover APS onboarding, owner isolation, Project Operating Space, the x-biz document workbench, and operator receipts.",
+      "required_state": "Storybook stories for APS onboarding, owner isolation, Project Operating Space, x-biz document workbench, and operator receipts with provenance and blocked/live status.",
+      "risk_if_ignored": "Storybook can overstate component maturity without showing paid-pilot constraints.",
+      "next_action": "Keep boundary stories in the golden-path contract lab and gate them with a verifier.",
+      "blocks_paid_pilot": false
+    }
+  ],
+  "storybook_contract_lab": [
+    {
+      "id": "aps_onboarding_boundary",
+      "title": "APS onboarding boundary",
+      "required_story_export": "APSOnboardingBoundary",
+      "status": "required",
+      "proves": "External customer onboarding can show authority, consent, source register, and AI-ready milestone without ingesting private data."
+    },
+    {
+      "id": "owner_isolation_boundary",
+      "title": "Owner isolation boundary",
+      "required_story_export": "OwnerIsolationBoundary",
+      "status": "required",
+      "proves": "Andrey/APS data is not visible in Marat/MB-P views without invitation or authenticated membership."
+    },
+    {
+      "id": "xbiz_document_workbench_boundary",
+      "title": "Project Operating Space document workbench boundary",
+      "required_story_export": "XBizDocumentWorkbenchBoundary",
+      "status": "required",
+      "proves": "Markdown preview, local draft, layout, source-heading anchors, and anchor/selection comments are live in Project Operating Space, while true source writeback/PDF/DOCX anchors are explicitly gated."
+    },
+    {
+      "id": "operator_receipt_boundary",
+      "title": "Operator receipt boundary",
+      "required_story_export": "OperatorReceiptBoundary",
+      "status": "required",
+      "proves": "Operator actions emit proposal receipts only until the authoritative gateway exists."
+    },
+    {
+      "id": "readiness_ladder_boundary",
+      "title": "Readiness ladder boundary",
+      "required_story_export": "ReadinessLadderBoundary",
+      "status": "required",
+      "proves": "Commercial demo go, controlled pilot restrictions, paid-pilot strict blocker, and production SaaS blocker are visibly separated."
+    }
+  ],
+  "acceptance_criteria": [
+    "Commercial demo readiness may be go only for browser-safe proof surfaces.",
+    "Controlled paid pilot preparation is go_with_restrictions and operator-gated while strict receipts and Marat onboarding decision are pending.",
+    "Every private Operator capability has a reason, risk, next action, and owner-visible operator-gated status.",
+    "Storybook contains explicit boundary stories for onboarding, owner isolation, Project Operating Space document workbench, and operator receipts.",
+    "The x-biz document workbench exposes one canonical Project Operating Space view/edit panel with session versions; drawer and board frames stay compact read-only/context entry points.",
+    "No checklist item converts public/self-serve readiness or private Operator execution into a live claim without evidence."
+  ],
+  "metrics": {
+    "paid_pilot_red_blockers": 0,
+    "operator_gated_evidence_tasks": 3,
+    "production_boundary_coverage_percent": 100,
+    "storybook_boundary_story_coverage_target_percent": 100,
+    "document_workbench_uniqueness_gate": "pass",
+    "board_layout_contract": "BoardLayout.v2_browser_safe_local_preview",
+    "document_anchor_contract": "MarkdownAnchorAdapter.live_pdf_docx.planned",
+    "source_writeback_mode": "proposal_only",
+    "operator_execution_mode": "proposal_only",
+    "server_tenant_policy_contract": "operator_gated_strict_receipt_required",
+    "backend_proposal_receipt_contract": "operator_gated_gateway_present_strict_receipt_required",
+    "markdown_source_writeback_contract": "operator_gated_markdown_adapter_present_strict_receipt_required",
+    "paid_pilot_strict_receipt": "pending_cloud_evidence"
+  }
+}

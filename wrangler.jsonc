@@ -1,0 +1,18 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "xlooop",
+  "compatibility_date": "2026-05-17",
+  "pages_build_output_dir": "dist-cloudflare",
+  "d1_databases": [
+    {
+      "binding": "FEEDBACK_DB",
+      "database_name": "xlooop-feedback-test",
+      "database_id": "9154ad92-084c-4573-8d08-78124f78e53f",
+      "preview_database_id": "9154ad92-084c-4573-8d08-78124f78e53f"
+    }
+  ],
+  "vars": {
+    "FEEDBACK_REQUIRE_ACCESS": "1",
+    "XLOOOP_FEEDBACK_ENVIRONMENT": "test"
+  }
+}

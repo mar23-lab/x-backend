@@ -1,0 +1,12 @@
+{
+  "schema": "xlooop.cloudflare_aps_pilot_deploy_receipt.v1",
+  "project": "aps-pilot-app",
+  "environment": "production",
+  "tenant": "aps-pty-ltd",
+  "source_commit": "b8d19428d612b0c533662cd4eaea4fc18a2ae278",
+  "deploy_url": "https://7f891a94.aps-pilot-app.pages.dev",
+  "live_url": "https://aps.xlooop.com",
+  "generated_at": "2026-06-22T17:20:20+10:00",
+  "live_verified": false,
+  "secret_policy": "no Cloudflare token or account secret is written to this receipt"
+}

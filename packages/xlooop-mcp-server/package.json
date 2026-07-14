@@ -1,0 +1,45 @@
+{
+  "name": "@xlooop/mcp-server",
+  "version": "0.1.0",
+  "description": "MCP server bridging Claude Code (and any MCP client) to the Xlooop operator app. Exposes 7 tools: event.append, event.list, project.list, signoff.create, signoff.await, board.read, workspace.context.",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "xlooop-mcp-server": "dist/index.js",
+    "xlooop": "dist/bin/cli.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "docs"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/index.js",
+    "test": "node --test tests/*.test.mjs",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "prepack": "npm run build"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.4"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.5.0"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "xlooop",
+    "claude-code",
+    "operator",
+    "governance"
+  ],
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  }
+}

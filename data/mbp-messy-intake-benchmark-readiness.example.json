@@ -1,0 +1,56 @@
+{
+  "schema_version": "xlooop.mbp_messy_intake_benchmark_readiness.v1",
+  "source_mode": "read_only_metadata_projection",
+  "projection_id": "projection:mbp:xlooop:c80-messy-intake-benchmark-readiness",
+  "source_pr": "mar23-lab/MB-P#1245",
+  "source_commit": "9f83c7069f786b833b1b5009c9a85ba6af70ab8c",
+  "benchmark_id": "260510_1115_messy-operator-intake-benchmark",
+  "benchmark_path": "_sys/xcp-system/governance/intake-benchmarks/260510_1115_messy-operator-intake-benchmark.json",
+  "raw_payload_included": false,
+  "writes_back_to_mbp_allowed": false,
+  "owner_review_required": true,
+  "verdict": "partial",
+  "summary": "MB-P can process structured intake, but messy operator intake still needs deterministic cleaning, URL/video policy, dynamic roadmap recovery, and agent-agnostic governance binding.",
+  "counts": {
+    "structured_items": 29,
+    "dedup_groups": 3,
+    "capability_scores": 6,
+    "p0_items": 8,
+    "critical_risks": 3
+  },
+  "readiness_lanes": [
+    {
+      "id": "messy_intake_cleaning",
+      "label": "Messy intake cleaning",
+      "status": "partial",
+      "priority": "P0",
+      "next_action": "Extend deterministic verifier with typo, encoding, Telegram timestamp, and duplicate-intent cases."
+    },
+    {
+      "id": "agent_agnostic_governance_binding",
+      "label": "Agent-agnostic governance binding",
+      "status": "gap",
+      "priority": "P0",
+      "next_action": "Add mandatory preflight and skill-attestation evidence that does not depend on one agent runtime."
+    },
+    {
+      "id": "roadmap_todo_session_recovery",
+      "label": "Roadmap and session recovery",
+      "status": "partial",
+      "priority": "P0",
+      "next_action": "Create dynamic session roadmap fields and interruption/deviation checkpoints."
+    },
+    {
+      "id": "url_video_source_policy",
+      "label": "URL/video/source policy",
+      "status": "policy_required",
+      "priority": "P1",
+      "next_action": "Define IP-safe source intake before fetching, transcribing, or monitoring external sources."
+    }
+  ],
+  "recommended_waves": [
+    "Wave 2: extend unified intake verifier with messy-intake cleaning rules.",
+    "Wave 3: add agent-agnostic intake declaration and checkpoint contract.",
+    "Wave 4: add external URL/video/source-monitoring SOP with IP gates."
+  ]
+}

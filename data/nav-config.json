@@ -1,0 +1,181 @@
+{
+  "wsPanes": [
+    {
+      "id": "cockpit",
+      "label": "Cockpit",
+      "surface": "home"
+    },
+    {
+      "id": "detailed",
+      "label": "Detailed",
+      "surface": "workspace"
+    },
+    {
+      "id": "projects",
+      "label": "Projects",
+      "surface": "workspace"
+    },
+    {
+      "id": "operations",
+      "label": "Operations",
+      "surface": "home"
+    },
+    {
+      "id": "members",
+      "label": "Members",
+      "surface": "workspace"
+    },
+    {
+      "id": "teams",
+      "label": "Teams",
+      "surface": "workspace"
+    },
+    {
+      "id": "tasks",
+      "label": "Tasks",
+      "surface": "workspace"
+    },
+    {
+      "id": "activity",
+      "label": "Activity",
+      "surface": "govern"
+    },
+    {
+      "id": "settings",
+      "label": "Settings",
+      "surface": "govern",
+      "navHidden": true
+    }
+  ],
+  "projectModes": [
+    {
+      "id": "cockpit",
+      "label": "Cockpit",
+      "ico": "◑",
+      "surface": "home"
+    },
+    {
+      "id": "detailed",
+      "label": "Detailed",
+      "ico": "▦",
+      "surface": "workspace"
+    },
+    {
+      "id": "intents",
+      "label": "Intents",
+      "ico": "✦",
+      "surface": "govern"
+    },
+    {
+      "id": "ops-workbench",
+      "label": "Ops workbench",
+      "ico": "⌬",
+      "surface": "workspace"
+    },
+    {
+      "id": "ops-rail",
+      "label": "Ops rail",
+      "ico": "⥁",
+      "surface": "home"
+    },
+    {
+      "id": "collaboration",
+      "label": "Collaboration",
+      "ico": "◆",
+      "surface": "workspace"
+    },
+    {
+      "id": "overview",
+      "label": "Overview",
+      "ico": "◇",
+      "surface": "home",
+      "legacy": true, "navHidden": true
+    },
+    {
+      "id": "inbox",
+      "label": "Inbox",
+      "ico": "⇣",
+      "surface": "home",
+      "legacy": true, "navHidden": true
+    },
+    {
+      "id": "triage",
+      "label": "Triage",
+      "ico": "⊻",
+      "surface": "home",
+      "legacy": true, "navHidden": true
+    },
+    {
+      "id": "build",
+      "label": "Build",
+      "ico": "▣",
+      "surface": "workspace",
+      "legacy": true, "navHidden": true
+    },
+    {
+      "id": "build-canvas",
+      "label": "Build canvas",
+      "ico": "◫",
+      "surface": "workspace"
+    },
+    {
+      "id": "design-canvas",
+      "label": "Design canvas",
+      "ico": "◰",
+      "surface": "workspace"
+    },
+    {
+      "id": "studio",
+      "label": "Studio",
+      "ico": "◈",
+      "surface": "workspace",
+      "legacy": true, "navHidden": true
+    },
+    {
+      "id": "tokens",
+      "label": "Tokens",
+      "ico": "◐",
+      "surface": "govern",
+      "legacy": true, "navHidden": true
+    },
+    {
+      "id": "evidence",
+      "label": "Evidence",
+      "ico": "⊞",
+      "surface": "govern"
+    },
+    {
+      "id": "signoff",
+      "label": "Sign-off",
+      "ico": "✓",
+      "surface": "govern"
+    },
+    {
+      "id": "lineage",
+      "label": "Lineage",
+      "ico": "⌬",
+      "surface": "govern"
+    },
+    {
+      "id": "fabric",
+      "label": "Compliance",
+      "ico": "▦",
+      "surface": "govern",
+      "legacy": true, "navHidden": true
+    },
+    {
+      "id": "substrate",
+      "label": "Learning / XCP feedback",
+      "ico": "❖",
+      "surface": "govern",
+      "legacy": true, "navHidden": true
+    },
+    {
+      "id": "settings",
+      "label": "Settings",
+      "ico": "⚙",
+      "surface": "govern",
+      "navHidden": true
+    }
+  ]
+}

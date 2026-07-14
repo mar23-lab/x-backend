@@ -1,0 +1,73 @@
+{
+  "schema_version": "xlooop.customer_feedback_production_boundary_receipt.v1",
+  "environment": "test",
+  "hostname": "xlooop-test.pages.dev",
+  "deployment_url": "https://544f29c0.xlooop-test.pages.dev",
+  "source_commit": "a7bc14d0359e631e27f13525c396d3c7b49a9a13",
+  "checked_at": "2026-05-18T21:47:35Z",
+  "ttl_expires_at": "2026-05-25T21:47:40Z",
+  "checks": {
+    "access_jwt_positive": "pass",
+    "access_jwt_negative": "pass",
+    "session_api_positive": "pass",
+    "session_api_unauthenticated_fail_closed": "pass",
+    "proposal_d1_write_read": "pass",
+    "receipt_customer_default_denied": "pass",
+    "telemetry_owner_aggregate_only": "pass",
+    "redaction_scan_customer_api_responses": "pass",
+    "monitoring_events_present": "pass"
+  },
+  "incident_sla_owner": "Marat Basyrov / Xlooop owner-admin",
+  "legal_claim_signoff_ref": "owner-approved-non-production-customer-feedback-proposal-only-no-production-saas-claim-20260519",
+  "claim_boundary": "Customer-feedback/proposal-only boundary evidence. This receipt does not approve production SaaS, autonomous operations, validated ROI, raw tenant content access, unrestricted Operator mode, or external private customer operations.",
+  "evidence": [
+    {
+      "id": "access_negative",
+      "status": "pass",
+      "command": "curl -i https://xlooop-test.pages.dev/api/session",
+      "observed": "HTTP/2 302 to Cloudflare Access login"
+    },
+    {
+      "id": "access_positive_session",
+      "status": "pass",
+      "command": "curl -i https://xlooop-test.pages.dev/api/session with CF-Access service-token headers",
+      "observed": "HTTP/2 200 application/json; xlooop.customer_feedback_session.v1; xcp entitlement disabled; operator disabled; proposal-only default"
+    },
+    {
+      "id": "feedback_persisted_d1",
+      "status": "pass",
+      "command": "npm run verify:feedback-cloud-smoke:persist",
+      "observed": "POST 200 persisted=true, GET 200 row readable, PATCH 200 status=verified"
+    },
+    {
+      "id": "proposal_d1_write",
+      "status": "pass",
+      "command": "curl -X POST https://xlooop-test.pages.dev/api/proposals with CF-Access service-token headers",
+      "observed": "xlooop.customer_feedback_proposal.v1 persisted=true; expected_receipt_policy=proposal_only_customer_feedback"
+    },
+    {
+      "id": "customer_receipt_denial",
+      "status": "pass",
+      "command": "curl -X POST https://xlooop-test.pages.dev/api/receipts with CF-Access service-token headers",
+      "observed": "HTTP/2 403; operator mode is not permitted"
+    },
+    {
+      "id": "customer_feedback_health",
+      "status": "pass",
+      "command": "curl https://xlooop-test.pages.dev/api/health/customer-feedback with CF-Access service-token headers",
+      "observed": "xlooop.customer_feedback_health.v1 status=pass; d1_binding=pass; redaction_scan=pass; proposal_receipt_tables=configured"
+    },
+    {
+      "id": "telemetry_customer_denied_and_owner_aggregate_route",
+      "status": "pass",
+      "command": "curl https://xlooop-test.pages.dev/api/telemetry/company with customer-feedback service-token headers",
+      "observed": "customer-feedback token denied telemetry:company:read; route requires telemetry:company:read and returns customerSafeJson aggregate payload only for entitled owner/admin principals"
+    },
+    {
+      "id": "monitoring_events",
+      "status": "pass",
+      "observed": "proposal_created and tenant_denied/auth-denial monitoring paths exercised through proposal creation, receipt denial, and telemetry denial checks"
+    }
+  ],
+  "secret_policy": "No Cloudflare API token, Access client secret, cookie value, or local private path is recorded in this receipt."
+}

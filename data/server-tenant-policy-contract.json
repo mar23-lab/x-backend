@@ -1,0 +1,113 @@
+{
+  "schema_version": "xlooop.server_tenant_policy_contract.v1",
+  "source_mode": "browser_safe_contract_and_cloudflare_pages_functions",
+  "status": "backend_authority_present_customer_feedback_non_production",
+  "url_owner_params_grant_access": false,
+  "backend_authoritative": true,
+  "backend_authority_scope": "customer_feedback_non_production",
+  "paid_pilot_blocker": "Private/customer Operator mode remains operator-gated until Marat onboarding decision, backend auth, tenant entitlement, action permissions, receipt creation, redaction, monitoring, incident/SLA, legal, and claim sign-off pass with cloud evidence.",
+  "server_routes": [
+    "/api/session",
+    "/api/proposals",
+    "/api/receipts",
+    "/api/telemetry/company",
+    "/api/health/customer-feedback"
+  ],
+  "d1_authority_migrations": [
+    "migrations/0001_feedback_annotations.sql",
+    "migrations/0002_customer_feedback_authority.sql"
+  ],
+  "session_contract": {
+    "schema_version": "xlooop.authenticated_session.v1",
+    "required_fields": [
+      "actor_id",
+      "identity_source",
+      "owner_graph_id",
+      "tenant_id",
+      "memberships",
+      "app_entitlements",
+      "permissions",
+      "platform_roles",
+      "telemetry_scopes",
+      "session_issued_at",
+      "session_expires_at",
+      "source"
+    ],
+    "allowed_sources": [
+      "signed_in",
+      "cloudflare_access",
+      "service_token",
+      "local_dev",
+      "new_user_onboarding",
+      "test_session"
+    ]
+  },
+  "app_entitlement_policy": {
+    "xlooop_access_does_not_grant_xcp": true,
+    "xcp_default": "disabled",
+    "xcp_enabled_by": "admin_per_user_entitlement",
+    "access_code_security_role": "routing_hint_not_authentication"
+  },
+  "backend_authority_chain_required_before_paid_customer_private_operations": [
+    "Cloudflare Access JWT validation",
+    "identity resolution",
+    "app entitlement check",
+    "tenant membership lookup",
+    "role/permission evaluation",
+    "Watch/Test/Operator mode policy",
+    "receipt/proposal policy",
+    "redaction before response or export"
+  ],
+  "platform_role_policy": {
+    "persona_is_not_authority": true,
+    "marat_roles": [
+      "mbp_ecosystem_operator",
+      "xlooop_company_owner_admin",
+      "xcp_platform_admin",
+      "company_telemetry_viewer"
+    ],
+    "xcp_platform_admin_requires_xcp_entitlement": true,
+    "customer_test_default_roles": []
+  },
+  "telemetry_scope_policy": {
+    "marat_default_scopes": [
+      "company_aggregate_usage",
+      "tenant_admin_summary",
+      "mbp_internal_governance"
+    ],
+    "customer_default_scopes": [
+      "tenant_admin_summary"
+    ],
+    "tenant_raw_break_glass": {
+      "default_granted": false,
+      "requires": [
+        "audited break-glass receipt",
+        "customer/tenant consent or owner-approved authority path",
+        "redaction and retention reason"
+      ]
+    }
+  },
+  "owner_graphs": [
+    {
+      "owner_graph_id": "owner-graph-marat-basyrov",
+      "tenant_id": "tenant:mbp-owner",
+      "workspaces": ["mbp-private", "xcp-platform", "xlooop", "x-biz", "x-docs", "x-front"]
+    },
+    {
+      "owner_graph_id": "owner-graph-andrey-p",
+      "tenant_id": "tenant:aps-pty-ltd",
+      "workspaces": ["aps-pty-ltd"]
+    },
+    {
+      "owner_graph_id": "owner-graph-local-test-user",
+      "tenant_id": "tenant:new-user-onboarding",
+      "workspaces": ["new-user-onboarding"]
+    }
+  ],
+  "required_behaviors": [
+    "New user starts an isolated onboarding owner graph and never falls into MB-P.",
+    "URL owner parameters may request navigation context but do not grant tenant access.",
+    "Search, workspace rows, project rows, drafts, receipts, documents, and interactions are scoped by authenticated session owner graph.",
+    "Denied tenant access must show an explicit no-permission/not-invited state instead of silently switching owner."
+  ]
+}

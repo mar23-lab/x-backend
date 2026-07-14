@@ -1,0 +1,62 @@
+{
+  "schema_version": "xlooop.customer_safe_export_manifest.v1",
+  "environment": "test",
+  "status": "approved",
+  "tenant_id": "aps-access-property-services",
+  "source_policy": "redacted_or_owner_approved_dataset_only",
+  "deployment_target": "xlooop-test.pages.dev",
+  "durable_target_domain": "test.xlooop.com",
+  "durable_target_access_status": "deferred_dns_not_moved_to_cloudflare",
+  "approved_by": "Marat Basyrov",
+  "approved_at": "2026-05-18T01:30:00+10:00",
+  "external_private_data_allowed": false,
+  "operator_mode_allowed": false,
+  "private_integrations_allowed": false,
+  "raw_customer_files_processed": false,
+  "watch_mode_only": true,
+  "files": [
+    {
+      "path": "data/customer-onboarding-read-model.json",
+      "classification": "customer_safe_public_discovery_projection",
+      "source_posture": "public_only_authority_pending",
+      "sha256": "7dfac0554e35461fbf5775198ebc7570aa3f61a452689de540ddcbec100fa6eb"
+    },
+    {
+      "path": "data/customer-health-value-read-model.json",
+      "classification": "customer_safe_preliminary_health_projection",
+      "source_posture": "public_only_authority_pending",
+      "sha256": "40d388de2432e433450570447e9a3800a2cfba0fa9e0f08a68219779eb9559b9"
+    }
+  ],
+  "generated_runtime_stubs": {
+    "purpose": "Allow the Xlooop test shell to boot without exposing MB-P operations, graph internals, receipts, owner activity streams, or raw customer data.",
+    "source": "scripts/prepare-cloudflare-pages.mjs",
+    "contains_private_mbp_data": false,
+    "contains_raw_customer_private_data": false
+  },
+  "forbidden_content": [
+    "MB-P private paths",
+    "internal hard rule IDs",
+    "XCP private engine chain",
+    "raw customer private data",
+    "raw MB-P operational evidence",
+    "operator-mode receipts",
+    "filesystem paths"
+  ],
+  "claim_posture": {
+    "allowed": [
+      "customer-feedback watch mode",
+      "public-discovery onboarding baseline",
+      "preliminary health/value model",
+      "feedback annotation capture"
+    ],
+    "blocked": [
+      "production SaaS",
+      "private source processing",
+      "operator mode",
+      "validated ROI",
+      "autonomous customer operations",
+      "Access-protected test.xlooop.com until xlooop.com DNS is moved to Cloudflare"
+    ]
+  }
+}

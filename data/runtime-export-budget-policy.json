@@ -1,0 +1,52 @@
+{
+  "policy_id": "runtime-export-budget-policy-v1",
+  "created_at": "2026-05-10T06:20:00+10:00",
+  "owner_roles": [
+    "Lead Engineer",
+    "Frontend Architect",
+    "Test / Release Assurance Lead"
+  ],
+  "runtime_bundle": {
+    "path": "dist/v3-runtime.js",
+    "max_bytes": 119751,
+    "last_measured_bytes": 87672,
+    "min_headroom_bytes_before_new_export_surfaces": 2048,
+    "freeze_new_export_surfaces_when_headroom_below_bytes": 2048,
+    "current_status": "available_for_new_export_surfaces_with_budget_guard",
+    "rationale": "C176 applies conservative syntax and whitespace minification to the runtime build while preserving export identifiers. The runtime export surface is no longer frozen by size pressure, but new runtime exports remain policy-gated by the allowlist, current budget headroom, and owner-approved verifier evidence."
+  },
+  "source_files": {
+    "runtime_barrel": "src/runtime/index.ts",
+    "contracts_barrel": "src/contracts/index.ts"
+  },
+  "allowed_runtime_export_surfaces": [
+    "./redaction",
+    "./client-view",
+    "./event-envelope",
+    "./state-trace",
+    "./risk-policy",
+    "./context-preview",
+    "./impact-of",
+    "./mutation-api",
+    "./signed-url",
+    "./topic-registry",
+    "./governance-packet",
+    "./engine-adapter-state",
+    "./autonomous-execution-program",
+    "./mbp-operations-bridge",
+    "./closeout-audit-export",
+    "./evidence-store-port",
+    "./live-evidence-store-port"
+  ],
+  "allowed_contract_export_surfaces": [
+    "./contract-kinds",
+    "./maturity-visibility",
+    "./selectors",
+    "./validators",
+    "./seed-contracts",
+    "./bisync",
+    "./engine-capability",
+    "./graph"
+  ],
+  "exceptions": []
+}

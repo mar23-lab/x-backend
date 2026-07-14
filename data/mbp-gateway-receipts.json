@@ -1,0 +1,150 @@
+{
+  "schema_id": "mbp_gateway_receipts_v1",
+  "schema_version": "mbp.gateway_receipts.v1",
+  "contract_kind": "mbp_gateway_receipt_projection",
+  "contract_version": "v1.0.0",
+  "projection_id": "mbp-gateway-receipts-20260613124507",
+  "producer_repo": "MB-P",
+  "consumer_repo": "Xlooop-XCP-demo",
+  "authority_source": "mb-p-gateway",
+  "projection_mode": "read_only_authoritative_receipt_projection",
+  "source_mode": "mbp_gateway_export_poll",
+  "generated_at": "2026-06-13T12:45:07+10:00",
+  "valid_until": "2026-06-13T13:00:07+10:00",
+  "poll_sla": {
+    "state": "green",
+    "cadence_seconds": 300,
+    "stale_after_seconds": 900,
+    "last_successful_poll_at": "2026-06-13T12:45:07+10:00",
+    "next_poll_due_at": "2026-06-13T12:50:07+10:00"
+  },
+  "receipt_coverage": {
+    "required_receipt_kinds": [
+      "free_text_chat_capture",
+      "telegram_chat_capture",
+      "xlooop_live_operation_handoff"
+    ],
+    "observed_receipt_kinds": [
+      "free_text_chat_capture",
+      "telegram_chat_capture",
+      "xlooop_live_operation_handoff"
+    ],
+    "missing_receipt_kinds": [],
+    "coverage_percent": 100.0
+  },
+  "source_files": [
+    "_sys/xcp-system/derivative/chat-capture-packets/2026-05/capture-20260511-chat-contract-capture.json",
+    "_sys/xcp-system/derivative/intake-ledger/2026-05.ndjson",
+    "_sys/xcp-system/evidence/frontend-architecture/C161_async_collaboration_xfront_engine_roadmap.md",
+    "_sys/xcp-system/cross_repo_drafts/Xlooop-XCP-demo/data/mbp-operations-projection.json"
+  ],
+  "direct_mbp_repo_write_allowed": false,
+  "raw_content_included": false,
+  "receipts": [
+    {
+      "receipt_id": "mbp-receipt-260513-c142-free-chat-capture",
+      "proposal_id": "proposal-260513-c142-free-chat-capture",
+      "proposal_kind": "free_text_chat_capture",
+      "idempotency_key": "xlooop:c142:free-chat-capture:260513:intent-to-contract",
+      "source_adapter": "free_chat_text",
+      "runtime_adapter": "codex",
+      "receipt_state": "accepted_by_mbp",
+      "receipt_source": "mbp_gateway_authoritative_projection",
+      "receipt_ref": "mbp-gateway://receipts/mbp-receipt-260513-c142-free-chat-capture",
+      "receipt_observed_at": "2026-05-11T22:34:26+10:00",
+      "replay_ref": "mbp-gateway://replay/xlooop:c142:free-chat-capture:260513:intent-to-contract",
+      "rollback_ref": "mbp-gateway://rollback/xlooop:c142:free-chat-capture:260513:intent-to-contract",
+      "owner_decision_state": "receipt_recorded",
+      "direct_mbp_repo_write_allowed": false,
+      "raw_content_included": false,
+      "evidence_refs": [
+        {
+          "ref_id": "receipt:evidence:c142-free-chat-capture",
+          "repo": "MB-P",
+          "uri": "mbp://_sys/xcp-system/derivative/chat-capture-packets/2026-05/capture-20260511-chat-contract-capture.json",
+          "source_path": "_sys/xcp-system/derivative/chat-capture-packets/2026-05/capture-20260511-chat-contract-capture.json",
+          "access_mode": "read_only_projection",
+          "raw_content_included": false
+        },
+        {
+          "ref_id": "receipt:evidence:intake-ledger-free-chat",
+          "repo": "MB-P",
+          "uri": "mbp://_sys/xcp-system/derivative/intake-ledger/2026-05.ndjson",
+          "source_path": "_sys/xcp-system/derivative/intake-ledger/2026-05.ndjson",
+          "access_mode": "read_only_intake_ledger",
+          "raw_content_included": false
+        }
+      ]
+    },
+    {
+      "receipt_id": "mbp-receipt-260513-c161-telegram-chat-capture",
+      "proposal_id": "proposal-260513-c161-telegram-chat-capture",
+      "proposal_kind": "telegram_chat_capture",
+      "idempotency_key": "xlooop:c161:telegram-chat-capture:260513:intent-to-contract",
+      "source_adapter": "telegram",
+      "runtime_adapter": "codex",
+      "receipt_state": "accepted_by_mbp",
+      "receipt_source": "mbp_gateway_authoritative_projection",
+      "receipt_ref": "mbp-gateway://receipts/mbp-receipt-260513-c161-telegram-chat-capture",
+      "receipt_observed_at": "2026-05-13T18:26:32+10:00",
+      "replay_ref": "mbp-gateway://replay/xlooop:c161:telegram-chat-capture:260513:intent-to-contract",
+      "rollback_ref": "mbp-gateway://rollback/xlooop:c161:telegram-chat-capture:260513:intent-to-contract",
+      "owner_decision_state": "receipt_recorded",
+      "direct_mbp_repo_write_allowed": false,
+      "raw_content_included": false,
+      "evidence_refs": [
+        {
+          "ref_id": "receipt:evidence:c161-telegram-chat-capture",
+          "repo": "MB-P",
+          "uri": "mbp://_sys/xcp-system/evidence/frontend-architecture/C161_async_collaboration_xfront_engine_roadmap.md",
+          "source_path": "_sys/xcp-system/evidence/frontend-architecture/C161_async_collaboration_xfront_engine_roadmap.md",
+          "access_mode": "read_only_evidence",
+          "raw_content_included": false
+        },
+        {
+          "ref_id": "receipt:evidence:private-telegram-direct-input-encryption",
+          "repo": "MB-P",
+          "uri": "private-host://AGENTS/xcp-chat-bridge/src/queueCrypto.ts",
+          "source_path": null,
+          "access_mode": "read_only_evidence",
+          "raw_content_included": false
+        }
+      ]
+    },
+    {
+      "receipt_id": "mbp-receipt-260513-c142-live-operation-handoff",
+      "proposal_id": "proposal-260513-c142-xlooop-live-operation-handoff",
+      "proposal_kind": "xlooop_live_operation_handoff",
+      "idempotency_key": "xlooop:c142:live-operation-handoff:projection-packet-action",
+      "source_adapter": "xlooop_operations_ui",
+      "runtime_adapter": "codex",
+      "receipt_state": "accepted_by_mbp",
+      "receipt_source": "mbp_gateway_authoritative_projection",
+      "receipt_ref": "mbp-gateway://receipts/mbp-receipt-260513-c142-live-operation-handoff",
+      "receipt_observed_at": "2026-06-12T03:30:03+10:00",
+      "replay_ref": "mbp-gateway://replay/xlooop:c142:live-operation-handoff:projection-packet-action",
+      "rollback_ref": "mbp-gateway://rollback/xlooop:c142:live-operation-handoff:projection-packet-action",
+      "owner_decision_state": "receipt_recorded",
+      "direct_mbp_repo_write_allowed": false,
+      "raw_content_included": false,
+      "evidence_refs": [
+        {
+          "ref_id": "receipt:evidence:c142-live-operation-handoff",
+          "repo": "MB-P",
+          "uri": "mbp://_sys/xcp-system/cross_repo_drafts/Xlooop-XCP-demo/data/mbp-operations-projection.json",
+          "source_path": "_sys/xcp-system/cross_repo_drafts/Xlooop-XCP-demo/data/mbp-operations-projection.json",
+          "access_mode": "read_only_projection",
+          "raw_content_included": false
+        },
+        {
+          "ref_id": "receipt:evidence:intake-ledger-live-handoff",
+          "repo": "MB-P",
+          "uri": "mbp://_sys/xcp-system/derivative/intake-ledger/2026-05.ndjson",
+          "source_path": "_sys/xcp-system/derivative/intake-ledger/2026-05.ndjson",
+          "access_mode": "read_only_intake_ledger",
+          "raw_content_included": false
+        }
+      ]
+    }
+  ]
+}

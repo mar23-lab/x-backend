@@ -1,0 +1,36 @@
+{
+  "schema_version": "xlooop.investor_safe_pack_manifest.v1",
+  "status": "draft_not_exported",
+  "public_claim_status": "not_claimed",
+  "source_domain": "x-biz",
+  "portal_active": false,
+  "operator_decision_required": true,
+  "allowed_source_paths": [
+    "investor/README.md",
+    "investor/ENTITY_STRUCTURE.md",
+    "investor/TEAM.md",
+    "investor/TRACTION.md",
+    "investor/FINANCIAL_MODEL.md",
+    "investor/EXECUTIVE_SUMMARY.md",
+    "marketing/01_stage1-early-launch/investor/PITCH_DECK_v3.md",
+    "marketing/01_stage1-early-launch/investor/ONE_PAGER.md",
+    "marketing/01_stage1-early-launch/investor/INVESTOR_FAQ.md",
+    "marketing/01_stage1-early-launch/investor/WHITE_PAPER.md"
+  ],
+  "required_checks_before_export": [
+    "verify:xbiz-investor-readiness-source-binding",
+    "verify:investor-data-room-authority",
+    "claim_safety_review",
+    "redaction_scan",
+    "legal_or_nondisclosure_reference",
+    "owner_signoff"
+  ],
+  "forbidden_content": [
+    "raw MB-P private governance",
+    "XCP private control-plane internals",
+    "raw tenant/customer data",
+    "unapproved financial assumptions",
+    "secrets or local paths"
+  ],
+  "next_action": "Create a redaction-safe generated pack only after x-biz claim safety and Marat owner signoff are recorded."
+}

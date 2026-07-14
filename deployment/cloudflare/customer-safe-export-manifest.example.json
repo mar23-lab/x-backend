@@ -1,0 +1,28 @@
+{
+  "schema_version": "xlooop.customer_safe_export_manifest.v1",
+  "environment": "test",
+  "status": "example_not_approved",
+  "tenant_id": "example-customer",
+  "source_policy": "redacted_or_owner_approved_dataset_only",
+  "approved_by": null,
+  "approved_at": null,
+  "files": [
+    {
+      "path": "data/customer-onboarding-read-model.json",
+      "classification": "customer_safe_projection",
+      "sha256": "replace-with-real-sha256-before-test-deploy"
+    },
+    {
+      "path": "data/customer-health-value-read-model.json",
+      "classification": "customer_safe_projection",
+      "sha256": "replace-with-real-sha256-before-test-deploy"
+    }
+  ],
+  "forbidden_content": [
+    "MB-P private paths",
+    "internal hard rule IDs",
+    "XCP private engine chain",
+    "raw customer private data",
+    "raw MB-P operational evidence"
+  ]
+}

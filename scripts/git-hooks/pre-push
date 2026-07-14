@@ -1,0 +1,83 @@
+#!/bin/sh
+# scripts/git-hooks/pre-push · Round 14 R14.1 (2026-05-20).
+#
+# Operator-opt-in pre-push hook · runs `npm run ci-local` before every
+# push so the 6 local gates (smoke + integrity + data-schemas + typecheck
+# + perf-budget + secret-scan) act as the local-gate-only authoritative
+# CI surface (remote GitHub Actions intentionally disabled per
+# mar23-lab free-tier policy).
+#
+# Install (one-time per clone):
+#   bash scripts/install-hooks.sh
+#
+# Bypass (operator-explicit only, logs a learning):
+#   git push --no-verify
+#
+# Exit codes:
+#   0 · all gates green · push proceeds
+#   1 · at least one gate failed · push aborted
+#
+# The hook does NOT run on `git push --force` or branch-delete pushes
+# (no commits to validate). It DOES run on every standard push including
+# branch creation.
+
+set -e
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+cd "$REPO_ROOT"
+
+# Read stdin from git (refs being pushed). Skip if no commits.
+HAS_COMMITS=0
+while read -r LOCAL_REF LOCAL_SHA REMOTE_REF REMOTE_SHA; do
+  if [ "$LOCAL_SHA" != "0000000000000000000000000000000000000000" ]; then
+    HAS_COMMITS=1
+  fi
+
+  # S2/F13 (260709) · stale-local-main guard. In a linked worktree sitting on a feature branch,
+  # `git push origin main` pushes the repo's STALE local `main` ref (rejected non-fast-forward at
+  # best; a silently-old tree at worst — observed 260708). If the ref being pushed is the LOCAL
+  # main branch while this checkout's HEAD is NOT main, the push is almost certainly a mistake:
+  # block it and name the correct form. Pushing `HEAD:main` (LOCAL_REF = the feature branch) and
+  # pushing main FROM a main checkout both remain allowed.
+  if [ "$LOCAL_REF" = "refs/heads/main" ]; then
+    CURRENT_REF="$(git symbolic-ref -q HEAD 2>/dev/null || echo detached)"
+    if [ "$CURRENT_REF" != "refs/heads/main" ]; then
+      echo "✗ pre-push BLOCKED · you are pushing the LOCAL 'main' ref from a checkout on '$CURRENT_REF'."
+      echo "  That local main is likely stale (worktree gotcha, F13 260708). Push your HEAD instead:"
+      echo "    git push origin HEAD:main"
+      echo "  Bypass (operator-explicit only): git push --no-verify"
+      exit 1
+    fi
+  fi
+done
+
+if [ "$HAS_COMMITS" -eq 0 ]; then
+  exit 0
+fi
+
+# L-R1 (Part L · HR-NO-BRANCH-FROM-STALE-BASE-1) — no-branch-from-stale-base (ADVISORY, WARN-only).
+# A branch cut from a STALE local main produces a CONFLICTING merge: PR #750 (Stage 1) was cut from
+# stale local main (pre-Stage-0a) and blocked its own merge until rebased. If HEAD is behind
+# origin/main, the base is stale -> WARN. Never blocks the push (mirrors the MB-P pre-push control
+# pre_push_stale_base_check). The `if [ ]` condition is exempt from `set -e`.
+git fetch -q origin main >/dev/null 2>&1 || true
+SB_BEHIND="$(git rev-list --count HEAD..origin/main 2>/dev/null || echo 0)"
+if [ "${SB_BEHIND:-0}" -gt 0 ] 2>/dev/null; then
+  echo "⚠ branch-base-freshness · HEAD is $SB_BEHIND commit(s) behind origin/main"
+  echo "  Branch may be cut from a stale base (merge-conflict risk; cf. #750). Consider:"
+  echo "    git pull --rebase origin main   (advisory — push proceeds)"
+  echo ""
+fi
+
+echo "▶ pre-push · running ci-local"
+echo ""
+
+if ! npm run --silent ci-local; then
+  echo ""
+  echo "✗ pre-push BLOCKED · ci-local failed"
+  echo "  Fix the failing gate, then re-push."
+  echo "  Bypass (operator-explicit only): git push --no-verify"
+  exit 1
+fi
+
+exit 0

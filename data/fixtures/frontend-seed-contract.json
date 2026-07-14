@@ -1,0 +1,74 @@
+{
+  "_meta": {
+    "source": "x-ai-front/project/seed-data.js@e8d9891ed8976619 (contractVersion 2026-07-11)",
+    "generated": "2026-07-11",
+    "note": "Serialized UI consumer-expectation payloads from the Design seat's frozen fixture. Validated AGAINST backend truth by verify:seed-contract-parity (data_class vocabulary from response-envelope.ts, authority-envelope shape, principal-redaction) — the server wins on any disagreement; this mock is never the tiebreaker. Re-serialize + bump when seed-data.js contractVersion changes."
+  },
+  "payloads": [
+    {
+      "entity": "event",
+      "role": "member",
+      "data_class": "live",
+      "allowed_actions": ["read"],
+      "disabled_reasons": { "decide": "signoff verdicts are governed writes (spine authority)" },
+      "sample": {
+        "id": "q1", "project": "p_qld", "intent": "i_qld", "turn": "t1",
+        "type": "signoff", "typeLabel": "Sign-off", "state": "needsrev",
+        "domains": ["d_comp"], "title": "Confirm QLD licensing pathway",
+        "body": "QLD owner-builder permits run through QBCC, not CBOS.",
+        "actor": "you", "when": "3m"
+      }
+    },
+    {
+      "entity": "event",
+      "role": "viewer",
+      "data_class": "redacted",
+      "allowed_actions": ["read"],
+      "disabled_reasons": { "decide": "viewer role cannot decide" },
+      "sample": {
+        "id": "q4", "project": "p_qld", "intent": "i_qld", "turn": "t1",
+        "type": "risk", "typeLabel": "Risk", "state": "blocked",
+        "domains": ["d_comp"], "title": "Insurance minimums unconfirmed",
+        "body": "QBCC home-warranty insurance thresholds not captured.",
+        "actor": "system", "when": "9m"
+      }
+    },
+    {
+      "entity": "source",
+      "role": "member",
+      "data_class": "live",
+      "allowed_actions": ["read"],
+      "disabled_reasons": {},
+      "sample": {
+        "id": "src6", "kind": "notion", "name": "Ops runbook · Notion",
+        "level": "rely", "usedIn": ["p_qld"], "feedsLens": "d_comp",
+        "synced": "syncing…", "fresh": "pending"
+      }
+    },
+    {
+      "entity": "source",
+      "role": "member",
+      "data_class": "live",
+      "allowed_actions": ["read"],
+      "disabled_reasons": { "resync": "sync in failed state — reconnect first" },
+      "sample": {
+        "id": "src5", "kind": "upload", "name": "Insurance certs (PDF)",
+        "level": "index", "usedIn": ["p_supplier"], "feedsLens": null,
+        "synced": "failed", "fresh": "error"
+      }
+    },
+    {
+      "entity": "chat",
+      "role": "member",
+      "data_class": "live",
+      "allowed_actions": ["read"],
+      "disabled_reasons": {},
+      "sample": {
+        "seq": 2, "role": "asst",
+        "text": "Scaffolded an 8-field intake and queued ABN validation.",
+        "when": "2 days ago",
+        "echo": { "id": "sp1", "title": "Supplier intake form fields", "kind": "Intake", "state": "needsrev" }
+      }
+    }
+  ]
+}

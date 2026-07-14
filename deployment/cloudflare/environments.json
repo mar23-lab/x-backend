@@ -1,0 +1,84 @@
+{
+  "schema_version": "xlooop.cloudflare_deployment.v1",
+  "last_updated": "2026-05-17",
+  "canonical_product_name": "Xlooop",
+  "technical_repo_name": "Xlooop-XCP-demo",
+  "stage": "development_and_customer_feedback",
+  "deployment_model": "cloudflare_pages_static_app_plus_access",
+  "github_repository": "xlooop/Xlooop-XCP-demo",
+  "required_github_secrets": [
+    "CLOUDFLARE_API_TOKEN",
+    "CLOUDFLARE_ACCOUNT_ID"
+  ],
+  "required_github_variables": [
+    "CLOUDFLARE_PAGES_PROJECT_XLOOOP_DEV",
+    "CLOUDFLARE_PAGES_PROJECT_XLOOOP_TEST"
+  ],
+  "base64_or_code_access_policy": {
+    "allowed": true,
+    "purpose": "routing_and_invitation_hint_only",
+    "not_security": true,
+    "required_real_controls": [
+      "cloudflare_access_identity",
+      "tenant_entitlement",
+      "server_side_code_validation",
+      "expiry",
+      "rate_limit",
+      "audit_log"
+    ]
+  },
+  "environments": [
+    {
+      "environment": "dev",
+      "domain": "dev.xlooop.com",
+      "cloudflare_access": "required_internal_owner_only",
+      "data_policy": "mbp_owner_full_operational_proof_allowed_when_access_protected",
+      "operator_mode_default": "owner_operator_allowed",
+      "external_customer_ready": false,
+      "deployment_status": "config_ready_access_evidence_required"
+    },
+    {
+      "environment": "test",
+      "domain": "test.xlooop.com",
+      "pages_dev_safe_preview": {
+        "domain": "xlooop-test.pages.dev",
+        "allowed_before_custom_domain_access": true,
+        "requires_customer_safe_export_manifest": "data/customer-safe-export-manifest.json",
+        "data_policy": "customer_safe_redacted_watch_only",
+        "not_external_customer_feedback": true,
+        "blocks_private_integrations": true,
+        "blocks_operator_mode": true
+      },
+      "cloudflare_access": "required_named_testers_only",
+      "data_policy": "customer_safe_redacted_or_owner_approved_dataset_only",
+      "operator_mode_default": "watch_or_proposal_only",
+      "external_customer_ready": false,
+      "deployment_status": "blocked_until_customer_safe_export_scan_and_tenant_entitlement_evidence",
+      "requires_customer_safe_export_manifest": "data/customer-safe-export-manifest.json"
+    }
+  ],
+  "xcp_second_level_access": {
+    "surface": "XCP",
+    "repository": "xcp-platform",
+    "default": "disabled",
+    "enabled_by": "admin_per_user_entitlement",
+    "must_not_be_granted_by": [
+      "xlooop_access_code",
+      "first_level_xlooop_invitation"
+    ]
+  },
+  "claim_posture": {
+    "allowed_now": [
+      "development/customer-feedback mode",
+      "Access-protected internal owner proof",
+      "selected tester feedback with redacted or owner-approved data",
+      "Watch/proposal-only customer workflows"
+    ],
+    "blocked_now": [
+      "production SaaS",
+      "fully autonomous customer operations",
+      "validated ROI or guaranteed savings",
+      "public live MB-P operations"
+    ]
+  }
+}

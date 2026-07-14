@@ -1,0 +1,1992 @@
+{
+  "_meta": {
+    "schema": "operations-live-stream.v1",
+    "generated_at": "2026-07-10T01:58:25.000Z",
+    "producer": "scripts/generate-operations-live-stream.mjs",
+    "git_sha": ""
+  },
+  "schema_id": "operations_live_stream_v1",
+  "schema_version": "xlooop.operations_live_stream.v1",
+  "contract_kind": "operations_live_stream",
+  "contract_version": "v1.0.0",
+  "stream_id": "operations-live-stream-20260710015825",
+  "authority_source": "MB-P operations live stream authority",
+  "authority_model": "mbp_owned_read_model_snapshot",
+  "source_repo": "MB-P",
+  "consumer_repo": "Xlooop-XCP-demo",
+  "source_mode": "staged_snapshot",
+  "claim_posture": {
+    "read_model_snapshot": "allowed_internal_owner_proof",
+    "live_streaming_operations": "internal_sla_poll_allowed_public_blocked",
+    "public_claim_allowed": false,
+    "required_caveat": "This is an MB-P-owned read-model snapshot with SLA-protected receipt polling for internal owner proof. Do not claim public live streaming operations or production SaaS until owner public claim sign-off and public-safe redaction exist."
+  },
+  "gateway_poll_sla": {
+    "state": "green",
+    "cadence_seconds": 300,
+    "stale_after_seconds": 900,
+    "last_successful_poll_at": "2026-06-13T12:45:07+10:00",
+    "next_poll_due_at": "2026-06-13T12:50:07+10:00"
+  },
+  "authoritative_receipt_ingestion": {
+    "schema_version": "mbp.gateway_receipts.v1",
+    "source_adapter": "mbp-gateway-receipt-export",
+    "projection_id": "mbp-gateway-receipts-20260613124507",
+    "authority_source": "mb-p-gateway",
+    "receipt_count": 3,
+    "coverage_percent": 100,
+    "direct_mbp_repo_write_allowed": false,
+    "raw_content_included": false
+  },
+  "fallback_fixture_used": false,
+  "direct_mbp_repo_write_allowed": false,
+  "private_mbp_data_allowed_by_owner": true,
+  "generated_at": "2026-07-10T01:58:25.000Z",
+  "valid_until": "2026-07-10T05:58:25.000Z",
+  "source_files": [
+    "_sys/xcp-system/cross_repo_drafts/Xlooop-XCP-demo/data/mbp-operations-projection.json",
+    "_sys/xcp-system/derivative/governance-events.jsonl",
+    "_sys/xcp-system/derivative/active-agent-collaboration/collaboration_events.jsonl",
+    "_sys/xcp-system/derivative/skill-invocation-log.ndjson",
+    "_sys/xcp-system/derivative/ecosystem-graph/graph-latest-summary.json",
+    "_sys/xcp-system/derivative/discipline-scorecard-latest.json",
+    "_sys/xcp-system/evidence/discoverability/mode-coverage/20260514_mode_coverage.json",
+    "Xlooop-XCP-demo/data/mbp-gateway-receipts.json",
+    "_sys/xcp-system/governance/HARD_RULES.md",
+    "_sys/scripts/verify_latest_committed_evidence_ledger.py",
+    "_sys/skills/ecosystem-status-brief/SKILL.md",
+    "_sys/xcp-system/derivative/chat-capture-packets/2026-05/capture-20260511-chat-contract-capture.json",
+    "_sys/xcp-system/derivative/intake-ledger/2026-05.ndjson",
+    "_sys/xcp-system/evidence/frontend-architecture/C161_async_collaboration_xfront_engine_roadmap.md",
+    "xlooop-x-biz/README.md",
+    "xlooop-x-biz/START_HERE.md",
+    "xlooop-x-biz/investor/EXECUTIVE_SUMMARY.md",
+    "xlooop-x-biz/investor/TRACTION.md",
+    "xlooop-x-biz/investor/FINANCIAL_MODEL.md"
+  ],
+  "required_source_coverage": {
+    "required_stream_types": [
+      "packet",
+      "governance_event",
+      "collaboration_event",
+      "skill_invocation",
+      "session_bundle",
+      "graph_signal",
+      "scorecard_signal",
+      "readiness_signal",
+      "gateway_receipt"
+    ],
+    "required_source_adapters": [
+      "mbp-operations-projection",
+      "mbp-governance-events-jsonl",
+      "active-agent-collaboration-registry",
+      "mbp-skill-invocation-log",
+      "mbp-session-context-bundle",
+      "mbp-ecosystem-graph-summary",
+      "mbp-discipline-scorecard",
+      "mbp-mode-coverage-report",
+      "mbp-gateway-receipt-export",
+      "mbp-latest-committed-evidence-ledger"
+    ],
+    "missing_stream_types": [],
+    "missing_source_adapters": [],
+    "coverage_percent": 100
+  },
+  "metrics": {
+    "rows_total": 55,
+    "by_stream_type": {
+      "governance_event": 12,
+      "graph_signal": 1,
+      "scorecard_signal": 3,
+      "packet": 6,
+      "session_bundle": 6,
+      "skill_invocation": 10,
+      "gateway_receipt": 3,
+      "readiness_signal": 2,
+      "collaboration_event": 12
+    },
+    "by_domain": {
+      "MB-P governance": 24,
+      "MB-P graph": 1,
+      "MB-P skills": 10,
+      "Unified intake": 1,
+      "MB-P gateway": 3,
+      "x-biz investor readiness": 3,
+      "XCP": 1,
+      "MB-P collaboration": 12
+    },
+    "source_file_count": 19,
+    "source_coverage_percent": 100
+  },
+  "rows": [
+    {
+      "schema_version": "xlooop.operations_live_stream.row.v1",
+      "row_id": "governance-event:2026-07-10t02-31-53-658562z:operatorresponsetorecommendation",
+      "stream_type": "governance_event",
+      "domain": "MB-P governance",
+      "workspace_id": "mbp-private",
+      "domain_id": "mbp-governance",
+      "domain_kind": "governance",
+      "project_id": "mbp-ops",
+      "lane_id": "signoff",
+      "board_id": "mbp-ops-activity-board",
+      "mode_jump": "signoff",
+      "source_adapter": "mbp-governance-events-jsonl",
+      "state": "OperatorResponseToRecommendation",
+      "timestamp_iso": "2026-07-10T02:31:53.658562Z",
+      "title": "OperatorResponseToRecommendation",
+      "summary": "Operator/governance signal captured by MB-P.",
+      "quick_actions": [
+        "Open packet",
+        "Confirm owner review"
+      ],
+      "evidence_refs": [
+        {
+          "ref_id": "mbp:_sys/xcp-system/derivative/governance-events.jsonl",
+          "label": "MB-P governance event stream",
+          "source_path": "_sys/xcp-system/derivative/governance-events.jsonl"
+        }
+      ],
+      "replay_command": null,
+      "rollback_command": null,
+      "source_event_id": "CF1B6FCF-A9B8-458F-BB13-2993985129EA",
+      "risk_lane": "low"
+    },
+    {
+      "schema_version": "xlooop.operations_live_stream.row.v1",
+      "row_id": "governance-event:2026-07-10t02-31-53-617671z:operatorresponsetorecommendation",
+      "stream_type": "governance_event",
+      "domain": "MB-P governance",
+      "workspace_id": "mbp-private",
+      "domain_id": "mbp-governance",
+      "domain_kind": "governance",
+      "project_id": "mbp-ops",
+      "lane_id": "signoff",
+      "board_id": "mbp-ops-activity-board",
+      "mode_jump": "signoff",
+      "source_adapter": "mbp-governance-events-jsonl",
+      "state": "OperatorResponseToRecommendation",
+      "timestamp_iso": "2026-07-10T02:31:53.617671Z",
+      "title": "OperatorResponseToRecommendation",
+      "summary": "Operator/governance signal captured by MB-P.",
+      "quick_actions": [
+        "Open packet",
+        "Confirm owner review"
+      ],
+      "evidence_refs": [
+        {
+          "ref_id": "mbp:_sys/xcp-system/derivative/governance-events.jsonl",
+          "label": "MB-P governance event stream",
+          "source_path": "_sys/xcp-system/derivative/governance-events.jsonl"
+        }
+      ],
+      "replay_command": null,
+      "rollback_command": null,
+      "source_event_id": "CF1B6FCF-A9B8-458F-BB13-2993985129EA",
+      "risk_lane": "low"
+    },
+    {
+      "schema_version": "xlooop.operations_live_stream.row.v1",
+      "row_id": "governance-event:2026-07-10t02-31-53-576390z:operatorresponsetorecommendation",
+      "stream_type": "governance_event",
+      "domain": "MB-P governance",
+      "workspace_id": "mbp-private",
+      "domain_id": "mbp-governance",
+      "domain_kind": "governance",
+      "project_id": "mbp-ops",
+      "lane_id": "signoff",
+      "board_id": "mbp-ops-activity-board",
+      "mode_jump": "signoff",
+      "source_adapter": "mbp-governance-events-jsonl",
+      "state": "OperatorResponseToRecommendation",
+      "timestamp_iso": "2026-07-10T02:31:53.576390Z",
+      "title": "OperatorResponseToRecommendation",
+      "summary": "Operator/governance signal captured by MB-P.",
+      "quick_actions": [
+        "Open packet",
+        "Confirm owner review"
+      ],
+      "evidence_refs": [
+        {
+          "ref_id": "mbp:_sys/xcp-system/derivative/governance-events.jsonl",
+          "label": "MB-P governance event stream",
+          "source_path": "_sys/xcp-system/derivative/governance-events.jsonl"
+        }
+      ],
+      "replay_command": null,
+      "rollback_command": null,
+      "source_event_id": "CF1B6FCF-A9B8-458F-BB13-2993985129EA",
+      "risk_lane": "low"
+    },
+    {
+      "schema_version": "xlooop.operations_live_stream.row.v1",
+      "row_id": "governance-event:2026-07-10t00-49-54-481968-00-00:recommendationemitted",
+      "stream_type": "governance_event",
+      "domain": "MB-P governance",
+      "workspace_id": "mbp-private",
+      "domain_id": "mbp-governance",
+      "domain_kind": "governance",
+      "project_id": "mbp-ops",
+      "lane_id": "signoff",
+      "board_id": "mbp-ops-activity-board",
+      "mode_jump": "signoff",
+      "source_adapter": "mbp-governance-events-jsonl",
+      "state": "RecommendationEmitted",
+      "timestamp_iso": "2026-07-10T00:49:54.481968+00:00",
+      "title": "RecommendationEmitted",
+      "summary": "Operator/governance signal captured by MB-P.",
+      "quick_actions": [
+        "Open packet",
+        "Confirm owner review"
+      ],
+      "evidence_refs": [
+        {
+          "ref_id": "mbp:_sys/xcp-system/derivative/governance-events.jsonl",
+          "label": "MB-P governance event stream",
+          "source_path": "_sys/xcp-system/derivative/governance-events.jsonl"
+        }
+      ],
+      "replay_command": null,
+      "rollback_command": null,
+      "source_event_id": null,
+      "risk_lane": "low"
+    },
+    {
+      "schema_version": "xlooop.operations_live_stream.row.v1",
+      "row_id": "governance-event:2026-07-10t00-49-54-439569-00-00:recommendationemitted",
+      "stream_type": "governance_event",
+      "domain": "MB-P governance",
+      "workspace_id": "mbp-private",
+      "domain_id": "mbp-governance",
+      "domain_kind": "governance",
+      "project_id": "mbp-ops",
+      "lane_id": "signoff",
+      "board_id": "mbp-ops-activity-board",
+      "mode_jump": "signoff",
+      "source_adapter": "mbp-governance-events-jsonl",
+      "state": "RecommendationEmitted",
+      "timestamp_iso": "2026-07-10T00:49:54.439569+00:00",
+      "title": "RecommendationEmitted",
+      "summary": "Operator/governance signal captured by MB-P.",
+      "quick_actions": [
+        "Open packet",
+        "Confirm owner review"
+      ],
+      "evidence_refs": [
+        {
+          "ref_id": "mbp:_sys/xcp-system/derivative/governance-events.jsonl",
+          "label": "MB-P governance event stream",
+          "source_path": "_sys/xcp-system/derivative/governance-events.jsonl"
+        }
+      ],
+      "replay_command": null,
+      "rollback_command": null,
+      "source_event_id": null,
+      "risk_lane": "low"
+    },
+    {
+      "schema_version": "xlooop.operations_live_stream.row.v1",
+      "row_id": "governance-event:2026-07-10t00-49-54-397464-00-00:recommendationemitted",
+      "stream_type": "governance_event",
+      "domain": "MB-P governance",
+      "workspace_id": "mbp-private",
+      "domain_id": "mbp-governance",
+      "domain_kind": "governance",
+      "project_id": "mbp-ops",
+      "lane_id": "signoff",
+      "board_id": "mbp-ops-activity-board",
+      "mode_jump": "signoff",
+      "source_adapter": "mbp-governance-events-jsonl",
+      "state": "RecommendationEmitted",
+      "timestamp_iso": "2026-07-10T00:49:54.397464+00:00",
+      "title": "RecommendationEmitted",
+      "summary": "Operator/governance signal captured by MB-P.",
+      "quick_actions": [
+        "Open packet",
+        "Confirm owner review"
+      ],
+      "evidence_refs": [
+        {
+          "ref_id": "mbp:_sys/xcp-system/derivative/governance-events.jsonl",
+          "label": "MB-P governance event stream",
+          "source_path": "_sys/xcp-system/derivative/governance-events.jsonl"
+        }
+      ],
+      "replay_command": null,
+      "rollback_command": null,
+      "source_event_id": null,
+      "risk_lane": "low"
+    },
+    {
+      "schema_version": "xlooop.operations_live_stream.row.v1",
+      "row_id": "graph-summary:2026-07-09t20-30-05-129443-00-00",
+      "stream_type": "graph_signal",
+      "domain": "MB-P graph",
+      "workspace_id": "mbp-private",
+      "domain_id": "mbp-graph",
+      "domain_kind": "knowledge_graph",
+      "project_id": "mbp-ops",
+      "lane_id": "signoff",
+      "board_id": "mbp-ops-learning-board",
+      "mode_jump": "signoff",
+      "source_adapter": "mbp-ecosystem-graph-summary",
+      "state": "graph_summary_current",
+      "timestamp_iso": "2026-07-09T20:30:05.129443+00:00",
+      "title": "Ecosystem graph summary",
+      "summary": "14496 nodes · 164510 edges · 50 intake events",
+      "quick_actions": [
+        "Open learning"
+      ],
+      "evidence_refs": [
+        {
+          "ref_id": "mbp:_sys/xcp-system/derivative/ecosystem-graph/graph-latest-summary.json",
+          "label": "MB-P ecosystem graph latest summary",
+          "source_path": "_sys/xcp-system/derivative/ecosystem-graph/graph-latest-summary.json"
+        }
+      ],
+      "replay_command": null,
+      "rollback_command": null,
+      "source_event_id": null,
+      "risk_lane": "low"
+    },
+    {
+      "schema_version": "xlooop.operations_live_stream.row.v1",
+      "row_id": "scorecard:2026-07-09t19-00-01-00-00",
+      "stream_type": "scorecard_signal",
+      "domain": "MB-P governance",
+      "workspace_id": "mbp-private",
+      "domain_id": "mbp-governance",
+      "domain_kind": "governance",
+      "project_id": "mbp-ops",
+      "lane_id": "signoff",
+      "board_id": "mbp-ops-readiness-board",
+      "mode_jump": "signoff",
+      "source_adapter": "mbp-discipline-scorecard",
+      "state": "discipline_scorecard_current",
+      "timestamp_iso": "2026-07-09T19:00:01+00:00",
+      "title": "Governance discipline scorecard",
+      "summary": "M1 citation 100 · M2 parity 100 · metrics tracked 8",
+      "quick_actions": [
+        "Open learning",
+        "Confirm owner review"
+      ],
+      "evidence_refs": [
+        {
+          "ref_id": "mbp:_sys/xcp-system/derivative/discipline-scorecard-latest.json",
+          "label": "MB-P discipline scorecard latest",
+          "source_path": "_sys/xcp-system/derivative/discipline-scorecard-latest.json"
+        }
+      ],
+      "replay_command": null,
+      "rollback_command": null,
+      "source_event_id": null,
+      "risk_lane": "low"
+    },
+    {
+      "schema_version": "xlooop.operations_live_stream.row.v1",
+      "row_id": "packet:packet-mbp-skills-260710",
+      "stream_type": "packet",
+      "domain": "MB-P governance",
+      "workspace_id": "mbp-private",
+      "domain_id": "mbp-governance",
+      "domain_kind": "governance",
+      "project_id": "mbp-governance",
+      "lane_id": "signoff",
+      "board_id": "mbp-governance-activity-board",
+      "mode_jump": "signoff",
+      "source_adapter": "mbp-operations-projection",
+      "state": "evidence_ready",
+      "timestamp_iso": "2026-07-10T03:30:00+10:00",
+      "title": "MB-P skill registry: 223 canonical skills",
+      "summary": "owner=confirmed · evidence=ready · signoff=ready · xcp=ready_for_substrate",
+      "quick_actions": [
+        "Open packet",
+        "Mark evidence ready",
+        "Sign off",
+        "Open learning"
+      ],
+      "evidence_refs": [
+        {
+          "ref_id": "mbp:_sys/xcp-system/cross_repo_drafts/Xlooop-XCP-demo/data/mbp-operations-projection.json",
+          "label": "MB-P operations projection",
+          "source_path": "_sys/xcp-system/cross_repo_drafts/Xlooop-XCP-demo/data/mbp-operations-projection.json"
+        },
+        {
+          "ref_id": "source:mbp:skills-index",
+          "label": "skills-index.yaml metadata (223 skills)",
+          "uri": "mbp://governance/skills-index",
+          "source_path": null
+        }
+      ],
+      "replay_command": "npm run verify:mbp-live-projection-adapter -- packet-mbp-skills-260710",
+      "rollback_command": null,
+      "source_event_id": null,
+      "risk_lane": "near-0-risk"
+    },
+    {
+      "schema_version": "xlooop.operations_live_stream.row.v1",
+      "row_id": "packet:packet-mbp-hard-rules-260710",
+      "stream_type": "packet",
+      "domain": "MB-P governance",
+      "workspace_id": "mbp-private",
+      "domain_id": "mbp-governance",
+      "domain_kind": "governance",
+      "project_id": "mbp-governance",
+      "lane_id": "signoff",
+      "board_id": "mbp-governance-activity-board",
+      "mode_jump": "signoff",
+      "source_adapter": "mbp-operations-projection",
+      "state": "evidence_ready",
+      "timestamp_iso": "2026-07-10T03:30:00+10:00",
+      "title": "MB-P HARD_RULES v1.26.0 (277 HR-* IDs)",
+      "summary": "owner=confirmed · evidence=ready · signoff=ready · xcp=ready_for_substrate",
+      "quick_actions": [
+        "Open packet",
+        "Mark evidence ready",
+        "Sign off",
+        "Open learning"
+      ],
+      "evidence_refs": [
+        {
+          "ref_id": "mbp:_sys/xcp-system/cross_repo_drafts/Xlooop-XCP-demo/data/mbp-operations-projection.json",
+          "label": "MB-P operations projection",
+          "source_path": "_sys/xcp-system/cross_repo_drafts/Xlooop-XCP-demo/data/mbp-operations-projection.json"
+        },
+        {
+          "ref_id": "source:mbp:hard-rules",
+          "label": "HARD_RULES.md v1.26.0",
+          "uri": "mbp://governance/hard-rules",
+          "source_path": null
+        }
+      ],
+      "replay_command": "npm run verify:mbp-live-projection-adapter -- packet-mbp-hard-rules-260710",
+      "rollback_command": null,
+      "source_event_id": null,
+      "risk_lane": "near-0-risk"
+    },
+    {
+      "schema_version": "xlooop.operations_live_stream.row.v1",
+      "row_id": "packet:packet-mbp-pillars-260710",
+      "stream_type": "packet",
+      "domain": "MB-P governance",
+      "workspace_id": "mbp-private",
+      "domain_id": "mbp-governance",
+      "domain_kind": "governance",
+      "project_id": "mbp-governance",
+      "lane_id": "signoff",
+      "board_id": "mbp-governance-activity-board",
+      "mode_jump": "signoff",
+      "source_adapter": "mbp-operations-projection",
+      "state": "evidence_ready",
+      "timestamp_iso": "2026-07-10T03:30:00+10:00",
+      "title": "MB-P pillar maturity composite ~7.86; 0/7 at 10/10",
+      "summary": "owner=confirmed · evidence=ready · signoff=ready · xcp=ready_for_substrate",
+      "quick_actions": [
+        "Open packet",
+        "Mark evidence ready",
+        "Sign off",
+        "Open learning"
+      ],
+      "evidence_refs": [
+        {
+          "ref_id": "mbp:_sys/xcp-system/cross_repo_drafts/Xlooop-XCP-demo/data/mbp-operations-projection.json",
+          "label": "MB-P operations projection",
+          "source_path": "_sys/xcp-system/cross_repo_drafts/Xlooop-XCP-demo/data/mbp-operations-projection.json"
+        },
+        {
+          "ref_id": "source:mbp:pillars",
+          "label": "PILLARS.md v2 7-pillar maturity",
+          "uri": "mbp://governance/pillars",
+          "source_path": null
+        }
+      ],
+      "replay_command": "npm run verify:mbp-live-projection-adapter -- packet-mbp-pillars-260710",
+      "rollback_command": null,
+      "source_event_id": null,
+      "risk_lane": "near-0-risk"
+    },
+    {
+      "schema_version": "xlooop.operations_live_stream.row.v1",
+      "row_id": "packet:packet-mbp-recent-waves-260710",
+      "stream_type": "packet",
+      "domain": "MB-P governance",
+      "workspace_id": "mbp-private",
+      "domain_id": "mbp-governance",
+      "domain_kind": "governance",
+      "project_id": "mbp-governance",
+      "lane_id": "signoff",
+      "board_id": "mbp-governance-activity-board",
+      "mode_jump": "signoff",
+      "source_adapter": "mbp-operations-projection",
+      "state": "evidence_ready",
+      "timestamp_iso": "2026-07-10T03:30:00+10:00",
+      "title": "MB-P recent waves (5 most recent retrospectives)",
+      "summary": "owner=confirmed · evidence=ready · signoff=ready · xcp=ready_for_substrate",
+      "quick_actions": [
+        "Open packet",
+        "Mark evidence ready",
+        "Sign off",
+        "Open learning"
+      ],
+      "evidence_refs": [
+        {
+          "ref_id": "mbp:_sys/xcp-system/cross_repo_drafts/Xlooop-XCP-demo/data/mbp-operations-projection.json",
+          "label": "MB-P operations projection",
+          "source_path": "_sys/xcp-system/cross_repo_drafts/Xlooop-XCP-demo/data/mbp-operations-projection.json"
+        },
+        {
+          "ref_id": "source:mbp:wave:0",
+          "label": "260511-wave-r-m-d-vi-adr-0049-ratified-path-b-supabase-mermaid-diagram",
+          "uri": "mbp://wave-reports/260511-wave-r-m-d-vi-adr-0049-ratified-path-b-supabase-mermaid-diagram.md",
+          "source_path": null
+        }
+      ],
+      "replay_command": "npm run verify:mbp-live-projection-adapter -- packet-mbp-recent-waves-260710",
+      "rollback_command": null,
+      "source_event_id": null,
+      "risk_lane": "near-0-risk"
+    },
+    {
+      "schema_version": "xlooop.operations_live_stream.row.v1",
+      "row_id": "packet:packet-mbp-comprehensive-review-260710",
+      "stream_type": "packet",
+      "domain": "MB-P governance",
+      "workspace_id": "mbp-private",
+      "domain_id": "mbp-governance",
+      "domain_kind": "governance",
+      "project_id": "mbp-governance",
+      "lane_id": "signoff",
+      "board_id": "mbp-governance-activity-board",
+      "mode_jump": "signoff",
+      "source_adapter": "mbp-operations-projection",
+      "state": "evidence_ready",
+      "timestamp_iso": "2026-07-10T03:30:00+10:00",
+      "title": "MB-P comprehensive ecosystem review scope is dashboard-visible and mandatory",
+      "summary": "owner=confirmed · evidence=ready · signoff=ready · xcp=ready_for_substrate",
+      "quick_actions": [
+        "Open packet",
+        "Mark evidence ready",
+        "Sign off",
+        "Open learning"
+      ],
+      "evidence_refs": [
+        {
+          "ref_id": "mbp:_sys/xcp-system/cross_repo_drafts/Xlooop-XCP-demo/data/mbp-operations-projection.json",
+          "label": "MB-P operations projection",
+          "source_path": "_sys/xcp-system/cross_repo_drafts/Xlooop-XCP-demo/data/mbp-operations-projection.json"
+        },
+        {
+          "ref_id": "source:mbp:engine-contract-registry",
+          "label": "ENGINE_CONTRACT_REGISTRY.yml module.comprehensive_ecosystem_review_scope",
+          "uri": "mbp://governance/engine-contract-registry",
+          "source_path": null
+        }
+      ],
+      "replay_command": "npm run verify:mbp-live-projection-adapter -- packet-mbp-comprehensive-review-260710",
+      "rollback_command": null,
+      "source_event_id": null,
+      "risk_lane": "near-0-risk"
+    },
+    {
+      "schema_version": "xlooop.operations_live_stream.row.v1",
+      "row_id": "session-bundle:xlooop-product-260710-0300-md",
+      "stream_type": "session_bundle",
+      "domain": "MB-P governance",
+      "workspace_id": "mbp-private",
+      "domain_id": "mbp-governance",
+      "domain_kind": "governance",
+      "project_id": "mbp-ops",
+      "lane_id": "signoff",
+      "board_id": "mbp-ops-activity-board",
+      "mode_jump": "signoff",
+      "source_adapter": "mbp-session-context-bundle",
+      "state": "context_bundle_available",
+      "timestamp_iso": "2026-07-09T17:00:41.552Z",
+      "title": "Session bundle · xlooop-product-260710_0300",
+      "summary": "Latest MB-P role/session context bundle available for operator review and downstream agents.",
+      "quick_actions": [
+        "Open packet"
+      ],
+      "evidence_refs": [
+        {
+          "ref_id": "mbp:_sys/xcp-system/derivative/session-bundles/xlooop-product-260710_0300.md",
+          "label": "Session bundle xlooop-product-260710_0300.md",
+          "source_path": "_sys/xcp-system/derivative/session-bundles/xlooop-product-260710_0300.md"
+        }
+      ],
+      "replay_command": null,
+      "rollback_command": null,
+      "source_event_id": null,
+      "risk_lane": "low"
+    },
+    {
+      "schema_version": "xlooop.operations_live_stream.row.v1",
+      "row_id": "session-bundle:xlooop-product-20260710-md",
+      "stream_type": "session_bundle",
+      "domain": "MB-P governance",
+      "workspace_id": "mbp-private",
+      "domain_id": "mbp-governance",
+      "domain_kind": "governance",
+      "project_id": "mbp-ops",
+      "lane_id": "signoff",
+      "board_id": "mbp-ops-activity-board",
+      "mode_jump": "signoff",
+      "source_adapter": "mbp-session-context-bundle",
+      "state": "context_bundle_available",
+      "timestamp_iso": "2026-07-09T17:00:41.551Z",
+      "title": "Session bundle · xlooop-product",
+      "summary": "Latest MB-P role/session context bundle available for operator review and downstream agents.",
+      "quick_actions": [
+        "Open packet"
+      ],
+      "evidence_refs": [
+        {
+          "ref_id": "mbp:_sys/xcp-system/derivative/session-bundles/xlooop-product-20260710.md",
+          "label": "Session bundle xlooop-product-20260710.md",
+          "source_path": "_sys/xcp-system/derivative/session-bundles/xlooop-product-20260710.md"
+        }
+      ],
+      "replay_command": null,
+      "rollback_command": null,
+      "source_event_id": null,
+      "risk_lane": "low"
+    },
+    {
+      "schema_version": "xlooop.operations_live_stream.row.v1",
+      "row_id": "session-bundle:cross-repo-planner-20260710-md",
+      "stream_type": "session_bundle",
+      "domain": "MB-P governance",
+      "workspace_id": "mbp-private",
+      "domain_id": "mbp-governance",
+      "domain_kind": "governance",
+      "project_id": "mbp-ops",
+      "lane_id": "signoff",
+      "board_id": "mbp-ops-activity-board",
+      "mode_jump": "signoff",
+      "source_adapter": "mbp-session-context-bundle",
+      "state": "context_bundle_available",
+      "timestamp_iso": "2026-07-09T17:00:41.314Z",
+      "title": "Session bundle · cross-repo-planner",
+      "summary": "Latest MB-P role/session context bundle available for operator review and downstream agents.",
+      "quick_actions": [
+        "Open packet"
+      ],
+      "evidence_refs": [
+        {
+          "ref_id": "mbp:_sys/xcp-system/derivative/session-bundles/cross-repo-planner-20260710.md",
+          "label": "Session bundle cross-repo-planner-20260710.md",
+          "source_path": "_sys/xcp-system/derivative/session-bundles/cross-repo-planner-20260710.md"
+        }
+      ],
+      "replay_command": null,
+      "rollback_command": null,
+      "source_event_id": null,
+      "risk_lane": "low"
+    },
+    {
+      "schema_version": "xlooop.operations_live_stream.row.v1",
+      "row_id": "session-bundle:cross-repo-planner-260710-0300-md",
+      "stream_type": "session_bundle",
+      "domain": "MB-P governance",
+      "workspace_id": "mbp-private",
+      "domain_id": "mbp-governance",
+      "domain_kind": "governance",
+      "project_id": "mbp-ops",
+      "lane_id": "signoff",
+      "board_id": "mbp-ops-activity-board",
+      "mode_jump": "signoff",
+      "source_adapter": "mbp-session-context-bundle",
+      "state": "context_bundle_available",
+      "timestamp_iso": "2026-07-09T17:00:41.314Z",
+      "title": "Session bundle · cross-repo-planner-260710_0300",
+      "summary": "Latest MB-P role/session context bundle available for operator review and downstream agents.",
+      "quick_actions": [
+        "Open packet"
+      ],
+      "evidence_refs": [
+        {
+          "ref_id": "mbp:_sys/xcp-system/derivative/session-bundles/cross-repo-planner-260710_0300.md",
+          "label": "Session bundle cross-repo-planner-260710_0300.md",
+          "source_path": "_sys/xcp-system/derivative/session-bundles/cross-repo-planner-260710_0300.md"
+        }
+      ],
+      "replay_command": null,
+      "rollback_command": null,
+      "source_event_id": null,
+      "risk_lane": "low"
+    },
+    {
+      "schema_version": "xlooop.operations_live_stream.row.v1",
+      "row_id": "session-bundle:product-manager-20260710-md",
+      "stream_type": "session_bundle",
+      "domain": "MB-P governance",
+      "workspace_id": "mbp-private",
+      "domain_id": "mbp-governance",
+      "domain_kind": "governance",
+      "project_id": "mbp-ops",
+      "lane_id": "signoff",
+      "board_id": "mbp-ops-activity-board",
+      "mode_jump": "signoff",
+      "source_adapter": "mbp-session-context-bundle",
+      "state": "context_bundle_available",
+      "timestamp_iso": "2026-07-09T17:00:41.078Z",
+      "title": "Session bundle · product-manager",
+      "summary": "Latest MB-P role/session context bundle available for operator review and downstream agents.",
+      "quick_actions": [
+        "Open packet"
+      ],
+      "evidence_refs": [
+        {
+          "ref_id": "mbp:_sys/xcp-system/derivative/session-bundles/product-manager-20260710.md",
+          "label": "Session bundle product-manager-20260710.md",
+          "source_path": "_sys/xcp-system/derivative/session-bundles/product-manager-20260710.md"
+        }
+      ],
+      "replay_command": null,
+      "rollback_command": null,
+      "source_event_id": null,
+      "risk_lane": "low"
+    },
+    {
+      "schema_version": "xlooop.operations_live_stream.row.v1",
+      "row_id": "session-bundle:product-manager-260710-0300-md",
+      "stream_type": "session_bundle",
+      "domain": "MB-P governance",
+      "workspace_id": "mbp-private",
+      "domain_id": "mbp-governance",
+      "domain_kind": "governance",
+      "project_id": "mbp-ops",
+      "lane_id": "signoff",
+      "board_id": "mbp-ops-activity-board",
+      "mode_jump": "signoff",
+      "source_adapter": "mbp-session-context-bundle",
+      "state": "context_bundle_available",
+      "timestamp_iso": "2026-07-09T17:00:41.078Z",
+      "title": "Session bundle · product-manager-260710_0300",
+      "summary": "Latest MB-P role/session context bundle available for operator review and downstream agents.",
+      "quick_actions": [
+        "Open packet"
+      ],
+      "evidence_refs": [
+        {
+          "ref_id": "mbp:_sys/xcp-system/derivative/session-bundles/product-manager-260710_0300.md",
+          "label": "Session bundle product-manager-260710_0300.md",
+          "source_path": "_sys/xcp-system/derivative/session-bundles/product-manager-260710_0300.md"
+        }
+      ],
+      "replay_command": null,
+      "rollback_command": null,
+      "source_event_id": null,
+      "risk_lane": "low"
+    },
+    {
+      "schema_version": "xlooop.operations_live_stream.row.v1",
+      "row_id": "governance-event:2026-07-08t19-45-55-10-00:skillinvoked:xcp-atomic-closure",
+      "stream_type": "governance_event",
+      "domain": "MB-P governance",
+      "workspace_id": "mbp-private",
+      "domain_id": "mbp-governance",
+      "domain_kind": "governance",
+      "project_id": "mbp-ops",
+      "lane_id": "signoff",
+      "board_id": "mbp-ops-activity-board",
+      "mode_jump": "signoff",
+      "source_adapter": "mbp-governance-events-jsonl",
+      "state": "SkillInvoked",
+      "timestamp_iso": "2026-07-08T19:45:55+10:00",
+      "title": "SkillInvoked",
+      "summary": "Operator/governance signal captured by MB-P.",
+      "quick_actions": [
+        "Open packet",
+        "Confirm owner review"
+      ],
+      "evidence_refs": [
+        {
+          "ref_id": "mbp:_sys/xcp-system/derivative/governance-events.jsonl",
+          "label": "MB-P governance event stream",
+          "source_path": "_sys/xcp-system/derivative/governance-events.jsonl"
+        }
+      ],
+      "replay_command": null,
+      "rollback_command": null,
+      "source_event_id": null,
+      "risk_lane": "low"
+    },
+    {
+      "schema_version": "xlooop.operations_live_stream.row.v1",
+      "row_id": "skill-invocation:2026-07-08t19-45-55-10-00:xcp-atomic-closure:587924df",
+      "stream_type": "skill_invocation",
+      "domain": "MB-P skills",
+      "workspace_id": "mbp-private",
+      "domain_id": "mbp-skills",
+      "domain_kind": "skill_system",
+      "project_id": "mbp-ops",
+      "lane_id": "signoff",
+      "board_id": "mbp-ops-skill-board",
+      "mode_jump": "signoff",
+      "source_adapter": "mbp-skill-invocation-log",
+      "state": "success",
+      "timestamp_iso": "2026-07-08T19:45:55+10:00",
+      "title": "Skill invoked · xcp-atomic-closure",
+      "summary": "git_reconstructed · builder-maintainer",
+      "quick_actions": [
+        "Open packet"
+      ],
+      "evidence_refs": [
+        {
+          "ref_id": "mbp:_sys/xcp-system/derivative/skill-invocation-log.ndjson",
+          "label": "MB-P skill invocation log",
+          "source_path": "_sys/xcp-system/derivative/skill-invocation-log.ndjson"
+        }
+      ],
+      "replay_command": null,
+      "rollback_command": null,
+      "source_event_id": null,
+      "risk_lane": "low"
+    },
+    {
+      "schema_version": "xlooop.operations_live_stream.row.v1",
+      "row_id": "governance-event:2026-07-08t17-59-04-10-00:skillinvoked:xcp-atomic-closure",
+      "stream_type": "governance_event",
+      "domain": "Unified intake",
+      "workspace_id": "mbp-private",
+      "domain_id": "mbp-intake",
+      "domain_kind": "intake",
+      "project_id": "mbp-intake",
+      "lane_id": "triage",
+      "board_id": "mbp-intake-activity-board",
+      "mode_jump": "triage",
+      "source_adapter": "mbp-governance-events-jsonl",
+      "state": "SkillInvoked",
+      "timestamp_iso": "2026-07-08T17:59:04+10:00",
+      "title": "SkillInvoked",
+      "summary": "Operator/governance signal captured by MB-P.",
+      "quick_actions": [
+        "Open packet",
+        "Confirm owner review"
+      ],
+      "evidence_refs": [
+        {
+          "ref_id": "mbp:_sys/xcp-system/derivative/governance-events.jsonl",
+          "label": "MB-P governance event stream",
+          "source_path": "_sys/xcp-system/derivative/governance-events.jsonl"
+        }
+      ],
+      "replay_command": null,
+      "rollback_command": null,
+      "source_event_id": null,
+      "risk_lane": "low"
+    },
+    {
+      "schema_version": "xlooop.operations_live_stream.row.v1",
+      "row_id": "skill-invocation:2026-07-08t17-59-04-10-00:xcp-atomic-closure:587924df",
+      "stream_type": "skill_invocation",
+      "domain": "MB-P skills",
+      "workspace_id": "mbp-private",
+      "domain_id": "mbp-skills",
+      "domain_kind": "skill_system",
+      "project_id": "mbp-ops",
+      "lane_id": "signoff",
+      "board_id": "mbp-ops-skill-board",
+      "mode_jump": "signoff",
+      "source_adapter": "mbp-skill-invocation-log",
+      "state": "success",
+      "timestamp_iso": "2026-07-08T17:59:04+10:00",
+      "title": "Skill invoked · xcp-atomic-closure",
+      "summary": "git_reconstructed · builder-maintainer",
+      "quick_actions": [
+        "Open packet"
+      ],
+      "evidence_refs": [
+        {
+          "ref_id": "mbp:_sys/xcp-system/derivative/skill-invocation-log.ndjson",
+          "label": "MB-P skill invocation log",
+          "source_path": "_sys/xcp-system/derivative/skill-invocation-log.ndjson"
+        }
+      ],
+      "replay_command": null,
+      "rollback_command": null,
+      "source_event_id": null,
+      "risk_lane": "low"
+    },
+    {
+      "schema_version": "xlooop.operations_live_stream.row.v1",
+      "row_id": "governance-event:2026-07-08t17-06-26-10-00:skillinvoked:xcp-atomic-closure",
+      "stream_type": "governance_event",
+      "domain": "MB-P governance",
+      "workspace_id": "mbp-private",
+      "domain_id": "mbp-governance",
+      "domain_kind": "governance",
+      "project_id": "mbp-ops",
+      "lane_id": "signoff",
+      "board_id": "mbp-ops-activity-board",
+      "mode_jump": "signoff",
+      "source_adapter": "mbp-governance-events-jsonl",
+      "state": "SkillInvoked",
+      "timestamp_iso": "2026-07-08T17:06:26+10:00",
+      "title": "SkillInvoked",
+      "summary": "Operator/governance signal captured by MB-P.",
+      "quick_actions": [
+        "Open packet",
+        "Confirm owner review"
+      ],
+      "evidence_refs": [
+        {
+          "ref_id": "mbp:_sys/xcp-system/derivative/governance-events.jsonl",
+          "label": "MB-P governance event stream",
+          "source_path": "_sys/xcp-system/derivative/governance-events.jsonl"
+        }
+      ],
+      "replay_command": null,
+      "rollback_command": null,
+      "source_event_id": null,
+      "risk_lane": "low"
+    },
+    {
+      "schema_version": "xlooop.operations_live_stream.row.v1",
+      "row_id": "skill-invocation:2026-07-08t17-06-26-10-00:xcp-atomic-closure:587924df",
+      "stream_type": "skill_invocation",
+      "domain": "MB-P skills",
+      "workspace_id": "mbp-private",
+      "domain_id": "mbp-skills",
+      "domain_kind": "skill_system",
+      "project_id": "mbp-ops",
+      "lane_id": "signoff",
+      "board_id": "mbp-ops-skill-board",
+      "mode_jump": "signoff",
+      "source_adapter": "mbp-skill-invocation-log",
+      "state": "success",
+      "timestamp_iso": "2026-07-08T17:06:26+10:00",
+      "title": "Skill invoked · xcp-atomic-closure",
+      "summary": "git_reconstructed · builder-maintainer",
+      "quick_actions": [
+        "Open packet"
+      ],
+      "evidence_refs": [
+        {
+          "ref_id": "mbp:_sys/xcp-system/derivative/skill-invocation-log.ndjson",
+          "label": "MB-P skill invocation log",
+          "source_path": "_sys/xcp-system/derivative/skill-invocation-log.ndjson"
+        }
+      ],
+      "replay_command": null,
+      "rollback_command": null,
+      "source_event_id": null,
+      "risk_lane": "low"
+    },
+    {
+      "schema_version": "xlooop.operations_live_stream.row.v1",
+      "row_id": "governance-event:2026-07-08t16-56-52-10-00:skillinvoked:xcp-cycle-retrospective",
+      "stream_type": "governance_event",
+      "domain": "MB-P governance",
+      "workspace_id": "mbp-private",
+      "domain_id": "mbp-governance",
+      "domain_kind": "governance",
+      "project_id": "mbp-ops",
+      "lane_id": "signoff",
+      "board_id": "mbp-ops-activity-board",
+      "mode_jump": "signoff",
+      "source_adapter": "mbp-governance-events-jsonl",
+      "state": "SkillInvoked",
+      "timestamp_iso": "2026-07-08T16:56:52+10:00",
+      "title": "SkillInvoked",
+      "summary": "Operator/governance signal captured by MB-P.",
+      "quick_actions": [
+        "Open packet",
+        "Confirm owner review"
+      ],
+      "evidence_refs": [
+        {
+          "ref_id": "mbp:_sys/xcp-system/derivative/governance-events.jsonl",
+          "label": "MB-P governance event stream",
+          "source_path": "_sys/xcp-system/derivative/governance-events.jsonl"
+        }
+      ],
+      "replay_command": null,
+      "rollback_command": null,
+      "source_event_id": null,
+      "risk_lane": "low"
+    },
+    {
+      "schema_version": "xlooop.operations_live_stream.row.v1",
+      "row_id": "skill-invocation:2026-07-08t16-56-52-10-00:xcp-atomic-closure:587924df",
+      "stream_type": "skill_invocation",
+      "domain": "MB-P skills",
+      "workspace_id": "mbp-private",
+      "domain_id": "mbp-skills",
+      "domain_kind": "skill_system",
+      "project_id": "mbp-ops",
+      "lane_id": "signoff",
+      "board_id": "mbp-ops-skill-board",
+      "mode_jump": "signoff",
+      "source_adapter": "mbp-skill-invocation-log",
+      "state": "success",
+      "timestamp_iso": "2026-07-08T16:56:52+10:00",
+      "title": "Skill invoked · xcp-atomic-closure",
+      "summary": "git_reconstructed · builder-maintainer",
+      "quick_actions": [
+        "Open packet"
+      ],
+      "evidence_refs": [
+        {
+          "ref_id": "mbp:_sys/xcp-system/derivative/skill-invocation-log.ndjson",
+          "label": "MB-P skill invocation log",
+          "source_path": "_sys/xcp-system/derivative/skill-invocation-log.ndjson"
+        }
+      ],
+      "replay_command": null,
+      "rollback_command": null,
+      "source_event_id": null,
+      "risk_lane": "low"
+    },
+    {
+      "schema_version": "xlooop.operations_live_stream.row.v1",
+      "row_id": "skill-invocation:2026-07-08t16-56-52-10-00:parallel-session-branch-guard:587924df",
+      "stream_type": "skill_invocation",
+      "domain": "MB-P skills",
+      "workspace_id": "mbp-private",
+      "domain_id": "mbp-skills",
+      "domain_kind": "skill_system",
+      "project_id": "mbp-ops",
+      "lane_id": "signoff",
+      "board_id": "mbp-ops-skill-board",
+      "mode_jump": "signoff",
+      "source_adapter": "mbp-skill-invocation-log",
+      "state": "success",
+      "timestamp_iso": "2026-07-08T16:56:52+10:00",
+      "title": "Skill invoked · parallel-session-branch-guard",
+      "summary": "git_reconstructed · builder-maintainer",
+      "quick_actions": [
+        "Open packet"
+      ],
+      "evidence_refs": [
+        {
+          "ref_id": "mbp:_sys/xcp-system/derivative/skill-invocation-log.ndjson",
+          "label": "MB-P skill invocation log",
+          "source_path": "_sys/xcp-system/derivative/skill-invocation-log.ndjson"
+        }
+      ],
+      "replay_command": null,
+      "rollback_command": null,
+      "source_event_id": null,
+      "risk_lane": "low"
+    },
+    {
+      "schema_version": "xlooop.operations_live_stream.row.v1",
+      "row_id": "skill-invocation:2026-07-08t16-56-52-10-00:xcp-cycle-retrospective:587924df",
+      "stream_type": "skill_invocation",
+      "domain": "MB-P skills",
+      "workspace_id": "mbp-private",
+      "domain_id": "mbp-skills",
+      "domain_kind": "skill_system",
+      "project_id": "mbp-ops",
+      "lane_id": "signoff",
+      "board_id": "mbp-ops-skill-board",
+      "mode_jump": "signoff",
+      "source_adapter": "mbp-skill-invocation-log",
+      "state": "success",
+      "timestamp_iso": "2026-07-08T16:56:52+10:00",
+      "title": "Skill invoked · xcp-cycle-retrospective",
+      "summary": "git_reconstructed · builder-maintainer",
+      "quick_actions": [
+        "Open packet"
+      ],
+      "evidence_refs": [
+        {
+          "ref_id": "mbp:_sys/xcp-system/derivative/skill-invocation-log.ndjson",
+          "label": "MB-P skill invocation log",
+          "source_path": "_sys/xcp-system/derivative/skill-invocation-log.ndjson"
+        }
+      ],
+      "replay_command": null,
+      "rollback_command": null,
+      "source_event_id": null,
+      "risk_lane": "low"
+    },
+    {
+      "schema_version": "xlooop.operations_live_stream.row.v1",
+      "row_id": "governance-event:2026-07-06t23-33-39-10-00:skillinvoked:xcp-atomic-closure",
+      "stream_type": "governance_event",
+      "domain": "MB-P governance",
+      "workspace_id": "mbp-private",
+      "domain_id": "mbp-governance",
+      "domain_kind": "governance",
+      "project_id": "mbp-ops",
+      "lane_id": "signoff",
+      "board_id": "mbp-ops-activity-board",
+      "mode_jump": "signoff",
+      "source_adapter": "mbp-governance-events-jsonl",
+      "state": "SkillInvoked",
+      "timestamp_iso": "2026-07-06T23:33:39+10:00",
+      "title": "SkillInvoked",
+      "summary": "Operator/governance signal captured by MB-P.",
+      "quick_actions": [
+        "Open packet",
+        "Confirm owner review"
+      ],
+      "evidence_refs": [
+        {
+          "ref_id": "mbp:_sys/xcp-system/derivative/governance-events.jsonl",
+          "label": "MB-P governance event stream",
+          "source_path": "_sys/xcp-system/derivative/governance-events.jsonl"
+        }
+      ],
+      "replay_command": null,
+      "rollback_command": null,
+      "source_event_id": null,
+      "risk_lane": "low"
+    },
+    {
+      "schema_version": "xlooop.operations_live_stream.row.v1",
+      "row_id": "skill-invocation:2026-07-06t23-33-39-10-00:xcp-atomic-closure:587924df",
+      "stream_type": "skill_invocation",
+      "domain": "MB-P skills",
+      "workspace_id": "mbp-private",
+      "domain_id": "mbp-skills",
+      "domain_kind": "skill_system",
+      "project_id": "mbp-ops",
+      "lane_id": "signoff",
+      "board_id": "mbp-ops-skill-board",
+      "mode_jump": "signoff",
+      "source_adapter": "mbp-skill-invocation-log",
+      "state": "success",
+      "timestamp_iso": "2026-07-06T23:33:39+10:00",
+      "title": "Skill invoked · xcp-atomic-closure",
+      "summary": "git_reconstructed · builder-maintainer",
+      "quick_actions": [
+        "Open packet"
+      ],
+      "evidence_refs": [
+        {
+          "ref_id": "mbp:_sys/xcp-system/derivative/skill-invocation-log.ndjson",
+          "label": "MB-P skill invocation log",
+          "source_path": "_sys/xcp-system/derivative/skill-invocation-log.ndjson"
+        }
+      ],
+      "replay_command": null,
+      "rollback_command": null,
+      "source_event_id": null,
+      "risk_lane": "low"
+    },
+    {
+      "schema_version": "xlooop.operations_live_stream.row.v1",
+      "row_id": "governance-event:2026-07-06t09-52-05-10-00:skillinvoked:lesson-to-gate",
+      "stream_type": "governance_event",
+      "domain": "MB-P governance",
+      "workspace_id": "mbp-private",
+      "domain_id": "mbp-governance",
+      "domain_kind": "governance",
+      "project_id": "mbp-ops",
+      "lane_id": "signoff",
+      "board_id": "mbp-ops-activity-board",
+      "mode_jump": "signoff",
+      "source_adapter": "mbp-governance-events-jsonl",
+      "state": "SkillInvoked",
+      "timestamp_iso": "2026-07-06T09:52:05+10:00",
+      "title": "SkillInvoked",
+      "summary": "Operator/governance signal captured by MB-P.",
+      "quick_actions": [
+        "Open packet",
+        "Confirm owner review"
+      ],
+      "evidence_refs": [
+        {
+          "ref_id": "mbp:_sys/xcp-system/derivative/governance-events.jsonl",
+          "label": "MB-P governance event stream",
+          "source_path": "_sys/xcp-system/derivative/governance-events.jsonl"
+        }
+      ],
+      "replay_command": null,
+      "rollback_command": null,
+      "source_event_id": null,
+      "risk_lane": "low"
+    },
+    {
+      "schema_version": "xlooop.operations_live_stream.row.v1",
+      "row_id": "skill-invocation:2026-07-06t09-52-05-10-00:lesson-to-gate:587924df",
+      "stream_type": "skill_invocation",
+      "domain": "MB-P skills",
+      "workspace_id": "mbp-private",
+      "domain_id": "mbp-skills",
+      "domain_kind": "skill_system",
+      "project_id": "mbp-ops",
+      "lane_id": "signoff",
+      "board_id": "mbp-ops-skill-board",
+      "mode_jump": "signoff",
+      "source_adapter": "mbp-skill-invocation-log",
+      "state": "success",
+      "timestamp_iso": "2026-07-06T09:52:05+10:00",
+      "title": "Skill invoked · lesson-to-gate",
+      "summary": "git_reconstructed · builder-maintainer",
+      "quick_actions": [
+        "Open packet"
+      ],
+      "evidence_refs": [
+        {
+          "ref_id": "mbp:_sys/xcp-system/derivative/skill-invocation-log.ndjson",
+          "label": "MB-P skill invocation log",
+          "source_path": "_sys/xcp-system/derivative/skill-invocation-log.ndjson"
+        }
+      ],
+      "replay_command": null,
+      "rollback_command": null,
+      "source_event_id": null,
+      "risk_lane": "low"
+    },
+    {
+      "schema_version": "xlooop.operations_live_stream.row.v1",
+      "row_id": "skill-invocation:2026-07-06t08-46-21-10-00:safe-unified-memory-cleanup:587924df",
+      "stream_type": "skill_invocation",
+      "domain": "MB-P skills",
+      "workspace_id": "mbp-private",
+      "domain_id": "mbp-skills",
+      "domain_kind": "skill_system",
+      "project_id": "mbp-ops",
+      "lane_id": "signoff",
+      "board_id": "mbp-ops-skill-board",
+      "mode_jump": "signoff",
+      "source_adapter": "mbp-skill-invocation-log",
+      "state": "success",
+      "timestamp_iso": "2026-07-06T08:46:21+10:00",
+      "title": "Skill invoked · safe-unified-memory-cleanup",
+      "summary": "git_reconstructed · builder-maintainer",
+      "quick_actions": [
+        "Open packet"
+      ],
+      "evidence_refs": [
+        {
+          "ref_id": "mbp:_sys/xcp-system/derivative/skill-invocation-log.ndjson",
+          "label": "MB-P skill invocation log",
+          "source_path": "_sys/xcp-system/derivative/skill-invocation-log.ndjson"
+        }
+      ],
+      "replay_command": null,
+      "rollback_command": null,
+      "source_event_id": null,
+      "risk_lane": "low"
+    },
+    {
+      "schema_version": "xlooop.operations_live_stream.row.v1",
+      "row_id": "skill-invocation:2026-07-06t05-04-16-10-00:xcp-atomic-closure:587924df",
+      "stream_type": "skill_invocation",
+      "domain": "MB-P skills",
+      "workspace_id": "mbp-private",
+      "domain_id": "mbp-skills",
+      "domain_kind": "skill_system",
+      "project_id": "mbp-ops",
+      "lane_id": "signoff",
+      "board_id": "mbp-ops-skill-board",
+      "mode_jump": "signoff",
+      "source_adapter": "mbp-skill-invocation-log",
+      "state": "success",
+      "timestamp_iso": "2026-07-06T05:04:16+10:00",
+      "title": "Skill invoked · xcp-atomic-closure",
+      "summary": "git_reconstructed · builder-maintainer",
+      "quick_actions": [
+        "Open packet"
+      ],
+      "evidence_refs": [
+        {
+          "ref_id": "mbp:_sys/xcp-system/derivative/skill-invocation-log.ndjson",
+          "label": "MB-P skill invocation log",
+          "source_path": "_sys/xcp-system/derivative/skill-invocation-log.ndjson"
+        }
+      ],
+      "replay_command": null,
+      "rollback_command": null,
+      "source_event_id": null,
+      "risk_lane": "low"
+    },
+    {
+      "schema_version": "xlooop.operations_live_stream.row.v1",
+      "row_id": "gateway-receipt:mbp-receipt-260513-c142-live-operation-handoff",
+      "stream_type": "gateway_receipt",
+      "domain": "MB-P gateway",
+      "workspace_id": "mbp-private",
+      "domain_id": "mbp-governance",
+      "domain_kind": "governance",
+      "project_id": "mbp-ops",
+      "lane_id": "signoff",
+      "board_id": "mbp-ops-receipt-board",
+      "mode_jump": "signoff",
+      "source_adapter": "mbp-gateway-receipt-export",
+      "state": "accepted_by_mbp",
+      "timestamp_iso": "2026-06-12T03:30:03+10:00",
+      "title": "Gateway receipt · xlooop_live_operation_handoff",
+      "summary": "xlooop_operations_ui -> codex · receipt_recorded · idempotency xlooop:c142:live-operation-handoff:projection-packet-action",
+      "quick_actions": [
+        "Open packet",
+        "Confirm owner review",
+        "Replay",
+        "Rollback"
+      ],
+      "evidence_refs": [
+        {
+          "ref_id": "receipt:evidence:c142-live-operation-handoff",
+          "label": "receipt:evidence:c142-live-operation-handoff",
+          "uri": "mbp://_sys/xcp-system/cross_repo_drafts/Xlooop-XCP-demo/data/mbp-operations-projection.json",
+          "source_path": "_sys/xcp-system/cross_repo_drafts/Xlooop-XCP-demo/data/mbp-operations-projection.json"
+        },
+        {
+          "ref_id": "receipt:evidence:intake-ledger-live-handoff",
+          "label": "receipt:evidence:intake-ledger-live-handoff",
+          "uri": "mbp://_sys/xcp-system/derivative/intake-ledger/2026-05.ndjson",
+          "source_path": "_sys/xcp-system/derivative/intake-ledger/2026-05.ndjson"
+        }
+      ],
+      "replay_command": "mbp-gateway://replay/xlooop:c142:live-operation-handoff:projection-packet-action",
+      "rollback_command": "mbp-gateway://rollback/xlooop:c142:live-operation-handoff:projection-packet-action",
+      "source_event_id": "mbp-receipt-260513-c142-live-operation-handoff",
+      "risk_lane": "near-0-risk"
+    },
+    {
+      "schema_version": "xlooop.operations_live_stream.row.v1",
+      "row_id": "xbiz-investor-readiness:traction-register",
+      "stream_type": "scorecard_signal",
+      "domain": "x-biz investor readiness",
+      "workspace_id": "x-biz",
+      "domain_id": "x-biz-investor-readiness",
+      "domain_kind": "business_knowledge",
+      "project_id": "x-biz-investor-readiness",
+      "lane_id": "evidence",
+      "board_id": "x-biz-investor-readiness-readiness-board",
+      "mode_jump": "evidence",
+      "source_adapter": "x-biz-investor-readiness-source-adapter",
+      "state": "traction_verification_gated",
+      "timestamp_iso": "2026-06-10T09:43:58.670Z",
+      "title": "Traction register",
+      "summary": "Traction, recognition, strategic interest, IP, grant, customer validation, and pipeline evidence exists with verification status; do not promote unsupported items.",
+      "quick_actions": [
+        "Review verification status",
+        "Open evidence",
+        "Prepare owner sign-off"
+      ],
+      "evidence_refs": [
+        {
+          "ref_id": "x-biz:investor/TRACTION.md",
+          "label": "Traction register",
+          "source_path": "xlooop-x-biz/investor/TRACTION.md"
+        }
+      ],
+      "replay_command": null,
+      "rollback_command": null,
+      "source_event_id": null,
+      "risk_lane": "medium-1"
+    },
+    {
+      "schema_version": "xlooop.operations_live_stream.row.v1",
+      "row_id": "xbiz-investor-readiness:financial-model",
+      "stream_type": "scorecard_signal",
+      "domain": "x-biz investor readiness",
+      "workspace_id": "x-biz",
+      "domain_id": "x-biz-investor-readiness",
+      "domain_kind": "business_knowledge",
+      "project_id": "x-biz-investor-readiness",
+      "lane_id": "evidence",
+      "board_id": "x-biz-investor-readiness-readiness-board",
+      "mode_jump": "evidence",
+      "source_adapter": "x-biz-investor-readiness-source-adapter",
+      "state": "financial_model_owner_review_required",
+      "timestamp_iso": "2026-06-01T14:51:25.834Z",
+      "title": "Financial model",
+      "summary": "Pricing, ACV, unit economics, 5-year projections, and raise assumptions are available as investor-model evidence pending owner confirmation where marked.",
+      "quick_actions": [
+        "Open model",
+        "Confirm owner review",
+        "Create proposal receipt"
+      ],
+      "evidence_refs": [
+        {
+          "ref_id": "x-biz:investor/FINANCIAL_MODEL.md",
+          "label": "Financial model",
+          "source_path": "xlooop-x-biz/investor/FINANCIAL_MODEL.md"
+        }
+      ],
+      "replay_command": null,
+      "rollback_command": null,
+      "source_event_id": null,
+      "risk_lane": "low"
+    },
+    {
+      "schema_version": "xlooop.operations_live_stream.row.v1",
+      "row_id": "xbiz-investor-readiness:executive-summary",
+      "stream_type": "packet",
+      "domain": "x-biz investor readiness",
+      "workspace_id": "x-biz",
+      "domain_id": "x-biz-investor-readiness",
+      "domain_kind": "business_knowledge",
+      "project_id": "x-biz-investor-readiness",
+      "lane_id": "evidence",
+      "board_id": "x-biz-investor-readiness-activity-board",
+      "mode_jump": "evidence",
+      "source_adapter": "x-biz-investor-readiness-source-adapter",
+      "state": "investor_summary_available",
+      "timestamp_iso": "2026-05-31T10:12:10.773Z",
+      "title": "Executive summary",
+      "summary": "Investor summary is available for owner review with demo posture, problem, solution, traction, market, team, and ask sections.",
+      "quick_actions": [
+        "Open evidence",
+        "Review summary",
+        "Prepare owner sign-off"
+      ],
+      "evidence_refs": [
+        {
+          "ref_id": "x-biz:investor/EXECUTIVE_SUMMARY.md",
+          "label": "Executive summary",
+          "source_path": "xlooop-x-biz/investor/EXECUTIVE_SUMMARY.md"
+        }
+      ],
+      "replay_command": null,
+      "rollback_command": null,
+      "source_event_id": null,
+      "risk_lane": "low"
+    },
+    {
+      "schema_version": "xlooop.operations_live_stream.row.v1",
+      "row_id": "latest-evidence-ledger:hr-latest-committed-evidence-1",
+      "stream_type": "readiness_signal",
+      "domain": "MB-P governance",
+      "workspace_id": "mbp-private",
+      "domain_id": "mbp-governance",
+      "domain_kind": "governance",
+      "project_id": "mbp-ops",
+      "lane_id": "signoff",
+      "board_id": "mbp-ops-readiness-board",
+      "mode_jump": "signoff",
+      "source_adapter": "mbp-latest-committed-evidence-ledger",
+      "state": "latest_committed_evidence_ledger_active",
+      "timestamp_iso": "2026-05-23T03:04:35.850Z",
+      "title": "Latest committed evidence ledger compliance",
+      "summary": "HR-LATEST-COMMITTED-EVIDENCE-1 active: latest/progress/blocker reports must list fetched refs plus read_full, read_partial, and not_read scope before claims.",
+      "quick_actions": [
+        "Open hard rule",
+        "Run ledger verifier",
+        "Confirm latest refs"
+      ],
+      "evidence_refs": [
+        {
+          "ref_id": "mbp:_sys/xcp-system/governance/HARD_RULES.md",
+          "label": "HARD_RULES.md",
+          "source_path": "_sys/xcp-system/governance/HARD_RULES.md"
+        },
+        {
+          "ref_id": "mbp:_sys/scripts/verify_latest_committed_evidence_ledger.py",
+          "label": "verify_latest_committed_evidence_ledger.py",
+          "source_path": "_sys/scripts/verify_latest_committed_evidence_ledger.py"
+        },
+        {
+          "ref_id": "mbp:_sys/skills/ecosystem-status-brief/SKILL.md",
+          "label": "SKILL.md",
+          "source_path": "_sys/skills/ecosystem-status-brief/SKILL.md"
+        }
+      ],
+      "replay_command": "make verify-latest-committed-evidence-ledger-diff REF=HEAD~1",
+      "rollback_command": null,
+      "source_event_id": null,
+      "risk_lane": "near-0-risk"
+    },
+    {
+      "schema_version": "xlooop.operations_live_stream.row.v1",
+      "row_id": "mode-coverage:2026-05-13t15-27-20-00-00",
+      "stream_type": "readiness_signal",
+      "domain": "XCP",
+      "workspace_id": "xcp-platform",
+      "domain_id": "xcp-roadmap",
+      "domain_kind": "ai_infrastructure",
+      "project_id": "xcp-roadmap",
+      "lane_id": "substrate",
+      "board_id": "xcp-roadmap-readiness-board",
+      "mode_jump": "substrate",
+      "source_adapter": "mbp-mode-coverage-report",
+      "state": "mode_coverage_current",
+      "timestamp_iso": "2026-05-13T15:27:20+00:00",
+      "title": "Mode coverage and engine adoption",
+      "summary": "Engine-contract adoption 44% · target 25",
+      "quick_actions": [
+        "Open learning"
+      ],
+      "evidence_refs": [
+        {
+          "ref_id": "mbp:_sys/xcp-system/evidence/discoverability/mode-coverage/20260514_mode_coverage.json",
+          "label": "MB-P mode coverage report",
+          "source_path": "_sys/xcp-system/evidence/discoverability/mode-coverage/20260514_mode_coverage.json"
+        }
+      ],
+      "replay_command": null,
+      "rollback_command": null,
+      "source_event_id": null,
+      "risk_lane": "low"
+    },
+    {
+      "schema_version": "xlooop.operations_live_stream.row.v1",
+      "row_id": "collaboration-event:evt-b4274b395b304c04",
+      "stream_type": "collaboration_event",
+      "domain": "MB-P collaboration",
+      "workspace_id": "mbp-private",
+      "domain_id": "mbp-governance",
+      "domain_kind": "governance",
+      "project_id": "mbp-ops",
+      "lane_id": "signoff",
+      "board_id": "mbp-ops-activity-board",
+      "mode_jump": "signoff",
+      "source_adapter": "active-agent-collaboration-registry",
+      "state": "ReleaseWork",
+      "timestamp_iso": "2026-05-13T13:15:15Z",
+      "title": "ReleaseWork",
+      "summary": "Agent collaboration registry event.",
+      "quick_actions": [
+        "Open packet"
+      ],
+      "evidence_refs": [
+        {
+          "ref_id": "mbp:_sys/xcp-system/derivative/active-agent-collaboration/collaboration_events.jsonl",
+          "label": "Active agent collaboration events",
+          "source_path": "_sys/xcp-system/derivative/active-agent-collaboration/collaboration_events.jsonl"
+        }
+      ],
+      "replay_command": null,
+      "rollback_command": null,
+      "source_event_id": "evt-b4274b395b304c04",
+      "risk_lane": "near-0-risk"
+    },
+    {
+      "schema_version": "xlooop.operations_live_stream.row.v1",
+      "row_id": "collaboration-event:evt-9350ed652d7e4291",
+      "stream_type": "collaboration_event",
+      "domain": "MB-P collaboration",
+      "workspace_id": "mbp-private",
+      "domain_id": "mbp-governance",
+      "domain_kind": "governance",
+      "project_id": "mbp-ops",
+      "lane_id": "signoff",
+      "board_id": "mbp-ops-activity-board",
+      "mode_jump": "signoff",
+      "source_adapter": "active-agent-collaboration-registry",
+      "state": "ClaimWork",
+      "timestamp_iso": "2026-05-13T13:14:19Z",
+      "title": "Claim · work.c170.career-artifact-naming.260513",
+      "summary": "Normalize-career-CV-artifact-naming-and-classification",
+      "quick_actions": [
+        "Open packet"
+      ],
+      "evidence_refs": [
+        {
+          "ref_id": "mbp:_sys/xcp-system/derivative/active-agent-collaboration/collaboration_events.jsonl",
+          "label": "Active agent collaboration events",
+          "source_path": "_sys/xcp-system/derivative/active-agent-collaboration/collaboration_events.jsonl"
+        }
+      ],
+      "replay_command": null,
+      "rollback_command": null,
+      "source_event_id": "evt-9350ed652d7e4291",
+      "risk_lane": "near-0-risk"
+    },
+    {
+      "schema_version": "xlooop.operations_live_stream.row.v1",
+      "row_id": "collaboration-event:evt-0628ca9c95b2bfc6",
+      "stream_type": "collaboration_event",
+      "domain": "MB-P collaboration",
+      "workspace_id": "mbp-private",
+      "domain_id": "mbp-governance",
+      "domain_kind": "governance",
+      "project_id": "mbp-ops",
+      "lane_id": "signoff",
+      "board_id": "mbp-ops-activity-board",
+      "mode_jump": "signoff",
+      "source_adapter": "active-agent-collaboration-registry",
+      "state": "PASS",
+      "timestamp_iso": "2026-05-13T13:14:12Z",
+      "title": "PlanCheck",
+      "summary": "Proceed within declared claim boundaries.",
+      "quick_actions": [
+        "Open packet",
+        "Confirm owner review"
+      ],
+      "evidence_refs": [
+        {
+          "ref_id": "mbp:_sys/xcp-system/derivative/active-agent-collaboration/collaboration_events.jsonl",
+          "label": "Active agent collaboration events",
+          "source_path": "_sys/xcp-system/derivative/active-agent-collaboration/collaboration_events.jsonl"
+        }
+      ],
+      "replay_command": null,
+      "rollback_command": null,
+      "source_event_id": "evt-0628ca9c95b2bfc6",
+      "risk_lane": "near-0-risk"
+    },
+    {
+      "schema_version": "xlooop.operations_live_stream.row.v1",
+      "row_id": "collaboration-event:evt-490a9b940d9a44be",
+      "stream_type": "collaboration_event",
+      "domain": "MB-P collaboration",
+      "workspace_id": "mbp-private",
+      "domain_id": "mbp-governance",
+      "domain_kind": "governance",
+      "project_id": "mbp-ops",
+      "lane_id": "signoff",
+      "board_id": "mbp-ops-activity-board",
+      "mode_jump": "signoff",
+      "source_adapter": "active-agent-collaboration-registry",
+      "state": "ClaimWork",
+      "timestamp_iso": "2026-05-13T13:12:01Z",
+      "title": "Claim · work.c170.career-artifact-naming.260513",
+      "summary": "Normalize-career-CV-artifact-naming-and-classification",
+      "quick_actions": [
+        "Open packet"
+      ],
+      "evidence_refs": [
+        {
+          "ref_id": "mbp:_sys/xcp-system/derivative/active-agent-collaboration/collaboration_events.jsonl",
+          "label": "Active agent collaboration events",
+          "source_path": "_sys/xcp-system/derivative/active-agent-collaboration/collaboration_events.jsonl"
+        }
+      ],
+      "replay_command": null,
+      "rollback_command": null,
+      "source_event_id": "evt-490a9b940d9a44be",
+      "risk_lane": "near-0-risk"
+    },
+    {
+      "schema_version": "xlooop.operations_live_stream.row.v1",
+      "row_id": "collaboration-event:evt-67589a1fb788366b",
+      "stream_type": "collaboration_event",
+      "domain": "MB-P collaboration",
+      "workspace_id": "mbp-private",
+      "domain_id": "mbp-governance",
+      "domain_kind": "governance",
+      "project_id": "mbp-ops",
+      "lane_id": "signoff",
+      "board_id": "mbp-ops-activity-board",
+      "mode_jump": "signoff",
+      "source_adapter": "active-agent-collaboration-registry",
+      "state": "PASS",
+      "timestamp_iso": "2026-05-13T13:11:52Z",
+      "title": "PlanCheck",
+      "summary": "Proceed within declared claim boundaries.",
+      "quick_actions": [
+        "Open packet",
+        "Confirm owner review"
+      ],
+      "evidence_refs": [
+        {
+          "ref_id": "mbp:_sys/xcp-system/derivative/active-agent-collaboration/collaboration_events.jsonl",
+          "label": "Active agent collaboration events",
+          "source_path": "_sys/xcp-system/derivative/active-agent-collaboration/collaboration_events.jsonl"
+        }
+      ],
+      "replay_command": null,
+      "rollback_command": null,
+      "source_event_id": "evt-67589a1fb788366b",
+      "risk_lane": "near-0-risk"
+    },
+    {
+      "schema_version": "xlooop.operations_live_stream.row.v1",
+      "row_id": "collaboration-event:evt-4a7baca49fa39d43",
+      "stream_type": "collaboration_event",
+      "domain": "MB-P collaboration",
+      "workspace_id": "mbp-private",
+      "domain_id": "mbp-governance",
+      "domain_kind": "governance",
+      "project_id": "mbp-ops",
+      "lane_id": "signoff",
+      "board_id": "mbp-ops-activity-board",
+      "mode_jump": "signoff",
+      "source_adapter": "active-agent-collaboration-registry",
+      "state": "ReleaseWork",
+      "timestamp_iso": "2026-05-13T13:07:03Z",
+      "title": "ReleaseWork",
+      "summary": "C169 artifact preservation staged; claim closed before commit to avoid active TTL overrun.",
+      "quick_actions": [
+        "Open packet"
+      ],
+      "evidence_refs": [
+        {
+          "ref_id": "mbp:_sys/xcp-system/derivative/active-agent-collaboration/collaboration_events.jsonl",
+          "label": "Active agent collaboration events",
+          "source_path": "_sys/xcp-system/derivative/active-agent-collaboration/collaboration_events.jsonl"
+        }
+      ],
+      "replay_command": null,
+      "rollback_command": null,
+      "source_event_id": "evt-4a7baca49fa39d43",
+      "risk_lane": "near-0-risk"
+    },
+    {
+      "schema_version": "xlooop.operations_live_stream.row.v1",
+      "row_id": "collaboration-event:evt-297d05f13e103380",
+      "stream_type": "collaboration_event",
+      "domain": "MB-P collaboration",
+      "workspace_id": "mbp-private",
+      "domain_id": "mbp-governance",
+      "domain_kind": "governance",
+      "project_id": "mbp-ops",
+      "lane_id": "signoff",
+      "board_id": "mbp-ops-activity-board",
+      "mode_jump": "signoff",
+      "source_adapter": "active-agent-collaboration-registry",
+      "state": "ClaimWork",
+      "timestamp_iso": "2026-05-13T13:06:01Z",
+      "title": "Claim · work.owner-stop-reconcile.260513",
+      "summary": "Owner-stopped parallel-session reconciliation: preserve dirty artifacts, integrate safe MB-P branch stack, and leave collaborator repos untouched",
+      "quick_actions": [
+        "Open packet"
+      ],
+      "evidence_refs": [
+        {
+          "ref_id": "mbp:_sys/xcp-system/derivative/active-agent-collaboration/collaboration_events.jsonl",
+          "label": "Active agent collaboration events",
+          "source_path": "_sys/xcp-system/derivative/active-agent-collaboration/collaboration_events.jsonl"
+        }
+      ],
+      "replay_command": null,
+      "rollback_command": null,
+      "source_event_id": "evt-297d05f13e103380",
+      "risk_lane": "near-0-risk"
+    },
+    {
+      "schema_version": "xlooop.operations_live_stream.row.v1",
+      "row_id": "collaboration-event:evt-278411e37913f463",
+      "stream_type": "collaboration_event",
+      "domain": "MB-P collaboration",
+      "workspace_id": "mbp-private",
+      "domain_id": "mbp-governance",
+      "domain_kind": "governance",
+      "project_id": "mbp-ops",
+      "lane_id": "signoff",
+      "board_id": "mbp-ops-activity-board",
+      "mode_jump": "signoff",
+      "source_adapter": "active-agent-collaboration-registry",
+      "state": "ReleaseWork",
+      "timestamp_iso": "2026-05-13T12:58:03Z",
+      "title": "ReleaseWork",
+      "summary": "C168 committed locally as 28595f5b; push-safety, range cascade, TTL, isolated-branch, and derivative classification rules validated.",
+      "quick_actions": [
+        "Open packet"
+      ],
+      "evidence_refs": [
+        {
+          "ref_id": "mbp:_sys/xcp-system/derivative/active-agent-collaboration/collaboration_events.jsonl",
+          "label": "Active agent collaboration events",
+          "source_path": "_sys/xcp-system/derivative/active-agent-collaboration/collaboration_events.jsonl"
+        }
+      ],
+      "replay_command": null,
+      "rollback_command": null,
+      "source_event_id": "evt-278411e37913f463",
+      "risk_lane": "near-0-risk"
+    },
+    {
+      "schema_version": "xlooop.operations_live_stream.row.v1",
+      "row_id": "collaboration-event:evt-5def2023593ad83a",
+      "stream_type": "collaboration_event",
+      "domain": "MB-P collaboration",
+      "workspace_id": "mbp-private",
+      "domain_id": "mbp-governance",
+      "domain_kind": "governance",
+      "project_id": "mbp-ops",
+      "lane_id": "signoff",
+      "board_id": "mbp-ops-activity-board",
+      "mode_jump": "signoff",
+      "source_adapter": "active-agent-collaboration-registry",
+      "state": "ClaimWork",
+      "timestamp_iso": "2026-05-13T12:53:48Z",
+      "title": "Claim · work.push-safety-collaboration-hardening.260513",
+      "summary": "C168 scoped pre-push cascade, active claim TTL, derivative noise classification, and isolated architecture-session rules",
+      "quick_actions": [
+        "Open packet"
+      ],
+      "evidence_refs": [
+        {
+          "ref_id": "mbp:_sys/xcp-system/derivative/active-agent-collaboration/collaboration_events.jsonl",
+          "label": "Active agent collaboration events",
+          "source_path": "_sys/xcp-system/derivative/active-agent-collaboration/collaboration_events.jsonl"
+        }
+      ],
+      "replay_command": null,
+      "rollback_command": null,
+      "source_event_id": "evt-5def2023593ad83a",
+      "risk_lane": "near-0-risk"
+    },
+    {
+      "schema_version": "xlooop.operations_live_stream.row.v1",
+      "row_id": "collaboration-event:evt-3a5cbf0b5ed55ab8",
+      "stream_type": "collaboration_event",
+      "domain": "MB-P collaboration",
+      "workspace_id": "mbp-private",
+      "domain_id": "mbp-governance",
+      "domain_kind": "governance",
+      "project_id": "mbp-ops",
+      "lane_id": "signoff",
+      "board_id": "mbp-ops-activity-board",
+      "mode_jump": "signoff",
+      "source_adapter": "active-agent-collaboration-registry",
+      "state": "ExpireStaleClaims",
+      "timestamp_iso": "2026-05-13T12:51:06Z",
+      "title": "ExpireStaleClaims",
+      "summary": "Agent collaboration registry event.",
+      "quick_actions": [
+        "Open packet"
+      ],
+      "evidence_refs": [
+        {
+          "ref_id": "mbp:_sys/xcp-system/derivative/active-agent-collaboration/collaboration_events.jsonl",
+          "label": "Active agent collaboration events",
+          "source_path": "_sys/xcp-system/derivative/active-agent-collaboration/collaboration_events.jsonl"
+        }
+      ],
+      "replay_command": null,
+      "rollback_command": null,
+      "source_event_id": "evt-3a5cbf0b5ed55ab8",
+      "risk_lane": "near-0-risk"
+    },
+    {
+      "schema_version": "xlooop.operations_live_stream.row.v1",
+      "row_id": "collaboration-event:evt-7a8b5e34c7ba2b73",
+      "stream_type": "collaboration_event",
+      "domain": "MB-P collaboration",
+      "workspace_id": "mbp-private",
+      "domain_id": "mbp-governance",
+      "domain_kind": "governance",
+      "project_id": "mbp-ops",
+      "lane_id": "signoff",
+      "board_id": "mbp-ops-activity-board",
+      "mode_jump": "signoff",
+      "source_adapter": "active-agent-collaboration-registry",
+      "state": "BLOCKED",
+      "timestamp_iso": "2026-05-13T12:49:22Z",
+      "title": "PlanCheck",
+      "summary": "Create an isolated branch/worktree or provide owner_approval_ref before editing.",
+      "quick_actions": [
+        "Open packet",
+        "Confirm owner review"
+      ],
+      "evidence_refs": [
+        {
+          "ref_id": "mbp:_sys/xcp-system/derivative/active-agent-collaboration/collaboration_events.jsonl",
+          "label": "Active agent collaboration events",
+          "source_path": "_sys/xcp-system/derivative/active-agent-collaboration/collaboration_events.jsonl"
+        }
+      ],
+      "replay_command": null,
+      "rollback_command": null,
+      "source_event_id": "evt-7a8b5e34c7ba2b73",
+      "risk_lane": "medium-1"
+    },
+    {
+      "schema_version": "xlooop.operations_live_stream.row.v1",
+      "row_id": "collaboration-event:evt-52ca4fec98716b8d",
+      "stream_type": "collaboration_event",
+      "domain": "MB-P collaboration",
+      "workspace_id": "mbp-private",
+      "domain_id": "mbp-governance",
+      "domain_kind": "governance",
+      "project_id": "mbp-ops",
+      "lane_id": "signoff",
+      "board_id": "mbp-ops-activity-board",
+      "mode_jump": "signoff",
+      "source_adapter": "active-agent-collaboration-registry",
+      "state": "ClaimWork",
+      "timestamp_iso": "2026-05-13T12:45:49Z",
+      "title": "Claim · work.push-safety-collaboration-hardening.260513",
+      "summary": "C168 scoped pre-push cascade, active claim TTL, derivative noise classification, and isolated architecture-session rules",
+      "quick_actions": [
+        "Open packet"
+      ],
+      "evidence_refs": [
+        {
+          "ref_id": "mbp:_sys/xcp-system/derivative/active-agent-collaboration/collaboration_events.jsonl",
+          "label": "Active agent collaboration events",
+          "source_path": "_sys/xcp-system/derivative/active-agent-collaboration/collaboration_events.jsonl"
+        }
+      ],
+      "replay_command": null,
+      "rollback_command": null,
+      "source_event_id": "evt-52ca4fec98716b8d",
+      "risk_lane": "near-0-risk"
+    },
+    {
+      "schema_version": "xlooop.operations_live_stream.row.v1",
+      "row_id": "gateway-receipt:mbp-receipt-260513-c161-telegram-chat-capture",
+      "stream_type": "gateway_receipt",
+      "domain": "MB-P gateway",
+      "workspace_id": "mbp-private",
+      "domain_id": "mbp-governance",
+      "domain_kind": "governance",
+      "project_id": "mbp-ops",
+      "lane_id": "signoff",
+      "board_id": "mbp-ops-receipt-board",
+      "mode_jump": "signoff",
+      "source_adapter": "mbp-gateway-receipt-export",
+      "state": "accepted_by_mbp",
+      "timestamp_iso": "2026-05-13T18:26:32+10:00",
+      "title": "Gateway receipt · telegram_chat_capture",
+      "summary": "telegram -> codex · receipt_recorded · idempotency xlooop:c161:telegram-chat-capture:260513:intent-to-contract",
+      "quick_actions": [
+        "Open packet",
+        "Confirm owner review",
+        "Replay",
+        "Rollback"
+      ],
+      "evidence_refs": [
+        {
+          "ref_id": "receipt:evidence:c161-telegram-chat-capture",
+          "label": "receipt:evidence:c161-telegram-chat-capture",
+          "uri": "mbp://_sys/xcp-system/evidence/frontend-architecture/C161_async_collaboration_xfront_engine_roadmap.md",
+          "source_path": "_sys/xcp-system/evidence/frontend-architecture/C161_async_collaboration_xfront_engine_roadmap.md"
+        },
+        {
+          "ref_id": "receipt:evidence:private-telegram-direct-input-encryption",
+          "label": "receipt:evidence:private-telegram-direct-input-encryption",
+          "uri": "private-host://AGENTS/xcp-chat-bridge/src/queueCrypto.ts",
+          "source_path": null
+        }
+      ],
+      "replay_command": "mbp-gateway://replay/xlooop:c161:telegram-chat-capture:260513:intent-to-contract",
+      "rollback_command": "mbp-gateway://rollback/xlooop:c161:telegram-chat-capture:260513:intent-to-contract",
+      "source_event_id": "mbp-receipt-260513-c161-telegram-chat-capture",
+      "risk_lane": "near-0-risk"
+    },
+    {
+      "schema_version": "xlooop.operations_live_stream.row.v1",
+      "row_id": "gateway-receipt:mbp-receipt-260513-c142-free-chat-capture",
+      "stream_type": "gateway_receipt",
+      "domain": "MB-P gateway",
+      "workspace_id": "mbp-private",
+      "domain_id": "mbp-governance",
+      "domain_kind": "governance",
+      "project_id": "mbp-ops",
+      "lane_id": "signoff",
+      "board_id": "mbp-ops-receipt-board",
+      "mode_jump": "signoff",
+      "source_adapter": "mbp-gateway-receipt-export",
+      "state": "accepted_by_mbp",
+      "timestamp_iso": "2026-05-11T22:34:26+10:00",
+      "title": "Gateway receipt · free_text_chat_capture",
+      "summary": "free_chat_text -> codex · receipt_recorded · idempotency xlooop:c142:free-chat-capture:260513:intent-to-contract",
+      "quick_actions": [
+        "Open packet",
+        "Confirm owner review",
+        "Replay",
+        "Rollback"
+      ],
+      "evidence_refs": [
+        {
+          "ref_id": "receipt:evidence:c142-free-chat-capture",
+          "label": "receipt:evidence:c142-free-chat-capture",
+          "uri": "mbp://_sys/xcp-system/derivative/chat-capture-packets/2026-05/capture-20260511-chat-contract-capture.json",
+          "source_path": "_sys/xcp-system/derivative/chat-capture-packets/2026-05/capture-20260511-chat-contract-capture.json"
+        },
+        {
+          "ref_id": "receipt:evidence:intake-ledger-free-chat",
+          "label": "receipt:evidence:intake-ledger-free-chat",
+          "uri": "mbp://_sys/xcp-system/derivative/intake-ledger/2026-05.ndjson",
+          "source_path": "_sys/xcp-system/derivative/intake-ledger/2026-05.ndjson"
+        }
+      ],
+      "replay_command": "mbp-gateway://replay/xlooop:c142:free-chat-capture:260513:intent-to-contract",
+      "rollback_command": "mbp-gateway://rollback/xlooop:c142:free-chat-capture:260513:intent-to-contract",
+      "source_event_id": "mbp-receipt-260513-c142-free-chat-capture",
+      "risk_lane": "near-0-risk"
+    }
+  ]
+}

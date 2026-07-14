@@ -1,0 +1,74 @@
+id: c29_story_p0_chain_01
+created_at: "2026-05-09T12:09:00+10:00"
+date_key: "260509_1209"
+timezone: Australia/Melbourne
+owner: Marat Basyrov
+status: implemented_storybook_proof
+lifecycle_state: sterile_active
+graph_required: true
+scope:
+  repo: Xlooop-XCP-demo
+  slice: C29-STORY-P0-CHAIN-01
+  type: storybook_p0_product_chain_proof
+  runtime_change_authorized: false
+  xfront_import_authorized: false
+  xfront_mutation_authorized: false
+  xcp_platform_mutation_authorized: false
+  archive_delete_move_authorized: false
+role_panel:
+  - chief-of-staff
+  - cto
+  - ux
+  - product-manager
+  - knowledge-architect
+  - ai-governed-infrastructure-manager
+  - devsecops
+  - lead-engineer
+skills_used:
+  - product-engineering-router
+  - xlooop-design-review
+  - frontend-architecture-review
+  - component-contract-storybook
+  - integration-boundary-contracts
+  - delivery-readiness-gates
+implemented_files:
+  - src/shared/storybook/golden-path/flows/First30SecondsProof.stories.tsx
+  - src/shared/storybook/golden-path/fixtures/goldenPath.fixture.ts
+  - scripts/p10d-sb5-storybook-gate.mjs
+required_story_text:
+  - MB-P
+  - Xlooop
+  - xcp-platform
+  - Client / invited
+  - Workspace
+  - Intent
+  - Governed triage
+  - Work item
+  - Build / evidence
+  - Sign-off
+  - Learning / XCP substrate
+workspace_classes:
+  - owner_private
+  - company_product
+  - platform_producer
+  - external_collaboration
+story:
+  title: Xlooop Flows/First 30 Seconds Proof
+  export: C29First30SecondsProof
+  maturity_target: 4
+  gate: scripts/p10d-sb5-storybook-gate.mjs
+decisions:
+  add_storybook_first_30_seconds_proof: go_implemented
+  import_xfront_code: no_go_not_done
+  embed_xcp_platform_admin_ui: no_go_not_done
+  change_runtime_app: no_go_not_this_slice
+next_slice:
+  id: C29-WEB-GATEWAY-01
+  title: Web-first workspace/workflow gateway implementation
+  scope: current_root_app_only
+  runtime_change_authorized: true
+stop_conditions:
+  - direct_xfront_source_import
+  - xcp_platform_admin_ui_embedded_in_product_shell
+  - missing_actor_role_visibility_sensitivity_context
+  - storybook_cannot_show_evidence_signoff_state

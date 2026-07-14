@@ -1,0 +1,178 @@
+{
+  "schema_id": "xlooop.external_capability_benchmark_corpus.v1",
+  "purpose": "Synthetic and redaction-safe corpus for deciding whether external capabilities can enter Xlooop backend pipelines.",
+  "acceptance_gates": {
+    "extraction_fidelity_pct_min": 95,
+    "citation_source_span_coverage_pct_min": 95,
+    "answer_equivalence_pct_min": 95,
+    "token_reduction_pct_min": 25,
+    "sensitive_leakage_count": 0,
+    "redaction_invariant_pct": 100,
+    "tenant_boundary_bypass_count": 0,
+    "external_graph_authority_count": 0,
+    "replayability_pct": 100,
+    "p95_small_doc_conversion_ms_target": 3000
+  },
+  "cases": [
+    {
+      "id": "case-001-task-packet-basic",
+      "source_type": "task_packet",
+      "capability_targets": ["headroom", "hyper_extract"],
+      "tenant_scope": "company_a",
+      "sensitivity": "internal_task_metadata",
+      "expected_outputs": {"source_span_required": true, "redaction_required": true, "tool_execution_allowed": false, "graph_authority_allowed": false}
+    },
+    {
+      "id": "case-002-evidence-bundle",
+      "source_type": "evidence_bundle",
+      "capability_targets": ["headroom", "hyper_extract"],
+      "tenant_scope": "company_a",
+      "sensitivity": "customer_evidence_metadata",
+      "expected_outputs": {"source_span_required": true, "redaction_required": true, "tool_execution_allowed": false, "graph_authority_allowed": false}
+    },
+    {
+      "id": "case-003-pdf-text",
+      "source_type": "pdf",
+      "capability_targets": ["markitdown", "hyper_extract"],
+      "tenant_scope": "company_a",
+      "sensitivity": "uploaded_document",
+      "expected_outputs": {"source_span_required": true, "redaction_required": true, "tool_execution_allowed": false, "graph_authority_allowed": false}
+    },
+    {
+      "id": "case-004-docx-policy",
+      "source_type": "docx",
+      "capability_targets": ["markitdown", "hyper_extract"],
+      "tenant_scope": "company_a",
+      "sensitivity": "policy_document",
+      "expected_outputs": {"source_span_required": true, "redaction_required": true, "tool_execution_allowed": false, "graph_authority_allowed": false}
+    },
+    {
+      "id": "case-005-pptx-deck",
+      "source_type": "pptx",
+      "capability_targets": ["markitdown"],
+      "tenant_scope": "company_a",
+      "sensitivity": "presentation",
+      "expected_outputs": {"source_span_required": true, "redaction_required": true, "tool_execution_allowed": false, "graph_authority_allowed": false}
+    },
+    {
+      "id": "case-006-xlsx-table",
+      "source_type": "xlsx",
+      "capability_targets": ["markitdown", "hyper_extract"],
+      "tenant_scope": "company_a",
+      "sensitivity": "table_data",
+      "expected_outputs": {"source_span_required": true, "redaction_required": true, "tool_execution_allowed": false, "graph_authority_allowed": false}
+    },
+    {
+      "id": "case-007-csv-ledger",
+      "source_type": "csv",
+      "capability_targets": ["markitdown", "hyper_extract"],
+      "tenant_scope": "company_a",
+      "sensitivity": "structured_ledger",
+      "expected_outputs": {"source_span_required": true, "redaction_required": true, "tool_execution_allowed": false, "graph_authority_allowed": false}
+    },
+    {
+      "id": "case-008-json-event-log",
+      "source_type": "json",
+      "capability_targets": ["markitdown", "hyper_extract", "headroom"],
+      "tenant_scope": "company_a",
+      "sensitivity": "event_log",
+      "expected_outputs": {"source_span_required": true, "redaction_required": true, "tool_execution_allowed": false, "graph_authority_allowed": false}
+    },
+    {
+      "id": "case-009-xml-export",
+      "source_type": "xml",
+      "capability_targets": ["markitdown", "hyper_extract"],
+      "tenant_scope": "company_a",
+      "sensitivity": "connector_export",
+      "expected_outputs": {"source_span_required": true, "redaction_required": true, "tool_execution_allowed": false, "graph_authority_allowed": false}
+    },
+    {
+      "id": "case-010-html-page",
+      "source_type": "html",
+      "capability_targets": ["markitdown", "hyper_extract"],
+      "tenant_scope": "company_a",
+      "sensitivity": "web_content",
+      "expected_outputs": {"source_span_required": true, "redaction_required": true, "tool_execution_allowed": false, "graph_authority_allowed": false}
+    },
+    {
+      "id": "case-011-source-connector-content",
+      "source_type": "source_connector",
+      "capability_targets": ["markitdown", "hyper_extract", "headroom"],
+      "tenant_scope": "company_a",
+      "sensitivity": "connected_source",
+      "expected_outputs": {"source_span_required": true, "redaction_required": true, "tool_execution_allowed": false, "graph_authority_allowed": false}
+    },
+    {
+      "id": "case-012-tool-log",
+      "source_type": "tool_log",
+      "capability_targets": ["headroom", "hyper_extract"],
+      "tenant_scope": "company_a",
+      "sensitivity": "tool_event_metadata",
+      "expected_outputs": {"source_span_required": true, "redaction_required": true, "tool_execution_allowed": false, "graph_authority_allowed": false}
+    },
+    {
+      "id": "case-013-malicious-markdown",
+      "source_type": "malicious_markdown",
+      "capability_targets": ["markitdown", "hyper_extract", "headroom"],
+      "tenant_scope": "company_a",
+      "sensitivity": "adversarial_content",
+      "expected_outputs": {"source_span_required": true, "redaction_required": true, "tool_execution_allowed": false, "graph_authority_allowed": false}
+    },
+    {
+      "id": "case-014-malicious-yaml",
+      "source_type": "malicious_yaml",
+      "capability_targets": ["markitdown", "hyper_extract"],
+      "tenant_scope": "company_a",
+      "sensitivity": "adversarial_content",
+      "expected_outputs": {"source_span_required": true, "redaction_required": true, "tool_execution_allowed": false, "graph_authority_allowed": false}
+    },
+    {
+      "id": "case-015-malicious-html",
+      "source_type": "malicious_html",
+      "capability_targets": ["markitdown", "hyper_extract"],
+      "tenant_scope": "company_a",
+      "sensitivity": "adversarial_content",
+      "expected_outputs": {"source_span_required": true, "redaction_required": true, "tool_execution_allowed": false, "graph_authority_allowed": false}
+    },
+    {
+      "id": "case-016-prompt-injection",
+      "source_type": "prompt_injection",
+      "capability_targets": ["markitdown", "hyper_extract", "headroom"],
+      "tenant_scope": "company_a",
+      "sensitivity": "adversarial_prompt",
+      "expected_outputs": {"source_span_required": true, "redaction_required": true, "tool_execution_allowed": false, "graph_authority_allowed": false}
+    },
+    {
+      "id": "case-017-redaction-sensitive",
+      "source_type": "redaction_sensitive",
+      "capability_targets": ["markitdown", "hyper_extract", "headroom"],
+      "tenant_scope": "company_a",
+      "sensitivity": "synthetic_secret_and_pii",
+      "expected_outputs": {"source_span_required": true, "redaction_required": true, "tool_execution_allowed": false, "graph_authority_allowed": false}
+    },
+    {
+      "id": "case-018-tenant-boundary-bypass",
+      "source_type": "tenant_boundary_bypass",
+      "capability_targets": ["hyper_extract", "headroom"],
+      "tenant_scope": "company_a_vs_company_b",
+      "sensitivity": "cross_tenant_negative_test",
+      "expected_outputs": {"source_span_required": true, "redaction_required": true, "tool_execution_allowed": false, "graph_authority_allowed": false}
+    },
+    {
+      "id": "case-019-image-ocr",
+      "source_type": "image",
+      "capability_targets": ["markitdown"],
+      "tenant_scope": "company_a",
+      "sensitivity": "uploaded_media",
+      "expected_outputs": {"source_span_required": true, "redaction_required": true, "tool_execution_allowed": false, "graph_authority_allowed": false}
+    },
+    {
+      "id": "case-020-audio-transcript",
+      "source_type": "audio",
+      "capability_targets": ["markitdown"],
+      "tenant_scope": "company_a",
+      "sensitivity": "uploaded_media",
+      "expected_outputs": {"source_span_required": true, "redaction_required": true, "tool_execution_allowed": false, "graph_authority_allowed": false}
+    }
+  ]
+}

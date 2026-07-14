@@ -1,0 +1,53 @@
+# DISABLED TEMPLATE ONLY.
+# GitHub Actions is unpaid/unavailable for this private repository.
+# Do not move this file back to .github/workflows until owner approval and
+# runner-health proof exist. Canonical D1 setup path: local scripts.
+
+name: Cloudflare Feedback D1 Provision - Xlooop
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Feedback D1 target environment"
+        required: true
+        type: choice
+        options:
+          - both
+          - dev
+          - test
+
+permissions:
+  contents: read
+
+jobs:
+  provision-feedback-d1:
+    name: Provision FEEDBACK_DB and apply migration
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment == 'test' && 'test' || 'dev' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Verify feedback D1 contract
+        run: node scripts/verify-feedback-d1-cloudflare.mjs
+
+      - name: Create/bind D1 and run migration
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_PAGES_PROJECT_XLOOOP_DEV: ${{ vars.CLOUDFLARE_PAGES_PROJECT_XLOOOP_DEV }}
+          CLOUDFLARE_PAGES_PROJECT_XLOOOP_TEST: ${{ vars.CLOUDFLARE_PAGES_PROJECT_XLOOOP_TEST }}
+        run: node scripts/provision-feedback-d1-cloudflare.mjs --env=${{ inputs.environment }}
+
+      - name: Verify test.xlooop.com Cloudflare Access protection
+        if: ${{ inputs.environment == 'test' || inputs.environment == 'both' }}
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: node scripts/verify-cloudflare-access-remote.mjs --env=test

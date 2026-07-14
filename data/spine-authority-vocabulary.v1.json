@@ -1,0 +1,50 @@
+{
+  "_meta": {
+    "schema": "xlooop.spine-authority-vocabulary.v1",
+    "authority": "src/workers/lib/spine-authority.ts SPINE_ACTIONS (the const) + src/workers/lib/permissions.ts SpineAction / SpineDenyReason unions",
+    "note": "CHECKED-IN PROJECTION, NOT the source of truth. The TypeScript SPINE_ACTIONS const IS the source of truth. This JSON exists so the frontend can gate spine controls against a single machine-readable vocabulary WITHOUT re-declaring an action table in the prototype (which would create a second source of truth and the exact drift the loop is meant to prevent). scripts/verify-spine-vocabulary.mjs FAILS if this file drifts from source, and also fails if the const and the type union disagree.",
+    "consumed_by": {
+      "runtime": "GET /api/v1/session -> entitlement.identity.spine_authority = { allowed_actions, disabled_reasons, enforced }; the FE gates each control on THIS envelope at runtime (see src/shared/platform/iam.ts isSpineActionAllowed/spineControlDisabled).",
+      "build_time": "the Design prototype's migration overlay + any FE-side gate diffs its control->action mapping against this list so an unknown or renamed action fails CI, not production."
+    },
+    "flag": "ENTITLEMENT_ENFORCEMENT (default off => enforced:false, legacy canWrite(role) gate, byte-identical; 'on' => per-action canActOnSpine with server-read mode)"
+  },
+  "envelope": {
+    "shape": "identity.spine_authority",
+    "fields": ["allowed_actions", "disabled_reasons", "enforced"],
+    "allowed_actions_type": "SpineAction[]",
+    "disabled_reasons_type": "Partial<Record<SpineAction, SpineDenyReason>>",
+    "enforced_type": "boolean"
+  },
+  "actions": [
+    "packet:create",
+    "evidence:submit",
+    "approval:request",
+    "approval:decide",
+    "tool_event:report",
+    "metric_delta:record",
+    "customer_data:export",
+    "customer_data:delete",
+    "customer_data:execute",
+    "authority:revoke",
+    "member:invite",
+    "token:create",
+    "token:read",
+    "signoff:decide",
+    "event:ingest",
+    "event:self_service",
+    "policy:write",
+    "runtime:configure"
+  ],
+  "action_count": 18,
+  "allow_reason": "active_entitlement",
+  "deny_reasons": [
+    "missing_entitlement",
+    "entitlement_not_active",
+    "mode_not_allowed",
+    "session_expired",
+    "mode_requires_operator",
+    "action_denied",
+    "action_not_allowed"
+  ]
+}

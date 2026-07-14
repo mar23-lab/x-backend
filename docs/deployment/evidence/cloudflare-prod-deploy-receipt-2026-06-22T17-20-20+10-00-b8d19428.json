@@ -1,0 +1,12 @@
+{
+  "schema": "xlooop.cloudflare_prod_deploy_receipt.v1",
+  "project": "xlooop-app",
+  "environment": "production",
+  "tenant": "operator-mbp",
+  "source_commit": "b8d19428d612b0c533662cd4eaea4fc18a2ae278",
+  "deploy_url": "https://d9dca214.xlooop-app.pages.dev",
+  "live_url": "https://app.xlooop.com",
+  "generated_at": "2026-06-22T17:20:20+10:00",
+  "live_verified": true,
+  "secret_policy": "no Cloudflare token, account secret, or Access secret is written to this receipt"
+}
