@@ -1,6 +1,6 @@
 {
   "schema_id": "xlooop.role_skill_catalog.v1",
-  "catalog_version": "2026.07.0",
+  "catalog_version": "2026.07.1",
   "source_package": "customer-safe-pack",
   "_provenance": {
     "authored": "OAR-W3 (260713) — hand-curated CUSTOMER-SAFE contracts for the three pack archetypes.",
@@ -62,6 +62,24 @@
       "output_schema": "xlooop.role_output.v1",
       "closing_requirement": "closing_attestations",
       "source_ref": "docs/contracts/role-skill-catalog.json#role.governance-reviewer"
+    },
+    {
+      "key": "role.workspace-member",
+      "category": "role",
+      "version": "1.0.0",
+      "classification": "customer_visible",
+      "name": "Workspace member",
+      "description": "Uses grounded workspace assistance within the facts their membership role is allowed to see. Read-only assistance never grants permission to change work.",
+      "capability": "grounded-assistance",
+      "actions": ["assistant:answer", "assistant:plan"],
+      "skills": ["skill.workspace-assistant.grounded-assistance@1.0.0"],
+      "allowed_tools": [],
+      "denied_tools": ["raw_graph_export", "full_tenant_memory_export", "secret_access", "search_all_memory"],
+      "requires_approval": false,
+      "evidence_contract": { "resolution": "context_packets", "denial": "authority_denial_receipts" },
+      "output_schema": "xlooop.role_output.v1",
+      "closing_requirement": "context_packet",
+      "source_ref": "docs/contracts/role-skill-catalog.json#role.workspace-member"
     },
     {
       "key": "skill.software-delivery.governed-shipping",
@@ -147,6 +165,23 @@
       "output_schema": "xlooop.skill_output.v1",
       "closing_requirement": "closing_attestations",
       "source_ref": "docs/contracts/role-skill-catalog.json#skill.founder-operator.progress-tracking"
+    },
+    {
+      "key": "skill.workspace-assistant.grounded-assistance",
+      "category": "skill",
+      "version": "1.0.0",
+      "classification": "customer_visible",
+      "name": "Grounded assistance",
+      "description": "Answers questions and drafts plans from the workspace facts the current member is allowed to use, without creating or changing governed work.",
+      "capability": "grounded-assistance",
+      "actions": ["assistant:answer", "assistant:plan"],
+      "allowed_tools": [],
+      "denied_tools": ["raw_graph_export", "full_tenant_memory_export", "secret_access", "search_all_memory"],
+      "requires_approval": false,
+      "evidence_contract": { "resolution": "context_packets", "denial": "authority_denial_receipts" },
+      "output_schema": "xlooop.skill_output.v1",
+      "closing_requirement": "context_packet",
+      "source_ref": "docs/contracts/role-skill-catalog.json#skill.workspace-assistant.grounded-assistance"
     },
     {
       "key": "pack.starter.software-delivery",

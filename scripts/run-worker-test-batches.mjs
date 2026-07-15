@@ -34,7 +34,7 @@ const nodeFiles = files.filter((file) => nodeEnvironmentTests.has(file));
 
 if (nodeFiles.length) {
   console.log(`\n=== Node-environment tests (${nodeFiles.length} files) ===`);
-  const result = spawnSync(process.execPath, [vitest, 'run', '--maxWorkers=1', '--minWorkers=1', ...nodeFiles], {
+  const result = spawnSync(process.execPath, [vitest, 'run', '--maxWorkers=1', '--no-file-parallelism', ...nodeFiles], {
     cwd: root,
     stdio: 'inherit',
     env: process.env,
@@ -53,7 +53,7 @@ for (let offset = 0; offset < workerFiles.length; offset += batchSize) {
     'run',
     '--config', 'vitest.workers.config.ts',
     '--maxWorkers=1',
-    '--minWorkers=1',
+    '--no-file-parallelism',
     ...batch,
   ], { cwd: root, stdio: 'inherit', env: process.env });
   if (result.status !== 0) process.exit(result.status ?? 1);

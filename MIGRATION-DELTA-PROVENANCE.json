@@ -62,6 +62,48 @@
           "reason": "delegates explicitly superseded seed paths to append-only delta verification"
         }
       ]
+    },
+    {
+      "delta_id": "commercial-single-intake-shadow-20260715",
+      "generated_at": "2026-07-15T00:00:00Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "8d19acaeab2399c1cc7a1485d0feb74250d0b70c",
+      "target_base_commit": "8d19acaeab2399c1cc7a1485d0feb74250d0b70c",
+      "authority": "shadow_only_no_production_cutover",
+      "copied_files": [],
+      "transformed_files": [
+        { "path": "docs/audits/OAR_W3_EVIDENCE_PACKET.md", "target_blob": "942032f62c827bd0c7276f12daf6f2db46543a57", "reason": "records the refreshed role and skill catalog evidence" },
+        { "path": "docs/contracts/api-contract.v1.json", "target_blob": "611a7bfd40d6a4c4cea37036040d40aac7ba8acf", "reason": "records the generated 208-tuple backend API contract" },
+        { "path": "docs/contracts/role-skill-catalog.json", "target_blob": "c4e851ddaeca9704a39820c1771bc291b585c000", "reason": "adds product-safe assistant role and skill bindings" },
+        { "path": "package-lock.json", "target_blob": "97b8d0276c67f16e03828eb01f06a563dd5d4de9", "reason": "locks the Workers test runtime upgrade and patched production Hono release" },
+        { "path": "package.json", "target_blob": "1ea4a8cff1063ba2843bc4a1ca129d8fef34b97a", "reason": "aligns Vitest and Cloudflare Workers test dependencies and pins the patched Hono runtime" },
+        { "path": "scripts/run-worker-test-batches.mjs", "target_blob": "6c9757151301ee202cf61926a518227aee49ac43", "reason": "preserves bounded serial test execution with the Vitest 4 CLI" },
+        { "path": "src/workers/__tests__/assistant-context-lineage.test.ts", "target_blob": "94a743f8cf89d72950309fa8fe950d67254f99da", "reason": "proves signed role, skill, and context lineage persistence" },
+        { "path": "src/workers/__tests__/current-work-route.test.ts", "target_blob": "ab7e4f3cc7d6a53bd81aad1ab247a83aca63049a", "reason": "proves shadow Current Work projection v2 behavior" },
+        { "path": "src/workers/__tests__/intake-resolution.test.ts", "target_blob": "da7203035171a9211ba21d4eb07c60429fd0f4a2", "reason": "proves deterministic intake classification and ambiguity handling" },
+        { "path": "src/workers/__tests__/intake-route.test.ts", "target_blob": "352b1df47196a9cf2305a39b148a2051f05c6269", "reason": "proves immutable and idempotent resolve and execute route contracts" },
+        { "path": "src/workers/__tests__/intake-store.test.ts", "target_blob": "069e4a94074cd31d5a9664418b82489e2ef69e3a", "reason": "proves transactional receipt replay and tenant-project enforcement" },
+        { "path": "src/workers/__tests__/role-skill-catalog-loader.test.ts", "target_blob": "34a13c2c73c956c282949a702911707704033ea1", "reason": "proves catalog loading after product-safe role additions" },
+        { "path": "src/workers/__tests__/role-skill-catalog-publisher.test.ts", "target_blob": "556ad41b906b0e762e223335ba24f202adebc370", "reason": "proves catalog publication remains deterministic" },
+        { "path": "src/workers/dal/DalAdapter.ts", "target_blob": "834bcd82e7a8de8aa77323b42b74c22036812d8b", "reason": "registers idempotent intake persistence methods in the DAL" },
+        { "path": "src/workers/dal/context-packet-store.ts", "target_blob": "5c5951011bf94d89afcce35142591035b1faae6e", "reason": "returns durable context receipt identifiers" },
+        { "path": "src/workers/dal/intake-store.ts", "target_blob": "c0da20b7b6807c51286f3011e204d8602d5cb877", "reason": "implements transactional intake execution, idempotent receipt replay, tenant-project validation, and outbox persistence" },
+        { "path": "src/workers/dal/operational-spine-methods.ts", "target_blob": "c6fa0996ea48cc4bea5fea6e86f185be2feda846", "reason": "installs the idempotent intake DAL methods" },
+        { "path": "src/workers/dal/role-skill-resolution-store.ts", "target_blob": "fe752e27397f7edfab41be83457a138e23cb83f1", "reason": "returns durable role and skill resolution identifiers" },
+        { "path": "src/workers/dal/types.ts", "target_blob": "f2ed0b16de243b28d2a71dff53c4c7b81c07841f", "reason": "exports the intake bounded-context DAL types" },
+        { "path": "src/workers/dal/types/intake.ts", "target_blob": "9e22cbdf88fc8d7e79c7370ecf98db2f8ea9bb04", "reason": "defines intake resolution, idempotent execution receipt, and outbox contracts" },
+        { "path": "src/workers/db/migrations/075_single_intake_and_execution_receipts.sql", "target_blob": "78dad23ff5b836026c4ac631ece2cd1341fab962", "reason": "stages tenant-scoped intake, idempotent execution receipt, and projection outbox schema without applying it" },
+        { "path": "src/workers/index.ts", "target_blob": "00f72fdd2b1d7be4eb2245ee02e66c6ec9065096", "reason": "mounts default-off single-intake and context-lineage routes" },
+        { "path": "src/workers/lib/assistant-context-lineage.ts", "target_blob": "5cc3441bd6dbc65d6ff8ba4f26adedc66f07c321", "reason": "assembles and persists governed assistant role, skill, and context lineage" },
+        { "path": "src/workers/lib/intake-resolution.ts", "target_blob": "a4c10b54e6e87db5df7dd2abe41b3c3ee79386e6", "reason": "implements product-native single-intake resolution semantics" },
+        { "path": "src/workers/lib/observability.ts", "target_blob": "6e5c513937b90a76d8262677c0c9fcea43422638", "reason": "adds intake and assistant lineage event kinds" },
+        { "path": "src/workers/lib/role-skill-catalog-loader.ts", "target_blob": "4fa122f7903c82090a98d9c551842c7474381014", "reason": "loads the expanded product-safe catalog" },
+        { "path": "src/workers/lib/role-skill-resolver.ts", "target_blob": "89e3e8975820b549c176c4b999496ed38f6c1625", "reason": "resolves assistant actions without widening write authority" },
+        { "path": "src/workers/routes/current-work.ts", "target_blob": "e14bb6039753458276cdb4c8b3099b4eded16775", "reason": "emits shadow-only server Current Work projection v2" },
+        { "path": "src/workers/routes/customer-chat.ts", "target_blob": "8c7fdf5c46f98d00427954c6c08e86613c350fdf", "reason": "persists role, skill, and context lineage around model execution" },
+        { "path": "src/workers/routes/intake.ts", "target_blob": "719af21f530ac989a2d4469058f9af32aba33aef", "reason": "exposes tenant-scoped resolve and idempotent immutable execute endpoints" },
+        { "path": "vitest.workers.config.ts", "target_blob": "3498585088f22e7ce7ab8340699592feeaf021c7", "reason": "uses the supported Cloudflare Vitest 4 configuration contract" }
+      ]
     }
   ]
 }

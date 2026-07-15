@@ -11,7 +11,7 @@ publication. `--apply` against prod is a named operator gate ⚙.
 | MB-P authoring skills | **223** | `MB-P/_sys/xcp-system/governance/skills-index.yaml` (v0.7.0) | INTERNAL authoring corpus; per-entry `fork_safe` (`true|false|template|unset`) is the **eligibility filter** for what may ever be *projected* — never a body-extraction source | ❌ never directly |
 | MB-P session roles | **23** | `MB-P/_sys/xcp-system/governance/SESSION_ROLE_MANIFEST.yml` (v1.9, entry_skill contract) | INTERNAL operator session roles | ❌ never directly |
 | Xlooop automation agents | **4** | `docs/contracts/agent-roles.yml` | deliberately **FILE-ONLY** SSOT (its header: a DB copy would violate HR-NO-PARALLEL-MODEL-1 and open agent self-registration). The publisher **hard-fails on any key collision** with these | ✅ (lineage labels; parity-gated) |
-| Customer-safe catalog entries | **9** — 3 roles + 5 skills + 1 pack | `docs/contracts/role-skill-catalog.json` (`xlooop.role_skill_catalog.v1`) | **curated FRESH for customers** — content is authored, not extracted; zero MB-P body text (gate-scanned) | ✅ once published + bound (operator ⚙) |
+| Customer-safe catalog entries | **11** current — 4 roles + 6 skills + 1 pack; original W3 baseline was 9 | `docs/contracts/role-skill-catalog.json` (`xlooop.role_skill_catalog.v1`) | **curated FRESH for customers** — grounded assistance was added for all workspace roles; content is authored, not extracted; zero MB-P body text (gate-scanned) | ✅ contract verified; publishing remains operator-controlled |
 
 These are **four distinct SSOTs with a stated boundary** — the earlier "3/4 vs 23/223" confusion was a
 category error: the small numbers are Xlooop runtime surfaces, the large ones are MB-P's internal

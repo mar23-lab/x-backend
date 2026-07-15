@@ -28,13 +28,14 @@ export const ARCHETYPE_TO_MEMBERSHIP: Readonly<Record<string, readonly string[]>
   'role.operator-lead': ['owner', 'operator'], // "the default hands-on role for a workspace owner" (its own description)
   'role.delivery-collaborator': ['collaborator'],
   'role.governance-reviewer': ['owner', 'operator'], // approval:decide / signoff:decide authority = owner/operator
+  'role.workspace-member': ['owner', 'operator', 'collaborator', 'viewer', 'client'],
   // viewer / client: read-only membership roles — intentionally unmapped (no governed-write skills).
 });
 
 /** sha256 of docs/contracts/role-skill-catalog.json — embedded because the sync resolver path cannot await
  *  crypto.subtle. `verify:role-skill-catalog-loader-fresh` (ci-local) re-hashes the file and fails on drift,
  *  so this constant can never silently diverge from the catalog it fingerprints. */
-export const CATALOG_MANIFEST_SHA256 = '1eecc5dd85d9e310b1b960ceef3cc5caf3eb1004880847bd9ee2cd477cfb16d0';
+export const CATALOG_MANIFEST_SHA256 = 'e85bdf46f3d29435dbcdafa229bd563a01dafa4685527c146421d01a2844aa0a';
 
 interface CatalogEntry {
   key: string;

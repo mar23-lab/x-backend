@@ -1,0 +1,60 @@
+import { describe, expect, it } from 'vitest';
+import { Hono } from 'hono';
+import { intakeRoute } from '../routes/intake';
+
+const AUTH = { user_id: 'user_a', workspace_id: 'tenant_a', role: 'operator' };
+
+function appFor(opts: { enabled?: boolean; packets?: any[]; approvals?: any[] } = {}) {
+  const calls: Array<Record<string, unknown>> = [];
+  const dal = {
+    listTaskPackets: async (workspace_id: string) => { calls.push({ method: 'listTaskPackets', workspace_id }); return opts.packets ?? []; },
+    listApprovalRequests: async (workspace_id: string) => { calls.push({ method: 'listApprovalRequests', workspace_id }); return opts.approvals ?? []; },
+    createIntakeResolution: async (workspace_id: string, actor_user_id: string, input: any) => {
+      calls.push({ method: 'createIntakeResolution', workspace_id, actor_user_id, input });
+      return { id: 'inr_1', workspace_id, actor_user_id, version: 1, status: 'pending', consumed_at: null, created_at: '2026-07-15T00:00:00Z', ...input };
+    },
+    executeIntakeResolution: async (workspace_id: string, actor_user_id: string, id: string, version: number, current_work_version: number, client_request_id: string) => {
+      calls.push({ method: 'executeIntakeResolution', workspace_id, actor_user_id, id, version, current_work_version, client_request_id });
+      return { ok: true, resolution: { id }, receipt: { id: 'ger_1', target_id: 'pkt_1' }, packet_id: 'pkt_1' };
+    },
+  };
+  const app = new Hono();
+  app.use('*', async (ctx, next) => {
+    ctx.set('request_id', 'req_test');
+    ctx.set('auth', AUTH as never);
+    ctx.set('dal', dal as never);
+    await next();
+  });
+  app.route('/api/v1', intakeRoute);
+  return { app, calls, env: { DATABASE_URL: 'x', SINGLE_INTAKE_ENABLED: opts.enabled ? 'true' : 'false' } };
+}
+
+describe('single intake route', () => {
+  it('fails closed while the feature is not explicitly enabled', async () => {
+    const { app, calls, env } = appFor();
+    const res = await app.request('/api/v1/intake/resolve', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ text: 'What changed?', client_request_id: 'c1' }) }, env);
+    expect(res.status).toBe(404);
+    expect(calls).toEqual([]);
+  });
+
+  it('derives tenant and actor only from authenticated context', async () => {
+    const { app, calls, env } = appFor({ enabled: true });
+    const res = await app.request('/api/v1/intake/resolve', {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ text: 'Create a task to verify Gmail sync', client_request_id: 'c2', workspace_id: 'tenant_b', actor_user_id: 'forged' }),
+    }, env);
+    expect(res.status).toBe(201);
+    expect(calls.at(-1)).toMatchObject({ method: 'createIntakeResolution', workspace_id: 'tenant_a', actor_user_id: 'user_a' });
+  });
+
+  it('requires immutable resolution and current-work versions to execute', async () => {
+    const { app, calls, env } = appFor({ enabled: true });
+    const bad = await app.request('/api/v1/intake/inr_1/execute', { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' }, env);
+    expect(bad.status).toBe(400);
+    const ok = await app.request('/api/v1/intake/inr_1/execute', {
+      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ version: 1, current_work_version: 3, client_request_id: 'exec_1' }),
+    }, env);
+    expect(ok.status).toBe(200);
+    expect(calls.at(-1)).toEqual({ method: 'executeIntakeResolution', workspace_id: 'tenant_a', actor_user_id: 'user_a', id: 'inr_1', version: 1, current_work_version: 3, client_request_id: 'exec_1' });
+  });
+});

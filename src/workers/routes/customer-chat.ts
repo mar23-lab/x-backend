@@ -32,6 +32,7 @@ import type { DalAdapter } from '../dal/DalAdapter';
 import type { EventListOpts, EventPage, HarnessFlowEvent, UserSourceConnection } from '../dal/types';
 import { type AiRunner } from '../services/agent-digest';
 import { customerSafeChat, customerSafeSerializerEnabled } from '../lib/customer-safe-decision'; // AR-0.2 · customer-safe projection (P3 260714: default-SAFE)
+import { persistAssistantContextLineage, completeAssistantSkillLineage, type AssistantContextLineage } from '../lib/assistant-context-lineage';
 import {
   answerCockpitChat,
   type CockpitChatScope,
@@ -54,6 +55,12 @@ export interface CustomerChatEnv extends AuthEnv {
   // owner/active-member operator may scope the chat to a workspace they own via body.workspace_id; an
   // unauthorized override is a hard 403 (never a silent read of the token org).
   OPERATOR_WORKSPACE_SCOPE_ENABLED?: string;
+  /** Commercial pilot gate: synchronously persist role/skill + context + completion lineage for every LLM run. */
+  CONTEXT_PACKET_PERSISTENCE_ENABLED?: string;
+  ROLE_SKILL_CATALOG_ENABLED?: string;
+  RESOLUTION_RECEIPT_SIGNING_SECRET?: string;
+  RESOLUTION_RECEIPT_SIGNING_KEY_ID?: string;
+  XLOOOP_DEPLOY_SHA?: string;
 }
 
 export interface CustomerChatVariables extends AuthVariables {
@@ -110,6 +117,11 @@ export function buildSourceFacts(
     facts.sort((a, b) => tierRank((b.access_tier ?? 'index') as SourceTier) - tierRank((a.access_tier ?? 'index') as SourceTier));
   }
   return facts;
+}
+
+async function messageIntentRef(message: string): Promise<string> {
+  const hash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(message));
+  return `sha256:${Array.from(new Uint8Array(hash), (b) => b.toString(16).padStart(2, '0')).join('')}`;
 }
 
 customerChatRoute.post('/customer-chat', async (ctx) => {
@@ -170,6 +182,8 @@ customerChatRoute.post('/customer-chat', async (ctx) => {
       } catch (_) { tierByConnId = undefined; }
     }
     let sources = buildSourceFacts(workspaceId, sourceRows, events, tierByConnId);
+    let redactionProfile = auth.role === 'client' ? 'client-empty' : auth.role === 'viewer' ? 'viewer-limited' : 'operator-full';
+    let clientEmpty = auth.role === 'client';
 
     // L1 (260710-D) · durable context-assembly trace, flag-gated (OFF ⇒ trace null ⇒ grounded_on is
     // persisted unchanged BY REFERENCE — byte-identical). Records ids/counts/enums only; each record*
@@ -188,6 +202,8 @@ customerChatRoute.post('/customer-chat', async (ctx) => {
         const rsc = assembleRoleScopedContext({ role: String(auth.role || ''), user_id: auth.user_id }, { events, sources });
         events = rsc.admissibleFacts.events as HarnessFlowEvent[];
         sources = rsc.visibleSources;
+        redactionProfile = `${rsc.auditLine.role}-${rsc.redactionProfile.expose}`;
+        clientEmpty = rsc.redactionProfile.expose === 'none';
         trace?.recordRoleProjection(rsc.auditLine);
         console.log(JSON.stringify({ kind: 'role_scoped_context', plane: 'customer', workspace_id: workspaceId, ...rsc.auditLine }));
       } catch (_) { /* projection is fail-safe: legacy facts stand; the flag can be pulled */ }
@@ -216,10 +232,45 @@ customerChatRoute.post('/customer-chat', async (ctx) => {
     const ai = ctx.env.AI;
     const claudeKey = ctx.env.ANTHROPIC_API_KEY;
 
+    // Commercial lineage gate: when explicitly enabled, no LLM call begins until its role/skill
+    // resolution and customer-safe context packet are durable. Raw prompt text is never stored.
+    let assistantLineage: AssistantContextLineage | null = null;
+    let lineageSql: ReturnType<typeof neonClient> | null = null;
+    if (envFlagTrue(ctx.env.CONTEXT_PACKET_PERSISTENCE_ENABLED)) {
+      lineageSql = ctx.get('sql') ?? neonClient(ctx.env.DATABASE_URL);
+      assistantLineage = await persistAssistantContextLineage(lineageSql, ctx.env, {
+        workspace_id: workspaceId,
+        principal_id: auth.user_id,
+        role: String(auth.role || 'client'),
+        mode,
+        intent_ref: await messageIntentRef(message),
+        scope: { event_count: events.length, document_count: 0, unpromoted_document_count: 0, source_count: sources.length },
+        redaction_profile: redactionProfile,
+        client_empty: clientEmpty,
+      });
+      emitEvent('context_packet_persisted', {
+        workspace_id: workspaceId,
+        context_packet_id: assistantLineage.context_packet_id,
+        action: assistantLineage.action,
+        skill_count: assistantLineage.resolution.selected_skills.length,
+      });
+    }
+
     // L1 · tier weights recorded from the FINAL grounding set (AFTER the role-scoped projection may have
     // emptied a viewer's sources) — the trace must reflect what actually grounded, never the pre-projection set.
     if (tierByConnId) trace?.recordTierWeights(sources);
     const result = await answerCockpitChat(message, { companyContext, events, sources, total: events.length, scope }, ai, mode, claudeKey, llm);
+    if (assistantLineage && lineageSql) {
+      const receipts = await completeAssistantSkillLineage(lineageSql, ctx.env, assistantLineage, {
+        workspace_id: workspaceId,
+        principal_id: auth.user_id,
+      });
+      emitEvent('skill_invocation_completed', {
+        workspace_id: workspaceId,
+        action: assistantLineage.action,
+        receipt_count: receipts.length,
+      });
+    }
     // G2 (260711) · per-tenant LLM metering, flag-gated default-off (LLM_USAGE_METERING_ENABLED).
     // Fire-and-forget; deterministic answers (model null) never record; failure never touches the answer.
     recordLlmUsage({

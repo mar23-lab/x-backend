@@ -37,10 +37,14 @@ describe('current-work · CurrentWorkProjection read route (flag-gated, inert)',
     const res = await app([ev({ id: 'e1', status: 'needs_review', summary: 'Approve TAS section' })], 'true').request('/current-work');
     expect(res.status).toBe(200);
     const b = await res.json();
-    expect(b.schema_id).toBe('xlooop.current_work_projection.v1');
+    expect(b.schema_id).toBe('xlooop.current_work_projection.v2');
+    expect(b.projection_version).toBe(2);
     expect(b.focus.state).toBe('needs_review');
     expect(b.focus.event_id).toBe('e1');
     expect(b.focus.primary_action.code).toBe('review_result');
+    expect(b.focus.focus_id).toBe('e1');
+    expect(b.focus.object_type).toBe('event');
+    expect(b.focus.target).toEqual({ type: 'event', id: 'e1', label: 'Approve TAS section' });
     expect(b.counts.needs_you).toBe(1);
   });
 
@@ -77,5 +81,7 @@ describe('current-work · CurrentWorkProjection read route (flag-gated, inert)',
     expect(Array.isArray(b.allowed_actions)).toBe(true);
     // never leaks evidence ids
     expect(JSON.stringify(b)).not.toMatch(/evidence_ref_ids|evidence_link/);
+    expect(b.receipt_count).toBeNull();
+    expect(b.receipt_count_status).toBe('unobservable_until_execution_receipt_read_is_wired');
   });
 });

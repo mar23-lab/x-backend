@@ -128,7 +128,7 @@ export interface DenialRowInput {
 }
 
 // ── writes (degrade-safe: throw is swallowed by the observer's waitUntil wrapper) ───────────────────
-export async function insertRoleSkillResolutionRow(sql: Sql, input: ResolutionRowInput): Promise<void> {
+export async function insertRoleSkillResolutionRow(sql: Sql, input: ResolutionRowInput): Promise<string> {
   const id = `rsr_${crypto.randomUUID()}`;
   const r = input.resolution;
   await sql/*sql*/`
@@ -148,6 +148,7 @@ export async function insertRoleSkillResolutionRow(sql: Sql, input: ResolutionRo
       ${input.resolver_source}, ${input.deploy_sha}, ${input.catalog_manifest_sha256}, ${r.expires_at}
     )
   `;
+  return id;
 }
 
 export async function insertAuthorityDenialRow(sql: Sql, input: DenialRowInput): Promise<void> {
@@ -215,7 +216,7 @@ export interface SkillInvocationReceiptInput {
   receipt: SignedReceipt;
 }
 
-export async function insertSkillInvocationReceiptRow(sql: Sql, input: SkillInvocationReceiptInput): Promise<void> {
+export async function insertSkillInvocationReceiptRow(sql: Sql, input: SkillInvocationReceiptInput): Promise<string> {
   const id = `sir_${crypto.randomUUID()}`;
   await sql/*sql*/`
     INSERT INTO skill_invocation_receipts (
@@ -227,6 +228,7 @@ export async function insertSkillInvocationReceiptRow(sql: Sql, input: SkillInvo
       ${input.evidence_ref_ids}, ${input.receipt.content_sha256}, ${input.receipt.signature_alg}, ${input.receipt.signature}
     )
   `;
+  return id;
 }
 
 export type ClosingOutcome = 'attested' | 'skipped' | 'failed';

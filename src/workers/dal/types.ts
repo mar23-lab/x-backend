@@ -27,3 +27,4 @@ export * from './types/propagation';
 export * from './types/inference';
 export * from './types/operational-spine';
 export * from './types/template-policy';
+export * from './types/intake';

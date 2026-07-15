@@ -48,6 +48,8 @@ export interface RoleSkillResolutionInput {
   intent?: string | null;
   /** from principal hydration: did an active entitlement row exist? undefined = not evaluated (shadow) */
   entitlementActive?: boolean;
+  /** Read-only assistant operations do not require operator mode. Defaults true for governed writes. */
+  requiresOperatorMode?: boolean;
   /** true when the resource's tenant differs from the principal's tenant */
   tenantMismatch?: boolean;
 }
@@ -113,6 +115,7 @@ function actionFamily(action: string): string {
     policy: 'policy',
     event: 'activity',
     runtime: 'model settings',
+    assistant: 'grounded assistance',
   };
   return FAMILIES[head] || 'operation';
 }
@@ -178,7 +181,7 @@ export function resolveRoleAndSkills(
   let verdict: RoleSkillVerdict = { allowed: true, reason: 'resolved' };
   if (input.tenantMismatch === true) {
     verdict = { allowed: false, reason: 'tenant_mismatch' };
-  } else if (!isGovernedMode(input.mode)) {
+  } else if (input.requiresOperatorMode !== false && !isGovernedMode(input.mode)) {
     verdict = { allowed: false, reason: 'mode_requires_operator' };
   } else if (input.entitlementActive === false) {
     verdict = { allowed: false, reason: 'entitlement_missing' };

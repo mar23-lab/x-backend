@@ -20,6 +20,7 @@ import {
   listMetricDeltasRow,
   executeCustomerDataLifecycleRequestRow,
 } from './operational-spine-store';
+import { createIntakeResolutionRow, executeIntakeResolutionRow } from './intake-store';
 import type { Sql } from '../db/client';
 
 export type OperationalSpineDalMethods = Pick<
@@ -37,6 +38,8 @@ export type OperationalSpineDalMethods = Pick<
   | 'createMetricDelta'
   | 'listMetricDeltas'
   | 'executeCustomerDataLifecycleRequest'
+  | 'createIntakeResolution'
+  | 'executeIntakeResolution'
 >;
 
 type AdapterCtor = { prototype: object };
@@ -55,6 +58,12 @@ export function applyOperationalSpineMethods(adapter: AdapterCtor): void {
     },
     listTaskPackets(workspaceId, opts) {
       return listTaskPacketsRow(sqlOf(this), workspaceId, opts);
+    },
+    createIntakeResolution(workspaceId, actorUserId, input) {
+      return createIntakeResolutionRow(sqlOf(this), workspaceId, actorUserId, input);
+    },
+    executeIntakeResolution(workspaceId, actorUserId, resolutionId, expectedVersion, expectedCurrentWorkVersion, clientRequestId) {
+      return executeIntakeResolutionRow(sqlOf(this), workspaceId, actorUserId, resolutionId, expectedVersion, expectedCurrentWorkVersion, clientRequestId);
     },
     evaluateTaskPacketCompletion(workspaceId, packetId) {
       return evaluateTaskPacketCompletionRow(sqlOf(this), workspaceId, packetId);
