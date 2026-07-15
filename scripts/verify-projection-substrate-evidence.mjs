@@ -45,9 +45,32 @@ function parseManifest(text) {
   const status = (text.match(/^status:\s*([a-z_]+)\s*$/m) || [])[1] || '';
   const persistedNodes = Number((text.match(/persisted_graph_nodes:\s*(\d+)/) || [])[1]);
   const dated = (text.match(/dated:\s*['"]?([0-9T:\-Z]+)/) || [])[1] || '';
-  const rowCountKeys = [...text.matchAll(/^\s{4,}([A-Za-z0-9_]+):\s*\d+/gm)].map((m) => m[1]);
+  const rowCounts = Object.fromEntries([...text.matchAll(/^\s{4,}([A-Za-z0-9_]+):\s*(\d+)/gm)].map((m) => [m[1], Number(m[2])]));
+  const rowCountKeys = Object.keys(rowCounts);
   const unobservedKeys = [...text.matchAll(/^\s{4,}([A-Za-z0-9_]+):\s*unobserved\s*(?:#.*)?$/gm)].map((m) => m[1]);
-  return { tables, roleByTable, status, persistedNodes, dated, rowCountKeys, unobservedKeys };
+  const persistedEdges = Number((text.match(/persisted_graph_edges:\s*(\d+)/) || [])[1]);
+  const intentCount = rowCounts.intents ?? 0;
+  const causationCount = rowCounts.audit_logs_with_causation_id ?? 0;
+  const packetCount = rowCounts.task_packets ?? 0;
+  return { tables, roleByTable, status, persistedNodes, persistedEdges, dated, rowCounts, rowCountKeys, unobservedKeys, intentCount, causationCount, packetCount };
+}
+
+function censusAgeDays(dated, now = new Date()) {
+  const value = new Date(dated);
+  if (!dated || Number.isNaN(value.getTime())) return Number.POSITIVE_INFINITY;
+  return (now.getTime() - value.getTime()) / 86_400_000;
+}
+
+function pilotViolations(m, now = new Date()) {
+  const v = [];
+  const age = censusAgeDays(m.dated, now);
+  if (age > 7) v.push(`census age ${age.toFixed(2)}d exceeds 7d`);
+  if (m.intentCount <= 0) v.push('intent_count must be > 0');
+  if (m.causationCount <= 0) v.push('caused_by source count must be > 0');
+  if (m.packetCount <= 0) v.push('task_packet_count must be > 0');
+  if ((m.persistedNodes || 0) <= 0 || (m.persistedEdges || 0) <= 0) v.push('persisted graph nodes and edges must be > 0');
+  if (m.unobservedKeys.length) v.push(`unobserved census rows: ${m.unobservedKeys.join(', ')}`);
+  return v;
 }
 
 // the should-FAIL / should-PASS pair for --self-test
@@ -66,7 +89,8 @@ if (process.argv.includes('--self-test')) {
   const failManifest = { tables: ['x'], roleByTable: {}, status: 'fed', persistedNodes: 0, dated: 't', rowCountKeys: [], unobservedKeys: ['x'] };
   const passOk = honestyViolations(passManifest).length === 0;
   const failBites = honestyViolations(failManifest).length > 0;
-  if (passOk && failBites) { console.log('☑ self-test: honesty gate BITES (fed+0-nodes FAILs; wired_not_fed+0-nodes PASSes)'); process.exit(0); }
+  const pilotBites = pilotViolations({ dated: '2026-01-01T00:00:00Z', intentCount: 0, causationCount: 0, packetCount: 0, persistedNodes: 1, persistedEdges: 1, unobservedKeys: [] }, new Date('2026-07-15T00:00:00Z')).length >= 3;
+  if (passOk && failBites && pilotBites) { console.log('☑ self-test: honesty and strict-pilot gates BITE'); process.exit(0); }
   console.error(`✗ self-test: gate did not bite (passOk=${passOk}, failBites=${failBites})`); process.exit(1);
 }
 
@@ -104,6 +128,11 @@ if (!text) {
   // (4) HONESTY — the S1 gate
   const hv = honestyViolations(m);
   ok('(4) status is honest vs the census (no fed/live claim on an empty persisted graph)', hv.length === 0, hv.join(' | '));
+
+  if (process.argv.includes('--strict-pilot')) {
+    const pv = pilotViolations(m);
+    ok('(5) pilot census is fresh and contains packet, intent, and causation lineage', pv.length === 0, pv.join(' | '));
+  }
 }
 
 console.log('ADR-XLOOP-ARCH-004 · projection substrate-evidence (HR-PROJECTION-SUBSTRATE-EVIDENCE-1)');

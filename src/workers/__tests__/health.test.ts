@@ -28,8 +28,40 @@ describe('GET /api/v1/health', () => {
     expect(body.status).toBe('ok');
     expect(typeof body.version).toBe('string');
     expect(typeof body.timestamp).toBe('string');
+    expect(body.contract_hash).toMatch(/^[a-f0-9]{64}$/);
+    expect(body.authority).toBe('shadow');
+    expect(body.environment).toBe('development');
+    expect(body.schema_head).toBeNull();
     // Timestamp must be ISO 8601
     expect(() => new Date(body.timestamp as string).toISOString()).not.toThrow();
+  });
+
+  it('reports pilot-shadow feature and binding posture without claiming authority', async () => {
+    const env = {
+      ...(stubEnv() as unknown as Record<string, unknown>),
+      ENVIRONMENT: 'pilot-shadow',
+      XLOOOP_SCHEMA_HEAD: '079',
+      XLOOOP_AUTHORITY_MODE: 'shadow',
+      SINGLE_INTAKE_ENABLED: 'true',
+      ROLE_SKILL_CATALOG_ENABLED: 'true',
+      CONTEXT_PACKET_PERSISTENCE_ENABLED: 'true',
+      TENANT_PROJECTION_QUEUE_ENABLED: 'true',
+      CURRENT_WORK_PROJECTION_ENABLED: 'true',
+      TENANT_PROJECTION_QUEUE: { send: async () => undefined },
+    } as never;
+    const res = await app.fetch(new Request('http://localhost/api/v1/health'), env);
+    const body = (await res.json()) as any;
+    expect(body.environment).toBe('pilot-shadow');
+    expect(body.authority).toBe('shadow');
+    expect(body.schema_head).toBe('079');
+    expect(body.feature_posture).toEqual({
+      single_intake: true,
+      role_skill_catalog: true,
+      context_packet_persistence: true,
+      tenant_projection_queue: true,
+      current_work_projection: true,
+    });
+    expect(body.bindings.tenant_projection_queue).toBe(true);
   });
 
   it('exposes a REAL deploy signal: build / built_at injected at deploy (HR-CONFIG-REALITY-MATCH-1)', async () => {

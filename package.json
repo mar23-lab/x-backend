@@ -8,6 +8,7 @@
   },
   "scripts": {
     "ci-local": "node scripts/ci-local.mjs",
+    "verify:installed-dependencies": "node scripts/verify-installed-dependencies.mjs",
     "typecheck": "tsc --noEmit -p tsconfig.workers.json",
     "test": "node scripts/run-worker-test-batches.mjs",
     "test:watch": "vitest --config vitest.workers.config.ts",
@@ -20,6 +21,7 @@
     "verify:role-skill-catalog-loader-fresh": "node scripts/verify-role-skill-catalog-loader-fresh.mjs",
     "verify:model-execution-callsites": "node scripts/verify-model-execution-callsites.mjs",
     "verify:shadow-observability-storage": "node scripts/verify-shadow-observability-storage.mjs",
+    "verify:projection-substrate-pilot": "node scripts/verify-projection-substrate-evidence.mjs --strict-pilot",
     "verify:boundary": "node scripts/verify-backend-boundary.mjs",
     "verify:no-mbp-runtime-dependency": "node scripts/verify-no-mbp-runtime-dependency.mjs",
     "verify:data-schemas": "node scripts/verify-data-schemas.mjs",

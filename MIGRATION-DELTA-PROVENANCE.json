@@ -199,6 +199,32 @@
         { "path": "src/workers/__tests__/llm-usage-metering.test.ts", "target_blob": "f4f9d99ec320794f028e5c73eab6c245dfe0c460", "reason": "keeps route metering tests network-free while store tests prove SQL behavior" },
         { "path": "src/workers/__tests__/request-access.test.ts", "target_blob": "9f041b486709956f6dd3890ab22a79da5719dfd7", "reason": "keeps public access boundary tests network-free and deterministic" }
       ]
+    },
+    {
+      "delta_id": "commercial-completion-integrity-and-closeout-20260715",
+      "generated_at": "2026-07-15T05:23:00Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "aee9b0e6a2b55095c645e632fe74ae2b251684a1",
+      "target_base_commit": "aee9b0e6a2b55095c645e632fe74ae2b251684a1",
+      "authority": "shadow_only_no_production_cutover",
+      "copied_files": [],
+      "transformed_files": [
+        { "path": "package.json", "target_blob": "b64a666ca4476989ed628361c1f01edd213c19a4", "reason": "adds installed-dependency parity and strict pilot graph evidence commands" },
+        { "path": "scripts/ci-local.mjs", "target_blob": "332a418f03135c7d1b77d16de4e20a9ebeae4802", "reason": "fails local authority before tests when Node or installed direct dependencies drift from the lockfile" },
+        { "path": "scripts/verify-installed-dependencies.mjs", "target_blob": "215c3bf892e39947cea04d09959d2c296de6074f", "reason": "verifies Node 22 and exact package, lockfile, and installed direct dependency parity" },
+        { "path": "scripts/verify-projection-substrate-evidence.mjs", "target_blob": "bea5fec1f61e75fff58e28070742c7b1736c4ecb", "reason": "adds a strict pilot gate for seven-day freshness and non-zero packet, intent, and causation evidence" },
+        { "path": "src/workers/routes/health.ts", "target_blob": "5bac89f4cd4ae68d5e0118c53d3444cb2b3d2122", "reason": "reports build, contract, schema, environment, feature, binding, and shadow-authority posture without activation" },
+        { "path": "src/workers/__tests__/health.test.ts", "target_blob": "b7981b299ff7d85f709143d16279ce2db8ad5542", "reason": "proves public-safe pilot-shadow health metadata and binding posture" },
+        { "path": "src/workers/dal/types/intake.ts", "target_blob": "f2de629042961c75de3e015c0b7cab9090c52497", "reason": "types customer-safe governance, prior-work, freshness, guardrails, and nullable historical closeout linkage" },
+        { "path": "docs/governance/GOVERNANCE_PILLARS.yml", "target_blob": "dcb6ada4ea0c3eabf0b2efa14805e1613d30e97c", "reason": "corrects the role-skill-context pillar to distinguish verified single-intake and LLM coverage from outstanding legacy and terminal-transition work" },
+        { "path": "src/workers/dal/intake-store.ts", "target_blob": "c506f2fd1c2827d364b198e22a838f9a6f6d9fba", "reason": "persists preview governance and commits receipt, closeout, and projection outbox atomically" },
+        { "path": "src/workers/dal/DalAdapter.ts", "target_blob": "b42a3b33e826b6912c30f0c16cc4d491184ff840", "reason": "requires governed closeout evidence at the intake execution boundary" },
+        { "path": "src/workers/dal/operational-spine-methods.ts", "target_blob": "77709e710f05eaea516f8661a56ae0fe1a741bec", "reason": "forwards immutable closeout evidence through the tenant-scoped adapter" },
+        { "path": "src/workers/routes/intake.ts", "target_blob": "68fcff13d0f4dddf7f28839aed428f1a22d7d78c", "reason": "emits prior-work discovery, safe guardrails, freshness, role labels, and signed-or-hashed execution closeout" },
+        { "path": "src/workers/__tests__/intake-route.test.ts", "target_blob": "026e124ea1047aca1892c7b3626edb655f6a8b30", "reason": "proves tenant-derived role, prior-work digest, guardrails, and closeout input" },
+        { "path": "src/workers/__tests__/intake-store.test.ts", "target_blob": "5b5692828843505da7199c35f141aa9dac698675", "reason": "proves atomic closing-attestation insertion and receipt linkage" },
+        { "path": "src/workers/db/migrations/079_commercial_completion_lineage.sql", "target_blob": "c47d3765eadbfb47559be71723d8cb5d40ee2404", "reason": "stages additive preview-governance and execution-closeout persistence without applying or activating it" }
+      ]
     }
   ]
 }

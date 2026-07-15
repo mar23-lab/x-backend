@@ -365,6 +365,7 @@ export interface DalAdapter {
     expectedVersion: number,
     expectedCurrentWorkVersion: number,
     clientRequestId: string,
+    closing: import('./types').GovernedClosingAttestationInput,
   ): Promise<IntakeExecutionResult>;
   /** Tenant-scoped count used by Current Work; returns no receipt identifiers or payloads. */
   countGovernedExecutionReceipts(workspaceId: WorkspaceId): Promise<number>;

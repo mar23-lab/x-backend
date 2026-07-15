@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { Hono } from 'hono';
 import { intakeRoute } from '../routes/intake';
 
-const AUTH = { user_id: 'user_a', workspace_id: 'tenant_a', role: 'operator' };
+const AUTH = { user_id: 'user_a', workspace_id: 'tenant_a', role: 'owner' };
 
 function appFor(opts: { enabled?: boolean; packets?: any[]; approvals?: any[] } = {}) {
   const calls: Array<Record<string, unknown>> = [];
@@ -13,8 +13,8 @@ function appFor(opts: { enabled?: boolean; packets?: any[]; approvals?: any[] } 
       calls.push({ method: 'createIntakeResolution', workspace_id, actor_user_id, input });
       return { id: 'inr_1', workspace_id, actor_user_id, version: 1, status: 'pending', consumed_at: null, created_at: '2026-07-15T00:00:00Z', ...input };
     },
-    executeIntakeResolution: async (workspace_id: string, actor_user_id: string, id: string, version: number, current_work_version: number, client_request_id: string) => {
-      calls.push({ method: 'executeIntakeResolution', workspace_id, actor_user_id, id, version, current_work_version, client_request_id });
+    executeIntakeResolution: async (workspace_id: string, actor_user_id: string, id: string, version: number, current_work_version: number, client_request_id: string, closing: any) => {
+      calls.push({ method: 'executeIntakeResolution', workspace_id, actor_user_id, id, version, current_work_version, client_request_id, closing });
       return { ok: true, resolution: { id }, receipt: { id: 'ger_1', target_id: 'pkt_1' }, packet_id: 'pkt_1' };
     },
   };
@@ -45,6 +45,11 @@ describe('single intake route', () => {
     }, env);
     expect(res.status).toBe(201);
     expect(calls.at(-1)).toMatchObject({ method: 'createIntakeResolution', workspace_id: 'tenant_a', actor_user_id: 'user_a' });
+    const input = (calls.at(-1) as any).input;
+    expect(input.role_label).toBe('Workspace owner');
+    expect(input.prior_work).toMatchObject({ discovery_executed: true, active_work_count: 0, pending_approval_count: 0 });
+    expect(input.prior_work.digest_sha256).toMatch(/^[a-f0-9]{64}$/);
+    expect(input.guardrails).toContain('tenant_and_workspace_scope_required');
   });
 
   it('requires immutable resolution and current-work versions to execute', async () => {
@@ -55,6 +60,11 @@ describe('single intake route', () => {
       method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ version: 1, current_work_version: 3, client_request_id: 'exec_1' }),
     }, env);
     expect(ok.status).toBe(200);
-    expect(calls.at(-1)).toEqual({ method: 'executeIntakeResolution', workspace_id: 'tenant_a', actor_user_id: 'user_a', id: 'inr_1', version: 1, current_work_version: 3, client_request_id: 'exec_1' });
+    expect(calls.at(-1)).toMatchObject({
+      method: 'executeIntakeResolution', workspace_id: 'tenant_a', actor_user_id: 'user_a', id: 'inr_1',
+      version: 1, current_work_version: 3, client_request_id: 'exec_1',
+      closing: { role_key: 'role.workspace.owner', closing_skill: 'skill.governed-execution-closeout', outcome: 'attested' },
+    });
+    expect((calls.at(-1) as any).closing.content_sha256).toMatch(/^[a-f0-9]{64}$/);
   });
 });
