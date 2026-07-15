@@ -6,10 +6,13 @@ import { envFlagTrue } from '../lib/env-flag';
 import { authorizeSpineWrite } from '../lib/spine-authority';
 import { buildIntakeResolution, type IntakeResolveRequest } from '../lib/intake-resolution';
 import { errorEnvelope } from '../middleware/error';
+import { closingAttestationSigningPayload, signReceipt } from '../dal/role-skill-resolution-store';
 
 interface IntakeEnv extends AuthEnv {
   DATABASE_URL: string;
   SINGLE_INTAKE_ENABLED?: string;
+  RESOLUTION_RECEIPT_SIGNING_SECRET?: string;
+  RESOLUTION_RECEIPT_SIGNING_KEY_ID?: string;
 }
 
 export const intakeRoute = new Hono<{ Bindings: IntakeEnv; Variables: AuthVariables & { dal: DalAdapter } }>();
@@ -34,7 +37,7 @@ intakeRoute.post('/intake/resolve', async (ctx) => {
     if (typeof body.client_request_id !== 'string' || !body.client_request_id.trim() || body.client_request_id.length > 160) {
       return fail(ctx, 400, 'VALIDATION_ERROR', 'client_request_id is required');
     }
-    const { workspace_id, user_id } = ctx.get('auth');
+    const { workspace_id, user_id, role } = ctx.get('auth');
     const [packets, approvals, createDecision, decideDecision] = await Promise.all([
       ctx.get('dal').listTaskPackets(workspace_id, { limit: 100 }),
       ctx.get('dal').listApprovalRequests(workspace_id, { limit: 100 }),
@@ -54,7 +57,30 @@ intakeRoute.post('/intake/resolve', async (ctx) => {
       target: body.target ?? null,
     }));
     const input = buildIntakeResolution(body, requestDigest, { packets, approvals, authorityFor, now: new Date() });
-    const resolution = await ctx.get('dal').createIntakeResolution(workspace_id, user_id, input);
+    const priorDigest = await digest(JSON.stringify({
+      packets: packets.map((packet) => [packet.id, packet.version, packet.lifecycle_state]).sort(),
+      approvals: approvals.map((approval) => [approval.id, approval.status, approval.packet_version]).sort(),
+    }));
+    const generatedAt = new Date().toISOString();
+    const activeWorkCount = packets.filter((packet) => !['completed', 'archived', 'rejected'].includes(packet.lifecycle_state)).length;
+    const pendingApprovalCount = approvals.filter((approval) => approval.status === 'requested').length;
+    const approachLabel = ({ answer: 'Answer', plan: 'Draft plan', create_work: 'Create governed work', continue_work: 'Continue governed work', decide: 'Record decision', inspect: 'Inspect', unresolved: 'Clarify' } as const)[input.operation];
+    const resolution = await ctx.get('dal').createIntakeResolution(workspace_id, user_id, {
+      ...input,
+      prior_work: { discovery_executed: true, active_work_count: activeWorkCount, pending_approval_count: pendingApprovalCount, digest_sha256: priorDigest },
+      governance_summary: input.authority.allowed ? 'Tenant-scoped interpretation; writes require immutable preview confirmation.' : `Blocked: ${input.authority.safe_reason}`,
+      role_label: role === 'owner' ? 'Workspace owner' : role === 'client' ? 'Workspace client' : 'Workspace viewer',
+      approach_label: approachLabel,
+      grounding_summary: `${input.context_summary.reference_count} references, ${input.context_summary.source_count} sources, ${input.context_summary.evidence_count} evidence items`,
+      guardrails: [
+        'tenant_and_workspace_scope_required',
+        ...(input.ambiguity ? ['clarification_required'] : []),
+        ...(input.requires_confirmation ? ['confirmation_required'] : []),
+        ...(input.risk === 'high' ? ['high_risk_confirmation_required'] : []),
+        'resolution_version_must_match', 'current_work_version_must_match', 'resolution_must_not_be_expired',
+      ],
+      freshness: { generated_at: generatedAt, expires_at: input.expires_at },
+    });
     ctx.status(201);
     return ctx.json({ resolution });
   } catch (err) {
@@ -70,7 +96,15 @@ intakeRoute.post('/intake/:resolution_id/execute', async (ctx) => {
       || typeof body.client_request_id !== 'string' || !body.client_request_id.trim() || body.client_request_id.length > 160) {
       return fail(ctx, 400, 'VALIDATION_ERROR', 'version, current_work_version, and client_request_id are required');
     }
-    const { workspace_id, user_id } = ctx.get('auth');
+    const { workspace_id, user_id, role } = ctx.get('auth');
+    const issuedAt = new Date().toISOString();
+    const evidenceRefIds = [`intake-resolution:${ctx.req.param('resolution_id')}`];
+    const closingPayload = closingAttestationSigningPayload({
+      workspace_id, principal_id: user_id, correlation_id: ctx.req.param('resolution_id'),
+      role_key: `role.workspace.${role}`, closing_skill: 'skill.governed-execution-closeout',
+      outcome: 'attested', evidence_ref_ids: evidenceRefIds, issued_at: issuedAt,
+    });
+    const signedClosing = await signReceipt(ctx.env.RESOLUTION_RECEIPT_SIGNING_SECRET, closingPayload, ctx.env.RESOLUTION_RECEIPT_SIGNING_KEY_ID);
     const result = await ctx.get('dal').executeIntakeResolution(
       workspace_id,
       user_id,
@@ -78,6 +112,14 @@ intakeRoute.post('/intake/:resolution_id/execute', async (ctx) => {
       Number(body.version),
       Number(body.current_work_version),
       body.client_request_id.trim(),
+      {
+        role_key: `role.workspace.${role}`,
+        closing_skill: 'skill.governed-execution-closeout',
+        outcome: 'attested', evidence_ref_ids: evidenceRefIds,
+        content_sha256: signedClosing.content_sha256,
+        signature_alg: signedClosing.signature_alg,
+        signature: signedClosing.signature,
+      },
     );
     if (!result.ok) {
       const status = result.reason === 'not_found' ? 404 : 409;

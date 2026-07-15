@@ -202,8 +202,9 @@ pillars:
       the operator's spine — every governed customer action resolves its role+skills MECHANICALLY from
       the published catalog (never a natural-language "act as" prompt), is folded into a customer-safe
       context packet, and terminates in signed evidence (resolution → invocation → closing). Traceable +
-      auditable, the same for every app.xlooop.com tenant. AR-2/AR-5, 260713. Substrate is complete +
-      structurally gated; runtime EMISSION is flag-gated (operator-named), so the gate is structural.
+      auditable, the same for every app.xlooop.com tenant. AR-2/AR-5, 260713. The substrate is staged and
+      structurally gated. Runtime coverage is partial: governed LLM callsites and single-intake execution
+      are wired; legacy writes and packet terminal transitions remain explicit pilot-shadow work.
     canonical_docs:
       - docs/contracts/role-skill-catalog.json
       - docs/contracts/context-packet.v1.json
@@ -219,11 +220,12 @@ pillars:
         runtime_flags: [ROLE_SKILL_CATALOG_ENABLED, ROLE_SKILL_RESOLVER_ENABLED]
       - id: every-governed-action-receipted
         statement: >-
-          resolution + authority-denial + skill-invocation + closing attestation each write a
-          content-hashed (optionally HS256-signed) evidence row (migration 070) via the canonical DAL —
-          no governed action without a receipt.
-        enforcement: gate
-        gates: [verify:lineage-completeness]
+          governed LLM callsites write role/context/model receipts, and confirmed single-intake writes
+          atomically write execution receipt + closing attestation + projection outbox. This invariant is
+          not system-wide until legacy writes and packet terminal transitions are migrated.
+        enforcement: runtime_flag
+        gates: [verify:model-execution-callsites]
+        runtime_flags: [SINGLE_INTAKE_ENABLED, CONTEXT_PACKET_PERSISTENCE_ENABLED]
       - id: intent-to-context-packet
         statement: >-
           the context an agent is given is folded into a customer-safe context_packets record (migration

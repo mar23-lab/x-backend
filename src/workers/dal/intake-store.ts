@@ -4,6 +4,7 @@ import { withWorkspaceRlsContext } from './operational-spine-store';
 import type { Sql } from '../db/client';
 import type {
   GovernedExecutionReceipt,
+  GovernedClosingAttestationInput,
   IntakeExecutionResult,
   IntakeResolution,
   IntakeResolutionInput,
@@ -11,10 +12,12 @@ import type {
   WorkspaceId,
 } from './types';
 
-type ResolutionRow = Omit<IntakeResolution, 'target' | 'authority' | 'context_summary' | 'action_payload'> & {
+type ResolutionRow = Omit<IntakeResolution, 'target' | 'authority' | 'context_summary' | 'prior_work' | 'freshness' | 'action_payload'> & {
   target: unknown;
   authority: unknown;
   context_summary: unknown;
+  prior_work: unknown;
+  freshness: unknown;
   action_payload: unknown;
 };
 
@@ -37,6 +40,8 @@ function normalizeResolution(row: ResolutionRow): IntakeResolution {
     target: objectValue(row.target, { type: 'none', id: null, label: 'Unavailable target' }),
     authority: objectValue(row.authority, { allowed: false, safe_reason: 'authority unavailable' }),
     context_summary: objectValue(row.context_summary, { reference_count: 0, source_count: 0, evidence_count: 0 }),
+    prior_work: objectValue(row.prior_work, { discovery_executed: true, active_work_count: 0, pending_approval_count: 0, digest_sha256: '' }),
+    freshness: objectValue(row.freshness, { generated_at: row.created_at, expires_at: row.expires_at }),
     action_payload: objectValue(row.action_payload, {}),
     required_tools: Array.isArray(row.required_tools) ? row.required_tools : [],
     current_work_version: Number(row.current_work_version || 0),
@@ -57,13 +62,18 @@ export async function createIntakeResolutionRow(
       INSERT INTO intake_resolutions (
         id, workspace_id, actor_user_id, project_id, client_request_id, request_digest,
         operation, confidence, ambiguity, target, effect_summary, risk, authority,
-        context_summary, required_tools, requires_confirmation, next_step, action_payload,
+        context_summary, prior_work, governance_summary, role_label, approach_label, grounding_summary,
+        guardrails, freshness, required_tools, requires_confirmation, next_step, action_payload,
         current_work_version, expires_at
       ) VALUES (
         ${id}, ${workspaceId}, ${actorUserId}, ${input.project_id ?? null}, ${input.client_request_id}, ${input.request_digest},
         ${input.operation}, ${input.confidence}, ${input.ambiguity}, ${JSON.stringify(input.target)}::jsonb,
         ${input.effect_summary}, ${input.risk}, ${JSON.stringify(input.authority)}::jsonb,
-        ${JSON.stringify(input.context_summary)}::jsonb, ${(input.required_tools ?? []) as unknown as string[]},
+        ${JSON.stringify(input.context_summary)}::jsonb, ${JSON.stringify(input.prior_work ?? { discovery_executed: true, active_work_count: 0, pending_approval_count: 0, digest_sha256: '' })}::jsonb,
+        ${input.governance_summary ?? 'Governance summary unavailable'}, ${input.role_label ?? 'Workspace member'},
+        ${input.approach_label ?? 'Governed operation'}, ${input.grounding_summary ?? 'No grounding summary'},
+        ${input.guardrails ?? []}, ${JSON.stringify(input.freshness ?? { generated_at: new Date().toISOString(), expires_at: input.expires_at })}::jsonb,
+        ${(input.required_tools ?? []) as unknown as string[]},
         ${input.requires_confirmation}, ${input.next_step}, ${JSON.stringify(input.action_payload ?? {})}::jsonb,
         ${input.current_work_version ?? 0}, ${input.expires_at}
       )
@@ -101,6 +111,7 @@ type ExecutionRow = ResolutionRow & {
   receipt_target_type: GovernedExecutionReceipt['target_type'];
   receipt_target_id: string | null;
   receipt_created_at: string;
+  receipt_closing_attestation_id: string;
 };
 
 export async function executeIntakeResolutionRow(
@@ -111,11 +122,13 @@ export async function executeIntakeResolutionRow(
   expectedVersion: number,
   expectedCurrentWorkVersion: number,
   clientRequestId: string,
+  closing: GovernedClosingAttestationInput,
 ): Promise<IntakeExecutionResult> {
   assertWorkspaceScope(workspaceId);
   const packetId = `pkt_${randomNanoid()}`;
   const receiptId = `ger_${randomNanoid()}`;
   const outboxId = `out_${randomNanoid()}`;
+  const closingAttestationId = `cla_${randomNanoid()}`;
   const [rows] = await withWorkspaceRlsContext<[ExecutionRow[]]>(sql, workspaceId, (tx) => [
     tx/*sql*/`
       WITH claimed AS (
@@ -199,12 +212,22 @@ export async function executeIntakeResolutionRow(
       ), receipt AS (
         INSERT INTO governed_execution_receipts (
           id, workspace_id, resolution_id, actor_user_id, client_request_id,
-          operation, target_type, target_id, result, effect_summary
+          operation, target_type, target_id, result, effect_summary, closing_attestation_id
         )
         SELECT ${receiptId}, workspace_id, resolution_id, actor_user_id, ${clientRequestId},
-          operation, target_type, target_id, 'completed', effect_summary
+          operation, target_type, target_id, 'completed', effect_summary, ${closingAttestationId}
           FROM effect WHERE target_id IS NOT NULL
         RETURNING *
+      ), closed AS (
+        INSERT INTO closing_attestations (
+          id, workspace_id, principal_id, correlation_id, role_key, closing_skill, outcome,
+          evidence_ref_ids, content_sha256, signature_alg, signature
+        )
+        SELECT ${closingAttestationId}, workspace_id, actor_user_id, resolution_id, ${closing.role_key},
+          ${closing.closing_skill}, ${closing.outcome}, ${closing.evidence_ref_ids}, ${closing.content_sha256},
+          ${closing.signature_alg}, ${closing.signature}
+          FROM receipt
+        RETURNING id
       ), queued AS (
         INSERT INTO projection_outbox (id, workspace_id, event_type, aggregate_type, aggregate_id, payload)
         SELECT ${outboxId}, workspace_id, 'governed_intake.executed', target_type, target_id,
@@ -213,8 +236,9 @@ export async function executeIntakeResolutionRow(
         RETURNING id
       )
       SELECT c.*, r.id AS receipt_id, r.client_request_id AS receipt_client_request_id, r.target_type AS receipt_target_type,
-        r.target_id AS receipt_target_id, r.created_at AS receipt_created_at
-      FROM claimed c JOIN receipt r ON r.resolution_id = c.id
+        r.target_id AS receipt_target_id, r.created_at AS receipt_created_at,
+        r.closing_attestation_id AS receipt_closing_attestation_id
+      FROM claimed c JOIN receipt r ON r.resolution_id = c.id JOIN closed x ON x.id = r.closing_attestation_id
     `,
   ]);
   const row = rows[0];
@@ -231,6 +255,7 @@ export async function executeIntakeResolutionRow(
       target_id: row.receipt_target_id,
       result: 'completed',
       effect_summary: row.effect_summary,
+      closing_attestation_id: row.receipt_closing_attestation_id,
       created_at: row.receipt_created_at,
     };
     return {
@@ -243,7 +268,8 @@ export async function executeIntakeResolutionRow(
 
   const [replayRows] = await withWorkspaceRlsContext<[ExecutionRow[]]>(sql, workspaceId, (tx) => [tx/*sql*/`
     SELECT c.*, r.id AS receipt_id, r.client_request_id AS receipt_client_request_id,
-      r.target_type AS receipt_target_type, r.target_id AS receipt_target_id, r.created_at AS receipt_created_at
+      r.target_type AS receipt_target_type, r.target_id AS receipt_target_id, r.created_at AS receipt_created_at,
+      r.closing_attestation_id AS receipt_closing_attestation_id
       FROM intake_resolutions c
       JOIN governed_execution_receipts r ON r.resolution_id = c.id
      WHERE c.id = ${resolutionId}
@@ -269,6 +295,7 @@ export async function executeIntakeResolutionRow(
       target_id: replay.receipt_target_id,
       result: 'completed',
       effect_summary: replay.effect_summary,
+      closing_attestation_id: replay.receipt_closing_attestation_id,
       created_at: replay.receipt_created_at,
     };
     return {

@@ -2,6 +2,7 @@
 import { spawnSync } from 'node:child_process';
 
 const gates = [
+  ['installed dependency parity', 'npm', ['run', 'verify:installed-dependencies']],
   ['provenance', 'npm', ['run', 'verify:provenance']],
   ['boundary', 'npm', ['run', 'verify:boundary']],
   ['runtime independence', 'npm', ['run', 'verify:no-mbp-runtime-dependency']],

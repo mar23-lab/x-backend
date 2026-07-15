@@ -24,6 +24,18 @@ export interface IntakeContextSummary {
   evidence_count: number;
 }
 
+export interface IntakePriorWorkSummary {
+  discovery_executed: true;
+  active_work_count: number;
+  pending_approval_count: number;
+  digest_sha256: string;
+}
+
+export interface IntakeFreshness {
+  generated_at: string;
+  expires_at: string;
+}
+
 export interface IntakeResolution {
   id: string;
   workspace_id: WorkspaceId;
@@ -39,6 +51,13 @@ export interface IntakeResolution {
   risk: IntakeRisk;
   authority: { allowed: boolean; safe_reason: string };
   context_summary: IntakeContextSummary;
+  prior_work: IntakePriorWorkSummary;
+  governance_summary: string;
+  role_label: string;
+  approach_label: string;
+  grounding_summary: string;
+  guardrails: string[];
+  freshness: IntakeFreshness;
   required_tools: string[];
   requires_confirmation: boolean;
   next_step: 'answer_now' | 'draft_plan' | 'confirm' | 'clarify' | 'blocked';
@@ -63,6 +82,13 @@ export interface IntakeResolutionInput {
   risk: IntakeRisk;
   authority: IntakeResolution['authority'];
   context_summary: IntakeContextSummary;
+  prior_work?: IntakePriorWorkSummary;
+  governance_summary?: string;
+  role_label?: string;
+  approach_label?: string;
+  grounding_summary?: string;
+  guardrails?: string[];
+  freshness?: IntakeFreshness;
   required_tools?: string[];
   requires_confirmation: boolean;
   next_step: IntakeResolution['next_step'];
@@ -82,7 +108,19 @@ export interface GovernedExecutionReceipt {
   target_id: string | null;
   result: 'completed';
   effect_summary: string;
+  /** Always present for executions created after staged migration 079; nullable on historical receipts. */
+  closing_attestation_id: string | null;
   created_at: string;
+}
+
+export interface GovernedClosingAttestationInput {
+  role_key: string;
+  closing_skill: string;
+  outcome: 'attested';
+  evidence_ref_ids: string[];
+  content_sha256: string;
+  signature_alg: 'none' | 'HS256';
+  signature: string | null;
 }
 
 export type IntakeExecutionResult =

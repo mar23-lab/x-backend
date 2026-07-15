@@ -16,6 +16,12 @@ const EXECUTION_ROW = {
   ...RESOLUTION,
   receipt_id: 'ger_1', receipt_client_request_id: 'execute_1',
   receipt_target_type: 'task_packet', receipt_target_id: 'pkt_1', receipt_created_at: '2026-07-15T00:00:01Z',
+  receipt_closing_attestation_id: 'cla_1',
+};
+
+const CLOSING = {
+  role_key: 'role.workspace.owner', closing_skill: 'skill.governed-execution-closeout', outcome: 'attested' as const,
+  evidence_ref_ids: ['intake-resolution:inr_1'], content_sha256: 'b'.repeat(64), signature_alg: 'none' as const, signature: null,
 };
 
 function sqlWith(transactionRows: unknown[][]) {
@@ -46,24 +52,26 @@ describe('single-intake transactional execution', () => {
 
   it('binds project validation and the execution idempotency key into the atomic write', async () => {
     const { sql, statements } = sqlWith([[EXECUTION_ROW]]);
-    const result = await executeIntakeResolutionRow(sql, 'ws_1', 'user_1', 'inr_1', 1, 0, 'execute_1');
-    expect(result).toMatchObject({ ok: true, packet_id: 'pkt_1', receipt: { client_request_id: 'execute_1' } });
+    const result = await executeIntakeResolutionRow(sql, 'ws_1', 'user_1', 'inr_1', 1, 0, 'execute_1', CLOSING);
+    expect(result).toMatchObject({ ok: true, packet_id: 'pkt_1', receipt: { client_request_id: 'execute_1', closing_attestation_id: 'cla_1' } });
     const write = statements.find((statement) => statement.text.includes('WITH claimed AS'))!;
     expect(write.text).toContain("p.workspace_id = intake_resolutions.workspace_id");
     expect(write.text).toContain("p.status <> 'archived'");
     expect(write.text).toContain('client_request_id');
     expect(write.values).toContain('execute_1');
+    expect(write.text).toContain('INSERT INTO closing_attestations');
+    expect(write.values).toContain('skill.governed-execution-closeout');
   });
 
   it('replays the original receipt for the same execution idempotency key', async () => {
     const { sql } = sqlWith([[], [EXECUTION_ROW]]);
-    const result = await executeIntakeResolutionRow(sql, 'ws_1', 'user_1', 'inr_1', 1, 0, 'execute_1');
+    const result = await executeIntakeResolutionRow(sql, 'ws_1', 'user_1', 'inr_1', 1, 0, 'execute_1', CLOSING);
     expect(result).toMatchObject({ ok: true, replayed: true, packet_id: 'pkt_1', receipt: { id: 'ger_1' } });
   });
 
   it('does not replay a consumed resolution for a different execution key', async () => {
     const { sql } = sqlWith([[], [EXECUTION_ROW]]);
-    const result = await executeIntakeResolutionRow(sql, 'ws_1', 'user_1', 'inr_1', 1, 0, 'execute_other');
+    const result = await executeIntakeResolutionRow(sql, 'ws_1', 'user_1', 'inr_1', 1, 0, 'execute_other', CLOSING);
     expect(result).toEqual({ ok: false, reason: 'already_consumed' });
   });
 });
