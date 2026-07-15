@@ -27,6 +27,15 @@ const FACTS = (): DataGraphFacts => ({
 });
 
 describe('buildDataGraph — derived projection', () => {
+  it('projects canonical task packets directly and links their source event', () => {
+    const facts = FACTS();
+    facts.unified.push({ id: 'evt-source', source_plane_id: 'evt-source', plane: 'event_sourcing', workspace_id: 'ws-1', project_id: 'proj-a', kind: 'event' });
+    facts.packets = [{ id: 'pkt-intake', workspace_id: 'ws-1', project_id: 'proj-a', event_id: 'evt-source', title: 'Launch pilot', summary: 'Governed intake result', created_at: '2026-07-15T00:00:00Z' }];
+    const { nodes, edges } = buildDataGraph('ws-1', facts);
+    expect(nodes.find((n) => n.id === 'packet:pkt-intake')).toMatchObject({ type: 'packet', plane: 'governance', description: 'Governed intake result' });
+    expect(edges).toContainEqual({ from: 'project:proj-a', to: 'packet:pkt-intake', type: 'scopes' });
+    expect(edges).toContainEqual({ from: 'packet:pkt-intake', to: 'event:evt-source', type: 'caused_by' });
+  });
   it('projects the 6 node types, workspace-scoped, with the right edges', () => {
     const { nodes, edges } = buildDataGraph('ws-1', FACTS());
     const byType = (t: string) => nodes.filter((n) => n.type === t).map((n) => n.ref_id).sort();

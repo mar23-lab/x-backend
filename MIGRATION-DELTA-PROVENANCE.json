@@ -104,6 +104,33 @@
         { "path": "src/workers/routes/intake.ts", "target_blob": "719af21f530ac989a2d4469058f9af32aba33aef", "reason": "exposes tenant-scoped resolve and idempotent immutable execute endpoints" },
         { "path": "vitest.workers.config.ts", "target_blob": "3498585088f22e7ce7ab8340699592feeaf021c7", "reason": "uses the supported Cloudflare Vitest 4 configuration contract" }
       ]
+    },
+    {
+      "delta_id": "tenant-projection-queue-shadow-20260715",
+      "generated_at": "2026-07-15T02:50:00Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "f5946de435ed367e509408907160ce54218551f6",
+      "target_base_commit": "f5946de435ed367e509408907160ce54218551f6",
+      "authority": "shadow_only_no_production_cutover",
+      "copied_files": [],
+      "transformed_files": [
+        { "path": "docs/architecture/backend/PRODUCTION_DEPENDENCIES.md", "target_blob": "1ff964bf99941fac14bad02af2c9305147b95b7b", "reason": "records the default-off Queue dependency and keeps activation explicitly unapproved" },
+        { "path": "docs/deployment/TENANT_PROJECTION_QUEUE_ACTIVATION.md", "target_blob": "87fd5ffdabcc545818a25a59d4aa9e0ecbc2c54a", "reason": "defines isolated canary, retry, DLQ, evidence and rollback requirements without authorizing activation" },
+        { "path": "docs/graph/GRAPH_SUBSTRATE_MANIFEST.yml", "target_blob": "bed7abdd87048dbca25430dec44e887c62b3e600", "reason": "declares canonical task packets and event-driven projection while preserving the stale census as unobserved" },
+        { "path": "scripts/verify-projection-substrate-evidence.mjs", "target_blob": "833b665938291f586644916cc5ebca7dc9803819", "reason": "allows explicit unobserved census states but forbids fed claims until every core source is measured" },
+        { "path": "src/workers/__tests__/data-graph.test.ts", "target_blob": "d941ae44a5158088a1cf7da91ca93cdf413a59da", "reason": "proves canonical intake packets and their source-event causation enter the derived graph" },
+        { "path": "src/workers/__tests__/projection-outbox-store.test.ts", "target_blob": "6f01bc0c0b534788757bb47fcc45a7b32055bf44", "reason": "proves bounded skip-locked dispatch and two-key tenant mutation scope" },
+        { "path": "src/workers/__tests__/tenant-projection-queue.test.ts", "target_blob": "83003a2bc0cfc9d024284e8ab8a4ea267a842fed", "reason": "proves dormant mode, opaque dispatch, tenant binding, idempotent replay, retry and DLQ behavior" },
+        { "path": "src/workers/crons/index.ts", "target_blob": "611d76b4e1e337b9d8d010c314bb6f25888d1b6d", "reason": "chains the default-off dispatcher into the existing five-minute schedule without adding a trigger" },
+        { "path": "src/workers/crons/tenant-projection-dispatch.ts", "target_blob": "861d25aea6f2cb9080d982527dbf443dc5851cb4", "reason": "adapts transactional outbox dispatch to the cron result and observability contract" },
+        { "path": "src/workers/crons/types.ts", "target_blob": "fd5f9e74a92027a3c6d8f39271f305defa6ae030", "reason": "adds optional default-off Queue and outbox gateways to the cron boundary" },
+        { "path": "src/workers/dal/graph-store.ts", "target_blob": "19c14d332970d59db9d70495d96cfea3eb725ce3", "reason": "feeds canonical task packets directly into tenant graph fact assembly" },
+        { "path": "src/workers/dal/projection-outbox-store.ts", "target_blob": "d46b6cdedb46fbd87b7ceba7ef6bfe8c5c9ec8c0", "reason": "implements bounded dispatch claims and tenant-bound process, retry and dead-letter transitions" },
+        { "path": "src/workers/db/migrations/076_tenant_projection_outbox_lifecycle.sql", "target_blob": "2a42bdb9b68c319ecbbc4b8e8b72acf153e904ee", "reason": "stages additive outbox lifecycle columns and indexes without applying or activating them" },
+        { "path": "src/workers/graph/data-graph.ts", "target_blob": "ddeec396111796e12b3bcbf10f5fa6159ef5f64f", "reason": "projects canonical task packets and source-event causation as derived tenant lineage" },
+        { "path": "src/workers/index.ts", "target_blob": "7ad494ac15b96a4c27237376fd75bd80facf672b", "reason": "binds the dormant outbox dispatcher and tenant-safe Queue consumer into the Worker runtime" },
+        { "path": "src/workers/services/tenant-projection-queue.ts", "target_blob": "de65c29a3cc686bd88a815d355fbbef31b4edfb1", "reason": "implements opaque Queue messages, at-least-once idempotency, backoff and durable DLQ recording" }
+      ]
     }
   ]
 }

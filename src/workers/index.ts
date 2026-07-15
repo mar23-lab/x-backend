@@ -88,6 +88,20 @@ import { workspacesRoute } from './routes/workspaces';             // R54-S3-C �
 import { pmfRoute } from './routes/pmf';                            // Wave 2 · PMF (Sean Ellis) must-have metric
 import { requireAdmin, type AdminEnv } from './middleware/admin';
 import type { NotifierEnv } from './services/email-notifier';
+import {
+  consumeTenantProjectionBatch,
+  type ProjectionQueueBatch,
+  type ProjectionQueueBinding,
+} from './services/tenant-projection-queue';
+import {
+  beginProjectionOutboxAttempt,
+  claimProjectionOutboxRows,
+  markProjectionOutboxDeadLettered,
+  markProjectionOutboxDispatched,
+  markProjectionOutboxFailed,
+  markProjectionOutboxProcessed,
+  releaseProjectionOutboxDispatch,
+} from './dal/projection-outbox-store';
 
 // Note: InvestorEnv not extended here — CLERK_SECRET_KEY is already provided
 // by AuthEnv (required string) which is compatible. InvestorEnv adds only
@@ -113,6 +127,9 @@ export interface AppEnv extends CorsEnv, AuthEnv, AdminEnv, NotifierEnv, MbpProj
   XLOOOP_DEPLOY_SHA?: string;              // Track A (260713) · build SHA stamped into receipt provenance (deploy_sha) — unset ⇒ null (unstamped)
   SINGLE_INTAKE_ENABLED?: string;           // Commercial hardening; default OFF and not activated in this plan
   CONTEXT_PACKET_PERSISTENCE_ENABLED?: string; // Commercial pilot lineage gate; default OFF
+  TENANT_PROJECTION_QUEUE_ENABLED?: string; // Commercial projection dispatcher; default OFF
+  TENANT_PROJECTION_QUEUE?: ProjectionQueueBinding; // Provisioning intentionally excluded until approved
+  GRAPH_DOCUMENT_NODES_ENABLED?: string;
 }
 
 export type AppVariables = AuthVariables & {
@@ -350,6 +367,15 @@ const scheduledHandler = async (
         listDue: (nowDateIso: string, limit: number) => listGoalsWithReviewDueRow(sql, nowDateIso, limit),
         bumpReviewDue: (goalId: string, nextReviewDue: string) => updateGoalReviewDueRow(sql, goalId, nextReviewDue),
       },
+      projectionOutbox: {
+        claim: (limit, nowIso, staleBeforeIso) => claimProjectionOutboxRows(sql, limit, nowIso, staleBeforeIso),
+        markDispatched: (ids, nowIso) => markProjectionOutboxDispatched(sql, ids, nowIso),
+        releaseDispatch: (ids, errorCode) => releaseProjectionOutboxDispatch(sql, ids, errorCode),
+        beginAttempt: (workspaceId, outboxId, nowIso) => beginProjectionOutboxAttempt(sql, workspaceId, outboxId, nowIso),
+        markProcessed: (workspaceId, outboxId, nowIso) => markProjectionOutboxProcessed(sql, workspaceId, outboxId, nowIso),
+        markFailed: (workspaceId, outboxId, errorCode) => markProjectionOutboxFailed(sql, workspaceId, outboxId, errorCode),
+        markDeadLettered: (workspaceId, outboxId, nowIso, errorCode) => markProjectionOutboxDeadLettered(sql, workspaceId, outboxId, nowIso, errorCode),
+      },
     });
     console.log(`[cron:${entry.loop_name}]`, JSON.stringify(result));
     // A cron returning status:'failed' has SWALLOWED its error into the result envelope (the composite
@@ -370,6 +396,41 @@ const scheduledHandler = async (
   }
 };
 
+const tenantProjectionQueueHandler = async (
+  batch: ProjectionQueueBatch,
+  env: AppEnv,
+  ctx: { waitUntil: (promise: Promise<unknown>) => void },
+): Promise<void> => {
+  const sql = neonClient(env.DATABASE_URL);
+  const rlsSql = env.XLOOOP_RLS_APP_DATABASE_URL ? neonClient(env.XLOOOP_RLS_APP_DATABASE_URL) : sql;
+  const dal = new WorkersDalAdapter(sql, rlsSql);
+  const result = await consumeTenantProjectionBatch({
+    batch,
+    graph: dal,
+    gateway: {
+      claim: (limit, nowIso, staleBeforeIso) => claimProjectionOutboxRows(sql, limit, nowIso, staleBeforeIso),
+      markDispatched: (ids, nowIso) => markProjectionOutboxDispatched(sql, ids, nowIso),
+      releaseDispatch: (ids, errorCode) => releaseProjectionOutboxDispatch(sql, ids, errorCode),
+      beginAttempt: (workspaceId, outboxId, nowIso) => beginProjectionOutboxAttempt(sql, workspaceId, outboxId, nowIso),
+      markProcessed: (workspaceId, outboxId, nowIso) => markProjectionOutboxProcessed(sql, workspaceId, outboxId, nowIso),
+      markFailed: (workspaceId, outboxId, errorCode) => markProjectionOutboxFailed(sql, workspaceId, outboxId, errorCode),
+      markDeadLettered: (workspaceId, outboxId, nowIso, errorCode) => markProjectionOutboxDeadLettered(sql, workspaceId, outboxId, nowIso, errorCode),
+    },
+    now: () => new Date(),
+    includeDocuments: String(env.GRAPH_DOCUMENT_NODES_ENABLED || '').toLowerCase() === 'true',
+  });
+  console.log('[tenant-projection-queue]', JSON.stringify({
+    queue: batch.queue,
+    messages: batch.messages.length,
+    acknowledged: result.acknowledged,
+    retried: result.retried,
+    dead_lettered: result.dead_lettered,
+    invalid: result.invalid,
+    projected: result.projected.length,
+  }));
+  try { ctx.waitUntil(sentryFlush()); } catch { /* test/runtime context may not expose waitUntil */ }
+};
+
 // A-W6 ACTIVATION (260707) · wrap the exported handler with Sentry. withSentry initializes the SDK
 // per-request from the env (Workers have no module-load env), captures unhandled exceptions, and is a
 // PASS-THROUGH no-op when sentryOptions(env) returns undefined (SENTRY_DSN unbound) — dormant-safe.
@@ -379,6 +440,7 @@ export default Sentry.withSentry(
   {
     fetch: app.fetch.bind(app),
     scheduled: scheduledHandler,
+    queue: tenantProjectionQueueHandler,
   },
 );
 

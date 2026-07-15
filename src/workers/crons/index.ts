@@ -34,6 +34,7 @@ import { shadowEvalCron } from './shadow-eval';
 import { reviewScheduleCron } from './review-schedule';
 import { reclassifyUnattributedCron } from './reclassify-unattributed';
 import { graphRebuildCron } from './graph-rebuild';
+import { tenantProjectionDispatchCron } from './tenant-projection-dispatch';
 import { runOperationsQueueConsumer, type QueueConsumerResult } from '../services/operations-queue-consumer';
 import type { CronHandler, CronHandlerResult, CronRegistryEntry } from './types';
 
@@ -47,6 +48,40 @@ export { calibrationRetrainCron } from './calibration-retrain';
 export { shadowEvalCron } from './shadow-eval';
 export { reclassifyUnattributedCron } from './reclassify-unattributed';
 export { graphRebuildCron } from './graph-rebuild';
+export { tenantProjectionDispatchCron } from './tenant-projection-dispatch';
+
+// Commercial single-intake projection dispatch shares the existing five-minute trigger. Both loops
+// execute independently; the projection lane is default-off and cannot degrade propagation while inert.
+const propagationThenTenantProjection: CronHandler = async (ctx) => {
+  let primary: CronHandlerResult | null = null;
+  let primaryError: string | null = null;
+  try { primary = await propagationTickCron(ctx); }
+  catch (error) { primaryError = error instanceof Error ? error.message : String(error); }
+  let projection: CronHandlerResult | null = null;
+  let projectionError: string | null = null;
+  try { projection = await tenantProjectionDispatchCron(ctx); }
+  catch (error) { projectionError = error instanceof Error ? error.message : String(error); }
+  const base = primary ?? {
+    loop_name: 'propagation_tick+tenant_projection_dispatch',
+    run_id: `composite_${ctx.now().toISOString()}`,
+    actions_taken: 0,
+    cost_ms: 0,
+    status: 'failed' as const,
+    error: primaryError ?? undefined,
+  };
+  const projectionFailed = projection?.status === 'failed' || projection?.status === 'degraded' || Boolean(projectionError);
+  return {
+    ...base,
+    status: base.status === 'failed' ? 'failed' : projectionFailed ? 'degraded' : base.status,
+    actions_taken: base.actions_taken + (projection?.actions_taken ?? 0),
+    metadata: {
+      ...(base.metadata ?? {}),
+      propagation_error: primaryError,
+      tenant_projection_dispatch: projection ? { status: projection.status, actions_taken: projection.actions_taken, ...(projection.metadata ?? {}) } : null,
+      tenant_projection_dispatch_error: projectionError,
+    },
+  };
+};
 
 // ARCH-004 Phase A: the 5-cron wrangler limit + single-handler-per-expression dispatch means new loops
 // CHAIN into an existing slot (the established pattern — "chaining pairs of daily loops"). The hourly
@@ -189,9 +224,9 @@ const calibrationRetrainThenReviewSchedule: CronHandler = async (ctx) => {
 export const CRON_REGISTRY: ReadonlyArray<CronRegistryEntry> = Object.freeze([
   {
     cron: '*/5 * * * *',
-    loop_name: 'propagation_tick',
-    handler: propagationTickCron,
-    description: 'R49\' PR-5+6 propagation worker · 5-minute tick',
+    loop_name: 'propagation_tick+tenant_projection_dispatch',
+    handler: propagationThenTenantProjection,
+    description: 'R49 propagation worker + default-off tenant projection outbox dispatcher · 5-minute tick',
   },
   {
     cron: '0 * * * *',

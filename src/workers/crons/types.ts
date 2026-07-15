@@ -8,6 +8,7 @@
 
 import type { DalAdapter } from '../dal/DalAdapter';
 import type { GoalReviewDueRow } from '../dal/propagation-store';
+import type { ProjectionOutboxGateway, ProjectionQueueBinding } from '../services/tenant-projection-queue';
 
 /**
  * A10 review-scheduler data gateway. Injected into the cron context (like `env.AI`) rather than added to
@@ -56,10 +57,17 @@ export interface CronHandlerContext {
     // enables it — flag-off performs ZERO DB reads/writes. Reads goals with review_due<=now, emits a
     // needs_review operation_event per due goal, and bumps review_due by the cadence.
     REVIEW_SCHEDULER_ENABLED?: string;
+    // Default OFF. The binding is deliberately optional until an operator-approved non-production
+    // queue resource exists; enabled-without-binding fails visibly rather than dropping work.
+    TENANT_PROJECTION_QUEUE_ENABLED?: string;
+    TENANT_PROJECTION_QUEUE?: ProjectionQueueBinding;
   };
   // A10 (260713) · review-scheduler data gateway (bound from store functions in the dispatcher). Optional
   // + additive: existing loops ignore it. Only reviewScheduleCron reads it, and only when its flag is on.
   readonly reviewSchedule?: ReviewScheduleGateway;
+  /** Cross-tenant dispatcher control plane. Messages contain only opaque outbox/workspace ids; the
+   * consumer re-binds every read/write to both values before projecting one tenant. */
+  readonly projectionOutbox?: ProjectionOutboxGateway;
 }
 
 /**
