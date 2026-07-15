@@ -49,6 +49,13 @@ healthRoute.get('/health', (ctx) => {
     bindings: {
       tenant_projection_queue: Boolean(env.TENANT_PROJECTION_QUEUE),
     },
+    capabilities: {
+      sign_offs: true,
+      single_intake: true,
+      customer_chat: true,
+      source_connections: true,
+      document_uploads: true,
+    },
     // A-W6 · public-safe activation signal: true iff the SDK is bound to a valid (parseable) DSN — the
     // honest getDsn() probe, not merely a bound client. (The temporary DSN-shape triage fields — dsn_len,
     // dsn_looks_like_url — were removed once the malformed-DSN incident was resolved 260707.)

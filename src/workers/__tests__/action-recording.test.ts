@@ -97,8 +97,17 @@ describe('ARCH-006 W1.2 — sign-off records an operation-tier event', () => {
     expect(res.status).toBe(201);
     expect(events.length).toBe(1);
     expect(events[0].event).toMatchObject({ source_tool: 'xlooop', agent_id: 'xlooop:operator-action', status: 'completed' });
-    expect(String(events[0].event.summary)).toMatch(/^\[sign-off approved\] evt-123/);
+    expect(String(events[0].event.summary)).toMatch(/^\[sign-off approval\] evt-123/);
     expect(String(events[0].event.id)).toMatch(/^evt_signoff_/);
+    const body = await res.json() as any;
+    expect(body.receipt_id).toBe('signoff:so-1');
+    expect(body.receipt).toMatchObject({
+      schema_id: 'xlooop.signoff_receipt.v1',
+      event_id: 'evt-123',
+      workspace_id: 'mbp-private',
+      actor_user_id: 'user_op',
+      decision_kind: 'approval',
+    });
   });
 
   it('a rejected sign-off records status needs_review (the item stays open)', async () => {
@@ -114,6 +123,34 @@ describe('ARCH-006 W1.2 — sign-off records an operation-tier event', () => {
     }, ENV as never);
     expect(res.status).toBe(201);
     expect(events[0].event.status).toBe('needs_review');
+  });
+
+  it('records request-changes as a noted decision with an explicit receipt kind', async () => {
+    const events: EventCall[] = [];
+    const dal = {
+      createSignOff: async (_ws: string, _user: string, input: Record<string, unknown>) => ({ id: 'so-4', ...input, signed_at: '2026-07-15T00:00:00.000Z' }),
+      upsertEvent: async (ws: string, event: Record<string, unknown>) => { events.push({ ws, event }); return { id: String(event.id), created: true }; },
+    };
+    const app = mount(signOffsRoute, dal);
+    const res = await app.request('/api/v1/sign-offs', {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ event_id: 'evt-10', verdict: 'noted', decision_kind: 'request_changes', comment: 'Add the missing acceptance criteria.' }),
+    }, ENV as never);
+    expect(res.status).toBe(201);
+    const body = await res.json() as any;
+    expect(body.receipt.decision_kind).toBe('request_changes');
+    expect(events[0].event.summary).toBe('[sign-off request_changes] evt-10');
+    expect(events[0].event.body).toBe('Add the missing acceptance criteria.');
+    expect(events[0].event.status).toBe('needs_review');
+  });
+
+  it('rejects request-changes without a reason', async () => {
+    const app = mount(signOffsRoute, { createSignOff: async () => { throw new Error('must not run'); } });
+    const res = await app.request('/api/v1/sign-offs', {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ event_id: 'evt-10', verdict: 'noted', decision_kind: 'request_changes' }),
+    }, ENV as never);
+    expect(res.status).toBe(400);
   });
 
   it('a throwing event mirror NEVER blocks the sign-off (still 201)', async () => {

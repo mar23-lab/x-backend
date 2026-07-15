@@ -225,6 +225,22 @@
         { "path": "src/workers/__tests__/intake-store.test.ts", "target_blob": "5b5692828843505da7199c35f141aa9dac698675", "reason": "proves atomic closing-attestation insertion and receipt linkage" },
         { "path": "src/workers/db/migrations/079_commercial_completion_lineage.sql", "target_blob": "c47d3765eadbfb47559be71723d8cb5d40ee2404", "reason": "stages additive preview-governance and execution-closeout persistence without applying or activating it" }
       ]
+    },
+    {
+      "delta_id": "live-signoff-trust-hardening-20260715",
+      "generated_at": "2026-07-15T06:15:00Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "08b02cdecf65f6fbdf136daeba2191963fd0392b",
+      "target_base_commit": "08b02cdecf65f6fbdf136daeba2191963fd0392b",
+      "authority": "shadow_only_no_production_cutover",
+      "copied_files": [],
+      "transformed_files": [
+        { "path": "src/workers/__tests__/action-recording.test.ts", "target_blob": "3a98591b83150a6fdf52050d74ba4baa52f7d71b", "reason": "proves receipt-bearing approval, rejection and request-changes behavior" },
+        { "path": "src/workers/__tests__/health.test.ts", "target_blob": "576e3a670acb3916c36a0a9ed7cba4ff3952e496", "reason": "proves the public-safe commercial capability handshake" },
+        { "path": "src/workers/dal/types/event.ts", "target_blob": "24de5a9c3daf40843b712a768754540b3a403b77", "reason": "types request-changes separately from approval and rejection without widening the persisted verdict enum" },
+        { "path": "src/workers/routes/health.ts", "target_blob": "ec878b1bbdb3f323bb638b791263a9fc50630cb5", "reason": "publishes mounted commercial route capabilities for fail-closed frontend startup" },
+        { "path": "src/workers/routes/sign-offs.ts", "target_blob": "5970a0afcd8aaf0d2061e8c438ea8c5334d6e36a", "reason": "returns durable sign-off receipts and preserves request-changes as needs-review" }
+      ]
     }
   ]
 }

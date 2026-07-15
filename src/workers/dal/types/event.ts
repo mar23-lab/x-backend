@@ -277,6 +277,8 @@ export interface SignOffInput {
   event_id: EventId;
   verdict: SignOffVerdict;
   comment?: string | null;
+  /** Distinguishes a review note from an explicit request to revise without widening the DB enum. */
+  decision_kind?: 'approval' | 'rejection' | 'request_changes';
 }
 
 export interface SignOff {
