@@ -80,6 +80,24 @@ signOffsRoute.post('/sign-offs', async (ctx) => {
         request_id: ctx.get('request_id'),
       });
     }
+    const decisionKind = body.decision_kind
+      ?? (body.verdict === 'approved' ? 'approval' : body.verdict === 'rejected' ? 'rejection' : null);
+    if (decisionKind && !['approval', 'rejection', 'request_changes'].includes(decisionKind)) {
+      ctx.status(400);
+      return ctx.json({
+        error: 'decision_kind must be one of: approval, rejection, request_changes',
+        code: 'VALIDATION_ERROR',
+        request_id: ctx.get('request_id'),
+      });
+    }
+    if (decisionKind === 'request_changes' && (body.verdict !== 'noted' || !body.comment?.trim())) {
+      ctx.status(400);
+      return ctx.json({
+        error: 'request_changes requires verdict=noted and a non-empty comment',
+        code: 'VALIDATION_ERROR',
+        request_id: ctx.get('request_id'),
+      });
+    }
 
     const dal = ctx.get('dal');
     // JB (260714) · operator-workspace-scope for WRITES (owner-gated). Flag OFF ⇒ authWs unconditionally
@@ -111,8 +129,8 @@ signOffsRoute.post('/sign-offs', async (ctx) => {
         id: `evt_signoff_${soId}`.replace(/[^a-zA-Z0-9_]/g, '_').slice(0, 128),
         source_tool: 'xlooop',
         agent_id: 'xlooop:operator-action',
-        status: body.verdict === 'rejected' ? 'needs_review' : 'completed',
-        summary: `[sign-off ${body.verdict}] ${body.event_id}`.slice(0, 512),
+        status: body.verdict === 'rejected' || decisionKind === 'request_changes' ? 'needs_review' : 'completed',
+        summary: `[sign-off ${decisionKind || body.verdict}] ${body.event_id}`.slice(0, 512),
         body: typeof body.comment === 'string' ? body.comment.slice(0, 400) : null,
         visibility: 'internal_workspace',
         occurred_at: new Date().toISOString(),
@@ -138,7 +156,23 @@ signOffsRoute.post('/sign-offs', async (ctx) => {
       } catch (_) { /* delivery must never block the sign-off */ }
     }
     ctx.status(201);
-    return ctx.json(signOff);
+    const signOffId = String((signOff as unknown as { id?: number | string }).id ?? 'unknown');
+    return ctx.json({
+      ...signOff,
+      receipt_id: `signoff:${signOffId}`,
+      receipt: {
+        schema_id: 'xlooop.signoff_receipt.v1',
+        id: `signoff:${signOffId}`,
+        sign_off_id: signOffId,
+        event_id: body.event_id,
+        workspace_id,
+        actor_user_id: user_id,
+        verdict: body.verdict,
+        decision_kind: decisionKind || body.verdict,
+        recorded_at: (signOff as unknown as { signed_at?: string }).signed_at || new Date().toISOString(),
+        request_id: ctx.get('request_id'),
+      },
+    });
   } catch (err) {
     return errorEnvelope(ctx, err);
   }

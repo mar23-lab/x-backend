@@ -62,6 +62,13 @@ describe('GET /api/v1/health', () => {
       current_work_projection: true,
     });
     expect(body.bindings.tenant_projection_queue).toBe(true);
+    expect(body.capabilities).toMatchObject({
+      sign_offs: true,
+      single_intake: true,
+      customer_chat: true,
+      source_connections: true,
+      document_uploads: true,
+    });
   });
 
   it('exposes a REAL deploy signal: build / built_at injected at deploy (HR-CONFIG-REALITY-MATCH-1)', async () => {
