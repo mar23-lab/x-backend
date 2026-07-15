@@ -26,6 +26,8 @@ export type ObservabilityKind =
   | 'llm_usage'                // an LLM answer's per-tenant token usage was metered (llm-usage-store · G2 260711)
   | 'policy_shadow_decision'   // a policy-engine evaluator fired on a governed write in SHADOW mode (policy-shadow · A7 260713)
   | 'role_skill_resolution'    // the role/skill resolver observed a governed-write decision in SHADOW mode (role-skill-shadow · OAR-W2 260713)
+  | 'context_packet_persisted' // an LLM run persisted role/skill + role-scoped context lineage before invocation
+  | 'skill_invocation_completed' // an LLM/tool capability completed with a durable skill receipt
   | 'role_skill_receipt_write_failed'; // a shadow receipt write rejected — telemetry so evidence loss is never silent (role-skill-shadow · Track A 260713)
 
 /** Emit one structured observability event. Never throws; never blocks. */

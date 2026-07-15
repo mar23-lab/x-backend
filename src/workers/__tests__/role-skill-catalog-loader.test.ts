@@ -17,17 +17,17 @@ describe('buildCatalogBindings — archetype→membership mapping', () => {
   const b = buildCatalogBindings();
 
   it('derives one binding per (membership-role × archetype skill)', () => {
-    expect(b.length).toBe(9);
+    expect(b.length).toBe(14);
     expect(b.every((x) => x.source === 'catalog' && x.lifecycle === 'active')).toBe(true);
   });
 
-  it('maps the archetypes to membership roles; viewer/client get NO governed-write skill (honest read-only)', () => {
+  it('maps governed-write skills narrowly and grounded assistance to every workspace role', () => {
     const byRole = b.reduce<Record<string, number>>((a, x) => ((a[x.role] = (a[x.role] || 0) + 1), a), {});
-    expect(byRole.owner).toBe(4);
-    expect(byRole.operator).toBe(4);
-    expect(byRole.collaborator).toBe(1);
-    expect(byRole.viewer).toBeUndefined();
-    expect(byRole.client).toBeUndefined();
+    expect(byRole.owner).toBe(5);
+    expect(byRole.operator).toBe(5);
+    expect(byRole.collaborator).toBe(2);
+    expect(byRole.viewer).toBe(1);
+    expect(byRole.client).toBe(1);
     expect(ARCHETYPE_TO_MEMBERSHIP['role.operator-lead']).toContain('owner');
   });
 
@@ -49,7 +49,7 @@ describe('catalogBindingsIfEnabled — flag gating (shadow-first)', () => {
   it('ON ⇒ the catalog bindings + the manifest fingerprint', () => {
     const out = catalogBindingsIfEnabled({ ROLE_SKILL_CATALOG_ENABLED: 'true' });
     expect(out).not.toBeNull();
-    expect(out!.bindings.length).toBe(9);
+    expect(out!.bindings.length).toBe(14);
     expect(out!.catalog_manifest_sha256).toBe(CATALOG_MANIFEST_SHA256);
     expect(/^[a-f0-9]{64}$/.test(CATALOG_MANIFEST_SHA256)).toBe(true);
   });
@@ -81,5 +81,12 @@ describe('KEYSTONE — the resolver produces REAL resolution, not no_catalog', (
     const r = resolveRoleAndSkills({ ...input, role: 'viewer' }, bindings, NOW);
     expect(r.verdict.allowed).toBe(false);
     expect(r.skill_coverage).toBe('no_skill_for_action');
+  });
+
+  it('a viewer resolves grounded assistance without gaining governed-write authority', () => {
+    const { bindings } = catalogBindingsIfEnabled({ ROLE_SKILL_CATALOG_ENABLED: 'true' })!;
+    const r = resolveRoleAndSkills({ ...input, role: 'viewer', mode: 'watch', action: 'assistant:answer', requiresOperatorMode: false }, bindings, NOW);
+    expect(r.verdict.allowed).toBe(true);
+    expect(r.selected_skills.map((s) => s.key)).toEqual(['skill.workspace-assistant.grounded-assistance']);
   });
 });

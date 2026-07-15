@@ -61,6 +61,7 @@ import { developerAccessRoute } from './routes/developer-access';
 import { customerWorkspaceFeedRoute } from './routes/customer-workspace-feed';
 import { currentWorkRoute } from './routes/current-work'; // Wave I · customer-safe Current Work read-projection (CURRENT_WORK_PROJECTION_ENABLED default OFF)
 import { customerChatRoute } from './routes/customer-chat'; // Customer-safe AI chat (tenant-isolated, company-aware)
+import { intakeRoute } from './routes/intake'; // Default-off canonical resolve -> preview -> execute intake
 import { customerLineageRoute } from './routes/customer-lineage'; // W3 · customer's own lineage/graph read (tenant-safe)
 import { chatReceiptRoute } from './routes/chat-receipt'; // W2 · per-answer audit receipt (tenant-safe, redacted)
 import { customerAuditLogRoute } from './routes/customer-audit-log'; // W2 · customer-scoped audit export (redacted)
@@ -110,6 +111,8 @@ export interface AppEnv extends CorsEnv, AuthEnv, AdminEnv, NotifierEnv, MbpProj
   RESOLUTION_RECEIPT_SIGNING_SECRET?: string; // OAR-W2 · HS256 secret for resolution/denial receipts (wrangler secret put) — unset ⇒ receipts written UNSIGNED (shadow never 503s)
   RESOLUTION_RECEIPT_SIGNING_KEY_ID?: string; // Track A (260713) · rotation label persisted on signed receipts — unset ⇒ 'default'
   XLOOOP_DEPLOY_SHA?: string;              // Track A (260713) · build SHA stamped into receipt provenance (deploy_sha) — unset ⇒ null (unstamped)
+  SINGLE_INTAKE_ENABLED?: string;           // Commercial hardening; default OFF and not activated in this plan
+  CONTEXT_PACKET_PERSISTENCE_ENABLED?: string; // Commercial pilot lineage gate; default OFF
 }
 
 export type AppVariables = AuthVariables & {
@@ -228,6 +231,7 @@ protectedRoutes.route('/', customerRoute);           // R55 · POST /customer/au
 protectedRoutes.route('/', developerAccessRoute);    // Customer-safe API/Desktop setup status + redacted connection receipt
 protectedRoutes.route('/', customerWorkspaceFeedRoute); // Customer-safe starter/read-only feed
 protectedRoutes.route('/', customerChatRoute);       // Customer-safe AI chat — tenant-isolated, company-aware (POST /customer-chat)
+protectedRoutes.route('/', intakeRoute);             // Canonical customer intake (default OFF)
 protectedRoutes.route('/', actionIntentShadowRoute); // Advisory action-intent classifier (default-off; never role/skill authority)
 protectedRoutes.route('/', customerLineageRoute);    // W3 · customer lineage + graph digest (GET /customer-lineage, /customer-graph-digest)
 protectedRoutes.route('/', chatReceiptRoute);        // W2 · per-answer audit receipt (GET /chat/receipt/:receipt_uid)

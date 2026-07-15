@@ -38,7 +38,7 @@ export async function sealContextPacket(secret: string | undefined, packet: Cont
 }
 
 /** Persist one context packet + its integrity receipt. Column set matches mig-071 exactly. */
-export async function insertContextPacketRow(sql: Sql, packet: ContextPacket, receipt: SignedReceipt): Promise<void> {
+export async function insertContextPacketRow(sql: Sql, packet: ContextPacket, receipt: SignedReceipt): Promise<string> {
   const id = `cpk_${crypto.randomUUID()}`;
   const s = packet.context_scope;
   await sql/*sql*/`
@@ -57,4 +57,5 @@ export async function insertContextPacketRow(sql: Sql, packet: ContextPacket, re
       ${packet.freshness.stale_after_s}, ${packet.freshness.generated_at}
     )
   `;
+  return id;
 }

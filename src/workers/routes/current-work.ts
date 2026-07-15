@@ -92,13 +92,38 @@ currentWorkRoute.get('/current-work', async (ctx) => {
     }
 
     const total = events.length;
+    const generatedAt = new Date().toISOString();
+    const sourceWatermark = events
+      .map((e) => String((e as unknown as { occurred_at?: string; created_at?: string; updated_at?: string }).updated_at
+        || (e as unknown as { occurred_at?: string }).occurred_at
+        || (e as unknown as { created_at?: string }).created_at || ''))
+      .filter(Boolean).sort().at(-1) || null;
     const payload = {
-      schema_id: 'xlooop.current_work_projection.v1',
-      generated_at: new Date().toISOString(),
+      schema_id: 'xlooop.current_work_projection.v2',
+      projection_version: 2,
+      generated_at: generatedAt,
       workspace_id: workspaceId,
       project_id: projectId,
+      current_work_version: sourceWatermark || 'empty',
+      source_watermark: sourceWatermark,
+      freshness: {
+        status: sourceWatermark ? 'live' : (events.length ? 'unobservable' : 'empty'),
+        generated_at: generatedAt,
+        source_updated_at: sourceWatermark,
+      },
       // canonical, coarse, counts-only (customer-safe doctrine: never evidence ids, never engine chains)
-      focus,
+      focus: focus ? {
+        ...focus,
+        focus_id: focus.event_id || null,
+        object_type: focus.event_id ? 'event' : 'none',
+        lifecycle: focus.state,
+        version: null,
+        version_status: 'not_available_from_event_projection',
+        target: { type: focus.event_id ? 'event' : 'none', id: focus.event_id || null, label: focus.title },
+        action: focus.primary_action,
+        blocked_reason: focus.state === 'blocked' ? focus.title : null,
+        review_state: focus.state === 'needs_review' ? 'requested' : focus.state === 'all_clear' ? 'not_required' : 'none',
+      } : null,
       counts: {
         needs_you: pending.length,
         blocked: blocked.length,
@@ -108,6 +133,8 @@ currentWorkRoute.get('/current-work', async (ctx) => {
       },
       // evidence is a COUNT, never ids
       evidence_count: events.filter((e) => Boolean(e.evidence_link)).length,
+      receipt_count: null,
+      receipt_count_status: 'unobservable_until_execution_receipt_read_is_wired',
     };
 
     return ctx.json(withDataClass(withAuthority(payload, auth, 'current_work'), 'live'));

@@ -44,7 +44,7 @@ describe('role-skill catalog publisher (OAR-W3)', () => {
   it('T1 · the shipped catalog parses and validates with zero errors', () => {
     expect(CATALOG.schema_id).toBe('xlooop.role_skill_catalog.v1');
     expect(validateCatalog(CATALOG, { agentKeys: [] })).toEqual([]);
-    expect(CATALOG.entries.length).toBe(9); // 3 roles + 5 skills + 1 pack
+    expect(CATALOG.entries.length).toBe(11); // 4 roles + 6 skills + 1 pack
   });
 
   // 2. classification whitelist rejects internal_sensitive
@@ -107,11 +107,11 @@ describe('role-skill catalog publisher (OAR-W3)', () => {
     const noBind = buildSql(buildRows(CATALOG, OPTS));
     expect(noBind.startsWith('BEGIN;')).toBe(true);
     expect(noBind).toContain('COMMIT;');
-    expect((noBind.match(/INSERT INTO template_definitions/g) ?? []).length).toBe(9);
-    expect((noBind.match(/INSERT INTO template_versions/g) ?? []).length).toBe(9);
+    expect((noBind.match(/INSERT INTO template_definitions/g) ?? []).length).toBe(11);
+    expect((noBind.match(/INSERT INTO template_versions/g) ?? []).length).toBe(11);
     expect(noBind).not.toContain('tenant_template_bindings');
     const withBind = buildSql(buildRows(CATALOG, OPTS), { workspaceId: 'ws_x' });
-    expect((withBind.match(/INSERT INTO tenant_template_bindings/g) ?? []).length).toBe(9);
+    expect((withBind.match(/INSERT INTO tenant_template_bindings/g) ?? []).length).toBe(11);
     expect(withBind).toContain(`'workspace', 'active'`);
   });
 
@@ -123,7 +123,7 @@ describe('role-skill catalog publisher (OAR-W3)', () => {
     }));
     const { conflicts, skips, publishable } = immutabilityCheck(rows, existing);
     expect(conflicts).toEqual([]);
-    expect(skips.length).toBe(9);
+    expect(skips.length).toBe(11);
     expect(publishable).toEqual([]);
   });
 
@@ -145,7 +145,7 @@ describe('role-skill catalog publisher (OAR-W3)', () => {
   it('T13 · emitted version rows carry all reader-consumed NOT NULLs and approved lifecycle', () => {
     const sql = buildSql(buildRows(CATALOG, OPTS));
     expect(sql).toContain('content_sha256, redacted_content, source_ref, source_sha, approval_ref, lifecycle_state');
-    expect((sql.match(/'approved'\)/g) ?? []).length).toBe(9);
+    expect((sql.match(/'approved'\)/g) ?? []).length).toBe(11);
   });
 
   // 14. binding rows valid (scope + lifecycle + approved_by)

@@ -111,6 +111,9 @@ import {
   TenantLearningPromotionInput,
   WorkspaceMember,
   WorkspaceMemberRole,
+  IntakeResolution,
+  IntakeResolutionInput,
+  IntakeExecutionResult,
 } from './types';
 import type { OperatingMode } from './session-preferences-store';
 import type { ModelRuntimesFacade } from './model-runtime-facade';
@@ -352,6 +355,17 @@ export interface DalAdapter {
   /** Backend-first operational spine: task packets scoped to a workspace. */
   createTaskPacket(workspaceId: WorkspaceId, actorUserId: UserId, input: TaskPacketInput): Promise<TaskPacket>;
   listTaskPackets(workspaceId: WorkspaceId, opts?: OperationalSpineListOpts): Promise<TaskPacket[]>;
+  /** Default-off canonical intake preview. Raw request text is not persisted. */
+  createIntakeResolution(workspaceId: WorkspaceId, actorUserId: UserId, input: IntakeResolutionInput): Promise<IntakeResolution>;
+  /** Atomically consume a resolution, apply its effect, write a receipt, and enqueue projection work. */
+  executeIntakeResolution(
+    workspaceId: WorkspaceId,
+    actorUserId: UserId,
+    resolutionId: string,
+    expectedVersion: number,
+    expectedCurrentWorkVersion: number,
+    clientRequestId: string,
+  ): Promise<IntakeExecutionResult>;
   /** Default-off, server-derived Definition-of-Done evaluation for one tenant-scoped packet. */
   evaluateTaskPacketCompletion(workspaceId: WorkspaceId, packetId: string): Promise<TaskPacketCompletionEvaluation | null>;
 
