@@ -43,6 +43,8 @@ import { neonClient } from '../db/client';
 import { recordLlmUsage } from '../dal/llm-usage-store'; // G2 260711
 import { envFlagTrue } from '../lib/env-flag';
 import { idempotencyMiddleware } from '../lib/idempotency'; // J-W1/IDEM-4
+import { persistAssistantContextLineage, completeAssistantSkillLineage, type AssistantContextLineage } from '../lib/assistant-context-lineage';
+import { createModelExecutionObserver } from '../lib/model-execution-lineage';
 import { listDocumentsRow } from '../lib/document-store';
 import type { EventListOpts, HarnessFlowEvent } from '../dal/types/event';
 // Plane B fallback (defense in depth): the build-time operations-live-stream bundle — the SAME source
@@ -53,6 +55,11 @@ export interface WorkspacesEnv extends AuthEnv {
   DATABASE_URL: string;
   MBP_OWNER_USER_ID?: string;
   MBP_OWNER_LINKED_USER_IDS?: string;
+  CONTEXT_PACKET_PERSISTENCE_ENABLED?: string;
+  ROLE_SKILL_CATALOG_ENABLED?: string;
+  RESOLUTION_RECEIPT_SIGNING_SECRET?: string;
+  RESOLUTION_RECEIPT_SIGNING_KEY_ID?: string;
+  XLOOOP_DEPLOY_SHA?: string;
 }
 
 export interface WorkspacesVariables extends AuthVariables {
@@ -60,6 +67,11 @@ export interface WorkspacesVariables extends AuthVariables {
 }
 
 export const workspacesRoute = new Hono<{ Bindings: WorkspacesEnv; Variables: WorkspacesVariables }>();
+
+async function assistantIntentRef(message: string): Promise<string> {
+  const hash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(message));
+  return `sha256:${Array.from(new Uint8Array(hash), (b) => b.toString(16).padStart(2, '0')).join('')}`;
+}
 
 // GET /api/v1/workspaces — operator lists workspaces they own (identity set).
 workspacesRoute.get('/workspaces', async (ctx) => {
@@ -173,7 +185,37 @@ workspacesRoute.post('/workspaces/:id/agent/digest', async (ctx) => {
     // LLM-richer draft when a Workers-AI binding is present; deterministic fallback otherwise.
     // Either way it lands as a PENDING proposal the operator approves — the LLM never posts to
     // the official record without sign-off.
-    const digest = await buildWorkspaceDigestLLM(summary, (ctx.env as { AI?: AiRunner }).AI);
+    let digestLineage: AssistantContextLineage | null = null;
+    let digestLineageSql: ReturnType<typeof neonClient> | null = null;
+    if (envFlagTrue(ctx.env.CONTEXT_PACKET_PERSISTENCE_ENABLED)) {
+      digestLineageSql = neonClient(ctx.env.DATABASE_URL);
+      digestLineage = await persistAssistantContextLineage(digestLineageSql, ctx.env, {
+        workspace_id: id,
+        principal_id: user_id,
+        role: String(role || 'operator'),
+        mode: 'plan',
+        action: 'assistant:digest',
+        intent_ref: `digest:${id}`,
+        scope: {
+          event_count: summary.events_total,
+          document_count: 0,
+          unpromoted_document_count: 0,
+          source_count: summary.connected_sources,
+        },
+        redaction_profile: 'operator-summary',
+        client_empty: false,
+      });
+    }
+    const digestObserver = digestLineage && digestLineageSql
+      ? createModelExecutionObserver(digestLineageSql, id, user_id, digestLineage)
+      : undefined;
+    const digest = await buildWorkspaceDigestLLM(summary, (ctx.env as { AI?: AiRunner }).AI, digestObserver);
+    if (digestLineage && digestLineageSql) {
+      await completeAssistantSkillLineage(digestLineageSql, ctx.env, digestLineage, {
+        workspace_id: id,
+        principal_id: user_id,
+      });
+    }
     const now = new Date().toISOString();
     const eventId = `evt_agent_digest_${id}_${now.slice(0, 10)}`; // idempotent: one per workspace per day
     await dal.upsertEvent(id, {
@@ -251,7 +293,15 @@ workspacesRoute.post('/cockpit-chat', async (ctx) => {
     // (the deterministic answer still works — "no recorded activity yet").
     const opts: EventListOpts = { limit: COCKPIT_CHAT_MAX_EVENTS, role: 'operator', ...(projectId ? { project_id: projectId } : {}) };
     let events: HarnessFlowEvent[] = [];
-    if (typeof (dal as { listEventsForOperator?: unknown }).listEventsForOperator === 'function') {
+    if (workspaceId && typeof dal.operatorOwnsWorkspace === 'function') {
+      const ownsWorkspace = await dal.operatorOwnsWorkspace(ids, workspaceId);
+      if (!ownsWorkspace) {
+        ctx.status(403);
+        return ctx.json({ error: 'workspace is outside the operator scope', code: 'FORBIDDEN', request_id: ctx.get('request_id') });
+      }
+      const page = await dal.listEvents(workspaceId, opts);
+      events = Array.isArray(page?.events) ? page.events : [];
+    } else if (typeof (dal as { listEventsForOperator?: unknown }).listEventsForOperator === 'function') {
       const page = await (dal as unknown as {
         listEventsForOperator: (operatorIds: string[], o: EventListOpts) => Promise<{ events?: HarnessFlowEvent[] }>;
       }).listEventsForOperator(ids, opts);
@@ -474,7 +524,52 @@ workspacesRoute.post('/cockpit-chat', async (ctx) => {
         console.log(JSON.stringify({ kind: 'role_scoped_context', plane: 'operator', workspace_id: workspaceId || null, ...rsc.auditLine }));
       } catch (_) { /* projection is fail-safe: on an unexpected throw the legacy facts stand (flag can be pulled) */ }
     }
-    const result = await answerCockpitChat(message, { events, governance, pinned, lineage, documents, total: events.length, scope, companyContext }, ai, mode, claudeKey, llm);
+    let assistantLineage: AssistantContextLineage | null = null;
+    let lineageSql: ReturnType<typeof neonClient> | null = null;
+    if (envFlagTrue(ctx.env.CONTEXT_PACKET_PERSISTENCE_ENABLED)) {
+      if (!workspaceId) {
+        ctx.status(409);
+        return ctx.json({
+          error: 'strict context lineage requires one workspace target',
+          code: 'CONTEXT_LINEAGE_SCOPE_REQUIRED',
+          request_id: ctx.get('request_id'),
+        });
+      }
+      lineageSql = neonClient(ctx.env.DATABASE_URL);
+      assistantLineage = await persistAssistantContextLineage(lineageSql, ctx.env, {
+        workspace_id: workspaceId,
+        principal_id: user_id,
+        role: String(role || 'operator'),
+        mode,
+        intent_ref: await assistantIntentRef(message),
+        scope: {
+          event_count: events.length + governance.length,
+          document_count: documents.length,
+          unpromoted_document_count: documents.filter((d) => d.filename.startsWith('[UNPROMOTED DRAFT]')).length,
+          source_count: 0,
+        },
+        redaction_profile: roleScopedOn ? `${String(role || 'operator')}-scoped` : 'operator-full',
+        client_empty: false,
+      });
+    }
+    const executionObserver = assistantLineage && lineageSql
+      ? createModelExecutionObserver(lineageSql, workspaceId, user_id, assistantLineage)
+      : undefined;
+    const result = await answerCockpitChat(
+      message,
+      { events, governance, pinned, lineage, documents, total: events.length, scope, companyContext },
+      ai,
+      mode,
+      claudeKey,
+      llm,
+      executionObserver,
+    );
+    if (assistantLineage && lineageSql) {
+      await completeAssistantSkillLineage(lineageSql, ctx.env, assistantLineage, {
+        workspace_id: workspaceId,
+        principal_id: user_id,
+      });
+    }
     void role;
     // L1 · always record the operator-plane fact bundle when the trace flag is on — so flag-ON never
     // silently behaves like flag-OFF even if the role/graph sub-flags are off (the assembly is non-null).
@@ -751,10 +846,35 @@ workspacesRoute.post('/intents', async (ctx) => {
         const prior = await dal.listIntentsForOperator(ids, { workspace_id: workspaceId }, 8) as Array<{ title?: string | null; status?: string | null }>;
         similar = (Array.isArray(prior) ? prior : []).filter((s) => s && s.title !== title);
       } catch (_) { similar = []; }
+      let enrichmentLineage: AssistantContextLineage | null = null;
+      let enrichmentLineageSql: ReturnType<typeof neonClient> | null = null;
+      if (envFlagTrue(ctx.env.CONTEXT_PACKET_PERSISTENCE_ENABLED)) {
+        enrichmentLineageSql = neonClient(ctx.env.DATABASE_URL);
+        enrichmentLineage = await persistAssistantContextLineage(enrichmentLineageSql, ctx.env, {
+          workspace_id: workspaceId,
+          principal_id: user_id,
+          role: 'operator',
+          mode: 'plan',
+          action: 'assistant:enrich',
+          intent_ref: `intent:${intent.id}`,
+          scope: { event_count: similar.length, document_count: 0, unpromoted_document_count: 0, source_count: 0 },
+          redaction_profile: 'operator-intent-prior-summary',
+          client_empty: false,
+        });
+      }
       const enr = await generateIntentEnrichment(
         { title, summary: intent.summary, project_id: intent.project_id, domain_id: intent.domain_id },
         { similar_intents: similar }, ai, undefined, false,
+        enrichmentLineage && enrichmentLineageSql
+          ? createModelExecutionObserver(enrichmentLineageSql, workspaceId, user_id, enrichmentLineage)
+          : undefined,
       );
+      if (enrichmentLineage && enrichmentLineageSql) {
+        await completeAssistantSkillLineage(enrichmentLineageSql, ctx.env, enrichmentLineage, {
+          workspace_id: workspaceId,
+          principal_id: user_id,
+        });
+      }
       await dal.upsertIntentEnrichment(intent.id, enr);
       enrichment_generated = true;
     } catch (_) { /* best-effort enrichment — never block the create */ }
@@ -800,11 +920,46 @@ workspacesRoute.post('/intents/:id/enrich', async (ctx) => {
       const prior = await dal.listIntentsForOperator(ids, { workspace_id: it.workspace_id ?? null }, 8) as Array<{ title?: string | null; status?: string | null }>;
       similar = (Array.isArray(prior) ? prior : []).filter((s) => s && s.title !== it.title);
     } catch (_) { similar = []; }
+    const enrichmentWorkspaceId = String(it.workspace_id || '').trim();
+    if (!enrichmentWorkspaceId) {
+      ctx.status(409);
+      return ctx.json({ error: 'intent has no workspace lineage target', code: 'CONTEXT_LINEAGE_SCOPE_REQUIRED', request_id: ctx.get('request_id') });
+    }
+    let enrichmentLineage: AssistantContextLineage | null = null;
+    let enrichmentLineageSql: ReturnType<typeof neonClient> | null = null;
+    if (envFlagTrue(ctx.env.CONTEXT_PACKET_PERSISTENCE_ENABLED)) {
+      enrichmentLineageSql = neonClient(ctx.env.DATABASE_URL);
+      enrichmentLineage = await persistAssistantContextLineage(enrichmentLineageSql, ctx.env, {
+        workspace_id: enrichmentWorkspaceId,
+        principal_id: user_id,
+        role: 'operator',
+        mode: 'plan',
+        action: 'assistant:enrich',
+        intent_ref: `intent:${id}`,
+        scope: {
+          event_count: similar.length + (Array.isArray(lineage.child_events) ? lineage.child_events.length : 0),
+          document_count: 0,
+          unpromoted_document_count: 0,
+          source_count: 0,
+        },
+        redaction_profile: 'operator-intent-prior-summary',
+        client_empty: false,
+      });
+    }
     const enr = await generateIntentEnrichment(
       { title: String(it.title || ''), summary: it.summary ?? null, project_id: it.project_id ?? null, domain_id: it.domain_id ?? null },
       { similar_intents: similar, recent_events: Array.isArray(lineage.child_events) ? lineage.child_events : [] },
       ai, claudeKey, true, // useClaude on-demand
+      enrichmentLineage && enrichmentLineageSql
+        ? createModelExecutionObserver(enrichmentLineageSql, enrichmentWorkspaceId, user_id, enrichmentLineage)
+        : undefined,
     );
+    if (enrichmentLineage && enrichmentLineageSql) {
+      await completeAssistantSkillLineage(enrichmentLineageSql, ctx.env, enrichmentLineage, {
+        workspace_id: enrichmentWorkspaceId,
+        principal_id: user_id,
+      });
+    }
     try { await dal.upsertIntentEnrichment(id, enr); } catch (_) { /* best-effort */ }
     return ctx.json({ enrichment: enr });
   } catch (err) {
@@ -1204,14 +1359,51 @@ workspacesRoute.post('/cockpit-chat/enhance-prompt', async (ctx) => {
       ctx.status(403);
       return ctx.json({ error: 'prompt tags are operator-only', code: 'FORBIDDEN', request_id: ctx.get('request_id') });
     }
-    const body = await ctx.req.json().catch(() => null) as { message?: string } | null;
+    const body = await ctx.req.json().catch(() => null) as { message?: string; workspace_id?: string } | null;
     const message = typeof body?.message === 'string' ? body.message.trim() : '';
     if (!message || message.length > 600) {
       ctx.status(400);
       return ctx.json({ error: 'body.message required (1-600 chars)', code: 'VALIDATION_ERROR', request_id: ctx.get('request_id') });
     }
     const ai = (ctx.env as { AI?: AiRunner }).AI;
-    const result = await refinePromptText(message, ai);
+    let refineLineage: AssistantContextLineage | null = null;
+    let refineLineageSql: ReturnType<typeof neonClient> | null = null;
+    const targetWorkspaceId = typeof body?.workspace_id === 'string' ? body.workspace_id.trim() : '';
+    if (envFlagTrue(ctx.env.CONTEXT_PACKET_PERSISTENCE_ENABLED)) {
+      if (!targetWorkspaceId || !await ctx.get('dal').operatorOwnsWorkspace(operatorIds(ctx.env).ids, targetWorkspaceId)) {
+        ctx.status(targetWorkspaceId ? 403 : 409);
+        return ctx.json({
+          error: targetWorkspaceId ? 'workspace is outside the operator scope' : 'strict context lineage requires one workspace target',
+          code: targetWorkspaceId ? 'FORBIDDEN' : 'CONTEXT_LINEAGE_SCOPE_REQUIRED',
+          request_id: ctx.get('request_id'),
+        });
+      }
+      refineLineageSql = neonClient(ctx.env.DATABASE_URL);
+      refineLineage = await persistAssistantContextLineage(refineLineageSql, ctx.env, {
+        workspace_id: targetWorkspaceId,
+        principal_id: user_id,
+        role: 'operator',
+        mode: 'plan',
+        action: 'assistant:refine',
+        intent_ref: await assistantIntentRef(message),
+        scope: { event_count: 0, document_count: 0, unpromoted_document_count: 0, source_count: 0 },
+        redaction_profile: 'operator-input-only',
+        client_empty: false,
+      });
+    }
+    const result = await refinePromptText(
+      message,
+      ai,
+      refineLineage && refineLineageSql
+        ? createModelExecutionObserver(refineLineageSql, targetWorkspaceId, user_id, refineLineage)
+        : undefined,
+    );
+    if (refineLineage && refineLineageSql) {
+      await completeAssistantSkillLineage(refineLineageSql, ctx.env, refineLineage, {
+        workspace_id: targetWorkspaceId,
+        principal_id: user_id,
+      });
+    }
     return ctx.json({ original: message, proposed: result.proposed, refined: result.refined });
   } catch (err) {
     return errorEnvelope(ctx, err);

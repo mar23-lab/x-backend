@@ -5,7 +5,7 @@
 // to provisionCustomerWorkspace; a missing readiness assessment is NON-FATAL (base roadmap +
 // warning); a missing access request 404s; missing ids are rejected; slug derivation.
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import {
   provisionCustomerFromAccessRequest,
   slugifyCustomer,
@@ -194,6 +194,52 @@ describe('provisionCustomerFromAccessRequest', () => {
     expect(String(upsertCalls[0].event.body)).toMatch(/workspace is live and ready/);
     // still PENDING — the LLM draft is never auto-posted
     expect(upsertCalls[0].event.approval_state).toBe('pending');
+  });
+
+  it('strict model lineage skips an unreceipted welcome model call without failing provisioning', async () => {
+    const { dal, provisionCalls, upsertCalls } = mockDal();
+    const run = vi.fn(async () => ({ response: 'This must not run.' }));
+
+    const out = await provisionCustomerFromAccessRequest(dal, {
+      ...REQ,
+      ai: { run },
+      modelLineageRequired: true,
+    });
+
+    expect(provisionCalls).toHaveLength(1);
+    expect(out.welcome_drafted).toBe(false);
+    expect(out.warnings.join(' ')).toMatch(/welcome draft skipped/i);
+    expect(run).not.toHaveBeenCalled();
+    expect(upsertCalls).toHaveLength(0);
+  });
+
+  it('strict model lineage wraps the welcome model call and closes skill lineage', async () => {
+    const { dal } = mockDal();
+    const finish = vi.fn(async () => undefined);
+    const start = vi.fn(async () => ({ complete: finish }));
+    const complete = vi.fn(async () => [] as string[]);
+    const modelLineageFactory = vi.fn(async () => ({ observer: { start }, complete }));
+    const ai = { run: vi.fn(async () => ({
+      response: 'Welcome to Honest & Young. Your governed workspace is ready for a safe first review and source connection.',
+    })) };
+
+    const out = await provisionCustomerFromAccessRequest(dal, {
+      ...REQ,
+      ai,
+      modelLineageRequired: true,
+      modelLineageFactory,
+    });
+
+    expect(out.welcome_drafted).toBe(true);
+    expect(modelLineageFactory).toHaveBeenCalledWith(expect.objectContaining({
+      workspace_id: 'org_abc123',
+      principal_id: 'xlooop:digest-agent',
+      role: 'automation',
+      action: 'assistant:onboard',
+    }));
+    expect(start).toHaveBeenCalledTimes(1);
+    expect(finish).toHaveBeenCalledWith(expect.objectContaining({ status: 'completed' }));
+    expect(complete).toHaveBeenCalledTimes(1);
   });
 });
 

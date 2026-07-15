@@ -8,7 +8,9 @@ import { __resetFallbackBuckets } from '../middleware/rate-limit';
 
 function stubEnv() {
   return {
-    DATABASE_URL: 'postgres://stub:stub@stub/stub',
+    // Deliberately invalid and network-free. Persistence-path tests inject a DAL separately;
+    // this suite verifies public/auth boundaries and must never attempt external DNS.
+    DATABASE_URL: '',
     CLERK_SECRET_KEY: 'sk_test_stub',
     CLERK_JWKS_URL: 'https://stub.clerk.accounts.dev/.well-known/jwks.json',
     ENVIRONMENT: 'development',
@@ -32,7 +34,7 @@ describe('POST /api/v1/request-access', () => {
       body: JSON.stringify({ email: 'test@example.com' }),
     });
     const res = await app.fetch(req, stubEnv());
-    // Will fail with 5xx because DAL can't talk to the stub DATABASE_URL, but importantly
+    // Will fail with 5xx because the test has no database, but importantly
     // NOT with 401 — that proves auth doesn't gate the route.
     expect(res.status).not.toBe(401);
   });

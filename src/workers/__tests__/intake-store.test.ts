@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { executeIntakeResolutionRow } from '../dal/intake-store';
+import { countGovernedExecutionReceiptsRow, executeIntakeResolutionRow } from '../dal/intake-store';
 
 const RESOLUTION = {
   id: 'inr_1', workspace_id: 'ws_1', actor_user_id: 'user_1', project_id: 'proj_1',
@@ -35,6 +35,15 @@ function sqlWith(transactionRows: unknown[][]) {
 }
 
 describe('single-intake transactional execution', () => {
+  it('counts receipts through the tenant RLS context without returning receipt data', async () => {
+    const { sql, statements } = sqlWith([[{ receipt_count: '3' }]]);
+    const count = await countGovernedExecutionReceiptsRow(sql, 'ws_1');
+    expect(count).toBe(3);
+    const query = statements.find((statement) => statement.text.includes('governed_execution_receipts'))!;
+    expect(query.text).toContain('WHERE workspace_id =');
+    expect(query.values).toContain('ws_1');
+  });
+
   it('binds project validation and the execution idempotency key into the atomic write', async () => {
     const { sql, statements } = sqlWith([[EXECUTION_ROW]]);
     const result = await executeIntakeResolutionRow(sql, 'ws_1', 'user_1', 'inr_1', 1, 0, 'execute_1');

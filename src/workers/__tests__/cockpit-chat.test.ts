@@ -119,6 +119,41 @@ describe('buildDeterministicChatAnswer — grounded, not canned', () => {
 });
 
 describe('answerCockpitChat — LLM-richer + fail-safe + grounded provenance', () => {
+  it('writes a terminal model-execution result when a governed observer is present', async () => {
+    const calls: unknown[] = [];
+    const observer = {
+      start: async (input: unknown) => {
+        calls.push({ start: input });
+        return { complete: async (finish: unknown) => { calls.push({ finish }); } };
+      },
+    };
+    const ai: AiRunner = {
+      run: async () => ({
+        response: 'A grounded answer that is comfortably long enough to satisfy the usable response floor.',
+        usage: { prompt_tokens: 12, completion_tokens: 8 },
+      }),
+    };
+    const r = await answerCockpitChat('summarize', FACTS(), ai, 'ask', undefined, 'llama', observer);
+    expect(r.generated_by).toBe('llm');
+    expect(calls).toEqual([
+      { start: { provider: 'workers_ai', model_key: '@cf/meta/llama-3.1-8b-instruct' } },
+      { finish: expect.objectContaining({ status: 'completed', tokens_in: 12, tokens_out: 8, error_code: null }) },
+    ]);
+  });
+
+  it('records fallback rather than falsely completing a failed model call', async () => {
+    const finishes: any[] = [];
+    const observer = {
+      start: async () => ({ complete: async (finish: unknown) => { finishes.push(finish); } }),
+    };
+    const r = await answerCockpitChat(
+      'summarize', FACTS(), { run: async () => { throw new Error('unavailable'); } },
+      'ask', undefined, 'llama', observer,
+    );
+    expect(r.generated_by).toBe('deterministic');
+    expect(finishes).toEqual([expect.objectContaining({ status: 'fallback', error_code: 'MODEL_ERROR' })]);
+  });
+
   it('falls back to the deterministic grounded answer when there is NO AI binding', async () => {
     const r = await answerCockpitChat('summarize what is happening here', FACTS());
     expect(r.generated_by).toBe('deterministic');

@@ -1,0 +1,19 @@
+{
+  "schema_version": "xlooop.model_execution_callsites.v1",
+  "status": "pre_cutover_default_off",
+  "owner": "x-backend",
+  "human_authority": "docs/architecture/GOVERNED_LINEAGE_MAP_260711H.md",
+  "strict_flag": "CONTEXT_PACKET_PERSISTENCE_ENABLED",
+  "content_storage_policy": "No prompt, response, source body, document body, or customer content is stored in model_execution_receipts.",
+  "callsites": [
+    { "id": "customer-chat", "path": "src/workers/routes/customer-chat.ts", "function": "answerCockpitChat", "anchor": "const result = await answerCockpitChat(", "observer_token": "executionObserver", "principal": "authenticated_customer", "action": "assistant:answer" },
+    { "id": "operator-chat", "path": "src/workers/routes/workspaces.ts", "function": "answerCockpitChat", "anchor": "const result = await answerCockpitChat(", "observer_token": "executionObserver", "principal": "authenticated_operator", "action": "assistant:answer" },
+    { "id": "manual-workspace-digest", "path": "src/workers/routes/workspaces.ts", "function": "buildWorkspaceDigestLLM", "anchor": "const digest = await buildWorkspaceDigestLLM(", "observer_token": "digestObserver", "principal": "authenticated_operator", "action": "assistant:digest" },
+    { "id": "scheduled-workspace-digest", "path": "src/workers/services/scheduled-digest-sweep.ts", "function": "buildWorkspaceDigestLLM", "anchor": "const digest = await buildWorkspaceDigestLLM(", "observer_token": "governed?.observer", "principal": "xlooop:digest-agent", "action": "assistant:digest" },
+    { "id": "queued-workspace-digest", "path": "src/workers/services/operations-queue-consumer.ts", "function": "buildWorkspaceDigestLLM", "anchor": "const draft = await buildWorkspaceDigestLLM(", "observer_token": "governed?.observer", "principal": "xlooop:digest-agent", "action": "assistant:digest" },
+    { "id": "onboarding-welcome", "path": "src/workers/services/onboarding-provisioner.ts", "function": "buildOnboardingWelcomeDraft", "anchor": "const welcome = await buildOnboardingWelcomeDraft(", "observer_token": "executionObserver: governed?.observer", "principal": "xlooop:digest-agent", "action": "assistant:onboard" },
+    { "id": "prompt-refine", "path": "src/workers/routes/workspaces.ts", "function": "refinePromptText", "anchor": "const result = await refinePromptText(", "observer_token": "createModelExecutionObserver", "principal": "authenticated_operator", "action": "assistant:refine" },
+    { "id": "intent-create-enrichment", "path": "src/workers/routes/workspaces.ts", "function": "generateIntentEnrichment", "anchor": "const enr = await generateIntentEnrichment(", "anchor_occurrence": 1, "observer_token": "createModelExecutionObserver", "principal": "authenticated_operator", "action": "assistant:enrich" },
+    { "id": "intent-regenerate-enrichment", "path": "src/workers/routes/workspaces.ts", "function": "generateIntentEnrichment", "anchor": "const enr = await generateIntentEnrichment(", "anchor_occurrence": 2, "observer_token": "createModelExecutionObserver", "principal": "authenticated_operator", "action": "assistant:enrich" }
+  ]
+}

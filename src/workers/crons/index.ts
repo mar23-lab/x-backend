@@ -140,7 +140,15 @@ const reclassifyThenDrainQueue: CronHandler = async (ctx) => {
   let drain: QueueConsumerResult | null = null;
   let drainErr: string | null = null;
   try {
-    drain = await runOperationsQueueConsumer({ dal: ctx.dal, ai: ctx.env?.AI, ownerUserIds, executorEnabled, now: ctx.now });
+    drain = await runOperationsQueueConsumer({
+      dal: ctx.dal,
+      ai: ctx.env?.AI,
+      ownerUserIds,
+      executorEnabled,
+      now: ctx.now,
+      modelLineageFactory: ctx.modelLineageFactory,
+      modelLineageRequired: ctx.modelLineageRequired,
+    });
   } catch (e) { drainErr = e instanceof Error ? e.message : String(e); }
 
   const base: CronHandlerResult = primary ?? {

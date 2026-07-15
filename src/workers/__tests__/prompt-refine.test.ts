@@ -3,7 +3,7 @@
 // that the operator can NEVER lose their text: a missing binding, a throw, a no-op rewrite, or a
 // degenerate output ALL return the original with refined=false.
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { refinePromptText } from '../services/prompt-refine';
 
 const aiReturning = (response: unknown) => ({ run: async () => ({ response }) });
@@ -47,5 +47,16 @@ describe('refinePromptText', () => {
     const long = 'x'.repeat(601);
     const r = await refinePromptText(long, aiReturning('something'));
     expect(r).toEqual({ proposed: long, refined: false });
+  });
+
+  it('records completed and fallback terminal states through the execution observer', async () => {
+    const finish = vi.fn(async () => undefined);
+    const observer = { start: vi.fn(async () => ({ complete: finish })) };
+
+    await refinePromptText('summarize', aiReturning('Summarize the work and identify the next governed action.'), observer);
+    expect(finish).toHaveBeenLastCalledWith(expect.objectContaining({ status: 'completed' }));
+
+    await refinePromptText('summarize', aiThrowing, observer);
+    expect(finish).toHaveBeenLastCalledWith(expect.objectContaining({ status: 'fallback', error_code: 'MODEL_ERROR' }));
   });
 });

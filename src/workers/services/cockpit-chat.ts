@@ -15,6 +15,7 @@
 import type { HarnessFlowEvent, EventStatus } from '../dal/types/event';
 import type { AiRunner } from './agent-digest';
 import { companyContextPreamble } from '../dal/customer-context-store';
+import type { ModelExecutionObserver } from '../lib/model-execution-lineage';
 
 /** The Workers-AI text model — same small instruct model the digest agent uses (free-tier friendly). */
 export const COCKPIT_CHAT_LLM_MODEL = '@cf/meta/llama-3.1-8b-instruct';
@@ -880,6 +881,7 @@ export async function answerCockpitChat(
   mode: CockpitChatMode = 'ask',
   claudeKey?: string,
   llmChoice: CockpitChatLLM = 'llama',
+  executionObserver?: ModelExecutionObserver,
 ): Promise<CockpitChatResult> {
   const grounded = compileChatFacts(facts);
   // P0.1 · the deterministic FLOOR must be honest about staleness too (it is the guaranteed fallback).
@@ -982,8 +984,17 @@ export async function answerCockpitChat(
   // Claude is used ONLY when the user explicitly selects it (or in deep-research mode) AND a key is set.
   // The default is the free Workers-AI Llama (below). Claude failure falls through to Llama → deterministic.
   if (claudeKey && (llmChoice === 'claude' || mode === 'deep-research')) {
+    const startedAt = Date.now();
+    const execution = await executionObserver?.start({ provider: 'anthropic', model_key: COCKPIT_CHAT_CLAUDE_MODEL });
     const claude = await callClaude(claudeKey, systemPrompt, userPrompt);
     if (claude && claude.text.length >= 40) {
+      await execution?.complete({
+        status: 'completed',
+        tokens_in: claude.usage?.input_tokens ?? null,
+        tokens_out: claude.usage?.output_tokens ?? null,
+        latency_ms: Date.now() - startedAt,
+        error_code: null,
+      });
       return {
         answer: claude.text, generated_by: 'llm', grounded_on: grounded, model: COCKPIT_CHAT_CLAUDE_MODEL,
         // G2 · metering capture (v0 known undercount: a <40-char Claude answer falls through to Llama
@@ -991,11 +1002,18 @@ export async function answerCockpitChat(
         usage: { tokens_in: claude.usage?.input_tokens ?? null, tokens_out: claude.usage?.output_tokens ?? null },
       };
     }
+    await execution?.complete({
+      status: 'fallback', tokens_in: claude?.usage?.input_tokens ?? null,
+      tokens_out: claude?.usage?.output_tokens ?? null, latency_ms: Date.now() - startedAt,
+      error_code: claude ? 'SHORT_RESPONSE' : 'NO_USABLE_RESPONSE',
+    });
     console.log(JSON.stringify({ kind: 'cockpit_chat_claude_fallthrough', len: claude ? claude.text.length : 0 }));
   }
 
   if (!ai) return { answer: deterministic, generated_by: 'deterministic', grounded_on: grounded, model: null };
 
+  const startedAt = Date.now();
+  const execution = await executionObserver?.start({ provider: 'workers_ai', model_key: COCKPIT_CHAT_LLM_MODEL });
   try {
     const out = await ai.run(COCKPIT_CHAT_LLM_MODEL, {
       messages: [
@@ -1015,6 +1033,10 @@ export async function answerCockpitChat(
       console.log(JSON.stringify({ kind: 'cockpit_chat_llm_short', model: COCKPIT_CHAT_LLM_MODEL, len: text.length,
         hasResponseField: !!(out && typeof out === 'object' && 'response' in (out as Record<string, unknown>)),
         outKeys: out && typeof out === 'object' ? Object.keys(out as Record<string, unknown>).slice(0, 6) : null }));
+      await execution?.complete({
+        status: 'fallback', tokens_in: null, tokens_out: null,
+        latency_ms: Date.now() - startedAt, error_code: 'SHORT_RESPONSE',
+      });
       return { answer: deterministic, generated_by: 'deterministic', grounded_on: grounded, model: null };
     }
 
@@ -1023,11 +1045,19 @@ export async function answerCockpitChat(
     const rawUsage = (out && typeof out === 'object' && 'usage' in (out as Record<string, unknown>))
       ? (out as { usage?: { prompt_tokens?: number; completion_tokens?: number } }).usage
       : undefined;
+    await execution?.complete({
+      status: 'completed', tokens_in: rawUsage?.prompt_tokens ?? null,
+      tokens_out: rawUsage?.completion_tokens ?? null, latency_ms: Date.now() - startedAt, error_code: null,
+    });
     return {
       answer: text, generated_by: 'llm', grounded_on: grounded, model: COCKPIT_CHAT_LLM_MODEL,
       usage: { tokens_in: rawUsage?.prompt_tokens ?? null, tokens_out: rawUsage?.completion_tokens ?? null },
     };
   } catch (err) {
+    await execution?.complete({
+      status: 'fallback', tokens_in: null, tokens_out: null,
+      latency_ms: Date.now() - startedAt, error_code: 'MODEL_ERROR',
+    });
     console.log(JSON.stringify({ kind: 'cockpit_chat_llm_error', model: COCKPIT_CHAT_LLM_MODEL, error: err instanceof Error ? err.message : String(err) }));
     return { answer: deterministic, generated_by: 'deterministic', grounded_on: grounded, model: null };
   }

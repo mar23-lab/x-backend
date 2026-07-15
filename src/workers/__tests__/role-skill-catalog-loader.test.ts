@@ -5,6 +5,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   buildCatalogBindings,
+  buildRuntimeBindings,
   catalogBindingsIfEnabled,
   CATALOG_MANIFEST_SHA256,
   ARCHETYPE_TO_MEMBERSHIP,
@@ -28,7 +29,17 @@ describe('buildCatalogBindings — archetype→membership mapping', () => {
     expect(byRole.collaborator).toBe(2);
     expect(byRole.viewer).toBe(1);
     expect(byRole.client).toBe(1);
+    expect(byRole.automation).toBeUndefined();
     expect(ARCHETYPE_TO_MEMBERSHIP['role.operator-lead']).toContain('owner');
+  });
+
+  it('keeps the internal automation binding out of the customer-publishable catalog', () => {
+    const runtime = buildRuntimeBindings();
+    const automation = runtime.filter((x) => x.role === 'automation');
+    expect(b.some((x) => x.role === 'automation')).toBe(false);
+    expect(automation).toHaveLength(1);
+    expect(automation[0].source).toBe('internal-service');
+    expect(automation[0].actions).toEqual(['assistant:digest', 'assistant:onboard']);
   });
 
   it('carries the real actions + tools from the skill entries', () => {
@@ -49,7 +60,7 @@ describe('catalogBindingsIfEnabled — flag gating (shadow-first)', () => {
   it('ON ⇒ the catalog bindings + the manifest fingerprint', () => {
     const out = catalogBindingsIfEnabled({ ROLE_SKILL_CATALOG_ENABLED: 'true' });
     expect(out).not.toBeNull();
-    expect(out!.bindings.length).toBe(14);
+    expect(out!.bindings.length).toBe(15);
     expect(out!.catalog_manifest_sha256).toBe(CATALOG_MANIFEST_SHA256);
     expect(/^[a-f0-9]{64}$/.test(CATALOG_MANIFEST_SHA256)).toBe(true);
   });
@@ -88,5 +99,14 @@ describe('KEYSTONE — the resolver produces REAL resolution, not no_catalog', (
     const r = resolveRoleAndSkills({ ...input, role: 'viewer', mode: 'watch', action: 'assistant:answer', requiresOperatorMode: false }, bindings, NOW);
     expect(r.verdict.allowed).toBe(true);
     expect(r.selected_skills.map((s) => s.key)).toEqual(['skill.workspace-assistant.grounded-assistance']);
+  });
+
+  it('an automation principal resolves draft assistance but no approval authority', () => {
+    const { bindings } = catalogBindingsIfEnabled({ ROLE_SKILL_CATALOG_ENABLED: 'true' })!;
+    const digest = resolveRoleAndSkills({ ...input, role: 'automation', mode: 'plan', action: 'assistant:digest', requiresOperatorMode: false }, bindings, NOW);
+    const approve = resolveRoleAndSkills({ ...input, role: 'automation', mode: 'operator', action: 'approval:decide', requiresOperatorMode: false }, bindings, NOW);
+    expect(digest.verdict.allowed).toBe(true);
+    expect(digest.allowed_tools).toEqual([]);
+    expect(approve.verdict.allowed).toBe(false);
   });
 });

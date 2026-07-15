@@ -34,8 +34,8 @@ export interface RoleSkillBinding {
   allowed_tools: string[];
   denied_tools: string[];
   requires_approval?: boolean;
-  /** provenance for the receipt (never surfaced to customers): 'v0-floor' | 'catalog' */
-  source: 'v0-floor' | 'catalog';
+  /** provenance for the receipt (never surfaced to customers). */
+  source: 'v0-floor' | 'catalog' | 'internal-service';
 }
 
 export interface RoleSkillResolutionInput {

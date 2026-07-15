@@ -11,6 +11,7 @@
 // is told not to fabricate URLs (the same guardrail cockpit-chat's deep-research uses).
 
 import type { AiRunner } from './agent-digest';
+import type { ModelExecutionObserver } from '../lib/model-execution-lineage';
 
 export const ENRICHMENT_LLM_MODEL = '@cf/meta/llama-3.1-8b-instruct';
 export const ENRICHMENT_CLAUDE_MODEL = 'claude-sonnet-4-6';
@@ -135,6 +136,7 @@ export async function generateIntentEnrichment(
   ai?: AiRunner,
   claudeKey?: string,
   useClaude = false,
+  executionObserver?: ModelExecutionObserver,
 ): Promise<EnrichmentDraft> {
   const system = SYSTEM_PROMPT;
   const user = buildUserPrompt(intent, prior);
@@ -142,22 +144,41 @@ export async function generateIntentEnrichment(
 
   // Claude tier (on-demand only).
   if (useClaude && claudeKey) {
+    const startedAt = Date.now();
+    const execution = await executionObserver?.start({ provider: 'anthropic', model_key: ENRICHMENT_CLAUDE_MODEL });
     const text = await callClaude(claudeKey, system, user);
     const parsed = text ? extractJson(text) : null;
-    if (parsed) return { ...coerceEnrichment(parsed, hasRealSource), generated_by: 'claude', model: ENRICHMENT_CLAUDE_MODEL };
+    if (parsed) {
+      await execution?.complete({ status: 'completed', tokens_in: null, tokens_out: null, latency_ms: Date.now() - startedAt, error_code: null });
+      return { ...coerceEnrichment(parsed, hasRealSource), generated_by: 'claude', model: ENRICHMENT_CLAUDE_MODEL };
+    }
+    await execution?.complete({ status: 'fallback', tokens_in: null, tokens_out: null, latency_ms: Date.now() - startedAt, error_code: text ? 'INVALID_RESPONSE' : 'NO_USABLE_RESPONSE' });
   }
 
   // Workers-AI Llama tier.
   if (ai) {
+    const startedAt = Date.now();
+    const execution = await executionObserver?.start({ provider: 'workers_ai', model_key: ENRICHMENT_LLM_MODEL });
+    let out: unknown;
     try {
-      const out = await ai.run(ENRICHMENT_LLM_MODEL, {
+      out = await ai.run(ENRICHMENT_LLM_MODEL, {
         messages: [{ role: 'system', content: system }, { role: 'user', content: user }],
         max_tokens: 700,
       });
-      const text = String((out && typeof out === 'object' && 'response' in (out as Record<string, unknown>)) ? (out as { response?: unknown }).response ?? '' : '');
-      const parsed = extractJson(text);
-      if (parsed) return { ...coerceEnrichment(parsed, hasRealSource), generated_by: 'workers_ai', model: ENRICHMENT_LLM_MODEL };
-    } catch { /* fall through to deterministic */ }
+    } catch {
+      await execution?.complete({ status: 'fallback', tokens_in: null, tokens_out: null, latency_ms: Date.now() - startedAt, error_code: 'MODEL_ERROR' });
+      return { ...deterministicEnrichment(intent, prior), generated_by: 'deterministic', model: null };
+    }
+    const text = String((out && typeof out === 'object' && 'response' in (out as Record<string, unknown>)) ? (out as { response?: unknown }).response ?? '' : '');
+    const parsed = extractJson(text);
+    if (parsed) {
+      const usage = out && typeof out === 'object' && 'usage' in (out as Record<string, unknown>)
+        ? (out as { usage?: { prompt_tokens?: number; completion_tokens?: number } }).usage
+        : undefined;
+      await execution?.complete({ status: 'completed', tokens_in: usage?.prompt_tokens ?? null, tokens_out: usage?.completion_tokens ?? null, latency_ms: Date.now() - startedAt, error_code: null });
+      return { ...coerceEnrichment(parsed, hasRealSource), generated_by: 'workers_ai', model: ENRICHMENT_LLM_MODEL };
+    }
+    await execution?.complete({ status: 'fallback', tokens_in: null, tokens_out: null, latency_ms: Date.now() - startedAt, error_code: 'INVALID_RESPONSE' });
   }
 
   // Deterministic floor — honest, never empty, never fabricated.

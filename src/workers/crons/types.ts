@@ -9,6 +9,7 @@
 import type { DalAdapter } from '../dal/DalAdapter';
 import type { GoalReviewDueRow } from '../dal/propagation-store';
 import type { ProjectionOutboxGateway, ProjectionQueueBinding } from '../services/tenant-projection-queue';
+import type { GovernedModelLineageFactory } from '../lib/model-execution-lineage';
 
 /**
  * A10 review-scheduler data gateway. Injected into the cron context (like `env.AI`) rather than added to
@@ -61,6 +62,11 @@ export interface CronHandlerContext {
     // queue resource exists; enabled-without-binding fails visibly rather than dropping work.
     TENANT_PROJECTION_QUEUE_ENABLED?: string;
     TENANT_PROJECTION_QUEUE?: ProjectionQueueBinding;
+    CONTEXT_PACKET_PERSISTENCE_ENABLED?: string;
+    ROLE_SKILL_CATALOG_ENABLED?: string;
+    RESOLUTION_RECEIPT_SIGNING_SECRET?: string;
+    RESOLUTION_RECEIPT_SIGNING_KEY_ID?: string;
+    XLOOOP_DEPLOY_SHA?: string;
   };
   // A10 (260713) · review-scheduler data gateway (bound from store functions in the dispatcher). Optional
   // + additive: existing loops ignore it. Only reviewScheduleCron reads it, and only when its flag is on.
@@ -68,6 +74,9 @@ export interface CronHandlerContext {
   /** Cross-tenant dispatcher control plane. Messages contain only opaque outbox/workspace ids; the
    * consumer re-binds every read/write to both values before projecting one tenant. */
   readonly projectionOutbox?: ProjectionOutboxGateway;
+  /** Present only when strict context/model lineage is enabled by the dispatcher. */
+  readonly modelLineageFactory?: GovernedModelLineageFactory;
+  readonly modelLineageRequired?: boolean;
 }
 
 /**

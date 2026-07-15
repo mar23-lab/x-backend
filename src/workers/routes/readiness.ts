@@ -23,9 +23,15 @@ import { getReadinessAssessmentByWorkspaceRow } from '../dal/customer-readiness-
 import type { AiRunner } from '../services/agent-digest';
 import type { AuthEnv, AuthVariables } from '../middleware/auth';
 import type { DalAdapter } from '../dal/DalAdapter';
+import { modelLineagePolicy } from '../lib/model-execution-lineage';
 
 export interface ReadinessEnv extends AuthEnv {
   DATABASE_URL: string;
+  CONTEXT_PACKET_PERSISTENCE_ENABLED?: string;
+  ROLE_SKILL_CATALOG_ENABLED?: string;
+  RESOLUTION_RECEIPT_SIGNING_SECRET?: string;
+  RESOLUTION_RECEIPT_SIGNING_KEY_ID?: string;
+  XLOOOP_DEPLOY_SHA?: string;
   CUSTOMER_AUTO_PROVISION_APPROVER_USER_ID?: string;
   MBP_OWNER_USER_ID?: string;
   ADMIN_USER_IDS?: string;
@@ -166,6 +172,7 @@ readinessRoute.post('/readiness/submit', async (ctx) => {
     }
 
     // 4. Provision the workspace + day-1 roadmap, now SCALED to the captured readiness.
+    const modelLineage = modelLineagePolicy({ load: () => neonClient(ctx.env.DATABASE_URL) }, ctx.env);
     await provisionCustomerFromAccessRequest(
       dal,
       {
@@ -176,6 +183,8 @@ readinessRoute.post('/readiness/submit', async (ctx) => {
         projectName: `${companyName} onboarding`,
         approvedBy: approved.reviewed_by || approvedBy,
         ai: (ctx.env as { AI?: AiRunner }).AI,
+        modelLineageFactory: modelLineage.factory,
+        modelLineageRequired: modelLineage.required,
       },
       { CONTEXT_RESOLVER_ENABLED: ctx.env.CONTEXT_RESOLVER_ENABLED },
     );

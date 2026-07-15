@@ -1,7 +1,7 @@
 // agent-digest.test.ts · 2026-06-08
 // Unit tests for the governed digest generator (buildWorkspaceDigest).
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { buildWorkspaceDigest, buildWorkspaceDigestLLM, type AiRunner } from '../services/agent-digest';
 
 const SUMMARY = (over: Record<string, unknown> = {}) => ({
@@ -79,5 +79,16 @@ describe('buildWorkspaceDigestLLM (governed LLM draft + fail-safe fallback)', ()
     expect(system).toMatch(/ONLY the facts/i);
     expect(system).toMatch(/never invent/i);
     expect(user).toMatch(/42 events on record, 30 completed/);
+  });
+
+  it('records completed and fallback terminal states through the execution observer', async () => {
+    const finish = vi.fn(async () => undefined);
+    const observer = { start: vi.fn(async () => ({ complete: finish })) };
+
+    await buildWorkspaceDigestLLM(SUMMARY(), { run: async () => ({ response: RICH }) }, observer);
+    expect(finish).toHaveBeenLastCalledWith(expect.objectContaining({ status: 'completed' }));
+
+    await buildWorkspaceDigestLLM(SUMMARY(), { run: async () => { throw new Error('down'); } }, observer);
+    expect(finish).toHaveBeenLastCalledWith(expect.objectContaining({ status: 'fallback', error_code: 'MODEL_ERROR' }));
   });
 });

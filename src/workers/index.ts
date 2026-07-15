@@ -102,6 +102,8 @@ import {
   markProjectionOutboxProcessed,
   releaseProjectionOutboxDispatch,
 } from './dal/projection-outbox-store';
+import { envFlagTrue } from './lib/env-flag';
+import { createGovernedModelLineageFactory } from './lib/model-execution-lineage';
 
 // Note: InvestorEnv not extended here — CLERK_SECRET_KEY is already provided
 // by AuthEnv (required string) which is compatible. InvestorEnv adds only
@@ -118,6 +120,7 @@ export interface AppEnv extends CorsEnv, AuthEnv, AdminEnv, NotifierEnv, MbpProj
   EXECUTOR_MODE?: string;               // OS-3 UX Wave-2.1 ops-queue executor — default OFF (only 'enabled' activates)
   SAFETY_FLOOR_RATELIMIT_ENABLED?: string; // SF-2 (260711) · per-user cap on LLM-cost endpoints — default OFF (only 'true' enables)
   LLM_USAGE_METERING_ENABLED?: string;     // G2 (260711) · per-tenant LLM token/call metering (llm_usage_log, mig 064) — default OFF
+  ROLE_SKILL_CATALOG_ENABLED?: string;
   REVIEW_SCHEDULER_ENABLED?: string;       // A10 (260713) · review-cadence cron (crons/review-schedule.ts, chained into 05:00 slot) — default OFF (only 'true' enables)
   POLICY_ENGINE_ENABLED?: string;          // A7 (260713) · policy-engine SHADOW at goal writes (lib/policy-shadow.ts) — default OFF (only 'true' enables)
   DOMAIN_SCAFFOLD_ENABLED?: string;        // ABS-P3 (260713) · scaffold archetype honest-empty domain skeletons at provisioning (services/domain-archetypes.ts) — default OFF (only 'true' enables)
@@ -353,6 +356,7 @@ const scheduledHandler = async (
     const sql = neonClient(env.DATABASE_URL);
     const rlsSql = env.XLOOOP_RLS_APP_DATABASE_URL ? neonClient(env.XLOOOP_RLS_APP_DATABASE_URL) : sql;
     const dal = new WorkersDalAdapter(sql, rlsSql);
+    const modelLineageRequired = envFlagTrue(env.CONTEXT_PACKET_PERSISTENCE_ENABLED);
     const result = await entry.handler({
       dal,
       now: () => new Date(),
@@ -361,6 +365,8 @@ const scheduledHandler = async (
       // set so the self-driving digest sweep (chained into weight_retune) can derive its
       // deps. Loops that don't need env ignore it.
       env,
+      modelLineageRequired,
+      modelLineageFactory: modelLineageRequired ? createGovernedModelLineageFactory(sql, env) : undefined,
       // A10 (260713) · review-scheduler data gateway, bound from the store functions here rather than
       // added to the FROZEN WorkersDalAdapter facade. Only reviewScheduleCron (chained into 05:00) reads it.
       reviewSchedule: {

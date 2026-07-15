@@ -20,11 +20,14 @@ import { envFlagTrue } from '../lib/env-flag';
 import { resolveScopedWorkspace } from '../lib/operator-workspace-scope';
 import type { AuthEnv, AuthVariables } from '../middleware/auth';
 import type { DalAdapter } from '../dal/DalAdapter';
+import type { CurrentWorkParityObservationInput, CurrentWorkParityStatus } from '../dal/current-work-parity-store';
 
 export interface CurrentWorkEnv extends AuthEnv {
   DATABASE_URL: string;
   // Default-OFF: deliberately NOT declared in wrangler.toml ⇒ inert, code-path-identical.
   CURRENT_WORK_PROJECTION_ENABLED?: string;
+  // Default-OFF append-only dual-read telemetry. This never switches projection authority.
+  CURRENT_WORK_PARITY_OBSERVATIONS_ENABLED?: string;
   // JA (260714) · operator-workspace-scope. Default-OFF (undeclared in wrangler.toml) ⇒ the resolved
   // workspace is ALWAYS auth.workspace_id (byte-identical). ON: an owner/active-member operator may scope
   // this projection to a workspace they own via ?workspace_id=; an unauthorized override is a hard 403.
@@ -37,6 +40,57 @@ export interface CurrentWorkVariables extends AuthVariables {
 export const currentWorkRoute = new Hono<{ Bindings: CurrentWorkEnv; Variables: CurrentWorkVariables }>();
 
 const clean = (t: string | null | undefined): string => String(t ?? '').replace(/^Packet · /, '').trim();
+const HASH_RE = /^[a-f0-9]{64}$/;
+const PARITY_STATUSES = new Set<CurrentWorkParityStatus>(['match', 'mismatch', 'client_unavailable', 'server_unavailable']);
+const PARITY_DIFFERENCE_CODES = new Set([
+  'focus_state_mismatch',
+  'action_mismatch',
+  'counts_mismatch',
+  'version_mismatch',
+  'freshness_mismatch',
+  'client_unavailable',
+  'server_unavailable',
+]);
+const PARITY_INPUT_FIELDS = new Set([
+  'server_projection_version', 'client_projection_version',
+  'server_current_work_version', 'client_current_work_version',
+  'parity_status', 'difference_codes', 'server_state_sha256', 'client_state_sha256',
+  'server_item_count', 'client_item_count',
+]);
+
+function parityInput(value: unknown): CurrentWorkParityObservationInput | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  const body = value as Record<string, unknown>;
+  if (Object.keys(body).some((key) => !PARITY_INPUT_FIELDS.has(key))) return null;
+  const parityStatus = body.parity_status as CurrentWorkParityStatus;
+  const differences = Array.isArray(body.difference_codes) ? [...new Set(body.difference_codes)] : null;
+  const validCount = (v: unknown) => v === null || (Number.isInteger(v) && Number(v) >= 0 && Number(v) <= 1_000_000);
+  const validHash = (v: unknown) => v === null || (typeof v === 'string' && HASH_RE.test(v));
+  if (!Number.isInteger(body.server_projection_version) || Number(body.server_projection_version) < 1
+    || !Number.isInteger(body.client_projection_version) || Number(body.client_projection_version) < 1
+    || typeof body.server_current_work_version !== 'string' || body.server_current_work_version.length > 160
+    || typeof body.client_current_work_version !== 'string' || body.client_current_work_version.length > 160
+    || !PARITY_STATUSES.has(parityStatus)
+    || !differences || differences.length > 20 || differences.some((code) => typeof code !== 'string' || !PARITY_DIFFERENCE_CODES.has(code))
+    || !validHash(body.server_state_sha256) || !validHash(body.client_state_sha256)
+    || !validCount(body.server_item_count) || !validCount(body.client_item_count)) return null;
+  if (parityStatus === 'match' && differences.length > 0) return null;
+  if (parityStatus === 'mismatch' && differences.length === 0) return null;
+  if (parityStatus === 'match' && body.server_state_sha256 && body.client_state_sha256
+    && body.server_state_sha256 !== body.client_state_sha256) return null;
+  return {
+    server_projection_version: Number(body.server_projection_version),
+    client_projection_version: Number(body.client_projection_version),
+    server_current_work_version: body.server_current_work_version,
+    client_current_work_version: body.client_current_work_version,
+    parity_status: parityStatus,
+    difference_codes: differences as string[],
+    server_state_sha256: body.server_state_sha256 as string | null,
+    client_state_sha256: body.client_state_sha256 as string | null,
+    server_item_count: body.server_item_count as number | null,
+    client_item_count: body.client_item_count as number | null,
+  };
+}
 
 currentWorkRoute.get('/current-work', async (ctx) => {
   try {
@@ -98,6 +152,9 @@ currentWorkRoute.get('/current-work', async (ctx) => {
         || (e as unknown as { occurred_at?: string }).occurred_at
         || (e as unknown as { created_at?: string }).created_at || ''))
       .filter(Boolean).sort().at(-1) || null;
+    const receiptObservation = await dal.countGovernedExecutionReceipts(workspaceId)
+      .then((count) => ({ count, status: 'observed' as const }))
+      .catch(() => ({ count: null, status: 'unavailable' as const }));
     const payload = {
       schema_id: 'xlooop.current_work_projection.v2',
       projection_version: 2,
@@ -133,11 +190,31 @@ currentWorkRoute.get('/current-work', async (ctx) => {
       },
       // evidence is a COUNT, never ids
       evidence_count: events.filter((e) => Boolean(e.evidence_link)).length,
-      receipt_count: null,
-      receipt_count_status: 'unobservable_until_execution_receipt_read_is_wired',
+      receipt_count: receiptObservation.count,
+      receipt_count_status: receiptObservation.status,
     };
 
     return ctx.json(withDataClass(withAuthority(payload, auth, 'current_work'), 'live'));
+  } catch (err) {
+    return errorEnvelope(ctx, err);
+  }
+});
+
+currentWorkRoute.post('/current-work/parity-observations', async (ctx) => {
+  try {
+    if (!envFlagTrue(ctx.env.CURRENT_WORK_PARITY_OBSERVATIONS_ENABLED)) {
+      ctx.status(404);
+      return ctx.json({ error: 'current-work parity observations are not enabled', code: 'FEATURE_DISABLED', request_id: ctx.get('request_id') });
+    }
+    const input = parityInput(await ctx.req.json().catch(() => null));
+    if (!input) {
+      ctx.status(400);
+      return ctx.json({ error: 'invalid customer-safe parity observation', code: 'VALIDATION_ERROR', request_id: ctx.get('request_id') });
+    }
+    const auth = ctx.get('auth');
+    const observation = await ctx.get('dal').createCurrentWorkParityObservation(auth.workspace_id, auth.user_id, input);
+    ctx.status(202);
+    return ctx.json({ accepted: true, observation_id: observation.id, created_at: observation.created_at });
   } catch (err) {
     return errorEnvelope(ctx, err);
   }

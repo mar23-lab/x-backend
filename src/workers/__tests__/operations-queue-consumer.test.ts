@@ -128,6 +128,56 @@ describe('runOperationsQueueConsumer · service', () => {
     expect(typeof resultEvent.metadata.metrics.generated_at).toBe('string');
   });
 
+  it('strict model lineage fails the request before an unreceipted digest model call', async () => {
+    const { dal, spies } = makeDal({ queued: [EV('e1', 'execute:digest')] });
+    const aiRun = vi.fn(async () => ({ response: 'This must not run.' }));
+
+    const res = await runOperationsQueueConsumer({
+      dal,
+      ai: { run: aiRun },
+      ownerUserIds: OWNER,
+      executorEnabled: true,
+      now: NOW,
+      modelLineageRequired: true,
+    });
+
+    expect(res.failed).toBe(1);
+    expect(res.executed).toBe(0);
+    expect(aiRun).not.toHaveBeenCalled();
+    expect(spies.updateEventStatusForOperator.mock.calls[1]![2]).toEqual({ status: 'failed' });
+  });
+
+  it('strict model lineage wraps queue digest execution and closes skill lineage', async () => {
+    const { dal } = makeDal({ queued: [EV('e1', 'execute:digest')] });
+    const finish = vi.fn(async () => undefined);
+    const start = vi.fn(async () => ({ complete: finish }));
+    const complete = vi.fn(async () => [] as string[]);
+    const modelLineageFactory = vi.fn(async () => ({ observer: { start }, complete }));
+    const ai = { run: vi.fn(async () => ({ response: 'A governed digest with enough detail to be accepted as the model-generated draft.' })) };
+
+    const res = await runOperationsQueueConsumer({
+      dal,
+      ai,
+      ownerUserIds: OWNER,
+      executorEnabled: true,
+      now: NOW,
+      modelLineageRequired: true,
+      modelLineageFactory,
+    });
+
+    expect(res.executed).toBe(1);
+    expect(modelLineageFactory).toHaveBeenCalledWith(expect.objectContaining({
+      workspace_id: 'ws1',
+      principal_id: 'xlooop:digest-agent',
+      role: 'automation',
+      action: 'assistant:digest',
+      intent_ref: 'event:e1',
+    }));
+    expect(start).toHaveBeenCalledTimes(1);
+    expect(finish).toHaveBeenCalledWith(expect.objectContaining({ status: 'completed' }));
+    expect(complete).toHaveBeenCalledTimes(1);
+  });
+
   // (2b) W3 Track A · GOVERNED happy path for the roadmap verb — same spine as digest (read the plan
   // via listWorkspacePlan, draft, APPEND a needs_review/pending proposal, request completed).
   it('execute:roadmap → reads the plan, APPENDS needs_review/pending roadmap synthesis, request completed', async () => {

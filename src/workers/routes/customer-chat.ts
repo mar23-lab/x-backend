@@ -33,6 +33,7 @@ import type { EventListOpts, EventPage, HarnessFlowEvent, UserSourceConnection }
 import { type AiRunner } from '../services/agent-digest';
 import { customerSafeChat, customerSafeSerializerEnabled } from '../lib/customer-safe-decision'; // AR-0.2 · customer-safe projection (P3 260714: default-SAFE)
 import { persistAssistantContextLineage, completeAssistantSkillLineage, type AssistantContextLineage } from '../lib/assistant-context-lineage';
+import { createModelExecutionObserver } from '../lib/model-execution-lineage';
 import {
   answerCockpitChat,
   type CockpitChatScope,
@@ -259,7 +260,18 @@ customerChatRoute.post('/customer-chat', async (ctx) => {
     // L1 · tier weights recorded from the FINAL grounding set (AFTER the role-scoped projection may have
     // emptied a viewer's sources) — the trace must reflect what actually grounded, never the pre-projection set.
     if (tierByConnId) trace?.recordTierWeights(sources);
-    const result = await answerCockpitChat(message, { companyContext, events, sources, total: events.length, scope }, ai, mode, claudeKey, llm);
+    const executionObserver = assistantLineage && lineageSql
+      ? createModelExecutionObserver(lineageSql, workspaceId, auth.user_id, assistantLineage)
+      : undefined;
+    const result = await answerCockpitChat(
+      message,
+      { companyContext, events, sources, total: events.length, scope },
+      ai,
+      mode,
+      claudeKey,
+      llm,
+      executionObserver,
+    );
     if (assistantLineage && lineageSql) {
       const receipts = await completeAssistantSkillLineage(lineageSql, ctx.env, assistantLineage, {
         workspace_id: workspaceId,
