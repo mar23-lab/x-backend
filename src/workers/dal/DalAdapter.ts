@@ -366,6 +366,14 @@ export interface DalAdapter {
     expectedCurrentWorkVersion: number,
     clientRequestId: string,
   ): Promise<IntakeExecutionResult>;
+  /** Tenant-scoped count used by Current Work; returns no receipt identifiers or payloads. */
+  countGovernedExecutionReceipts(workspaceId: WorkspaceId): Promise<number>;
+  /** Append-only customer-safe dual-read telemetry; never changes Current Work authority. */
+  createCurrentWorkParityObservation(
+    workspaceId: WorkspaceId,
+    actorUserId: UserId,
+    input: import('./current-work-parity-store').CurrentWorkParityObservationInput,
+  ): Promise<{ id: string; created_at: string }>;
   /** Default-off, server-derived Definition-of-Done evaluation for one tenant-scoped packet. */
   evaluateTaskPacketCompletion(workspaceId: WorkspaceId, packetId: string): Promise<TaskPacketCompletionEvaluation | null>;
 

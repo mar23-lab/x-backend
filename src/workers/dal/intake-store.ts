@@ -77,6 +77,24 @@ export async function createIntakeResolutionRow(
   return normalizeResolution(rows[0]);
 }
 
+export async function countGovernedExecutionReceiptsRow(
+  sql: Sql,
+  workspaceId: WorkspaceId,
+): Promise<number> {
+  assertWorkspaceScope(workspaceId);
+  const [rows] = await withWorkspaceRlsContext<[Array<{ receipt_count: number | string }>]>(
+    sql,
+    workspaceId,
+    (tx) => [tx/*sql*/`
+      SELECT count(*)::integer AS receipt_count
+        FROM governed_execution_receipts
+       WHERE workspace_id = ${workspaceId}
+    `],
+    { readOnly: true },
+  );
+  return Number(rows[0]?.receipt_count ?? 0);
+}
+
 type ExecutionRow = ResolutionRow & {
   receipt_id: string;
   receipt_client_request_id: string;

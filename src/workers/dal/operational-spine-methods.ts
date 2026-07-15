@@ -20,7 +20,12 @@ import {
   listMetricDeltasRow,
   executeCustomerDataLifecycleRequestRow,
 } from './operational-spine-store';
-import { createIntakeResolutionRow, executeIntakeResolutionRow } from './intake-store';
+import {
+  countGovernedExecutionReceiptsRow,
+  createIntakeResolutionRow,
+  executeIntakeResolutionRow,
+} from './intake-store';
+import { createCurrentWorkParityObservationRow } from './current-work-parity-store';
 import type { Sql } from '../db/client';
 
 export type OperationalSpineDalMethods = Pick<
@@ -40,6 +45,8 @@ export type OperationalSpineDalMethods = Pick<
   | 'executeCustomerDataLifecycleRequest'
   | 'createIntakeResolution'
   | 'executeIntakeResolution'
+  | 'countGovernedExecutionReceipts'
+  | 'createCurrentWorkParityObservation'
 >;
 
 type AdapterCtor = { prototype: object };
@@ -64,6 +71,12 @@ export function applyOperationalSpineMethods(adapter: AdapterCtor): void {
     },
     executeIntakeResolution(workspaceId, actorUserId, resolutionId, expectedVersion, expectedCurrentWorkVersion, clientRequestId) {
       return executeIntakeResolutionRow(sqlOf(this), workspaceId, actorUserId, resolutionId, expectedVersion, expectedCurrentWorkVersion, clientRequestId);
+    },
+    countGovernedExecutionReceipts(workspaceId) {
+      return countGovernedExecutionReceiptsRow(sqlOf(this), workspaceId);
+    },
+    createCurrentWorkParityObservation(workspaceId, actorUserId, input) {
+      return createCurrentWorkParityObservationRow(sqlOf(this), workspaceId, actorUserId, input);
     },
     evaluateTaskPacketCompletion(workspaceId, packetId) {
       return evaluateTaskPacketCompletionRow(sqlOf(this), workspaceId, packetId);

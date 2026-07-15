@@ -35,7 +35,7 @@ export const ARCHETYPE_TO_MEMBERSHIP: Readonly<Record<string, readonly string[]>
 /** sha256 of docs/contracts/role-skill-catalog.json — embedded because the sync resolver path cannot await
  *  crypto.subtle. `verify:role-skill-catalog-loader-fresh` (ci-local) re-hashes the file and fails on drift,
  *  so this constant can never silently diverge from the catalog it fingerprints. */
-export const CATALOG_MANIFEST_SHA256 = 'e85bdf46f3d29435dbcdafa229bd563a01dafa4685527c146421d01a2844aa0a';
+export const CATALOG_MANIFEST_SHA256 = '29b427d4c21d62909aaa64ab4c6aa5add9cd6fbb1477679046974f5db4dfc68a';
 
 interface CatalogEntry {
   key: string;
@@ -80,8 +80,26 @@ export function buildCatalogBindings(): RoleSkillBinding[] {
   return bindings;
 }
 
+/** Internal service principals never enter the customer-publishable role catalog. This narrow
+ * binding is code-reviewed runtime policy for the xlooop:digest-agent registered in agent-roles.yml. */
+export const INTERNAL_SERVICE_BINDINGS: readonly RoleSkillBinding[] = Object.freeze([{
+  role: 'automation',
+  skill_key: 'skill.workspace-assistant.grounded-assistance',
+  skill_version: '1.0.0',
+  lifecycle: 'active',
+  actions: ['assistant:digest', 'assistant:onboard'],
+  allowed_tools: [],
+  denied_tools: ['raw_graph_export', 'full_tenant_memory_export', 'secret_access', 'search_all_memory', 'customer_data_export', 'approval_decision'],
+  requires_approval: true,
+  source: 'internal-service',
+}]);
+
+export function buildRuntimeBindings(): RoleSkillBinding[] {
+  return [...buildCatalogBindings(), ...INTERNAL_SERVICE_BINDINGS];
+}
+
 /** Frozen singleton — the catalog is immutable per version, so the bindings are computed once. */
-const CATALOG_BINDINGS: readonly RoleSkillBinding[] = Object.freeze(buildCatalogBindings());
+const CATALOG_BINDINGS: readonly RoleSkillBinding[] = Object.freeze(buildRuntimeBindings());
 
 /** Flag-gated accessor for the shadow resolver. OFF ⇒ null (caller uses the empty floor, byte-identical). */
 export function catalogBindingsIfEnabled(env: unknown): { bindings: readonly RoleSkillBinding[]; catalog_manifest_sha256: string } | null {

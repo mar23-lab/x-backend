@@ -53,6 +53,7 @@ import type { DalAdapter } from '../dal/DalAdapter';
 import type { HarnessFlowEvent, HarnessFlowEventInput } from '../dal/types';
 import { buildWorkspaceDigestLLM, type AiRunner } from './agent-digest';
 import { buildWorkspaceRoadmap } from './agent-roadmap';
+import type { GovernedModelLineageFactory } from '../lib/model-execution-lineage';
 
 /** next_action namespace that marks an event as addressed to THIS executor. */
 const EXECUTE_PREFIX = 'execute:';
@@ -82,6 +83,8 @@ export interface OperationsQueueConsumerDeps {
   readonly now: () => Date;
   /** Max queued events to claim per run. Defaults to DEFAULT_MAX_BATCH. */
   readonly maxBatch?: number;
+  readonly modelLineageFactory?: GovernedModelLineageFactory;
+  readonly modelLineageRequired?: boolean;
 }
 
 export interface QueueConsumerResult {
@@ -109,7 +112,13 @@ export interface QueueConsumerResult {
  */
 type VerbHandler = (
   event: HarnessFlowEvent,
-  deps: { readonly dal: DalAdapter; readonly ai?: AiRunner; readonly now: () => Date },
+  deps: {
+    readonly dal: DalAdapter;
+    readonly ai?: AiRunner;
+    readonly now: () => Date;
+    readonly modelLineageFactory?: GovernedModelLineageFactory;
+    readonly modelLineageRequired?: boolean;
+  },
 ) => Promise<HarnessFlowEventInput>;
 
 // ── Verb registry ────────────────────────────────────────────────────────────────────────────────
@@ -119,9 +128,24 @@ const VERB_HANDLERS: Readonly<Record<string, VerbHandler>> = Object.freeze({
   // 'execute:digest' — compile a workspace digest from the activity summary and APPEND it PENDING.
   // Mirrors services/agent-digest.ts (manual route) + scheduled-digest-sweep.ts (PUSH): same draft,
   // same proposal shape, same approval spine. The operator approves via POST /sign-offs to post it.
-  digest: async (event, { dal, ai, now }) => {
+  digest: async (event, { dal, ai, now, modelLineageFactory, modelLineageRequired }) => {
     const summary = await dal.getWorkspaceActivitySummary(event.workspace_id, null);
-    const draft = await buildWorkspaceDigestLLM(summary, ai);
+    if (ai && modelLineageRequired && !modelLineageFactory) throw new Error('strict model lineage factory is unavailable');
+    const governed = ai && modelLineageFactory
+      ? await modelLineageFactory({
+        workspace_id: event.workspace_id,
+        principal_id: DIGEST_AGENT_ID,
+        role: 'automation',
+        mode: 'plan',
+        action: 'assistant:digest',
+        intent_ref: `event:${event.id}`,
+        scope: { event_count: summary.events_total, document_count: 0, unpromoted_document_count: 0, source_count: summary.connected_sources },
+        redaction_profile: 'automation-summary',
+        client_empty: false,
+      })
+      : null;
+    const draft = await buildWorkspaceDigestLLM(summary, ai, governed?.observer);
+    if (governed) await governed.complete();
     return {
       // Deterministic id derived from the request -> idempotent (upsertEvent is insert-if-absent), and
       // the id itself is the lineage link back to the command that produced it.
@@ -288,7 +312,11 @@ export async function runOperationsQueueConsumer(
         // 'failed' (+ failure note) and continues.
         let resultEvent: HarnessFlowEventInput;
         try {
-          resultEvent = await handler(ev, { dal, ai, now });
+          resultEvent = await handler(ev, {
+            dal, ai, now,
+            modelLineageFactory: deps.modelLineageFactory,
+            modelLineageRequired: deps.modelLineageRequired,
+          });
         } catch (verbErr) {
           await appendFailureNote(
             dal,

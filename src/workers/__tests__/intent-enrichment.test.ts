@@ -2,7 +2,7 @@
 // Tests the generator ladder (Claude→Llama→deterministic, never-throws, no fabricated web_sources) and
 // the route wiring (POST /intents best-effort enrichment, GET /intents/:id merge, POST /intents/:id/enrich).
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { Hono } from 'hono';
 import { workspacesRoute } from '../routes/workspaces';
 import { generateIntentEnrichment } from '../services/packet-enrichment';
@@ -51,6 +51,18 @@ describe('generateIntentEnrichment — the LLM ladder', () => {
     const e = await generateIntentEnrichment(INTENT, {}, fenced);
     expect(e.generated_by).toBe('workers_ai');
     expect(e.pros).toEqual(['x']);
+  });
+
+  it('records completed and fallback terminal states through the execution observer', async () => {
+    const finish = vi.fn(async () => undefined);
+    const observer = { start: vi.fn(async () => ({ complete: finish })) };
+    const valid: AiRunner = { run: async () => ({ response: JSON.stringify({ pros: ['fast'], cons: [], prior_resources: [], web_sources: [], recommended_path: 'ship', metrics: {}, confidence: 0.8 }) }) };
+
+    await generateIntentEnrichment(INTENT, {}, valid, undefined, false, observer);
+    expect(finish).toHaveBeenLastCalledWith(expect.objectContaining({ status: 'completed' }));
+
+    await generateIntentEnrichment(INTENT, {}, { run: async () => { throw new Error('down'); } }, undefined, false, observer);
+    expect(finish).toHaveBeenLastCalledWith(expect.objectContaining({ status: 'fallback', error_code: 'MODEL_ERROR' }));
   });
 });
 

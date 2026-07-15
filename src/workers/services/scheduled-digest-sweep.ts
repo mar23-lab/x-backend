@@ -24,6 +24,7 @@
 
 import type { DalAdapter } from '../dal/DalAdapter';
 import { buildWorkspaceDigestLLM, type AiRunner } from './agent-digest';
+import type { GovernedModelLineageFactory } from '../lib/model-execution-lineage';
 
 const DIGEST_AGENT_ID = 'xlooop:digest-agent';
 const DIGEST_NEXT_ACTION = 'approve_to_post_digest';
@@ -38,6 +39,8 @@ export interface ScheduledDigestSweepDeps {
   readonly flagEnabled: boolean;
   /** Injected clock so cron + tests are deterministic. */
   readonly now: () => Date;
+  readonly modelLineageFactory?: GovernedModelLineageFactory;
+  readonly modelLineageRequired?: boolean;
 }
 
 export interface SweepResult {
@@ -101,7 +104,24 @@ export async function runScheduledDigestSweep(deps: ScheduledDigestSweepDeps): P
 
         // (c) DRAFT — LLM-richer when a binding is present, deterministic fallback otherwise. Either
         // way it is posted PENDING; the agent never auto-posts to the official record.
-        const digest = await buildWorkspaceDigestLLM(summary, ai);
+        if (ai && deps.modelLineageRequired && !deps.modelLineageFactory) {
+          throw new Error('strict model lineage factory is unavailable');
+        }
+        const governed = ai && deps.modelLineageFactory
+          ? await deps.modelLineageFactory({
+            workspace_id: ws.id,
+            principal_id: DIGEST_AGENT_ID,
+            role: 'automation',
+            mode: 'plan',
+            action: 'assistant:digest',
+            intent_ref: `scheduled-digest:${ws.id}`,
+            scope: { event_count: summary.events_total, document_count: 0, unpromoted_document_count: 0, source_count: summary.connected_sources },
+            redaction_profile: 'automation-summary',
+            client_empty: false,
+          })
+          : null;
+        const digest = await buildWorkspaceDigestLLM(summary, ai, governed?.observer);
+        if (governed) await governed.complete();
         const occurredAt = now().toISOString();
         // Field-identical to workspaces.ts POST .../agent/digest, including the per-workspace-per-day
         // id — so a manual trigger and the scheduled sweep are mutually idempotent (same id collides).

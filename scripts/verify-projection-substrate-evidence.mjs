@@ -9,7 +9,8 @@
 //   (1) the substrate manifest exists + declares the projection's source tables.
 //   (2) MANIFEST ⊇ CODE: every table the persistence module READS (FROM <t>) is declared in the manifest
 //       (a new uncensused source read is a defect — you cannot census what you did not declare).
-//   (3) the census block is present + dated + has a row_count for every declared core table.
+//   (3) the census block is present + dated + has an explicit numeric or `unobserved` state for every
+//       declared core table. `unobserved` is allowed only while status is not `fed`.
 //   (4) HONESTY: persisted_graph_nodes == 0 ⇒ status MUST be `wired_not_fed` (a `fed`/`partially_fed`
 //       claim on an empty persisted graph FAILS — the exact S1 defect).
 //
@@ -45,7 +46,8 @@ function parseManifest(text) {
   const persistedNodes = Number((text.match(/persisted_graph_nodes:\s*(\d+)/) || [])[1]);
   const dated = (text.match(/dated:\s*['"]?([0-9T:\-Z]+)/) || [])[1] || '';
   const rowCountKeys = [...text.matchAll(/^\s{4,}([A-Za-z0-9_]+):\s*\d+/gm)].map((m) => m[1]);
-  return { tables, roleByTable, status, persistedNodes, dated, rowCountKeys };
+  const unobservedKeys = [...text.matchAll(/^\s{4,}([A-Za-z0-9_]+):\s*unobserved\s*(?:#.*)?$/gm)].map((m) => m[1]);
+  return { tables, roleByTable, status, persistedNodes, dated, rowCountKeys, unobservedKeys };
 }
 
 // the should-FAIL / should-PASS pair for --self-test
@@ -60,8 +62,8 @@ function honestyViolations(m) {
 }
 
 if (process.argv.includes('--self-test')) {
-  const passManifest = { tables: ['x'], roleByTable: {}, status: 'wired_not_fed', persistedNodes: 0, dated: 't', rowCountKeys: [] };
-  const failManifest = { tables: ['x'], roleByTable: {}, status: 'fed', persistedNodes: 0, dated: 't', rowCountKeys: [] };
+  const passManifest = { tables: ['x'], roleByTable: {}, status: 'wired_not_fed', persistedNodes: 0, dated: 't', rowCountKeys: [], unobservedKeys: ['x'] };
+  const failManifest = { tables: ['x'], roleByTable: {}, status: 'fed', persistedNodes: 0, dated: 't', rowCountKeys: [], unobservedKeys: ['x'] };
   const passOk = honestyViolations(passManifest).length === 0;
   const failBites = honestyViolations(failManifest).length > 0;
   if (passOk && failBites) { console.log('☑ self-test: honesty gate BITES (fed+0-nodes FAILs; wired_not_fed+0-nodes PASSes)'); process.exit(0); }
@@ -89,12 +91,15 @@ if (!text) {
   ok('(2) every source table read by graph-store.ts is declared in the manifest', undeclared.length === 0,
     undeclared.length ? `undeclared (uncensused) reads: ${undeclared.join(', ')}` : `${new Set(fromTables).size} source reads declared`);
 
-  // (3) census present + dated + a row_count for each declared CORE table
+  // (3) census present + dated + an explicit state for each declared CORE table. A new source may be
+  // recorded as unobserved instead of inventing a count, but fed is forbidden until all are measured.
   ok('(3) census is dated', !!m.dated, m.dated || 'no dated census');
   const coreTables = m.tables.filter((t) => (m.roleByTable[t] || 'core') === 'core');
-  const missingCensus = coreTables.filter((t) => !m.rowCountKeys.includes(t));
-  ok('(3) every CORE source table has a census row_count', missingCensus.length === 0,
-    missingCensus.length ? `no census for: ${missingCensus.join(', ')}` : `${coreTables.length} core tables censused`);
+  const missingCensus = coreTables.filter((t) => !m.rowCountKeys.includes(t) && !m.unobservedKeys.includes(t));
+  ok('(3) every CORE source table has an explicit census state', missingCensus.length === 0,
+    missingCensus.length ? `no census state for: ${missingCensus.join(', ')}` : `${coreTables.length} core tables declared`);
+  ok('(3) fed status has no unobserved CORE sources', m.status !== 'fed' || m.unobservedKeys.length === 0,
+    m.unobservedKeys.length ? `unobserved: ${m.unobservedKeys.join(', ')}` : 'all observed');
 
   // (4) HONESTY — the S1 gate
   const hv = honestyViolations(m);

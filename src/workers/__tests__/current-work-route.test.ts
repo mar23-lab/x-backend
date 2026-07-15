@@ -3,20 +3,41 @@ import { Hono } from 'hono';
 import { currentWorkRoute } from '../routes/current-work';
 
 // Mock dal: getSession returns one project; listEvents returns a fixture event stream.
-function mkDal(events: any[]) {
+function mkDal(events: any[], receiptCount = 0, receiptReadFails = false, parityCalls: any[] = []) {
   return {
     getSession: async () => ({ projects: [{ id: 'prj_1', name: 'P1' }], workspace: { id: 'ws_1' }, user: { role: 'operator' } }),
     listEvents: async () => ({ events, pagination: { has_more: false, next_before: null } }),
+    countGovernedExecutionReceipts: async () => {
+      if (receiptReadFails) throw new Error('receipt read unavailable');
+      return receiptCount;
+    },
+    createCurrentWorkParityObservation: async (workspace_id: string, actor_user_id: string, input: any) => {
+      parityCalls.push({ workspace_id, actor_user_id, input });
+      return { id: 'cwp_1', created_at: '2026-07-15T00:00:00.000Z' };
+    },
   } as any;
 }
 const AUTH = { user_id: 'u_1', workspace_id: 'ws_1', role: 'operator', email: 'o@x.com', service_principal: false } as any;
 
-function app(events: any[], flag: string | undefined) {
+function app(events: any[], flag: string | undefined, receiptCount = 0, receiptReadFails = false) {
   const a = new Hono();
   a.use('*', async (ctx, next) => {
     ctx.env = { CURRENT_WORK_PROJECTION_ENABLED: flag } as any;
     ctx.set('auth', AUTH);
-    ctx.set('dal', mkDal(events));
+    ctx.set('dal', mkDal(events, receiptCount, receiptReadFails));
+    ctx.set('request_id', 'rq_1');
+    await next();
+  });
+  a.route('/', currentWorkRoute);
+  return a;
+}
+
+function parityApp(flag: string | undefined, calls: any[]) {
+  const a = new Hono();
+  a.use('*', async (ctx, next) => {
+    ctx.env = { CURRENT_WORK_PARITY_OBSERVATIONS_ENABLED: flag } as any;
+    ctx.set('auth', AUTH);
+    ctx.set('dal', mkDal([], 0, false, calls));
     ctx.set('request_id', 'rq_1');
     await next();
   });
@@ -81,7 +102,64 @@ describe('current-work · CurrentWorkProjection read route (flag-gated, inert)',
     expect(Array.isArray(b.allowed_actions)).toBe(true);
     // never leaks evidence ids
     expect(JSON.stringify(b)).not.toMatch(/evidence_ref_ids|evidence_link/);
+    expect(b.receipt_count).toBe(0);
+    expect(b.receipt_count_status).toBe('observed');
+  });
+
+  it('reports the observed tenant-scoped execution receipt count', async () => {
+    const res = await app([], 'true', 4).request('/current-work');
+    const b = await res.json();
+    expect(b.receipt_count).toBe(4);
+    expect(b.receipt_count_status).toBe('observed');
+  });
+
+  it('fails conservatively when receipt observability is unavailable', async () => {
+    const res = await app([], 'true', 0, true).request('/current-work');
+    const b = await res.json();
     expect(b.receipt_count).toBeNull();
-    expect(b.receipt_count_status).toBe('unobservable_until_execution_receipt_read_is_wired');
+    expect(b.receipt_count_status).toBe('unavailable');
+  });
+});
+
+describe('current-work · customer-safe parity observations (separately flag-gated)', () => {
+  const observation = {
+    server_projection_version: 2,
+    client_projection_version: 1,
+    server_current_work_version: '2026-07-15T00:00:00Z',
+    client_current_work_version: 'fixture-v1',
+    parity_status: 'mismatch',
+    difference_codes: ['counts_mismatch'],
+    server_state_sha256: 'a'.repeat(64),
+    client_state_sha256: 'b'.repeat(64),
+    server_item_count: 3,
+    client_item_count: 2,
+  };
+
+  it('is inert when the parity-observation flag is absent', async () => {
+    const res = await parityApp(undefined, []).request('/current-work/parity-observations', {
+      method: 'POST', body: JSON.stringify(observation), headers: { 'content-type': 'application/json' },
+    });
+    expect(res.status).toBe(404);
+  });
+
+  it('persists only the authenticated tenant and customer-safe observation fields', async () => {
+    const calls: any[] = [];
+    const res = await parityApp('true', calls).request('/current-work/parity-observations', {
+      method: 'POST', body: JSON.stringify(observation), headers: { 'content-type': 'application/json' },
+    });
+    expect(res.status).toBe(202);
+    expect(calls).toEqual([{ workspace_id: 'ws_1', actor_user_id: 'u_1', input: observation }]);
+    expect(JSON.stringify(calls)).not.toMatch(/title|prompt|evidence|focus_id/);
+  });
+
+  it('rejects raw or inconsistent parity payloads', async () => {
+    const calls: any[] = [];
+    const res = await parityApp('true', calls).request('/current-work/parity-observations', {
+      method: 'POST',
+      body: JSON.stringify({ ...observation, parity_status: 'match', difference_codes: [], raw_title: 'private' }),
+      headers: { 'content-type': 'application/json' },
+    });
+    expect(res.status).toBe(400);
+    expect(calls).toHaveLength(0);
   });
 });

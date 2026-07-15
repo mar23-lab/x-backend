@@ -1,4 +1,4 @@
-// context-packet.ts · AR-2.2 (260713) · the context-packet builder KERNEL (pure, inert).
+// context-packet.ts · AR-2.2 (260713) · the context-packet builder kernel (pure).
 //
 // The operator's spine requirement is a traceable/auditable line from intent → the context an agent was
 // given → the governed action. The pieces already exist server-side but are never assembled into ONE
@@ -10,9 +10,9 @@
 //
 // PURE by construction (no IO, no Date.now — `now` is injected; mirrors role-skill-resolver.ts). Deny-by-
 // default CUSTOMER-SAFE: the packet carries COUNTS + a coarse capability summary + a deterministic
-// fingerprint — NEVER internal ids, event/document ids, graph topology, prompts, or skill bodies. INERT:
-// nothing calls this yet; persistence (context_packets table) + the assembler wire are the next
-// operator-gated steps (CONTEXT_PACKET_CONTRACT = docs/contracts/context-packet.v1.json).
+// fingerprint — NEVER internal ids, event/document ids, graph topology, prompts, or skill bodies.
+// Assistant routes and background automation call this through assistant-context-lineage only when
+// CONTEXT_PACKET_PERSISTENCE_ENABLED is true (contract: docs/contracts/context-packet.v1.json).
 
 import type { RoleSkillResolution } from './role-skill-resolver';
 

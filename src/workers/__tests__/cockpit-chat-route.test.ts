@@ -99,6 +99,72 @@ describe('POST /cockpit-chat', () => {
     expect(cap.opts?.project_id).toBeUndefined(); // no narrowing → whole workspace
   });
 
+  it('binds a named workspace to the tenant-scoped event read when the full DAL is present', async () => {
+    const calls: string[] = [];
+    const app = new Hono();
+    app.use('*', async (ctx, next) => {
+      ctx.set('request_id', 'test');
+      ctx.set('auth', { user_id: MBP_OWNER, role: 'owner' } as never);
+      ctx.set('dal', {
+        operatorOwnsWorkspace: async (_ids: string[], workspaceId: string) => {
+          calls.push(`owns:${workspaceId}`);
+          return workspaceId === 'org_3EG82';
+        },
+        listEvents: async (workspaceId: string) => {
+          calls.push(`events:${workspaceId}`);
+          return { events: COCKPIT_EVENTS, pagination: { has_more: false, next_before: null } };
+        },
+        listEventsForOperator: async () => { throw new Error('operator-wide read must not serve a named workspace'); },
+      } as never);
+      await next();
+    });
+    app.route('/api/v1', workspacesRoute);
+    const res = await app.request('/api/v1/cockpit-chat', {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ message: 'summarize', scope: { workspace_id: 'org_3EG82' } }),
+    }, ENV as never);
+    expect(res.status).toBe(200);
+    expect(calls).toEqual(['owns:org_3EG82', 'events:org_3EG82']);
+  });
+
+  it('rejects a named workspace outside the operator ownership set', async () => {
+    const app = new Hono();
+    app.use('*', async (ctx, next) => {
+      ctx.set('request_id', 'test');
+      ctx.set('auth', { user_id: MBP_OWNER, role: 'owner' } as never);
+      ctx.set('dal', {
+        operatorOwnsWorkspace: async () => false,
+        listEvents: async () => { throw new Error('must not read'); },
+      } as never);
+      await next();
+    });
+    app.route('/api/v1', workspacesRoute);
+    const res = await app.request('/api/v1/cockpit-chat', {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ message: 'summarize', scope: { workspace_id: 'tenant_b' } }),
+    }, ENV as never);
+    expect(res.status).toBe(403);
+  });
+
+  it('strict lineage mode refuses cross-workspace chat instead of assigning it to a false tenant', async () => {
+    const app = new Hono();
+    app.use('*', async (ctx, next) => {
+      ctx.set('request_id', 'test');
+      ctx.set('auth', { user_id: MBP_OWNER, role: 'owner' } as never);
+      ctx.set('dal', {
+        listEventsForOperator: async () => ({ events: COCKPIT_EVENTS, pagination: { has_more: false, next_before: null } }),
+      } as never);
+      await next();
+    });
+    app.route('/api/v1', workspacesRoute);
+    const res = await app.request('/api/v1/cockpit-chat', {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ message: 'summarize', scope: { all_workspaces: true } }),
+    }, { ...ENV, CONTEXT_PACKET_PERSISTENCE_ENABLED: 'true' } as never);
+    expect(res.status).toBe(409);
+    expect((await res.json()).code).toBe('CONTEXT_LINEAGE_SCOPE_REQUIRED');
+  });
+
   // The trust fix end-to-end: a governance project with ZERO operation_events but governance packets
   // waiting on the operator's sign-off (Plane B, from the operations-live-stream snapshot). Before the
   // fix the route answered "nothing blocked"; now it reads the snapshot and reports the sign-offs.

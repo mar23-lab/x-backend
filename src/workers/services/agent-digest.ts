@@ -9,6 +9,7 @@
 
 import type { WorkspaceActivitySummary } from '../dal/workspace-activity-store';
 import { companyDescriptor, type CustomerContextProfile } from '../dal/customer-context-store';
+import type { ModelExecutionObserver } from '../lib/model-execution-lineage';
 
 export interface DigestProposal {
   summary: string;
@@ -68,9 +69,16 @@ const APPROVE_FOOTER = 'Approve to post this digest to your operations stream as
  * to the deterministic digest (HR-INPUT-COERCION-NO-THROW-1 / HR-CONFIG-REALITY-MATCH-1 spirit:
  * a missing/failing binding surfaces as a deterministic fallback, never a 5xx).
  */
-export async function buildWorkspaceDigestLLM(s: WorkspaceActivitySummary, ai?: AiRunner): Promise<DigestDraft> {
+export async function buildWorkspaceDigestLLM(
+  s: WorkspaceActivitySummary,
+  ai?: AiRunner,
+  executionObserver?: ModelExecutionObserver,
+): Promise<DigestDraft> {
   const deterministic = buildWorkspaceDigest(s);
   if (!ai) return { ...deterministic, generated_by: 'deterministic' };
+  const startedAt = Date.now();
+  const execution = await executionObserver?.start({ provider: 'workers_ai', model_key: DIGEST_LLM_MODEL });
+  let out: unknown;
   try {
     const facts: string[] = [
       `${plural(s.events_total, 'event')} on record, ${s.events_completed} completed`,
@@ -82,7 +90,7 @@ export async function buildWorkspaceDigestLLM(s: WorkspaceActivitySummary, ai?: 
     if (s.needs_you > 0) facts.push(`${plural(s.needs_you, 'item')} awaiting the operator's review`);
     if (s.since && s.events_since > 0) facts.push(`${plural(s.events_since, 'new event')} since the operator last visited`);
 
-    const out = await ai.run(DIGEST_LLM_MODEL, {
+    out = await ai.run(DIGEST_LLM_MODEL, {
       messages: [
         {
           role: 'system',
@@ -97,21 +105,32 @@ export async function buildWorkspaceDigestLLM(s: WorkspaceActivitySummary, ai?: 
       max_tokens: 320,
     });
 
-    const text = String(
+  } catch (_) {
+    await execution?.complete({ status: 'fallback', tokens_in: null, tokens_out: null, latency_ms: Date.now() - startedAt, error_code: 'MODEL_ERROR' });
+    return { ...deterministic, generated_by: 'deterministic' };
+  }
+  const text = String(
       (out && typeof out === 'object' && 'response' in (out as Record<string, unknown>)
         ? (out as { response?: unknown }).response
         : '') ?? '',
     ).trim();
-    if (text.length < 40) return { ...deterministic, generated_by: 'deterministic' };
+  if (text.length < 40) {
+    await execution?.complete({ status: 'fallback', tokens_in: null, tokens_out: null, latency_ms: Date.now() - startedAt, error_code: 'SHORT_RESPONSE' });
+    return { ...deterministic, generated_by: 'deterministic' };
+  }
+  const usage = out && typeof out === 'object' && 'usage' in (out as Record<string, unknown>)
+    ? (out as { usage?: { prompt_tokens?: number; completion_tokens?: number } }).usage
+    : undefined;
+  await execution?.complete({
+    status: 'completed', tokens_in: usage?.prompt_tokens ?? null, tokens_out: usage?.completion_tokens ?? null,
+    latency_ms: Date.now() - startedAt, error_code: null,
+  });
 
-    return {
+  return {
       summary: deterministic.summary,
       body: `${text}\n\n${APPROVE_FOOTER}`,
       generated_by: 'llm',
-    };
-  } catch (_) {
-    return { ...deterministic, generated_by: 'deterministic' };
-  }
+  };
 }
 
 // ── DAY-1 governed welcome (the moat, visible at minute one) ─────────────────────────────────
@@ -131,6 +150,7 @@ export interface WelcomeDraftOpts {
   roadmapCount?: number | null;
   /** Workers-AI binding for LLM enrichment; absent → deterministic. */
   ai?: AiRunner;
+  executionObserver?: ModelExecutionObserver;
 }
 
 export interface WelcomeDraft extends DigestProposal {
@@ -195,6 +215,9 @@ export async function buildOnboardingWelcomeDraft(
 
   if (!opts.ai) return deterministic;
 
+  const startedAt = Date.now();
+  const execution = await opts.executionObserver?.start({ provider: 'workers_ai', model_key: DIGEST_LLM_MODEL });
+  let out: unknown;
   try {
     const facts: string[] = [`the workspace is named "${name}" and is freshly set up`];
     if (roadmapCount > 0) facts.push(`${plural(roadmapCount, 'day-1 roadmap item')} queued`);
@@ -206,7 +229,7 @@ export async function buildOnboardingWelcomeDraft(
     );
     facts.push(`the single suggested first step is: ${firstAction}`);
 
-    const out = await opts.ai.run(DIGEST_LLM_MODEL, {
+    out = await opts.ai.run(DIGEST_LLM_MODEL, {
       messages: [
         {
           role: 'system',
@@ -222,21 +245,32 @@ export async function buildOnboardingWelcomeDraft(
       max_tokens: 320,
     });
 
-    const text = String(
+  } catch (_) {
+    await execution?.complete({ status: 'fallback', tokens_in: null, tokens_out: null, latency_ms: Date.now() - startedAt, error_code: 'MODEL_ERROR' });
+    return deterministic;
+  }
+  const text = String(
       (out && typeof out === 'object' && 'response' in (out as Record<string, unknown>)
         ? (out as { response?: unknown }).response
         : '') ?? '',
     ).trim();
-    if (text.length < 40) return deterministic;
+  if (text.length < 40) {
+    await execution?.complete({ status: 'fallback', tokens_in: null, tokens_out: null, latency_ms: Date.now() - startedAt, error_code: 'SHORT_RESPONSE' });
+    return deterministic;
+  }
+  const usage = out && typeof out === 'object' && 'usage' in (out as Record<string, unknown>)
+    ? (out as { usage?: { prompt_tokens?: number; completion_tokens?: number } }).usage
+    : undefined;
+  await execution?.complete({
+    status: 'completed', tokens_in: usage?.prompt_tokens ?? null, tokens_out: usage?.completion_tokens ?? null,
+    latency_ms: Date.now() - startedAt, error_code: null,
+  });
 
-    return {
+  return {
       summary: deterministic.summary,
       body: `${text}\n\n${WELCOME_APPROVE_FOOTER}`,
       generated_by: 'llm',
-    };
-  } catch (_) {
-    return deterministic;
-  }
+  };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────────────────────────

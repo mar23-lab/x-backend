@@ -26,9 +26,16 @@ import type { AdminEnv } from '../middleware/admin';
 import type { DalAdapter } from '../dal/DalAdapter';
 import type { AccessRequestStatus, UserStatus } from '../dal/types';
 import { CONNECTOR_REGISTRY } from '../lib/connector-registry'; // W5-C/G10 · connector OAuth health
+import { neonClient } from '../db/client';
+import { modelLineagePolicy } from '../lib/model-execution-lineage';
 
 export interface AdminRoutesEnv extends AuthEnv, AdminEnv, NotifierEnv {
   DATABASE_URL: string;
+  CONTEXT_PACKET_PERSISTENCE_ENABLED?: string;
+  ROLE_SKILL_CATALOG_ENABLED?: string;
+  RESOLUTION_RECEIPT_SIGNING_SECRET?: string;
+  RESOLUTION_RECEIPT_SIGNING_KEY_ID?: string;
+  XLOOOP_DEPLOY_SHA?: string;
 }
 
 export type AdminRoutesVariables = AuthVariables & {
@@ -143,6 +150,7 @@ adminRoute.post('/admin/access-requests/:id/provision', async (ctx) => {
       });
     }
     const dal = ctx.get('dal');
+    const modelLineage = modelLineagePolicy({ load: () => neonClient(ctx.env.DATABASE_URL) }, ctx.env);
     const outcome = await provisionCustomerFromAccessRequest(
       dal,
       {
@@ -154,6 +162,8 @@ adminRoute.post('/admin/access-requests/:id/provision', async (ctx) => {
         approvedBy: auth.user_id,
         // Workers-AI binding LLM-enriches the day-1 welcome; absent → deterministic fallback.
         ai: (ctx.env as { AI?: AiRunner }).AI,
+        modelLineageFactory: modelLineage.factory,
+        modelLineageRequired: modelLineage.required,
       },
       // ctx_v1 resolver flag — default OFF (unset). Only 'true' enables it.
       { CONTEXT_RESOLVER_ENABLED: (ctx.env as { CONTEXT_RESOLVER_ENABLED?: string }).CONTEXT_RESOLVER_ENABLED },

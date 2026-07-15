@@ -93,6 +93,9 @@ export interface DataGraphFacts {
   // (operation_events ⨝ operations_unified) the persist handler performs — operations_unified itself
   // lacks intent_id (ADR-ARCH-003 VI.2 step 3).
   unified: Array<{ id: string; plane: GraphPlane; source_plane_id?: string | null; workspace_id?: string | null; project_id?: string | null; domain_id?: string | null; kind?: string | null; occurred_at?: string | null; ingested_at?: string | null; summary?: string | null; title?: string | null; intent_id?: string | null }>;
+  // Canonical governed work. This direct feed prevents new single-intake packets from remaining
+  // invisible until an unrelated operations_unified mirror happens to be written.
+  packets?: Array<{ id: string; workspace_id?: string | null; project_id?: string | null; event_id?: string | null; title?: string | null; summary?: string | null; lifecycle_state?: string | null; created_at?: string | null; updated_at?: string | null }>;
   // project_source_bindings → the `source` lineage-origin node + the `feeds` edge (optional; ADR-ARCH-003 VI.2).
   bindings?: Array<{ id: string; workspace_id?: string | null; project_id?: string | null; source_kind?: string | null; source_ref?: unknown; created_at?: string | null }>;
   // W3 (260708) · documents as first-class lineage nodes (051 version chain). OPTIONAL + flag-gated at the
@@ -196,6 +199,26 @@ export function buildDataGraph(workspaceId: string, facts: DataGraphFacts): { no
     addNode({ id: nid, type, workspace_id: ws, ref_id: u.source_plane_id || u.id, plane: u.plane, occurred_at: u.occurred_at ?? null, ingested_at: u.ingested_at ?? null, label: u.summary ?? null, description: nonEmpty(u.summary, u.title, u.source_plane_id, u.id), domain_ref: resolveDomainId(u.domain_id, domCtx) });
     if (u.project_id && projectIds.has(u.project_id)) addEdge(`project:${u.project_id}`, nid, 'scopes');
     if (u.intent_id && intentIds.has(u.intent_id)) addEdge(nid, `intent:${u.intent_id}`, 'realizes');
+  }
+
+  // Canonical task packets are projected directly. Existing governance-plane mirrors dedupe by node id;
+  // the relational task_packets row remains authority and the graph remains a reproducible cache.
+  for (const packet of facts.packets ?? []) {
+    if ((packet.workspace_id ?? ws) !== ws) continue;
+    const nid = `packet:${packet.id}`;
+    addNode({
+      id: nid,
+      type: 'packet',
+      workspace_id: ws,
+      ref_id: packet.id,
+      plane: 'governance',
+      occurred_at: packet.created_at ?? null,
+      ingested_at: packet.updated_at ?? packet.created_at ?? null,
+      label: nonEmpty(packet.title, packet.id),
+      description: nonEmpty(packet.summary, packet.title, packet.id),
+    });
+    if (packet.project_id && projectIds.has(packet.project_id)) addEdge(`project:${packet.project_id}`, nid, 'scopes');
+    if (packet.event_id && seenNode.has(`event:${packet.event_id}`)) addEdge(nid, `event:${packet.event_id}`, 'caused_by');
   }
 
   // W3 · DOCUMENT nodes (051 version chain) + edges. project —contains→ document (workspace —contains→ when

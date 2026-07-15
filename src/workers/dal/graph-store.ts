@@ -76,6 +76,17 @@ export async function assembleDataGraphFactsRow(sql: Sql, workspaceId: string, o
     FROM project_source_bindings WHERE workspace_id = ${ws} AND status <> 'archived'
   `) as Array<Record<string, unknown>>;
 
+  // Governed packets are a first-class relational source. Reading them directly closes the gap where
+  // single-intake execution committed a packet and outbox row, but a rebuild could still project no
+  // packet because operations_unified had no corresponding mirror.
+  const packetRows = (await sql/*sql*/`
+    SELECT id, workspace_id, project_id, event_id, title, summary, lifecycle_state, created_at, updated_at
+    FROM task_packets
+    WHERE workspace_id = ${ws} AND lifecycle_state <> 'archived'
+    ORDER BY updated_at DESC NULLS LAST
+    LIMIT 5000
+  `) as Array<Record<string, unknown>>;
+
   // causation pairs from audit_logs.causation_id. We propose CANDIDATE node-id pairs; buildDataGraph
   // emits the edge ONLY when both endpoints resolve to real nodes in this workspace graph (no fabricated
   // or dangling edge — the C3 fake-strip honesty lesson). The audit target is the EFFECT (a governance
@@ -123,6 +134,7 @@ export async function assembleDataGraphFactsRow(sql: Sql, workspaceId: string, o
     memberships: membershipRows.map((r) => ({ domain_id: str(r.domain_id), project_id: str(r.project_id) })),
     intents: intentRows.map((r) => ({ id: str(r.id), workspace_id: orNull(r.workspace_id), project_id: orNull(r.project_id), domain_id: orNull(r.domain_id), derived_from: orNull(r.derived_from), title: orNull(r.title), created_at: iso(r.created_at) })),
     unified: unifiedRows.map((r) => ({ id: str(r.id), plane: str(r.plane) as DataGraphFacts['unified'][number]['plane'], source_plane_id: orNull(r.source_plane_id), workspace_id: orNull(r.workspace_id), project_id: orNull(r.project_id), domain_id: orNull(r.domain_id), kind: orNull(r.kind), occurred_at: iso(r.occurred_at), ingested_at: iso(r.ingested_at), summary: orNull(r.summary), title: orNull(r.title), intent_id: orNull(r.intent_id) })),
+    packets: packetRows.map((r) => ({ id: str(r.id), workspace_id: orNull(r.workspace_id), project_id: orNull(r.project_id), event_id: orNull(r.event_id), title: orNull(r.title), summary: orNull(r.summary), lifecycle_state: orNull(r.lifecycle_state), created_at: iso(r.created_at), updated_at: iso(r.updated_at) })),
     bindings: bindingRows.map((r) => ({ id: str(r.id), workspace_id: orNull(r.workspace_id), project_id: orNull(r.project_id), source_kind: orNull(r.source_kind), source_ref: r.source_ref, created_at: iso(r.created_at) })),
     causation,
     ...(opts.includeDocuments ? {

@@ -31,6 +31,7 @@ endpoint sweep (all 200/403-correct, zero 5xx). Companion: [API_CONTRACT_V1.md](
 | Flag | Prod | Gates |
 |---|---|---|
 | `EXECUTOR_MODE` | `enabled` | hourly :45 operations-queue drain |
+| `TENANT_PROJECTION_QUEUE_ENABLED` | OFF / not bound | default-off outbox dispatcher; requires migration 076 plus Queue/DLQ bindings and explicit activation approval |
 | `RECLASSIFY_CRON_ENABLED` | `true` | hourly :45 unattributed-event self-heal |
 | `DIGEST_SWEEP_ENABLED` | `true` | digest sweep |
 | `ENRICHMENT_SWEEP_ENABLED` | `true` | packet enrichment |
@@ -51,6 +52,15 @@ endpoint sweep (all 200/403-correct, zero 5xx). Companion: [API_CONTRACT_V1.md](
 | `15 5 * * *` | shadow eval | — |
 | `0 3 * * 1` | weekly weight retune | — |
 | `45 * * * *` | reclassify + ops-queue drain | `RECLASSIFY_CRON_ENABLED` / `EXECUTOR_MODE` |
+| `*/5 * * * *` | propagation + tenant projection outbox dispatch | `TENANT_PROJECTION_QUEUE_ENABLED` (default OFF; missing binding fails visibly) |
+
+## Tenant projection Queue bindings (not provisioned by repository code)
+
+`TENANT_PROJECTION_QUEUE` is an optional Cloudflare Queue producer binding consumed by the same Worker.
+The main queue must route exhausted retries to `xlooop-tenant-projection-dlq`; the same Worker consumes
+the DLQ only to record a durable dead-letter receipt. Resource creation, migration application, binding
+activation, and flag enablement require a separate operator-approved action. See
+`docs/deployment/TENANT_PROJECTION_QUEUE_ACTIVATION.md`.
 
 ## 5 · The MB-P read-model pipeline (the "Read-model · stale" pill)
 

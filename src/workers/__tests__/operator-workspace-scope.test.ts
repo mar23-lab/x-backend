@@ -24,6 +24,7 @@ function cwDal(spy: { eventsFor: string[]; canScopeCalls: Array<[string, string]
   return {
     getSession: async (_u: string, w: string) => ({ projects: [{ id: 'prj_1', name: 'P1' }], workspace: { id: w }, user: { role: 'operator' } }),
     listEvents: async (w: string) => { spy.eventsFor.push(w); return { events: [{ id: 'e1', project_id: 'prj_1', intent_id: 'i', status: 'needs_review', approval_state: 'pending', summary: 's', evidence_link: null }], pagination: { has_more: false, next_before: null } }; },
+    countGovernedExecutionReceipts: async () => 0,
     userCanScopeWorkspace: async (u: string, w: string) => { spy.canScopeCalls.push([u, w]); return spy.canScope; },
   } as any;
 }

@@ -61,6 +61,8 @@ async function chainDigestSweep(
     ownerUserIds,
     flagEnabled,
     now: ctx.now,
+    modelLineageFactory: ctx.modelLineageFactory,
+    modelLineageRequired: ctx.modelLineageRequired,
   });
 
   return {

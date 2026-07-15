@@ -27,12 +27,21 @@ export interface AssistantContextLineageInput {
   scope: ContextScopeCounts;
   redaction_profile: string;
   client_empty: boolean;
+  action?: ProductAssistantAction;
 }
+
+export type ProductAssistantAction =
+  | 'assistant:answer'
+  | 'assistant:plan'
+  | 'assistant:digest'
+  | 'assistant:onboard'
+  | 'assistant:refine'
+  | 'assistant:enrich';
 
 export interface AssistantContextLineage {
   context_packet_id: string;
   resolution_id: string;
-  action: 'assistant:answer' | 'assistant:plan';
+  action: ProductAssistantAction;
   resolution: RoleSkillResolution;
 }
 
@@ -44,7 +53,7 @@ export async function persistAssistantContextLineage(
 ): Promise<AssistantContextLineage> {
   const catalog = catalogBindingsIfEnabled(env);
   if (!catalog) throw new Error('role-skill catalog is not enabled');
-  const action = input.mode === 'plan' ? 'assistant:plan' : 'assistant:answer';
+  const action = input.action ?? (input.mode === 'plan' ? 'assistant:plan' : 'assistant:answer');
   const resolution = resolveRoleAndSkills({
     tenant: input.workspace_id,
     principal: input.principal_id,

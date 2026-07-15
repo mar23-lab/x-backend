@@ -101,10 +101,9 @@ describe('customer-chat metering integration', () => {
 
   it('flag ON + LLM answer: metered with model + tokens (AI stub returns usage)', async () => {
     const AI = { run: async () => ({ response: 'x'.repeat(80), usage: { prompt_tokens: 11, completion_tokens: 22 } }) };
-    // neonClient('') would throw synchronously in recordLlmUsage's try{} — prove the ANSWER survives AND,
-    // with a valid-looking URL, the upsert text is correct via the store-level test above. Here we assert
-    // the response carries the model (metering preconditions met) and 200 stability.
-    const res = await askChat(chatApp(null), { LLM_USAGE_METERING_ENABLED: 'true', AI, DATABASE_URL: 'postgres://u:p@h/db' });
+    // Keep this route unit test network-free: neonClient('') throws inside recordLlmUsage's guard,
+    // proving the answer survives. The store-level test above proves the accumulating SQL separately.
+    const res = await askChat(chatApp(null), { LLM_USAGE_METERING_ENABLED: 'true', AI, DATABASE_URL: '' });
     expect(res.status).toBe(200);
     const body = await res.json() as { generated_by: string; model: string | null };
     expect(body.generated_by).toBe('llm');

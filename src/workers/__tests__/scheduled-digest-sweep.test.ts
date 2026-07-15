@@ -181,6 +181,55 @@ describe('runScheduledDigestSweep · service', () => {
     expect(String(detEvent.body)).toMatch(/snapshot of your workspace/);
     expect(String(detEvent.body)).not.toMatch(/productive week/);
   });
+
+  it('strict model lineage fails closed before an unreceipted AI call', async () => {
+    const { dal, spies } = makeDal({ workspaces: [WS('ws1')] });
+    const run = vi.fn(async () => ({ response: 'This must not run.' }));
+
+    const res = await runScheduledDigestSweep({
+      dal,
+      ai: { run },
+      ownerUserIds: ['user_op'],
+      flagEnabled: true,
+      now: NOW,
+      modelLineageRequired: true,
+    });
+
+    expect(res.errors).toBe(1);
+    expect(res.drafted).toBe(0);
+    expect(run).not.toHaveBeenCalled();
+    expect(spies.upsertEvent).not.toHaveBeenCalled();
+  });
+
+  it('strict model lineage wraps the scheduled AI call and closes skill lineage', async () => {
+    const { dal } = makeDal({ workspaces: [WS('ws1')] });
+    const finish = vi.fn(async () => undefined);
+    const start = vi.fn(async () => ({ complete: finish }));
+    const complete = vi.fn(async () => [] as string[]);
+    const modelLineageFactory = vi.fn(async () => ({ observer: { start }, complete }));
+    const ai = { run: vi.fn(async () => ({ response: 'A source-grounded weekly digest with enough useful detail for the operator to review safely.' })) };
+
+    const res = await runScheduledDigestSweep({
+      dal,
+      ai,
+      ownerUserIds: ['user_op'],
+      flagEnabled: true,
+      now: NOW,
+      modelLineageRequired: true,
+      modelLineageFactory,
+    });
+
+    expect(res.drafted).toBe(1);
+    expect(modelLineageFactory).toHaveBeenCalledWith(expect.objectContaining({
+      workspace_id: 'ws1',
+      principal_id: 'xlooop:digest-agent',
+      role: 'automation',
+      action: 'assistant:digest',
+    }));
+    expect(start).toHaveBeenCalledTimes(1);
+    expect(finish).toHaveBeenCalledWith(expect.objectContaining({ status: 'completed' }));
+    expect(complete).toHaveBeenCalledTimes(1);
+  });
 });
 
 // ── Cron-level: weightRetuneCron folds the sweep into its result + actions_taken ───────────────

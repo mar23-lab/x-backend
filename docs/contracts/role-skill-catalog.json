@@ -1,6 +1,6 @@
 {
   "schema_id": "xlooop.role_skill_catalog.v1",
-  "catalog_version": "2026.07.1",
+  "catalog_version": "2026.07.2",
   "source_package": "customer-safe-pack",
   "_provenance": {
     "authored": "OAR-W3 (260713) — hand-curated CUSTOMER-SAFE contracts for the three pack archetypes.",
@@ -71,7 +71,7 @@
       "name": "Workspace member",
       "description": "Uses grounded workspace assistance within the facts their membership role is allowed to see. Read-only assistance never grants permission to change work.",
       "capability": "grounded-assistance",
-      "actions": ["assistant:answer", "assistant:plan"],
+      "actions": ["assistant:answer", "assistant:plan", "assistant:digest", "assistant:onboard", "assistant:refine", "assistant:enrich"],
       "skills": ["skill.workspace-assistant.grounded-assistance@1.0.0"],
       "allowed_tools": [],
       "denied_tools": ["raw_graph_export", "full_tenant_memory_export", "secret_access", "search_all_memory"],
@@ -174,7 +174,7 @@
       "name": "Grounded assistance",
       "description": "Answers questions and drafts plans from the workspace facts the current member is allowed to use, without creating or changing governed work.",
       "capability": "grounded-assistance",
-      "actions": ["assistant:answer", "assistant:plan"],
+      "actions": ["assistant:answer", "assistant:plan", "assistant:digest", "assistant:onboard", "assistant:refine", "assistant:enrich"],
       "allowed_tools": [],
       "denied_tools": ["raw_graph_export", "full_tenant_memory_export", "secret_access", "search_all_memory"],
       "requires_approval": false,

@@ -24,6 +24,7 @@ import type {
   UpsertResult,
 } from '../dal/types';
 import type { WorkspaceActivitySummary } from '../dal/workspace-activity-store';
+import type { GovernedModelLineageFactory } from '../lib/model-execution-lineage';
 import type {
   ProvisionCustomerInput,
   ProvisionCustomerResult,
@@ -61,6 +62,8 @@ export interface ProvisionRequest {
   approvedBy: string;
   /** Optional Workers-AI binding to LLM-enrich the day-1 welcome (absent → deterministic). */
   ai?: AiRunner;
+  modelLineageFactory?: GovernedModelLineageFactory;
+  modelLineageRequired?: boolean;
 }
 
 export interface ProvisionOutcome {
@@ -246,11 +249,29 @@ export async function provisionCustomerFromAccessRequest(
   let welcomeDrafted = false;
   try {
     const summary = await dal.getWorkspaceActivitySummary(result.workspace_id, null);
+    if (req.ai && req.modelLineageRequired && !req.modelLineageFactory) {
+      throw new Error('strict model lineage factory is unavailable');
+    }
+    const governed = req.ai && req.modelLineageFactory
+      ? await req.modelLineageFactory({
+        workspace_id: result.workspace_id,
+        principal_id: 'xlooop:digest-agent',
+        role: 'automation',
+        mode: 'plan',
+        action: 'assistant:onboard',
+        intent_ref: `onboarding:${req.accessRequestId}`,
+        scope: { event_count: summary.events_total, document_count: 0, unpromoted_document_count: 0, source_count: summary.connected_sources },
+        redaction_profile: 'automation-onboarding-summary',
+        client_empty: false,
+      })
+      : null;
     const welcome = await buildOnboardingWelcomeDraft(summary, {
       customerName,
       roadmapCount: roadmap.length,
       ai: req.ai,
+      executionObserver: governed?.observer,
     });
+    if (governed) await governed.complete();
     const now = new Date().toISOString();
     // Stable, distinct id so it is idempotent and never collides with the weekly digest's
     // `evt_agent_digest_<ws>_<date>` id.

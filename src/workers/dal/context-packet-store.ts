@@ -3,8 +3,8 @@
 // Persists the pure ContextPacket kernel (lib/context-packet.ts) into context_packets. House store pattern
 // (dal/role-skill-resolution-store.ts): free `...Row` fn, first param `sql: Sql`, tagged-template
 // parameterized INSERT, degrade-safe (the assembler wraps the write in waitUntil + try/catch so a write
-// error can never break the governed-action path). INERT: no assembler calls this yet — the persistence
-// wire is the next operator-gated step (the packet is built customer-safe, so this only ever writes counts,
+// error can never break the governed-action path). Assistant execution calls this only when
+// CONTEXT_PACKET_PERSISTENCE_ENABLED is true (the packet is customer-safe and only writes counts,
 // coarse capability labels, a FNV fingerprint, and an integrity hash — never ids/graph/prompt/skill body).
 
 import type { Sql } from '../db/client';

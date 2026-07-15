@@ -31,9 +31,16 @@ import { provisionCustomerFromAccessRequest } from '../services/onboarding-provi
 import type { AiRunner } from '../services/agent-digest';
 import type { AuthEnv } from '../middleware/auth';
 import type { DalAdapter } from '../dal/DalAdapter';
+import { neonClient } from '../db/client';
+import { modelLineagePolicy } from '../lib/model-execution-lineage';
 
 export interface SessionEnv extends AuthEnv {
   DATABASE_URL: string;
+  CONTEXT_PACKET_PERSISTENCE_ENABLED?: string;
+  ROLE_SKILL_CATALOG_ENABLED?: string;
+  RESOLUTION_RECEIPT_SIGNING_SECRET?: string;
+  RESOLUTION_RECEIPT_SIGNING_KEY_ID?: string;
+  XLOOOP_DEPLOY_SHA?: string;
   ADMIN_USER_IDS?: string;
   // R43.18 · operator self-bootstrap config
   MBP_OWNER_USER_ID?: string;            // Clerk user_id of platform operator
@@ -234,6 +241,7 @@ sessionRoute.get('/session', async (ctx) => {
           request?.reviewed_by &&
           (request.invited_to_workspace_id === orgId || (autoSource === 'clerk_org' && !request.invited_to_workspace_id))
         ) {
+          const modelLineage = modelLineagePolicy({ load: () => neonClient(ctx.env.DATABASE_URL) }, ctx.env);
           await provisionCustomerFromAccessRequest(
             dal,
             {
@@ -246,6 +254,8 @@ sessionRoute.get('/session', async (ctx) => {
                 : null,
               approvedBy: request.reviewed_by,
               ai: (ctx.env as { AI?: AiRunner }).AI,
+              modelLineageFactory: modelLineage.factory,
+              modelLineageRequired: modelLineage.required,
             },
             { CONTEXT_RESOLVER_ENABLED: (ctx.env as { CONTEXT_RESOLVER_ENABLED?: string }).CONTEXT_RESOLVER_ENABLED },
           );

@@ -17,6 +17,9 @@
     "verify:packet-completion-contract": "node scripts/verify-packet-completion-contract.mjs",
     "verify:typed-work-relationships": "node scripts/verify-typed-work-relationships.mjs",
     "verify:action-intent-shadow": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/verify-action-intent-shadow.mjs",
+    "verify:role-skill-catalog-loader-fresh": "node scripts/verify-role-skill-catalog-loader-fresh.mjs",
+    "verify:model-execution-callsites": "node scripts/verify-model-execution-callsites.mjs",
+    "verify:shadow-observability-storage": "node scripts/verify-shadow-observability-storage.mjs",
     "verify:boundary": "node scripts/verify-backend-boundary.mjs",
     "verify:no-mbp-runtime-dependency": "node scripts/verify-no-mbp-runtime-dependency.mjs",
     "verify:data-schemas": "node scripts/verify-data-schemas.mjs",
@@ -37,9 +40,9 @@
   "devDependencies": {
     "@babel/parser": "7.29.2",
     "@cloudflare/vitest-pool-workers": "0.18.4",
-    "@cloudflare/workers-types": "4.20260606.1",
+    "@cloudflare/workers-types": "4.20260617.1",
     "typescript": "5.9.3",
     "vitest": "4.1.0",
-    "wrangler": "4.93.1"
+    "wrangler": "4.102.0"
   }
 }

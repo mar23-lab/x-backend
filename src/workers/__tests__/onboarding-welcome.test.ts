@@ -6,7 +6,7 @@
 // → "review roadmap"), LLM-enriches when an AI binding is present and falls back to deterministic
 // otherwise, and never leaks internal vocabulary into the customer-facing body.
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { buildOnboardingWelcomeDraft } from '../services/agent-digest';
 import type { WorkspaceActivitySummary } from '../dal/workspace-activity-store';
 
@@ -94,5 +94,25 @@ describe('buildOnboardingWelcomeDraft', () => {
     const internal = /\bMB-?P\b|\bxcp[-_]|role-route:|\bWI-\d|packet-\d|\bx-biz\b|Marat/i;
     expect(d.body).not.toMatch(internal);
     expect(d.summary).not.toMatch(internal);
+  });
+
+  it('records completed and fallback terminal states through the execution observer', async () => {
+    const finish = vi.fn(async () => undefined);
+    const executionObserver = { start: vi.fn(async () => ({ complete: finish })) };
+    const rich = 'Welcome to Acme. Your workspace is ready, the first governed work items are visible, and your next safe action is to connect a source.';
+
+    await buildOnboardingWelcomeDraft(summary(), {
+      customerName: 'Acme',
+      ai: { run: async () => ({ response: rich }) },
+      executionObserver,
+    });
+    expect(finish).toHaveBeenLastCalledWith(expect.objectContaining({ status: 'completed' }));
+
+    await buildOnboardingWelcomeDraft(summary(), {
+      customerName: 'Acme',
+      ai: { run: async () => { throw new Error('down'); } },
+      executionObserver,
+    });
+    expect(finish).toHaveBeenLastCalledWith(expect.objectContaining({ status: 'fallback', error_code: 'MODEL_ERROR' }));
   });
 });

@@ -13,6 +13,7 @@ projection: data-graph
 projection_module: src/workers/graph/data-graph.ts
 persistence_module: src/workers/dal/graph-store.ts
 populated_by: src/workers/crons/graph-rebuild.ts   # hourly cron (0 * * * *) + POST /api/v1/graph/rebuild
+event_driven_population: src/workers/services/tenant-projection-queue.ts # default-off transactional-outbox Queue path
 
 # Every relational table the projection READS (must match the FROM clauses in graph-store.ts).
 source_tables:
@@ -22,6 +23,9 @@ source_tables:
   - table: operations_unified
     feeds: governance/synthetic packet nodes
     role: core
+  - table: task_packets
+    feeds: canonical governed packet nodes + project/event lineage
+    role: core            # direct feed; intake packets do not depend on an operations_unified mirror
   - table: projects
     feeds: project nodes + contains edges
     role: core
@@ -59,6 +63,7 @@ census:
   row_counts:
     operation_events: 4209          # grew from operator-action + activity events (monotonic event-log growth)
     operations_unified: 83          # governance plane grew (decision/folder-promote mirrors)
+    task_packets: unobserved         # new direct source; requires a fresh live census before fed claims
     projects: 101
     workspaces: 8
     synthetic_domains: 16
@@ -86,3 +91,5 @@ status_note: >
   Still `partially_fed` NOT `fed`: the CAUSATION/INTENT spine
   (intent / realizes / derived_from / caused_by) is still 0 — it fills only when the operator exercises
   Send-Intent, sign-offs, and decisions (the machinery is live as of this deploy; the data accrues with use).
+  The code now also reads canonical task_packets directly and contains a default-off tenant projection
+  Queue consumer. This historical census predates those paths and MUST NOT be used as activation proof.
