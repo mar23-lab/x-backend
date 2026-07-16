@@ -26,7 +26,7 @@ binding = "AI"
 ENVIRONMENT = "pilot-shadow"
 XLOOOP_AUTHORITY_MODE = "shadow"
 XLOOOP_SCHEMA_HEAD = "79"
-ALLOWED_ORIGIN_PATTERN = "https://*.pages.dev"
+ALLOWED_ORIGIN_PATTERN = "https://*.xlooop-app-next.pages.dev"
 LOG_LEVEL = "info"
 
 # Commercial candidate paths are active only inside this isolated environment.

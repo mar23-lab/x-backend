@@ -38,4 +38,18 @@ describe('CORS preflight — allowed methods', () => {
     const res = await app().request('/x', { method: 'OPTIONS', headers: { origin: 'https://evil.example.com' } }, ENV);
     expect(res.headers.get('Access-Control-Allow-Origin')).toBeNull();
   });
+
+  it('pilot-shadow Pages previews are allowed only for the staging frontend project', async () => {
+    const pilotEnv = { ALLOWED_ORIGIN_PATTERN: 'https://*.xlooop-app-next.pages.dev' } as never;
+    for (const origin of [
+      'https://e894386f.xlooop-app-next.pages.dev',
+      'https://codex-pilot-shadow-evidence.xlooop-app-next.pages.dev',
+    ]) {
+      const res = await app().request('/x', { method: 'OPTIONS', headers: { origin } }, pilotEnv);
+      expect(res.headers.get('Access-Control-Allow-Origin')).toBe(origin);
+    }
+
+    const otherPagesProject = await app().request('/x', { method: 'OPTIONS', headers: { origin: 'https://preview.other.pages.dev' } }, pilotEnv);
+    expect(otherPagesProject.headers.get('Access-Control-Allow-Origin')).toBeNull();
+  });
 });
