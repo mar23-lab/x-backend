@@ -433,6 +433,22 @@ projectsRoute.post('/projects/:id/sources', async (ctx) => {
         ctx.status(400);
         return ctx.json({ error: `source_kind ${input.source_kind} requires ${provider} user source`, code: 'VALIDATION_ERROR', request_id: ctx.get('request_id') });
       }
+      if (!userSource.workspace_id) {
+        ctx.status(409);
+        return ctx.json({
+          error: 'source connection must be explicitly bound to this workspace before it can be attached to a project',
+          code: 'SOURCE_WORKSPACE_BINDING_REQUIRED',
+          request_id: ctx.get('request_id'),
+        });
+      }
+      if (userSource.workspace_id !== ws) {
+        ctx.status(403);
+        return ctx.json({
+          error: 'source connection belongs to a different workspace',
+          code: 'SOURCE_WORKSPACE_MISMATCH',
+          request_id: ctx.get('request_id'),
+        });
+      }
     }
     if (!provider && input.user_source_connection_id) {
       ctx.status(400);

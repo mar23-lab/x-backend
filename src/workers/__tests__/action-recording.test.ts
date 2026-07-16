@@ -6,7 +6,7 @@
 // OPERATION-tier event (best-effort, never blocking the live action), so the chief-of-staff sees the
 // operator's own work. DAL mocked (no WorkersDalAdapter import).
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { Hono } from 'hono';
 import { projectsRoute } from '../routes/projects';
 import { signOffsRoute } from '../routes/sign-offs';
@@ -79,6 +79,59 @@ describe('ARCH-006 W1.2 — connect-a-source records an operation-tier event', (
       body: JSON.stringify({ source_kind: 'desktop_folder', source_ref: { path: '/x' }, status: 'connected' }),
     }, ENV as never);
     expect(res.status).toBe(201);
+  });
+
+  it('rejects null-bound OAuth sources before binding them to a project', async () => {
+    const createProjectSourceBinding = vi.fn(async () => ({ id: 'bind-null', source_kind: 'github_repo' }));
+    const dal = {
+      getUserSource: async () => ({ id: 'src_legacy', user_id: 'user_op', provider: 'github', workspace_id: null }),
+      createProjectSourceBinding,
+    };
+    const app = mount(projectsRoute, dal);
+    const res = await app.request('/api/v1/projects/p1/sources', {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ source_kind: 'github_repo', user_source_connection_id: 'src_legacy', source_ref: { repo: 'org/repo' }, status: 'connected' }),
+    }, ENV as never);
+    const body = await res.json() as Record<string, unknown>;
+    expect(res.status).toBe(409);
+    expect(body.code).toBe('SOURCE_WORKSPACE_BINDING_REQUIRED');
+    expect(createProjectSourceBinding).not.toHaveBeenCalled();
+  });
+
+  it('rejects OAuth sources from a different workspace before project binding', async () => {
+    const createProjectSourceBinding = vi.fn(async () => ({ id: 'bind-cross', source_kind: 'github_repo' }));
+    const dal = {
+      getUserSource: async () => ({ id: 'src_other', user_id: 'user_op', provider: 'github', workspace_id: 'other-workspace' }),
+      createProjectSourceBinding,
+    };
+    const app = mount(projectsRoute, dal);
+    const res = await app.request('/api/v1/projects/p1/sources', {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ source_kind: 'github_repo', user_source_connection_id: 'src_other', source_ref: { repo: 'org/repo' }, status: 'connected' }),
+    }, ENV as never);
+    const body = await res.json() as Record<string, unknown>;
+    expect(res.status).toBe(403);
+    expect(body.code).toBe('SOURCE_WORKSPACE_MISMATCH');
+    expect(createProjectSourceBinding).not.toHaveBeenCalled();
+  });
+
+  it('allows explicitly same-workspace OAuth sources to bind to a project', async () => {
+    const createProjectSourceBinding = vi.fn(async () => ({ id: 'bind-ok', source_kind: 'github_repo' }));
+    const events: EventCall[] = [];
+    const dal = {
+      getUserSource: async () => ({ id: 'src_ok', user_id: 'user_op', provider: 'github', workspace_id: 'mbp-private' }),
+      createProjectSourceBinding,
+      upsertEvent: async (ws: string, event: Record<string, unknown>) => { events.push({ ws, event }); return { id: String(event.id), created: true }; },
+    };
+    const app = mount(projectsRoute, dal);
+    const res = await app.request('/api/v1/projects/p1/sources', {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ source_kind: 'github_repo', user_source_connection_id: 'src_ok', source_ref: { repo: 'org/repo' }, status: 'connected' }),
+    }, ENV as never);
+    expect(res.status).toBe(201);
+    expect(createProjectSourceBinding).toHaveBeenCalledOnce();
+    expect(createProjectSourceBinding.mock.calls[0][0]).toBe('mbp-private');
+    expect(events).toHaveLength(1);
   });
 });
 
