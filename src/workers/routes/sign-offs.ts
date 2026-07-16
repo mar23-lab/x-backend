@@ -4,7 +4,6 @@
 
 import { Hono } from 'hono';
 import { errorEnvelope } from '../middleware/error';
-import { lineageFor } from '../lib/actor-lineage';
 import { authorizeGovernedWrite } from '../lib/spine-authority';
 import { idempotencyMiddleware } from '../lib/idempotency';
 import type { AuthEnv, AuthVariables } from '../middleware/auth';
@@ -115,34 +114,8 @@ signOffsRoute.post('/sign-offs', async (ctx) => {
     );
     if (!wsScoped.ok) return wsScoped.res;
     const workspace_id = wsScoped.ws;
-    const signOff = await dal.createSignOff(workspace_id, user_id, body);
+    const signOff = await dal.createSignOff(workspace_id, user_id, body, ctx.get('request_id'));
     emitEvent('signoff_decided', { workspace_id, sign_off_id: (signOff as unknown as { id?: number | string })?.id ?? null, verdict: (body as { verdict?: string })?.verdict ?? null }); // T3/P6
-    // ARCH-006 W1.2 — tiered provenance: record the sign-off as a first-class OPERATION-tier event so the
-    // chief-of-staff sees the operator's decision (an approve clears a needs-review; a reject keeps it
-    // open). `caused_by` lineage (W2.3) stamps audit_logs.causation_id → the signed event. createSignOff's
-    // own tenant guard proves event_id belongs to workspace_id, so this mirror is correctly scoped.
-    // Best-effort + idempotent (deterministic id): a failed mirror NEVER blocks the sign-off.
-    try {
-      const rawId = (signOff && typeof signOff === 'object') ? (signOff as { id?: number | string }).id : undefined;
-      const soId = (rawId !== undefined && rawId !== null) ? String(rawId) : body.event_id;
-      await dal.upsertEvent(workspace_id, {
-        id: `evt_signoff_${soId}`.replace(/[^a-zA-Z0-9_]/g, '_').slice(0, 128),
-        source_tool: 'xlooop',
-        agent_id: 'xlooop:operator-action',
-        status: body.verdict === 'rejected' || decisionKind === 'request_changes' ? 'needs_review' : 'completed',
-        summary: `[sign-off ${decisionKind || body.verdict}] ${body.event_id}`.slice(0, 512),
-        body: typeof body.comment === 'string' ? body.comment.slice(0, 400) : null,
-        visibility: 'internal_workspace',
-        occurred_at: new Date().toISOString(),
-        // A-W4/P6 · the sign-off IS the authorization moment: the human approver is the principal,
-        // acting directly (instrument human) under their workspace role authority.
-        ...lineageFor(auth),
-        request_id: ctx.get('request_id'),
-      });
-    } catch (err) {
-      // best-effort operator-action mirror — never block the sign-off, but LOG it (audit loss must be visible, not silent).
-      console.warn('[sign-offs] sign-off audit mirror failed (best-effort)', { workspace_id, error: (err as Error)?.message });
-    }
     // OS-5 W2 — the approve_to_post_digest CONSUMER (J2's missing last step). When an approve
     // lands on a digest proposal: atomic claim needs_review→completed (run-exactly-once; ALSO
     // unblocks the weekly sweep, whose idempotency scan counted the approved-but-needs_review
@@ -164,6 +137,7 @@ signOffsRoute.post('/sign-offs', async (ctx) => {
         schema_id: 'xlooop.signoff_receipt.v1',
         id: `signoff:${signOffId}`,
         sign_off_id: signOffId,
+        audit_event_id: signOff.audit_event_id,
         event_id: body.event_id,
         workspace_id,
         actor_user_id: user_id,

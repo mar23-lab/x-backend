@@ -631,9 +631,10 @@ export class WorkersDalAdapter implements DalAdapter {
   async createSignOff(
     workspaceId: WorkspaceId,
     userId: UserId,
-    signOff: SignOffInput
+    signOff: SignOffInput,
+    requestId?: string | null,
   ): Promise<SignOff> {
-    return createSignOffRow(this.sql, workspaceId, userId, signOff);
+    return createSignOffRow(this.sql, workspaceId, userId, signOff, requestId);
   }
 
   // ============================================================

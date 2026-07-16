@@ -1,0 +1,58 @@
+# Isolated commercial-validation environment. This Worker never owns api.xlooop.com.
+name = "xlooop-api-pilot-shadow"
+main = "src/workers/index.ts"
+compatibility_date = "2026-06-20"
+compatibility_flags = ["nodejs_compat"]
+workers_dev = true
+keep_vars = true
+
+[triggers]
+crons = ["*/5 * * * *"]
+
+[[queues.producers]]
+binding = "TENANT_PROJECTION_QUEUE"
+queue = "xlooop-tenant-projection-pilot-shadow"
+
+[[queues.consumers]]
+queue = "xlooop-tenant-projection-pilot-shadow"
+max_batch_size = 10
+max_batch_timeout = 5
+max_retries = 3
+
+[ai]
+binding = "AI"
+
+[vars]
+ENVIRONMENT = "pilot-shadow"
+XLOOOP_AUTHORITY_MODE = "shadow"
+XLOOOP_SCHEMA_HEAD = "79"
+ALLOWED_ORIGIN_PATTERN = "https://*.pages.dev"
+LOG_LEVEL = "info"
+
+# Commercial candidate paths are active only inside this isolated environment.
+SINGLE_INTAKE_ENABLED = "true"
+ROLE_SKILL_RESOLVER_ENABLED = "true"
+ROLE_SKILL_CATALOG_ENABLED = "true"
+CONTEXT_PACKET_PERSISTENCE_ENABLED = "true"
+TENANT_PROJECTION_QUEUE_ENABLED = "true"
+CURRENT_WORK_PROJECTION_ENABLED = "true"
+GRAPH_DOCUMENT_NODES_ENABLED = "true"
+CUSTOMER_SAFE_SERIALIZER_ENABLED = "true"
+CHAT_SOURCE_TRUTH_OVERRIDE_ENABLED = "true"
+CHAT_ROLE_SCOPED_CONTEXT_ENABLED = "true"
+CHAT_GRAPH_CONTEXT_ENABLED = "true"
+DOCUMENT_READ_AUDIT_ENABLED = "true"
+SPINE_TOOL_EVENT_UNIFICATION_ENABLED = "true"
+PACKET_INTENT_QUALITY_ENABLED = "true"
+OPERATOR_WORKSPACE_SCOPE_ENABLED = "true"
+
+# Autonomous and production-authority effects remain inert during evidence collection.
+EXECUTOR_MODE = "disabled"
+DIGEST_SWEEP_ENABLED = "false"
+RECLASSIFY_CRON_ENABLED = "false"
+ENTITLEMENT_ENFORCEMENT = "off"
+PURGE_DELETED_ENABLED = "false"
+
+[observability]
+enabled = true
+head_sampling_rate = 1.0

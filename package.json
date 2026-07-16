@@ -29,6 +29,7 @@
     "verify:operational-spine-api": "vitest run --config vitest.workers.config.ts src/workers/__tests__/operational-spine-route.test.ts src/workers/__tests__/operational-spine-rls-context.test.ts src/workers/__tests__/mcp-gateway-route.test.ts src/workers/__tests__/template-policy-registry-route.test.ts",
     "verify:operational-spine-live-rls": "XLOOOP_RUN_LIVE_RLS=1 vitest run --config vitest.workers.config.ts src/workers/__tests__/operational-spine-live-rls.test.ts",
     "verify:bundle": "wrangler deploy --config wrangler.toml --dry-run --outdir dist-workers-dryrun",
+    "verify:pilot-shadow-config": "node scripts/verify-pilot-shadow-config.mjs",
     "secret-scan": "node scripts/secret-scan.mjs --all"
   },
   "dependencies": {

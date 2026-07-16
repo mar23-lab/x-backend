@@ -349,7 +349,8 @@ export interface DalAdapter {
   createSignOff(
     workspaceId: WorkspaceId,
     userId: UserId,
-    signOff: SignOffInput
+    signOff: SignOffInput,
+    requestId?: string | null,
   ): Promise<SignOff>;
 
   /** Backend-first operational spine: task packets scoped to a workspace. */

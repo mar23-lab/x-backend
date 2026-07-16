@@ -36,7 +36,7 @@ import type {
   SignOffInput,
   SignOff,
 } from './types';
-import type { Sql, SqlTx } from '../db/client';
+import type { Sql } from '../db/client';
 
 // ------------------------------------------------------------
 // Internal helpers (lifted verbatim from WorkersDalAdapter)
@@ -242,6 +242,7 @@ export async function createSignOffRow(
   workspaceId: WorkspaceId,
   userId: import('./types').UserId,
   signOff: SignOffInput,
+  requestId?: string | null,
 ): Promise<SignOff> {
   assertWorkspaceScope(workspaceId);
   if (!userId) throw makeError('UNAUTHORIZED', 'user_id required', 401);
@@ -258,41 +259,68 @@ export async function createSignOffRow(
     throw makeError('NOT_FOUND', `event ${signOff.event_id} not found in workspace`, 404);
   }
 
-  // Single transaction: insert sign-off + update event approval_state (the core, atomic action).
-  // @neondatabase/serverless `transaction()` API runs multiple statements atomically.
-  const [inserted] = (await (sql as SqlTx).transaction([
-    sql/*sql*/`
-      INSERT INTO sign_offs (workspace_id, event_id, user_id, verdict, comment)
-      VALUES (${workspaceId}, ${signOff.event_id}, ${userId}, ${signOff.verdict}, ${signOff.comment ?? null})
-      RETURNING id, workspace_id, event_id, user_id, verdict, comment, signed_at
-    `,
-    sql/*sql*/`
+  const decisionKind = signOff.decision_kind
+    ?? (signOff.verdict === 'approved' ? 'approval' : signOff.verdict === 'rejected' ? 'rejection' : 'noted');
+  const mirrorStatus = signOff.verdict === 'rejected' || decisionKind === 'request_changes'
+    ? 'needs_review'
+    : 'completed';
+  const approvalState = signOff.verdict === 'approved'
+    ? 'approved'
+    : signOff.verdict === 'rejected' ? 'rejected' : null;
+  const action = `sign_off_${decisionKind}`;
+  const summary = `[sign-off ${decisionKind}] ${signOff.event_id}`.slice(0, 512);
+  const body = signOff.comment?.slice(0, 400) ?? null;
+
+  // One statement is the authority boundary: the sign-off, target state, operation event and audit log
+  // either all commit or all roll back. Email, analytics and graph projection remain post-commit effects.
+  const rows = (await sql/*sql*/`
+    WITH target_updated AS (
       UPDATE operation_events
-      SET approval_state = ${
-        signOff.verdict === 'approved' ? 'approved'
-        : signOff.verdict === 'rejected' ? 'rejected'
-        : null
-      }
+      SET approval_state = ${approvalState}
       WHERE id = ${signOff.event_id} AND workspace_id = ${workspaceId}
-    `,
-  ])) as [Array<SignOff>, unknown];
+      RETURNING id
+    ), inserted AS (
+      INSERT INTO sign_offs (workspace_id, event_id, user_id, verdict, comment)
+      SELECT ${workspaceId}, ${signOff.event_id}, ${userId}, ${signOff.verdict}, ${signOff.comment ?? null}
+      FROM target_updated
+      RETURNING id, workspace_id, event_id, user_id, verdict, comment, signed_at
+    ), event_written AS (
+      INSERT INTO operation_events (
+        id, workspace_id, source_tool, agent_id, status, summary, body, visibility,
+        occurred_at, parent_event_id, authorized_by_user_id, instrument_kind,
+        authority_source, request_id
+      )
+      SELECT
+        LEFT('evt_signoff_' || inserted.id::text, 128), workspace_id, 'xlooop',
+        'xlooop:operator-action', ${mirrorStatus}, ${summary}, ${body},
+        'internal_workspace', signed_at, event_id, user_id, 'human',
+        'explicit_approval', ${requestId ?? null}
+      FROM inserted
+      JOIN target_updated ON target_updated.id = inserted.event_id
+      RETURNING id
+    ), audit_written AS (
+      INSERT INTO audit_logs (
+        actor_user_id, action, target_type, target_id, workspace_id, reason, causation_id,
+        metadata
+      )
+      SELECT user_id, ${action}, 'event', event_id, workspace_id, comment, event_id,
+        jsonb_build_object('sign_off_id', id, 'audit_event_id', (SELECT id FROM event_written))
+      FROM inserted
+      RETURNING id
+    )
+    SELECT inserted.*, event_written.id AS audit_event_id
+    FROM inserted
+    JOIN target_updated ON target_updated.id = inserted.event_id
+    CROSS JOIN event_written
+    CROSS JOIN audit_written
+  `) as SignOff[];
 
-  const row = inserted[0];
-  if (!row) throw makeError('INTERNAL_ERROR', 'sign-off insert returned no row', 500);
-
-  // Wave 4 · auditability — record WHO signed off on WHAT, WHEN, with what verdict (causation_id points
-  // back at the event: the first link of a lineage chain). BEST-EFFORT and OUTSIDE the transaction on
-  // purpose: a missing migration 021 (target_type 'event' / causation_id) must NEVER break the sign-off
-  // itself; once 021 is applied this records reliably. action matches audit_logs' ^[a-z_]+$.
-  try {
-    await sql/*sql*/`
-      INSERT INTO audit_logs (actor_user_id, action, target_type, target_id, workspace_id, reason, causation_id)
-      VALUES (${userId}, ${`sign_off_${signOff.verdict}`}, 'event', ${signOff.event_id}, ${workspaceId}, ${signOff.comment ?? null}, ${signOff.event_id})
-    `;
-  } catch (_) { /* audit is best-effort; the sign-off already stands */ }
+  const row = rows[0];
+  if (!row) throw makeError('CONFLICT', 'sign-off target was not updated; receipt not issued', 409);
 
   return {
     id: row.id,
+    audit_event_id: row.audit_event_id,
     workspace_id: row.workspace_id,
     event_id: row.event_id,
     user_id: row.user_id,

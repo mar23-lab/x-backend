@@ -283,6 +283,7 @@ export interface SignOffInput {
 
 export interface SignOff {
   id: number;
+  audit_event_id: EventId;
   workspace_id: WorkspaceId;
   event_id: EventId;
   user_id: UserId;

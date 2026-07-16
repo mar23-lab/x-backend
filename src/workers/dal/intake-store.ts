@@ -239,6 +239,7 @@ export async function executeIntakeResolutionRow(
         r.target_id AS receipt_target_id, r.created_at AS receipt_created_at,
         r.closing_attestation_id AS receipt_closing_attestation_id
       FROM claimed c JOIN receipt r ON r.resolution_id = c.id JOIN closed x ON x.id = r.closing_attestation_id
+      JOIN queued q ON q.id IS NOT NULL
     `,
   ]);
   const row = rows[0];

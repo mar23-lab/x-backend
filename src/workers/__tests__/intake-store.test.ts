@@ -61,6 +61,8 @@ describe('single-intake transactional execution', () => {
     expect(write.values).toContain('execute_1');
     expect(write.text).toContain('INSERT INTO closing_attestations');
     expect(write.values).toContain('skill.governed-execution-closeout');
+    expect(write.text).toContain('INSERT INTO projection_outbox');
+    expect(write.text).toContain('JOIN queued q ON q.id IS NOT NULL');
   });
 
   it('replays the original receipt for the same execution idempotency key', async () => {
