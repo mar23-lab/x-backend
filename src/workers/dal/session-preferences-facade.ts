@@ -3,11 +3,11 @@
 
 import type { Sql } from '../db/client';
 import type { UserId, WorkspaceId } from './types';
-import { getOperatingModeRow, setOperatingModeRow, type OperatingMode } from './session-preferences-store';
+import { getOperatingModeRow, setOperatingModeRow, type OperatingMode, type OperatingModeWriteResult } from './session-preferences-store';
 
 export interface SessionPreferencesFacade {
   getOperatingMode(userId: UserId, workspaceId: WorkspaceId): Promise<OperatingMode>;
-  setOperatingMode(userId: UserId, workspaceId: WorkspaceId, mode: OperatingMode, actorUserId: UserId): Promise<OperatingMode>;
+  setOperatingMode(userId: UserId, workspaceId: WorkspaceId, mode: OperatingMode, actorUserId: UserId): Promise<OperatingModeWriteResult>;
 }
 
 export function makeSessionPreferencesFacade(getSql: () => Sql): SessionPreferencesFacade {

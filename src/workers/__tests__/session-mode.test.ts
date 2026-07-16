@@ -5,6 +5,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { Hono } from 'hono';
 import { sessionModeRoute } from '../routes/session-mode';
+import { setOperatingModeRow } from '../dal/session-preferences-store';
 
 function appFor(
   dal: Record<string, unknown>,
@@ -31,13 +32,19 @@ function patch(app: ReturnType<typeof appFor>, mode: unknown) {
 
 describe('PATCH /session/mode', () => {
   it('200 — sets the mode; DAL called with (user, workspace, mode, actor); echoes 4-axis identity', async () => {
-    const setOperatingMode = vi.fn(async () => 'operator');
+    const setOperatingMode = vi.fn(async () => ({
+      operating_mode: 'operator',
+      session_mode_revision_id: 'session-mode:u1:org_a:2026-07-16T00:00:00.000Z',
+      audit_event_id: '9001',
+    }));
     const res = await patch(appFor({ setOperatingMode }), 'operator');
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.identity).toEqual({
       role: 'operator', operating_mode: 'operator', session_mode: 'authenticated', visibility: 'system-internal',
     });
+    expect(body.session_mode_revision_id).toBe('session-mode:u1:org_a:2026-07-16T00:00:00.000Z');
+    expect(body.audit_event_id).toBe('9001');
     expect(setOperatingMode).toHaveBeenCalledWith('u1', 'org_a', 'operator', 'u1');
   });
 
@@ -49,7 +56,11 @@ describe('PATCH /session/mode', () => {
   });
 
   it('visibility axis derives from role — a client gets client-visible, a viewer agency-visible', async () => {
-    const setOperatingMode = vi.fn(async () => 'watch');
+    const setOperatingMode = vi.fn(async () => ({
+      operating_mode: 'watch',
+      session_mode_revision_id: 'session-mode:u:org_a:2026-07-16T00:00:00.000Z',
+      audit_event_id: '9002',
+    }));
     const rC = await patch(appFor({ setOperatingMode }, { user_id: 'c', workspace_id: 'org_a', role: 'client' }), 'watch');
     expect((await rC.json()).identity.visibility).toBe('client-visible');
     const rV = await patch(appFor({ setOperatingMode }, { user_id: 'v', workspace_id: 'org_a', role: 'viewer' }), 'watch');
@@ -59,5 +70,31 @@ describe('PATCH /session/mode', () => {
   it('403 — no workspace in session', async () => {
     const res = await patch(appFor({ setOperatingMode: vi.fn() }, { user_id: 'u1', workspace_id: '', role: 'operator' }), 'operator');
     expect(res.status).toBe(403);
+  });
+
+  it('500 — mode write without an audit receipt fails closed', async () => {
+    const setOperatingMode = vi.fn(async () => ({
+      operating_mode: 'operator',
+      session_mode_revision_id: '',
+      audit_event_id: '',
+    }));
+    const res = await patch(appFor({ setOperatingMode }), 'operator');
+    expect(res.status).toBe(500);
+  });
+});
+
+describe('setOperatingModeRow', () => {
+  it('requires the audit_written CTE before returning a session mode revision', async () => {
+    const calls: Array<{ text: string; values: unknown[] }> = [];
+    const sql = ((strings: TemplateStringsArray, ...values: unknown[]) => {
+      calls.push({ text: strings.join('?'), values });
+      return Promise.resolve([]);
+    }) as never;
+
+    await expect(setOperatingModeRow(sql, 'u1', 'org_a', 'operator', 'u1')).rejects.toThrow(/audit receipt/);
+    expect(calls).toHaveLength(1);
+    expect(calls[0]!.text).toMatch(/WITH mode_written AS/);
+    expect(calls[0]!.text).toMatch(/audit_written AS/);
+    expect(calls[0]!.text).toMatch(/JOIN audit_written ON TRUE/);
   });
 });

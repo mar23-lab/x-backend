@@ -115,7 +115,7 @@ import {
   IntakeResolutionInput,
   IntakeExecutionResult,
 } from './types';
-import type { OperatingMode } from './session-preferences-store';
+import type { OperatingMode, OperatingModeWriteResult } from './session-preferences-store';
 import type { ModelRuntimesFacade } from './model-runtime-facade';
 import type { PlanEntitiesFacade } from './plan-entities-facade';
 
@@ -691,7 +691,7 @@ export interface DalAdapter {
   /** Wave B · the caller's persisted operating mode for a workspace ('watch' default when unset). */
   getOperatingMode(userId: UserId, workspaceId: WorkspaceId): Promise<OperatingMode>;
   /** Wave B · set the caller's operating mode for a workspace (UPSERT + audited). */
-  setOperatingMode(userId: UserId, workspaceId: WorkspaceId, mode: OperatingMode, actorUserId: UserId): Promise<OperatingMode>;
+  setOperatingMode(userId: UserId, workspaceId: WorkspaceId, mode: OperatingMode, actorUserId: UserId): Promise<OperatingModeWriteResult>;
 
   /** Wave C · model-runtime provider config (encrypted-at-rest credentials, workspace default, session
    *  override). A sub-facade — the crypto lives in the route layer; the store handles only sealed data. */

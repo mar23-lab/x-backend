@@ -46,14 +46,19 @@ sessionModeRoute.patch('/session/mode', async (ctx) => {
     }
     const dal = ctx.get('dal');
     const saved = await dal.setOperatingMode(auth.user_id, auth.workspace_id, body.mode, auth.user_id);
+    if (!saved.session_mode_revision_id || !saved.audit_event_id) {
+      return errorEnvelope(ctx, { status: 500, code: 'SESSION_MODE_RECEIPT_MISSING', message: 'session mode write did not produce a durable audit receipt' });
+    }
     // Echo the updated 4-axis identity block (same shape GET /session returns) so the caller can re-sync.
     return ctx.json({
       identity: {
         role: auth.role,
-        operating_mode: saved,
+        operating_mode: saved.operating_mode,
         session_mode: 'authenticated',
         visibility: visibilityForRole(auth.role),
       },
+      session_mode_revision_id: saved.session_mode_revision_id,
+      audit_event_id: saved.audit_event_id,
     });
   } catch (err) {
     return errorEnvelope(ctx, err);

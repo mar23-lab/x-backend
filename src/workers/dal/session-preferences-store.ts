@@ -12,6 +12,11 @@ import type { UserId, WorkspaceId } from './types';
 
 export const OPERATING_MODES = ['watch', 'test', 'operator'] as const;
 export type OperatingMode = (typeof OPERATING_MODES)[number];
+export interface OperatingModeWriteResult {
+  operating_mode: OperatingMode;
+  session_mode_revision_id: string;
+  audit_event_id: string;
+}
 
 export function isOperatingMode(v: unknown): v is OperatingMode {
   return typeof v === 'string' && (OPERATING_MODES as readonly string[]).includes(v);
@@ -41,18 +46,35 @@ export async function setOperatingModeRow(
   workspaceId: WorkspaceId,
   mode: OperatingMode,
   actorUserId: UserId,
-): Promise<OperatingMode> {
-  await (sql as unknown as { transaction: (q: unknown[]) => Promise<unknown> }).transaction([
-    sql/*sql*/`
+): Promise<OperatingModeWriteResult> {
+  const rows = (await sql/*sql*/`
+    WITH mode_written AS (
       INSERT INTO user_session_preferences (user_id, workspace_id, operating_mode, updated_at)
       VALUES (${userId}, ${workspaceId}, ${mode}, now())
       ON CONFLICT (user_id, workspace_id)
       DO UPDATE SET operating_mode = EXCLUDED.operating_mode, updated_at = now()
-    `,
-    sql/*sql*/`
+      RETURNING user_id, workspace_id, operating_mode, updated_at
+    ), audit_written AS (
       INSERT INTO audit_logs (actor_user_id, action, target_type, target_id, workspace_id, reason)
-      VALUES (${actorUserId}, 'operating_mode_change'::text, 'session', ${userId}, ${workspaceId}, ${'mode -> ' + mode})
-    `,
-  ]);
-  return mode;
+      SELECT ${actorUserId}, 'operating_mode_change'::text, 'session', user_id, workspace_id, ${'mode -> ' + mode}
+      FROM mode_written
+      RETURNING id
+    )
+    SELECT
+      mode_written.operating_mode,
+      'session-mode:' || mode_written.user_id || ':' || mode_written.workspace_id || ':' ||
+        to_char(mode_written.updated_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS session_mode_revision_id,
+      audit_written.id::text AS audit_event_id
+    FROM mode_written
+    JOIN audit_written ON TRUE
+  `) as Array<{ operating_mode: string; session_mode_revision_id: string; audit_event_id: string }>;
+  const row = rows[0];
+  if (!row || !isOperatingMode(row.operating_mode) || !row.session_mode_revision_id || !row.audit_event_id) {
+    throw new Error('operating mode write did not produce an audit receipt');
+  }
+  return {
+    operating_mode: row.operating_mode,
+    session_mode_revision_id: row.session_mode_revision_id,
+    audit_event_id: row.audit_event_id,
+  };
 }
