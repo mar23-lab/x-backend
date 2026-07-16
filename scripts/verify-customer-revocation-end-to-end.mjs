@@ -33,7 +33,15 @@ const mcp = read('src/workers/routes/mcp-gateway.ts');
 for (const [id, text, markers] of [
   ['auth_has_clerk_and_service_principal_boundaries', auth, ['verifyToken', 'org_id', 'org_role', 'service_principal', 'client_id', 'token_expires_at']],
   ['whoami_exposes_redacted_membership_resolution', templateRoute, ['membership_ref', 'membership_resolution', 'clerk_org_membership_and_backend_rbac', 'token_expires_at', 'auth_method', 'service_principal']],
-  ['mcp_write_surfaces_are_role_and_canary_scoped', mcp, ['canWrite(role)', 'ensureCanaryLifecycleWrite', 'pkt-canary-', 'metadata_only', 'xlooop://canary/']],
+  ['mcp_write_surfaces_are_role_and_canary_scoped', mcp, [
+    "authorizeSpineWrite(ctx, 'evidence:submit')",
+    "authorizeSpineWrite(ctx, 'tool_event:report')",
+    "authorizeSpineWrite(ctx, 'approval:request')",
+    'ensureCanaryLifecycleWrite',
+    'pkt-canary-',
+    'metadata_only',
+    'xlooop://canary/',
+  ]],
 ]) {
   const missing = markers.filter((marker) => !text.includes(marker));
   if (missing.length) fail(id, 'required markers missing', { missing });

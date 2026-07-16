@@ -13,6 +13,7 @@ const gates = [
   ['role-skill catalog loader freshness', 'npm', ['run', 'verify:role-skill-catalog-loader-fresh']],
   ['model execution callsite coverage', 'npm', ['run', 'verify:model-execution-callsites']],
   ['shadow observability storage', 'npm', ['run', 'verify:shadow-observability-storage']],
+  ['backend trust proofs (static)', 'npm', ['run', 'verify:trust-proofs']],
   ['data schemas', 'npm', ['run', 'verify:data-schemas']],
   ['orphan tests', 'npm', ['run', 'verify:no-orphan-worker-tests']],
   ['typecheck', 'npm', ['run', 'typecheck']],

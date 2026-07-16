@@ -262,6 +262,302 @@
         { "path": "src/workers/routes/sign-offs.ts", "target_blob": "58cc9f8e040864bdc1253f924a2b9099620b0d82", "reason": "returns the atomic audit-event identifier and removes best-effort duplicate mirroring" },
         { "path": "wrangler.pilot-shadow.toml", "target_blob": "a716f4ef5058228f443d3abe8cccc9de24aa8a9c", "reason": "defines isolated shadow Worker, queue, schema and non-authoritative feature posture" }
       ]
+    },
+    {
+      "delta_id": "pilot-shadow-trust-proof-closeout-20260717",
+      "generated_at": "2026-07-17T00:00:00Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "9d4680bd42b4b67cf7476e910fe2b417813e030b",
+      "target_base_commit": "9d4680bd42b4b67cf7476e910fe2b417813e030b",
+      "authority": "shadow_only_no_production_cutover",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "package.json",
+          "target_blob": "ac15c6e0a4677e5fee422b9bee2ae27b7e46e44d",
+          "reason": "restamps current pilot-shadow trust, receipt, RLS, and source-binding proof surface after governed local hardening"
+        },
+        {
+          "path": "scripts/ci-local.mjs",
+          "target_blob": "3e660c7e48f83b93ef7f9115bcfd12fdd2a942a6",
+          "reason": "restamps current pilot-shadow trust, receipt, RLS, and source-binding proof surface after governed local hardening"
+        },
+        {
+          "path": "scripts/rls-shadow-soak.mjs",
+          "target_blob": "dd88091240afb171e236da890af38553ea430262",
+          "reason": "restamps current pilot-shadow trust, receipt, RLS, and source-binding proof surface after governed local hardening"
+        },
+        {
+          "path": "scripts/run-trust-proofs.mjs",
+          "target_blob": "3043a38abd93ccccf00b917576f5da0a2d3d3c2b",
+          "reason": "restamps current pilot-shadow trust, receipt, RLS, and source-binding proof surface after governed local hardening"
+        },
+        {
+          "path": "scripts/verify-customer-revocation-end-to-end.mjs",
+          "target_blob": "ba5894e273f1d0f9b4fd0577ab2bc7b397cc2309",
+          "reason": "restamps current pilot-shadow trust, receipt, RLS, and source-binding proof surface after governed local hardening"
+        },
+        {
+          "path": "scripts/verify-pilot-shadow-config.mjs",
+          "target_blob": "42e3d4d2e71daecc02f70b7861aeb76d97db264f",
+          "reason": "restamps current pilot-shadow trust, receipt, RLS, and source-binding proof surface after governed local hardening"
+        },
+        {
+          "path": "src/workers/__tests__/action-recording.test.ts",
+          "target_blob": "9809f85b9626cec5b498747799b9c04c358afc27",
+          "reason": "restamps current pilot-shadow trust, receipt, RLS, and source-binding proof surface after governed local hardening"
+        },
+        {
+          "path": "src/workers/__tests__/cors-methods.test.ts",
+          "target_blob": "2e63dd4d3815ff2def8faa7791fc9f23ecd73ade",
+          "reason": "restamps current pilot-shadow trust, receipt, RLS, and source-binding proof surface after governed local hardening"
+        },
+        {
+          "path": "src/workers/__tests__/customer-chat-route.test.ts",
+          "target_blob": "d8dd56198749ed42ea6b9bdf31d030845b63d389",
+          "reason": "restamps current pilot-shadow trust, receipt, RLS, and source-binding proof surface after governed local hardening"
+        },
+        {
+          "path": "src/workers/__tests__/customer.test.ts",
+          "target_blob": "38213e48edb51da0d8543d8084f620bcbc7a3adf",
+          "reason": "restamps current pilot-shadow trust, receipt, RLS, and source-binding proof surface after governed local hardening"
+        },
+        {
+          "path": "src/workers/__tests__/destructive-op-event-mirror.test.ts",
+          "target_blob": "22be711f5953a83bf5dde7c5e2b048384c540511",
+          "reason": "restamps current pilot-shadow trust, receipt, RLS, and source-binding proof surface after governed local hardening"
+        },
+        {
+          "path": "src/workers/__tests__/events-self-service.test.ts",
+          "target_blob": "d976cf16b3bc63eb2d2451aa7abfd01be8a073c5",
+          "reason": "restamps current pilot-shadow trust, receipt, RLS, and source-binding proof surface after governed local hardening"
+        },
+        {
+          "path": "src/workers/__tests__/health.test.ts",
+          "target_blob": "25258d79afb837287cfab64346995cf97d165759",
+          "reason": "restamps current pilot-shadow trust, receipt, RLS, and source-binding proof surface after governed local hardening"
+        },
+        {
+          "path": "src/workers/__tests__/intake-route.test.ts",
+          "target_blob": "bab95152d78dc47e52b7e639225a88f0237341bb",
+          "reason": "restamps current pilot-shadow trust, receipt, RLS, and source-binding proof surface after governed local hardening"
+        },
+        {
+          "path": "src/workers/__tests__/member-remove-route.test.ts",
+          "target_blob": "f8637fbd6ea2485f6dbb301657f3dc0776a15c56",
+          "reason": "restamps current pilot-shadow trust, receipt, RLS, and source-binding proof surface after governed local hardening"
+        },
+        {
+          "path": "src/workers/__tests__/members-role-mutation.test.ts",
+          "target_blob": "12f0b0a7618dbfa1bf160533cb8ed4c328d0e1a9",
+          "reason": "restamps current pilot-shadow trust, receipt, RLS, and source-binding proof surface after governed local hardening"
+        },
+        {
+          "path": "src/workers/__tests__/model-runtime-store.test.ts",
+          "target_blob": "d52cf123e6f2df0e5238340a2a6cb401c8db1722",
+          "reason": "restamps current pilot-shadow trust, receipt, RLS, and source-binding proof surface after governed local hardening"
+        },
+        {
+          "path": "src/workers/__tests__/model-runtimes-route.test.ts",
+          "target_blob": "f5a9b1ec094326b08eaf159d7bbca2877d0fc717",
+          "reason": "restamps current pilot-shadow trust, receipt, RLS, and source-binding proof surface after governed local hardening"
+        },
+        {
+          "path": "src/workers/__tests__/operational-spine-live-rls.test.ts",
+          "target_blob": "a9da650d49b461c28c259a7ea15054845fd9ed9e",
+          "reason": "restamps current pilot-shadow trust, receipt, RLS, and source-binding proof surface after governed local hardening"
+        },
+        {
+          "path": "src/workers/__tests__/plan-route.test.ts",
+          "target_blob": "edf2c4ae4ef63a1482f174be0224ca738e7f5177",
+          "reason": "restamps current pilot-shadow trust, receipt, RLS, and source-binding proof surface after governed local hardening"
+        },
+        {
+          "path": "src/workers/__tests__/role-skill-evidence-live-rls.test.ts",
+          "target_blob": "3ce79e87dbdb99097e06a2f97ec7a09e66eb6d0d",
+          "reason": "restamps current pilot-shadow trust, receipt, RLS, and source-binding proof surface after governed local hardening"
+        },
+        {
+          "path": "src/workers/__tests__/session-mode.test.ts",
+          "target_blob": "b48e7931964b0a26203aa18847521be16cd265ab",
+          "reason": "restamps current pilot-shadow trust, receipt, RLS, and source-binding proof surface after governed local hardening"
+        },
+        {
+          "path": "src/workers/__tests__/source-tier-grounding.test.ts",
+          "target_blob": "429a6a2e64564e0419171adda48581b118eff21f",
+          "reason": "restamps current pilot-shadow trust, receipt, RLS, and source-binding proof surface after governed local hardening"
+        },
+        {
+          "path": "src/workers/__tests__/sources-connect-sync.test.ts",
+          "target_blob": "e4d0cd0cf7887b13b61b53158aa8116b6d14d8a8",
+          "reason": "restamps current pilot-shadow trust, receipt, RLS, and source-binding proof surface after governed local hardening"
+        },
+        {
+          "path": "src/workers/__tests__/sources-read-policy-route.test.ts",
+          "target_blob": "9bdbe8448012acaa0af04c85e97ebb7c13466ef0",
+          "reason": "restamps current pilot-shadow trust, receipt, RLS, and source-binding proof surface after governed local hardening"
+        },
+        {
+          "path": "src/workers/__tests__/workspace-upgrade-route.test.ts",
+          "target_blob": "2d3e6a75e7e9aee9b3e84101915beeb049471c99",
+          "reason": "restamps current pilot-shadow trust, receipt, RLS, and source-binding proof surface after governed local hardening"
+        },
+        {
+          "path": "src/workers/dal/DalAdapter.ts",
+          "target_blob": "f91d2d77e03a6c10af00199c90cff7a65094e475",
+          "reason": "restamps current pilot-shadow trust, receipt, RLS, and source-binding proof surface after governed local hardening"
+        },
+        {
+          "path": "src/workers/dal/WorkersDalAdapter.ts",
+          "target_blob": "b3cb1492feb002ae2a0f03e69e62f21092b5d8b1",
+          "reason": "restamps current pilot-shadow trust, receipt, RLS, and source-binding proof surface after governed local hardening"
+        },
+        {
+          "path": "src/workers/dal/chat-store.ts",
+          "target_blob": "727093633f792e03b9327cf09ec0946218393ac2",
+          "reason": "restamps current pilot-shadow trust, receipt, RLS, and source-binding proof surface after governed local hardening"
+        },
+        {
+          "path": "src/workers/dal/customer-authority-store.ts",
+          "target_blob": "a664a42ac073d0958806a18f8efda4282c37881b",
+          "reason": "restamps current pilot-shadow trust, receipt, RLS, and source-binding proof surface after governed local hardening"
+        },
+        {
+          "path": "src/workers/dal/event-store.ts",
+          "target_blob": "6ce78bf234710336cf0f21e6e9f078f3d1f23299",
+          "reason": "restamps current pilot-shadow trust, receipt, RLS, and source-binding proof surface after governed local hardening"
+        },
+        {
+          "path": "src/workers/dal/model-runtime-facade.ts",
+          "target_blob": "8feb51fbb29b3bc0f5f66d3fff8f5708fca6fdad",
+          "reason": "restamps current pilot-shadow trust, receipt, RLS, and source-binding proof surface after governed local hardening"
+        },
+        {
+          "path": "src/workers/dal/model-runtime-store.ts",
+          "target_blob": "91c0df6526758cb460a8d1d6077cc8b732033746",
+          "reason": "restamps current pilot-shadow trust, receipt, RLS, and source-binding proof surface after governed local hardening"
+        },
+        {
+          "path": "src/workers/dal/plan-entities-facade.ts",
+          "target_blob": "391bb1eabeabcd584eab1518069364aa06563f4e",
+          "reason": "restamps current pilot-shadow trust, receipt, RLS, and source-binding proof surface after governed local hardening"
+        },
+        {
+          "path": "src/workers/dal/plan-store.ts",
+          "target_blob": "6697f021c5a52bd442d9f00b7b3384e99df6ab2c",
+          "reason": "restamps current pilot-shadow trust, receipt, RLS, and source-binding proof surface after governed local hardening"
+        },
+        {
+          "path": "src/workers/dal/session-preferences-facade.ts",
+          "target_blob": "6c805daa7883fd03c0d195ab5d3a7a1c80a03182",
+          "reason": "restamps current pilot-shadow trust, receipt, RLS, and source-binding proof surface after governed local hardening"
+        },
+        {
+          "path": "src/workers/dal/session-preferences-store.ts",
+          "target_blob": "be04874ba645fa457c4f8cae9510f47b7a35989c",
+          "reason": "restamps current pilot-shadow trust, receipt, RLS, and source-binding proof surface after governed local hardening"
+        },
+        {
+          "path": "src/workers/dal/source-store.ts",
+          "target_blob": "62865bdecfa1d06e84c15bcf6689e07d086f490a",
+          "reason": "restamps current pilot-shadow trust, receipt, RLS, and source-binding proof surface after governed local hardening"
+        },
+        {
+          "path": "src/workers/dal/types/access.ts",
+          "target_blob": "1c76d196e8f5a0df2bb5972e6f9f83770db98837",
+          "reason": "restamps current pilot-shadow trust, receipt, RLS, and source-binding proof surface after governed local hardening"
+        },
+        {
+          "path": "src/workers/dal/types/plan-entity.ts",
+          "target_blob": "18ff840cb6b29e8170d12f8e161fcbb652bd546f",
+          "reason": "restamps current pilot-shadow trust, receipt, RLS, and source-binding proof surface after governed local hardening"
+        },
+        {
+          "path": "src/workers/dal/workspace-member-facade.ts",
+          "target_blob": "07fd34c85d4406927c5ff9d29f4957232381c36f",
+          "reason": "restamps current pilot-shadow trust, receipt, RLS, and source-binding proof surface after governed local hardening"
+        },
+        {
+          "path": "src/workers/dal/workspace-member-store.ts",
+          "target_blob": "fb9ca1705d17f5fee6d4329a68488b6c0ec446b3",
+          "reason": "restamps current pilot-shadow trust, receipt, RLS, and source-binding proof surface after governed local hardening"
+        },
+        {
+          "path": "src/workers/lib/observability.ts",
+          "target_blob": "2d781c2a7decabcb3eedb18a1c7b54412be63f30",
+          "reason": "restamps current pilot-shadow trust, receipt, RLS, and source-binding proof surface after governed local hardening"
+        },
+        {
+          "path": "src/workers/routes/customer-chat.ts",
+          "target_blob": "87515ab2875fb1b907c38339a520413842d72319",
+          "reason": "restamps current pilot-shadow trust, receipt, RLS, and source-binding proof surface after governed local hardening"
+        },
+        {
+          "path": "src/workers/routes/customer.ts",
+          "target_blob": "381e068b0d7b0971e70e646572ca188bb954229c",
+          "reason": "restamps current pilot-shadow trust, receipt, RLS, and source-binding proof surface after governed local hardening"
+        },
+        {
+          "path": "src/workers/routes/events.ts",
+          "target_blob": "29bb73b8645a63567765e2643e09356f732ab8ee",
+          "reason": "restamps current pilot-shadow trust, receipt, RLS, and source-binding proof surface after governed local hardening"
+        },
+        {
+          "path": "src/workers/routes/health.ts",
+          "target_blob": "e054dd0dc367164c4b8dac43f5dc5b1f5bfd5573",
+          "reason": "restamps current pilot-shadow trust, receipt, RLS, and source-binding proof surface after governed local hardening"
+        },
+        {
+          "path": "src/workers/routes/intake.ts",
+          "target_blob": "b224c5ad8a8877c661f97749572acc1c97c7ed0f",
+          "reason": "restamps current pilot-shadow trust, receipt, RLS, and source-binding proof surface after governed local hardening"
+        },
+        {
+          "path": "src/workers/routes/members.ts",
+          "target_blob": "3d3006a14a925ef53e0eaf834f69dca9185918c1",
+          "reason": "restamps current pilot-shadow trust, receipt, RLS, and source-binding proof surface after governed local hardening"
+        },
+        {
+          "path": "src/workers/routes/model-runtimes.ts",
+          "target_blob": "8c0ec5effef07a308e854228c7ed5d35a07d3a8a",
+          "reason": "restamps current pilot-shadow trust, receipt, RLS, and source-binding proof surface after governed local hardening"
+        },
+        {
+          "path": "src/workers/routes/plan.ts",
+          "target_blob": "8df732a9014b71229eebd2fce7c483a128775d6e",
+          "reason": "restamps current pilot-shadow trust, receipt, RLS, and source-binding proof surface after governed local hardening"
+        },
+        {
+          "path": "src/workers/routes/projects.ts",
+          "target_blob": "be4ae39daf611b9e18d1f23b8f64a800286541dd",
+          "reason": "restamps current pilot-shadow trust, receipt, RLS, and source-binding proof surface after governed local hardening"
+        },
+        {
+          "path": "src/workers/routes/session-mode.ts",
+          "target_blob": "784374a393a3b6f75e1cf6ad193f385080d69817",
+          "reason": "restamps current pilot-shadow trust, receipt, RLS, and source-binding proof surface after governed local hardening"
+        },
+        {
+          "path": "src/workers/routes/sources.ts",
+          "target_blob": "0238c98a60417a231f1d87fdab6718a84375cd62",
+          "reason": "restamps current pilot-shadow trust, receipt, RLS, and source-binding proof surface after governed local hardening"
+        },
+        {
+          "path": "src/workers/routes/workspace-upgrade.ts",
+          "target_blob": "91b1ae6ade67a23bc0227a7e38643de0c09969c4",
+          "reason": "restamps current pilot-shadow trust, receipt, RLS, and source-binding proof surface after governed local hardening"
+        },
+        {
+          "path": "vitest.workers.config.ts",
+          "target_blob": "ebff5b537b8206b8d2b3528d0f00f9f96c23247d",
+          "reason": "restamps current pilot-shadow trust, receipt, RLS, and source-binding proof surface after governed local hardening"
+        },
+        {
+          "path": "wrangler.pilot-shadow.toml",
+          "target_blob": "54dd8cfe4be8000735594be9818993e8159e2b2d",
+          "reason": "restamps current pilot-shadow trust, receipt, RLS, and source-binding proof surface after governed local hardening"
+        }
+      ]
     }
   ]
 }

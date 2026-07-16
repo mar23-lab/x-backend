@@ -10,7 +10,8 @@
 // For every (workspace, spine-table) it asserts TWO things:
 //   1. ZERO DIVERGENCE — the app role (RLS on, GUC = ws) sees EXACTLY the rows the owner sees for that ws.
 //   2. RLS BITES — the app role with ws=A's GUC sees NONE of another workspace B's rows (owner sees all).
-// Any divergence or any cross-tenant leak = exit 1 (do NOT cut over). No URLs = skip (exit 0) so CI is safe.
+// Any divergence or any cross-tenant leak = exit 1. No URLs = skip (exit 0) for optional CI unless
+// --strict or XLOOOP_STRICT_PROOF=1 is set; strict mode is the acceptance-proof path and fails closed.
 //
 // The app role is stateless over the Neon HTTP driver, so the GUC must be set + read in ONE transaction
 // (matches the worker's per-request set_config('xlooop.current_workspace_id', …, true) pattern).
@@ -19,12 +20,22 @@ import { neon } from '@neondatabase/serverless';
 
 const OWNER = process.env.DATABASE_URL;
 const APP = process.env.XLOOOP_RLS_APP_DATABASE_URL;
+const STRICT = process.argv.includes('--strict') || process.env.XLOOOP_STRICT_PROOF === '1';
 // 034-spine tables + operation_events (043: RLS'd customer spine; xlooop_app has SELECT — read parity
 // + cross-tenant-leak checks apply exactly as for the spine).
 const TABLES = ['task_packets', 'evidence_items', 'approval_requests', 'tool_events', 'metric_deltas', 'operation_events'];
 const SAMPLE_WORKSPACES = 8; // cap
 
 if (!OWNER || !APP) {
+  if (STRICT) {
+    const missing = [
+      !OWNER ? 'DATABASE_URL' : null,
+      !APP ? 'XLOOOP_RLS_APP_DATABASE_URL' : null,
+    ].filter(Boolean).join(', ');
+    console.error(`rls-shadow-soak · OPERATOR-INPUT-REQUIRED — missing ${missing}.`);
+    console.error('Set both URLs to a disposable/prod-shaped Neon branch and rerun; this proof is not satisfied by a skip.');
+    process.exit(2);
+  }
   console.log('rls-shadow-soak · SKIP — set DATABASE_URL (owner) + XLOOOP_RLS_APP_DATABASE_URL (xlooop_app) on a Neon branch to run.');
   process.exit(0);
 }
@@ -73,11 +84,11 @@ const main = async () => {
   }
 
   if (failures.length) {
-    console.error(`\n✗ rls-shadow-soak FAILED · ${failures.length} issue(s) — DO NOT cut over:`);
+    console.error(`\n✗ rls-shadow-soak FAILED · ${failures.length} issue(s) — do not promote this candidate:`);
     for (const f of failures) console.error(`    ${f}`);
     process.exit(1);
   }
-  console.log('\n✓ rls-shadow-soak GREEN · xlooop_app enforces tenant isolation with zero divergence — cutover is evidence-backed');
+  console.log('\n✓ rls-shadow-soak GREEN · xlooop_app enforces tenant isolation with zero divergence; production cutover still requires separate approval');
   process.exit(0);
 };
 
