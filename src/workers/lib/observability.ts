@@ -28,6 +28,8 @@ export type ObservabilityKind =
   | 'role_skill_resolution'    // the role/skill resolver observed a governed-write decision in SHADOW mode (role-skill-shadow · OAR-W2 260713)
   | 'context_packet_persisted' // an LLM run persisted role/skill + role-scoped context lineage before invocation
   | 'skill_invocation_completed' // an LLM/tool capability completed with a durable skill receipt
+  | 'chat_history_persistence_unavailable' // strict chat lineage could not start because the DAL append contract is absent
+  | 'chat_history_persistence_failed' // strict/default chat lineage append failed; strict deployments fail closed
   | 'role_skill_receipt_write_failed'; // a shadow receipt write rejected — telemetry so evidence loss is never silent (role-skill-shadow · Track A 260713)
 
 /** Emit one structured observability event. Never throws; never blocks. */

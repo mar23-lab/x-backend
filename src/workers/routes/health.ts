@@ -24,6 +24,7 @@ healthRoute.get('/health', (ctx) => {
     SINGLE_INTAKE_ENABLED?: string;
     ROLE_SKILL_CATALOG_ENABLED?: string;
     CONTEXT_PACKET_PERSISTENCE_ENABLED?: string;
+    CHAT_HISTORY_PERSISTENCE_REQUIRED?: string;
     TENANT_PROJECTION_QUEUE_ENABLED?: string;
     CURRENT_WORK_PROJECTION_ENABLED?: string;
     TENANT_PROJECTION_QUEUE?: unknown;
@@ -43,6 +44,7 @@ healthRoute.get('/health', (ctx) => {
       single_intake: enabled(env.SINGLE_INTAKE_ENABLED),
       role_skill_catalog: enabled(env.ROLE_SKILL_CATALOG_ENABLED),
       context_packet_persistence: enabled(env.CONTEXT_PACKET_PERSISTENCE_ENABLED),
+      chat_history_persistence_required: enabled(env.CHAT_HISTORY_PERSISTENCE_REQUIRED),
       tenant_projection_queue: enabled(env.TENANT_PROJECTION_QUEUE_ENABLED),
       current_work_projection: enabled(env.CURRENT_WORK_PROJECTION_ENABLED),
     },

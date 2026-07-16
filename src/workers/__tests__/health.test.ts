@@ -45,6 +45,7 @@ describe('GET /api/v1/health', () => {
       SINGLE_INTAKE_ENABLED: 'true',
       ROLE_SKILL_CATALOG_ENABLED: 'true',
       CONTEXT_PACKET_PERSISTENCE_ENABLED: 'true',
+      CHAT_HISTORY_PERSISTENCE_REQUIRED: 'true',
       TENANT_PROJECTION_QUEUE_ENABLED: 'true',
       CURRENT_WORK_PROJECTION_ENABLED: 'true',
       TENANT_PROJECTION_QUEUE: { send: async () => undefined },
@@ -58,6 +59,7 @@ describe('GET /api/v1/health', () => {
       single_intake: true,
       role_skill_catalog: true,
       context_packet_persistence: true,
+      chat_history_persistence_required: true,
       tenant_projection_queue: true,
       current_work_projection: true,
     });

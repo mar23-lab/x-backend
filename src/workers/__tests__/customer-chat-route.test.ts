@@ -193,6 +193,39 @@ describe('POST /api/v1/customer-chat', () => {
     expect(res.status).toBe(400);
   });
 
+  it('legacy/default mode still returns the answer when chat history persistence fails', async () => {
+    const dal = dalStub({
+      appendChatExchange: async () => { throw new Error('chat table unavailable'); },
+    });
+    const res = await ask(appFor(AUTH, dal), { message: 'what should I do?' });
+    expect(res.status).toBe(200);
+    const body = await res.json() as { answer: string };
+    expect(body.answer).toContain('Honest & Young');
+  });
+
+  it('strict pilot mode fails before answering when chat persistence is unavailable', async () => {
+    let eventsRead = false;
+    const dal = dalStub({
+      listEvents: async () => { eventsRead = true; return { events: [], pagination: { has_more: false, next_before: null } }; },
+    });
+    const res = await askEnv(appFor(AUTH, dal), { message: 'what should I do?' }, { CHAT_HISTORY_PERSISTENCE_REQUIRED: 'true' });
+    const body = await res.json() as Record<string, unknown>;
+    expect(res.status).toBe(503);
+    expect(body.code).toBe('CHAT_HISTORY_PERSISTENCE_UNAVAILABLE');
+    expect(eventsRead).toBe(false);
+  });
+
+  it('strict pilot mode fails closed when the exchange cannot be durably recorded', async () => {
+    const dal = dalStub({
+      appendChatExchange: async () => { throw new Error('insert failed'); },
+    });
+    const res = await askEnv(appFor(AUTH, dal), { message: 'what should I do?' }, { CHAT_HISTORY_PERSISTENCE_REQUIRED: 'true' });
+    const body = await res.json() as Record<string, unknown>;
+    expect(res.status).toBe(503);
+    expect(body.code).toBe('CHAT_HISTORY_PERSISTENCE_FAILED');
+    expect(body).not.toHaveProperty('answer');
+  });
+
   it('403 when there is no signed-in workspace', async () => {
     const res = await ask(appFor({ ...AUTH, workspace_id: '' }, dalStub()), { message: 'hi' });
     expect(res.status).toBe(403);

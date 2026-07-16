@@ -3,8 +3,8 @@
 // Authority: 020_cockpit_chat_threads. ONE thread per (operator, scope); messages appended in order.
 // The thread id is DETERMINISTIC from (user_id, scope_key) so the same operator returning to the same
 // scope re-opens the same thread (idempotent upsert) — that is what makes a conversation survive a
-// reload or a different browser. Best-effort by design at the route: a persist failure never breaks
-// the live answer.
+// reload or a different browser. Legacy routes may treat persistence as best-effort; commercial pilot
+// routes can require this append before returning a successful answer.
 
 import { makeError } from './shared-helpers';
 import type { Sql } from '../db/client';

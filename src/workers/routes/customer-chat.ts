@@ -58,6 +58,9 @@ export interface CustomerChatEnv extends AuthEnv {
   OPERATOR_WORKSPACE_SCOPE_ENABLED?: string;
   /** Commercial pilot gate: synchronously persist role/skill + context + completion lineage for every LLM run. */
   CONTEXT_PACKET_PERSISTENCE_ENABLED?: string;
+  /** Commercial pilot gate: never return a successful chat answer unless the exchange is durably recorded. */
+  CHAT_HISTORY_PERSISTENCE_REQUIRED?: string;
+  CHAT_RECEIPT_GROUNDING_ENABLED?: string;
   ROLE_SKILL_CATALOG_ENABLED?: string;
   RESOLUTION_RECEIPT_SIGNING_SECRET?: string;
   RESOLUTION_RECEIPT_SIGNING_KEY_ID?: string;
@@ -160,6 +163,17 @@ customerChatRoute.post('/customer-chat', async (ctx) => {
     const mode: CockpitChatMode = ALLOWED_MODES.includes(body?.mode as CockpitChatMode) ? (body!.mode as CockpitChatMode) : 'ask';
     // User-selected model (the chat's model switcher). Default = free Llama; 'claude' uses the premium tier.
     const llm: CockpitChatLLM = body?.llm === 'claude' ? 'claude' : 'llama';
+    const chatHistoryPersistenceRequired = envFlagTrue(ctx.env.CHAT_HISTORY_PERSISTENCE_REQUIRED);
+    const appendChatExchange = (dal as unknown as { appendChatExchange?: (u: string, s: unknown, m: unknown[]) => Promise<void> }).appendChatExchange;
+    if (chatHistoryPersistenceRequired && typeof appendChatExchange !== 'function') {
+      emitEvent('chat_history_persistence_unavailable', { workspace_id: workspaceId, required: true });
+      ctx.status(503);
+      return ctx.json({
+        error: 'chat history persistence is required for this deployment',
+        code: 'CHAT_HISTORY_PERSISTENCE_UNAVAILABLE',
+        request_id: ctx.get('request_id'),
+      });
+    }
 
     // TENANT-SAFE event read — workspace-scoped via the DAL guard (never operator-wide, never body-supplied).
     const opts: EventListOpts = { limit: MAX_EVENTS, role: auth.role, top_level: true };
@@ -314,22 +328,38 @@ customerChatRoute.post('/customer-chat', async (ctx) => {
     });
 
     // W1 (260708) · FOUND GAP: customer chat never persisted exchanges (only the operator cockpit did), so
-    // customers had no thread history and receipts (G4) were impossible. Persist best-effort — reusing
-    // appendChatExchange verbatim; a persistence failure never breaks the live answer. Receipt links ride
-    // the assistant message only when CHAT_RECEIPT_GROUNDING_ENABLED (chat-store degrades safely pre-058).
+    // customers had no thread history and receipts (G4) were impossible. Legacy/default deployments still
+    // tolerate a persistence failure, but commercial pilot-shadow sets CHAT_HISTORY_PERSISTENCE_REQUIRED
+    // so the route fails closed instead of returning a successful answer with no durable thread.
+    // Receipt links ride the assistant message only when CHAT_RECEIPT_GROUNDING_ENABLED.
     try {
-      const appender = (dal as unknown as { appendChatExchange?: (u: string, s: unknown, m: unknown[]) => Promise<void> }).appendChatExchange;
-      if (typeof appender === 'function') {
-        const receiptLinks = envFlagTrue((ctx.env as { CHAT_RECEIPT_GROUNDING_ENABLED?: string }).CHAT_RECEIPT_GROUNDING_ENABLED)
+      if (typeof appendChatExchange === 'function') {
+        const receiptLinks = envFlagTrue(ctx.env.CHAT_RECEIPT_GROUNDING_ENABLED)
           ? ((result.grounded_on as { event_ids?: string[] })?.event_ids ?? null)
           : null;
-        await appender.call(dal, auth.user_id, { workspace_id: workspaceId }, [
+        await appendChatExchange.call(dal, auth.user_id, { workspace_id: workspaceId }, [
           { role: 'you', body: message, mode },
           // L1 · attachAssembly(g, null) returns g unchanged by reference — flag-off stays byte-identical.
           { role: 'assistant', body: result.answer, mode, generated_by: result.generated_by, grounded_on: attachAssembly(result.grounded_on, trace), grounding_event_ids: receiptLinks },
         ]);
+      } else if (chatHistoryPersistenceRequired) {
+        throw new Error('appendChatExchange unavailable');
       }
-    } catch (_) { /* best-effort — the answer already stands */ }
+    } catch (err) {
+      emitEvent('chat_history_persistence_failed', {
+        workspace_id: workspaceId,
+        required: chatHistoryPersistenceRequired,
+        error: err instanceof Error ? err.message.slice(0, 200) : String(err).slice(0, 200),
+      });
+      if (chatHistoryPersistenceRequired) {
+        ctx.status(503);
+        return ctx.json({
+          error: 'chat answer could not be durably recorded',
+          code: 'CHAT_HISTORY_PERSISTENCE_FAILED',
+          request_id: ctx.get('request_id'),
+        });
+      }
+    }
 
     // AR-0.2 · customer-safe projection (flag-gated). OFF (default) = payload unchanged (byte-identical);
     // ON collapses the engine name, drops the internal model id, reduces grounded_on to an evidence count.
