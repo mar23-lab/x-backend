@@ -7,6 +7,7 @@ import type {
   UserId,
   WorkspaceId,
   PlanEntity,
+  PlanEntityDeleteReceipt,
   PlanEntityCreateInput,
   PlanEntityListContext,
   PlanEntityPatch,
@@ -27,7 +28,7 @@ export interface PlanEntitiesFacade {
   listPlanEntities(scopeId: string, ctx: PlanEntityListContext): Promise<PlanEntity[]>;
   getPlanEntity(id: string, workspaceId: WorkspaceId): Promise<PlanEntity | null>;
   updatePlanEntity(id: string, patch: PlanEntityPatch, actorUserId: UserId): Promise<PlanEntity>;
-  softDeletePlanEntity(id: string, actorUserId: UserId): Promise<void>;
+  softDeletePlanEntity(id: string, actorUserId: UserId): Promise<PlanEntityDeleteReceipt>;
   setUserSourceReadPolicy(userId: UserId, id: string, readPolicy: SourceReadPolicy): Promise<UserSourceConnection>;
 }
 

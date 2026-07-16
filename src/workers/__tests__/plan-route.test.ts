@@ -78,8 +78,11 @@ describe('POST /plan/entity', () => {
       scope_id: 'scope_x', scope_type: 'workspace', kind: 'goal', title: 'Ship G1',
     });
     expect(res.status).toBe(201);
-    const j = (await res.json()) as { entity: { id: string } };
+    const j = (await res.json()) as { entity: { id: string }; plan_entity_id: string; plan_revision_id: string; operation: string };
     expect(j.entity.id).toBe('ple_1');
+    expect(j.plan_entity_id).toBe('ple_1');
+    expect(j.plan_revision_id).toBe('plan:create:ple_1:2026-07-11T00:00:00Z');
+    expect(j.operation).toBe('create');
     expect(createPlanEntity).toHaveBeenCalledWith(
       expect.objectContaining({ workspace_id: 'org_a', scope_id: 'scope_x', kind: 'goal', title: 'Ship G1' }),
       'op',
@@ -107,8 +110,11 @@ describe('PATCH /plan/entity/:id', () => {
     const updatePlanEntity = vi.fn(async () => ({ ...entity, title: 'Renamed', position: 2 }));
     const res = await jsonReq(appFor({ getPlanEntity, updatePlanEntity }), '/api/v1/plan/entity/ple_1', 'PATCH', { title: 'Renamed', position: 2 });
     expect(res.status).toBe(200);
-    const j = (await res.json()) as { entity: { title: string } };
+    const j = (await res.json()) as { entity: { id: string; title: string }; plan_entity_id: string; plan_revision_id: string; operation: string };
     expect(j.entity.title).toBe('Renamed');
+    expect(j.plan_entity_id).toBe('ple_1');
+    expect(j.plan_revision_id).toBe('plan:update:ple_1:2026-07-11T00:00:00Z');
+    expect(j.operation).toBe('update');
     expect(getPlanEntity).toHaveBeenCalledWith('ple_1', 'org_a');
     expect(updatePlanEntity).toHaveBeenCalledWith('ple_1', { title: 'Renamed', position: 2 }, 'op');
   });
@@ -139,11 +145,25 @@ describe('PATCH /plan/entity/:id', () => {
 describe('DELETE /plan/entity/:id', () => {
   it('200 — soft-deletes; getPlanEntity tenancy-check then softDeletePlanEntity(id, actor)', async () => {
     const getPlanEntity = vi.fn(async () => entity);
-    const softDeletePlanEntity = vi.fn(async () => undefined);
+    const softDeletePlanEntity = vi.fn(async () => ({ id: 'ple_1', workspace_id: 'org_a', scope_id: 'scope_x', parent_id: null, updated_at: '2026-07-11T00:01:00Z' }));
     const res = await appFor({ getPlanEntity, softDeletePlanEntity }).request('/api/v1/plan/entity/ple_1', { method: 'DELETE' }, ON);
     expect(res.status).toBe(200);
-    expect((await res.json())).toEqual({ deleted: { id: 'ple_1' } });
+    expect((await res.json())).toEqual({
+      deleted: { id: 'ple_1', updated_at: '2026-07-11T00:01:00Z' },
+      plan_entity_id: 'ple_1',
+      plan_revision_id: 'plan:delete:ple_1:2026-07-11T00:01:00Z',
+      operation: 'delete',
+    });
     expect(softDeletePlanEntity).toHaveBeenCalledWith('ple_1', 'op');
+  });
+
+  it('503 — delete receipt without revision source fails closed before customer success', async () => {
+    const getPlanEntity = vi.fn(async () => entity);
+    const softDeletePlanEntity = vi.fn(async () => ({ id: 'ple_1', workspace_id: 'org_a', scope_id: 'scope_x', parent_id: null, updated_at: '' }));
+    const res = await appFor({ getPlanEntity, softDeletePlanEntity }).request('/api/v1/plan/entity/ple_1', { method: 'DELETE' }, ON);
+    expect(res.status).toBe(503);
+    const body = (await res.json()) as { code?: string };
+    expect(body.code).toBe('SERVICE_UNAVAILABLE');
   });
 
   it('404 — tenancy: entity not in caller workspace; softDeletePlanEntity never called', async () => {

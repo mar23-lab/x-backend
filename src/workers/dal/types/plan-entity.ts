@@ -32,6 +32,14 @@ export interface PlanEntity {
   updated_at: string;
 }
 
+export interface PlanEntityDeleteReceipt {
+  id: PlanEntityId;
+  workspace_id: WorkspaceId;
+  scope_id: string | null;
+  parent_id: PlanEntityId | null;
+  updated_at: string;
+}
+
 // Create input — the DAL fills in id/position/timestamps; workspace_id comes from the auth context.
 export interface PlanEntityCreateInput {
   workspace_id: WorkspaceId;

@@ -23,7 +23,7 @@ import { idempotencyMiddleware } from '../lib/idempotency';
 import { envFlagTrue } from '../lib/env-flag';
 import type { AuthEnv, AuthVariables } from '../middleware/auth';
 import type { DalAdapter } from '../dal/DalAdapter';
-import type { PlanEntityKind, PlanEntityPatch } from '../dal/types';
+import type { PlanEntity, PlanEntityDeleteReceipt, PlanEntityKind, PlanEntityPatch } from '../dal/types';
 
 export interface PlanEnv extends AuthEnv {
   DATABASE_URL: string;
@@ -69,6 +69,22 @@ function resolveActor(
     return { ok: false, res: errorEnvelope(ctx, { status: 403, code: 'NO_WORKSPACE', message: 'no workspace in session' }) };
   }
   return { ok: true, userId: auth.user_id, workspaceId };
+}
+
+function planRevisionId(operation: 'create' | 'update' | 'delete', row: Pick<PlanEntity | PlanEntityDeleteReceipt, 'id' | 'updated_at'>): string {
+  if (!row.id || !row.updated_at) {
+    throw { status: 503, code: 'SERVICE_UNAVAILABLE', message: `plan ${operation} did not return a revision source` };
+  }
+  return `plan:${operation}:${row.id}:${row.updated_at}`;
+}
+
+function planMutationResponse(operation: 'create' | 'update', entity: PlanEntity) {
+  return {
+    entity,
+    plan_entity_id: entity.id,
+    plan_revision_id: planRevisionId(operation, entity),
+    operation,
+  };
 }
 
 // ============================================================
@@ -126,7 +142,7 @@ planRoute.post('/plan/entity', async (ctx) => {
       },
       actor.userId,
     );
-    return ctx.json({ entity }, 201);
+    return ctx.json(planMutationResponse('create', entity), 201);
   } catch (err) {
     return errorEnvelope(ctx, err);
   }
@@ -173,7 +189,7 @@ planRoute.patch('/plan/entity/:id', async (ctx) => {
       return errorEnvelope(ctx, { status: 404, code: 'NOT_FOUND', message: `plan entity ${id} not found` });
     }
     const entity = await dal.plan.updatePlanEntity(id, patch, actor.userId);
-    return ctx.json({ entity });
+    return ctx.json(planMutationResponse('update', entity));
   } catch (err) {
     return errorEnvelope(ctx, err);
   }
@@ -197,8 +213,13 @@ planRoute.delete('/plan/entity/:id', async (ctx) => {
     if (!existing) {
       return errorEnvelope(ctx, { status: 404, code: 'NOT_FOUND', message: `plan entity ${id} not found` });
     }
-    await dal.plan.softDeletePlanEntity(id, actor.userId);
-    return ctx.json({ deleted: { id } });
+    const deleted = await dal.plan.softDeletePlanEntity(id, actor.userId);
+    return ctx.json({
+      deleted: { id: deleted.id, updated_at: deleted.updated_at },
+      plan_entity_id: deleted.id,
+      plan_revision_id: planRevisionId('delete', deleted),
+      operation: 'delete',
+    });
   } catch (err) {
     return errorEnvelope(ctx, err);
   }

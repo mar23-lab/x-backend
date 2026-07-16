@@ -19,6 +19,7 @@ import type {
   PlanEntityPatch,
   PlanEntityId,
   PlanEntityListContext,
+  PlanEntityDeleteReceipt,
   UserId,
   WorkspaceId,
 } from './types';
@@ -222,16 +223,23 @@ export async function softDeletePlanEntityRow(
   sql: Sql,
   id: PlanEntityId,
   actorUserId: UserId,
-): Promise<void> {
+): Promise<PlanEntityDeleteReceipt> {
   if (!actorUserId) throw makeError('VALIDATION_ERROR', 'actor required', 400);
   // SOFT delete (customer-recoverability doctrine): mark deleted_at so the plan artifact is recoverable.
   // Reads filter deleted_at IS NULL; the re-pack below closes the gap among the remaining active siblings.
   const rows = (await sql/*sql*/`
     UPDATE plan_entities SET deleted_at = now(), updated_at = now(), updated_by = ${actorUserId}
     WHERE id = ${id} AND deleted_at IS NULL
-    RETURNING workspace_id, scope_id, parent_id
-  `) as Array<{ workspace_id: string; scope_id: string | null; parent_id: string | null }>;
+    RETURNING id, workspace_id, scope_id, parent_id, updated_at
+  `) as Array<{ id: string; workspace_id: string; scope_id: string | null; parent_id: string | null; updated_at: unknown }>;
   if (!rows[0]) throw makeError('NOT_FOUND', `plan entity ${id} not found`, 404);
   const r = rows[0];
   await repackSiblings(sql, r.workspace_id, r.scope_id ?? null, r.parent_id ?? null, null);
+  return {
+    id: r.id,
+    workspace_id: r.workspace_id,
+    scope_id: r.scope_id ?? null,
+    parent_id: r.parent_id ?? null,
+    updated_at: toIso(r.updated_at) ?? '',
+  };
 }
