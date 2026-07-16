@@ -678,6 +678,37 @@
           "reason": "adds the operator-run launchd arm/status/disarm for the soak window; refuses to arm without recorded rollback-rehearsal evidence and avoids the bash -lc PATH trap"
         }
       ]
+    },
+    {
+      "delta_id": "pilot-xlooop-com-origin-20260717",
+      "generated_at": "2026-07-16T19:27:08Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "f62fa78c0a7ff2da987719dc055e0c362f7bb6d0",
+      "target_base_commit": "f62fa78c0a7ff2da987719dc055e0c362f7bb6d0",
+      "authority": "shadow_only_no_production_cutover",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/middleware/cors.ts",
+          "target_blob": "172ceaa1f47cd87a3738de127922ebbebcb625d7",
+          "reason": "ALLOWED_ORIGIN_PATTERN may now be a comma-separated list so pilot-shadow can serve its operator-approved xlooop.com host AND the Pages previews; each entry is still matched in full and empty entries are dropped, so this never widens an entry into an allow-all"
+        },
+        {
+          "path": "src/workers/__tests__/cors-methods.test.ts",
+          "target_blob": "1bf523751c821987ae4c90f5b2a473ac94e0c8eb",
+          "reason": "proves both governed origins are allowed while production (app.xlooop.com), sibling hosts, suffix-attack hosts, other Pages projects, and stray-comma patterns stay refused"
+        },
+        {
+          "path": "wrangler.pilot-shadow.toml",
+          "target_blob": "336f882c1a1affe42568f690e837c89259ecaa83",
+          "reason": "scopes pilot CORS to https://pilot.xlooop.com plus the xlooop-app-next Pages previews (operator approved pilot.xlooop.com on 260717 because Clerk pk_live is domain-locked to xlooop.com)"
+        },
+        {
+          "path": "scripts/verify-pilot-shadow-config.mjs",
+          "target_blob": "3f01a701535c4a5cf721a2d50369e6bb38a641ff",
+          "reason": "requires exactly the two governed origin entries so the pilot boundary cannot silently widen to production or a bare apex wildcard"
+        }
+      ]
     }
   ]
 }

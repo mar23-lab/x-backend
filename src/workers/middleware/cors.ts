@@ -72,6 +72,19 @@ export function originIsAllowed(origin: string, pattern: string, isDev: boolean)
     }
   }
 
+  // A pattern may be a COMMA-SEPARATED LIST so one deployment can serve more than one governed
+  // origin (pilot-shadow needs its xlooop.com host AND the Pages preview hosts). Each entry is
+  // matched independently and must match in FULL — this never widens a single entry, it only
+  // allows several exactly-scoped entries. Empty entries are dropped so a stray comma or trailing
+  // separator can never degrade into an allow-all.
+  return pattern
+    .split(',')
+    .map((entry) => entry.trim())
+    .filter(Boolean)
+    .some((entry) => singleOriginPatternMatches(origin, entry));
+}
+
+function singleOriginPatternMatches(origin: string, pattern: string): boolean {
   // Convert pattern like "https://*.xlooop.com" → regex.
   // NOTE: the first replace escapes regex specials but intentionally NOT `*`,
   // because the second replace converts bare `*` into the subdomain wildcard.

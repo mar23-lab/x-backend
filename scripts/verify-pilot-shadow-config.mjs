@@ -12,7 +12,10 @@ requireMatch(/^workers_dev\s*=\s*true$/m, 'workers.dev preview must be enabled')
 requireMatch(/^ENVIRONMENT\s*=\s*"pilot-shadow"$/m, 'environment must be pilot-shadow');
 requireMatch(/^XLOOOP_AUTHORITY_MODE\s*=\s*"shadow"$/m, 'authority must remain shadow');
 requireMatch(/^XLOOOP_SCHEMA_HEAD\s*=\s*"79"$/m, 'schema head must match the candidate migration head');
-requireMatch(/^ALLOWED_ORIGIN_PATTERN\s*=\s*"https:\/\/\*\.xlooop-app-next\.pages\.dev"$/m, 'pilot frontend CORS must be scoped to xlooop-app-next Pages previews');
+// pilot.xlooop.com (operator-approved 260717) is required because Clerk pk_live is domain-locked to
+// xlooop.com: the authenticated journey proof cannot run from a *.pages.dev origin. The pattern stays
+// EXACTLY these two governed entries — no production host (app.xlooop.com), no bare-apex wildcard.
+requireMatch(/^ALLOWED_ORIGIN_PATTERN\s*=\s*"https:\/\/pilot\.xlooop\.com,https:\/\/\*\.xlooop-app-next\.pages\.dev"$/m, 'pilot frontend CORS must be scoped to the pilot.xlooop.com host plus xlooop-app-next Pages previews');
 requireMatch(/queue\s*=\s*"xlooop-tenant-projection-pilot-shadow"/m, 'isolated projection queue is required');
 requireMatch(/^SINGLE_INTAKE_ENABLED\s*=\s*"true"$/m, 'single intake must be enabled');
 requireMatch(/^ROLE_SKILL_CATALOG_ENABLED\s*=\s*"true"$/m, 'role/skill catalog must be enabled');

@@ -52,4 +52,40 @@ describe('CORS preflight — allowed methods', () => {
     const otherPagesProject = await app().request('/x', { method: 'OPTIONS', headers: { origin: 'https://preview.other.pages.dev' } }, pilotEnv);
     expect(otherPagesProject.headers.get('Access-Control-Allow-Origin')).toBeNull();
   });
+
+  // pilot.xlooop.com (operator-approved 260717): Clerk pk_live is domain-locked to xlooop.com, so the
+  // authenticated 12-journey proof can only run from an xlooop.com host. The pilot therefore serves TWO
+  // governed origins, which the comma-separated pattern supports without widening either entry.
+  it('pilot-shadow allows both the xlooop.com pilot host and the staging Pages previews', async () => {
+    const pilotEnv = {
+      ALLOWED_ORIGIN_PATTERN: 'https://pilot.xlooop.com,https://*.xlooop-app-next.pages.dev',
+    } as never;
+    for (const origin of [
+      'https://pilot.xlooop.com',
+      'https://codex-pilot-shadow-evidence.xlooop-app-next.pages.dev',
+    ]) {
+      const res = await app().request('/x', { method: 'OPTIONS', headers: { origin } }, pilotEnv);
+      expect(res.headers.get('Access-Control-Allow-Origin')).toBe(origin);
+    }
+
+    // The multi-entry pattern must not become an allow-all: production, sibling hosts, and other
+    // Pages projects stay refused.
+    for (const origin of [
+      'https://app.xlooop.com',
+      'https://evil.pilot.xlooop.com',
+      'https://pilot.xlooop.com.attacker.dev',
+      'https://preview.other.pages.dev',
+    ]) {
+      const res = await app().request('/x', { method: 'OPTIONS', headers: { origin } }, pilotEnv);
+      expect(res.headers.get('Access-Control-Allow-Origin')).toBeNull();
+    }
+  });
+
+  it('a stray comma or empty entry cannot degrade the pattern into an allow-all', async () => {
+    const sloppyEnv = { ALLOWED_ORIGIN_PATTERN: 'https://pilot.xlooop.com,,  ,' } as never;
+    const allowed = await app().request('/x', { method: 'OPTIONS', headers: { origin: 'https://pilot.xlooop.com' } }, sloppyEnv);
+    expect(allowed.headers.get('Access-Control-Allow-Origin')).toBe('https://pilot.xlooop.com');
+    const refused = await app().request('/x', { method: 'OPTIONS', headers: { origin: 'https://anything.example.com' } }, sloppyEnv);
+    expect(refused.headers.get('Access-Control-Allow-Origin')).toBeNull();
+  });
 });
