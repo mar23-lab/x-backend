@@ -31,6 +31,16 @@ const liveRlsBindings =
       }
     : {};
 
+// Live pilot census seed (pilot-census-seed-live.test.ts) uses the same explicit
+// opt-in pattern as live RLS: armed only via env, otherwise the file skips.
+const censusSeedBindings =
+  process.env.XLOOOP_RUN_PILOT_CENSUS_SEED === '1'
+    ? {
+        XLOOOP_RUN_PILOT_CENSUS_SEED: '1',
+        ...(process.env.DATABASE_URL ? { DATABASE_URL: process.env.DATABASE_URL } : {}),
+      }
+    : {};
+
 export default defineConfig({
   plugins: [cloudflareTest({
     wrangler: { configPath: TEST_WRANGLER_PATH },
@@ -42,6 +52,7 @@ export default defineConfig({
         ALLOWED_ORIGIN_PATTERN: 'https://*.xlooop.com',
         LOG_LEVEL: 'debug',
         ...liveRlsBindings,
+        ...censusSeedBindings,
       },
       compatibilityFlags: ['nodejs_compat'],
     },

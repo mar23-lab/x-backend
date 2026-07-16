@@ -626,6 +626,32 @@
           "reason": "forwards the workers test env to Hono requests (routes read ctx.env), grants operation_events to the probe role (packet writes record durable operation-event receipts), sentence-form probe payloads for the intent-thinness gate, and cleans probe operation events"
         }
       ]
+    },
+    {
+      "delta_id": "pilot-census-seed-live-proof-20260717",
+      "generated_at": "2026-07-16T18:04:42Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "6e0245f7c53a8353cd04a211a475b22e1ed673ae",
+      "target_base_commit": "6e0245f7c53a8353cd04a211a475b22e1ed673ae",
+      "authority": "shadow_only_no_production_cutover",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "vitest.workers.config.ts",
+          "target_blob": "9ece9023d1dfeafbdda89d948a7f19db460f975c",
+          "reason": "adds the XLOOOP_RUN_PILOT_CENSUS_SEED opt-in binding pass-through mirroring the live-RLS pattern"
+        },
+        {
+          "path": "src/workers/__tests__/pilot-census-seed-live.test.ts",
+          "target_blob": "c458f6b7c374d03120ed122db7ce254b7655b938",
+          "reason": "adds the live-gated pilot census seed proof driving the real intent, single-intake, context-lineage, model-receipt, tool-event, and atomic sign-off code paths for the dedicated census workspaces"
+        },
+        {
+          "path": "docs/graph/GRAPH_SUBSTRATE_MANIFEST.yml",
+          "target_blob": "1f495de5c4c29d88f41be80d0d845a62b644cbd2",
+          "reason": "records the fresh 2026-07-17 pilot-shadow census: intents 4, caused_by 6, task_packets 11, graph 6421 nodes / 6225 edges, cross-tenant edge refs 0, projection dispatch->processed p95 19.6s via the deployed pilot worker"
+        }
+      ]
     }
   ]
 }

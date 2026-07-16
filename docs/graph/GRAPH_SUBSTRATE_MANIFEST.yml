@@ -56,26 +56,29 @@ source_tables:
     feeds: evidences edges (document -> packet/event via the 051 content_hash join)
     role: lineage         # flag-gated with documents; census pending activation
 
-# Last live prod census (flat-truth-23350426). Re-run on every substrate-affecting change.
+# Last live census. Re-run on every substrate-affecting change.
+# 2026-07-17: PILOT-SHADOW census (Neon branch br-summer-dew-a7mrinpd, schema 79, read-only query).
+# Lineage spine proven non-zero via the pilot census seed (pilot-census-seed-live.test.ts): real
+# single-intake executions, Send-Intent rows, atomic sign-off causation, and the DEPLOYED
+# xlooop-api-pilot-shadow outbox->queue->consumer projection (dispatch->processed p95 19.6s).
 census:
-  dated: '2026-06-11T00:00:47Z'    # latest graph_snapshot; re-censused 2026-06-11 during the ARCH-006 production-truth audit
-  source: prod Neon flat-truth-23350426 (read-only)
+  dated: '2026-07-16T18:05:42Z'    # latest graph_nodes write by the deployed pilot-shadow projection consumer
+  source: pilot-shadow Neon branch br-summer-dew-a7mrinpd of flat-truth-23350426 (read-only)
   row_counts:
-    operation_events: 4209          # grew from operator-action + activity events (monotonic event-log growth)
-    operations_unified: 83          # governance plane grew (decision/folder-promote mirrors)
-    task_packets: unobserved         # new direct source; requires a fresh live census before fed claims
-    projects: 101
-    workspaces: 8
+    operation_events: 5544
+    operations_unified: 702
+    task_packets: 11                # FED — includes real single-intake create_work executions (census seed)
+    projects: 103
+    workspaces: 12
     synthetic_domains: 16
     synthetic_domain_membership: 35
-    intents: 0                      # lineage backbone EMPTY — fills when Send-Intent is used
-    project_source_bindings: 51     # FED — D2 backfill (ARCH-006 W2) ran in the 23:00 cron (7 repos x projects)
-    audit_logs_with_causation_id: 0 # causation EMPTY — fills when sign-offs/decisions accrue
-  persisted_graph_nodes: 4466       # FED + kept fresh by the hourly graph_rebuild cron (latest 2026-06-11T00:00:47Z)
-  persisted_graph_edges: 4427       # scopes:4255 + contains:101 + feeds:51 + views:20
-  persisted_node_breakdown: 'event:4208, project:101, packet:83, source:51, lens:15, workspace:8'
-  persisted_lineage_spine: 'source:51, feeds:51, intent:0, caused_by:0'   # source/feeds NOW FED (D2); intent/causation still empty (need usage)
-  projected_capacity_nodes: 4466    # source nodes (51) appeared after the D2 backfill seeded project_source_bindings
+    intents: 4                      # lineage backbone FED — Send-Intent exercised (census workspaces)
+    project_source_bindings: 57
+    audit_logs_with_causation_id: 6 # causation FED — atomic sign-offs stamped causation_id (census seed)
+  persisted_graph_nodes: 6421       # written by the DEPLOYED pilot-shadow queue consumer (event/intent/packet/workspace census nodes present)
+  persisted_graph_edges: 6225
+  persisted_lineage_spine: 'intent:4, caused_by:6, task_packets:11, cross_tenant_edge_refs:0'
+  projected_capacity_nodes: 6421
 
 # status MUST follow the census (the verifier enforces persisted_graph_nodes==0 => wired_not_fed):
 #   wired_not_fed   — code + tables exist but the persisted graph is empty (no rebuild / empty sources)
@@ -83,13 +86,14 @@ census:
 #   fed             — every core AND lineage source has data + the persisted graph reflects it
 status: partially_fed
 status_note: >
-  SOURCE SPINE NOW FED (2026-06-10T23:00:53Z). After the ARCH-006 batch deploy (worker 6b0ee0bc + cockpit
-  132fd3b4), the 23:00 graph_rebuild cron ran the W2 D2 backfill (ensureGithubRepoBindingsForOperator):
-  project_source_bindings 0 -> 51, so the persisted graph gained 51 `source` nodes + 51 `feeds` edges.
-  v_artefact_lineage now resolves the full chain `source --feeds--> project --scopes--> event/packet`
-  (4466 nodes / 4427 edges as of the 2026-06-11 audit re-census; the hourly cron keeps it fresh).
-  Still `partially_fed` NOT `fed`: the CAUSATION/INTENT spine
-  (intent / realizes / derived_from / caused_by) is still 0 — it fills only when the operator exercises
-  Send-Intent, sign-offs, and decisions (the machinery is live as of this deploy; the data accrues with use).
-  The code now also reads canonical task_packets directly and contains a default-off tenant projection
-  Queue consumer. This historical census predates those paths and MUST NOT be used as activation proof.
+  PILOT-SHADOW LINEAGE SPINE FED (2026-07-16T18:05:42Z). The census above is a PILOT-SHADOW branch
+  census, not a production census: the pilot census seed (pilot-census-seed-live.test.ts, backend
+  6e0245f7) drove the real Send-Intent store, single-intake resolve/execute (packet + governed
+  execution receipt + closing attestation + mandatory projection outbox), assistant context lineage
+  (catalog resolution + signed context packet + skill receipts), model execution receipts, spine
+  tool events, and the atomic sign-off route (audit_logs.causation_id) for two dedicated census
+  workspaces. The DEPLOYED xlooop-api-pilot-shadow worker's outbox sweep + queue consumer processed
+  all outbox rows (dispatch->processed p95 19.6s) and wrote event/intent/packet/workspace graph
+  nodes; cross-tenant edge references measured 0. Still `partially_fed` NOT `fed`: document lineage
+  stays flag-gated (GRAPH_DOCUMENT_NODES_ENABLED off) and PRODUCTION intent/causation remains empty
+  until real operator usage — this pilot census MUST NOT be cited as production activation proof.
