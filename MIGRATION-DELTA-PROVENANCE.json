@@ -600,6 +600,32 @@
           "reason": "adds a fail-closed pilot-shadow 48-72h soak and rollback evidence gate without production authority"
         }
       ]
+    },
+    {
+      "delta_id": "live-rls-proof-harness-repair-20260717",
+      "generated_at": "2026-07-16T17:41:21Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "80fda9929d46760da4fbf7135b4335b3a8ff3b4c",
+      "target_base_commit": "80fda9929d46760da4fbf7135b4335b3a8ff3b4c",
+      "authority": "shadow_only_no_production_cutover",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "package.json",
+          "target_blob": "92fb99ad02bc4fc2ab1f7b1925cd8f9577760522",
+          "reason": "serializes the two live RLS test files (--no-file-parallelism) so concurrent probe-role DDL cannot race Postgres catalogs (tuple concurrently updated)"
+        },
+        {
+          "path": "scripts/rls-shadow-soak.mjs",
+          "target_blob": "c39a1363b4489049fcc13b349e2b2829e7acbd65",
+          "reason": "repairs the strict soak for the pinned @neondatabase/serverless 0.10.4 (no sql.unsafe): allowlist-guarded identifiers with parameterized values; first live run proved GREEN on the pilot-shadow branch"
+        },
+        {
+          "path": "src/workers/__tests__/operational-spine-live-rls.test.ts",
+          "target_blob": "a04ac56011b2deb43d7d6c5f67a0510482ecfce6",
+          "reason": "forwards the workers test env to Hono requests (routes read ctx.env), grants operation_events to the probe role (packet writes record durable operation-event receipts), sentence-form probe payloads for the intent-thinness gate, and cleans probe operation events"
+        }
+      ]
     }
   ]
 }

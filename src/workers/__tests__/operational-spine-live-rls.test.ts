@@ -58,7 +58,11 @@ function appFor(sql: Sql, auth: Record<string, unknown>) {
     await next();
   });
   app.route('/api/v1', operationalSpineRoute);
-  return app;
+  // Forward the workers test env as Hono's per-request env so routes that read
+  // ctx.env (e.g. OPERATOR_WORKSPACE_SCOPE_ENABLED) see bindings instead of undefined.
+  return {
+    request: (input: string, init?: RequestInit) => app.request(input, init, env as never),
+  };
 }
 
 async function expectStatus(response: Response, expected: number) {
@@ -68,12 +72,14 @@ async function expectStatus(response: Response, expected: number) {
 }
 
 async function cleanup(ownerSql: Sql) {
+  await ownerSql`DELETE FROM operation_events WHERE workspace_id IN (${WORKSPACE_A}, ${WORKSPACE_B})`;
   await ownerSql`DELETE FROM metric_deltas WHERE id IN (${METRIC_DELTA_A}, ${METRIC_DELTA_B})`;
   await ownerSql`DELETE FROM tool_events WHERE id IN (${TOOL_EVENT_A}, ${TOOL_EVENT_B})`;
   await ownerSql`DELETE FROM approval_requests WHERE id IN (${APPROVAL_A}, ${APPROVAL_B})`;
   await ownerSql`DELETE FROM evidence_items WHERE id IN (${EVIDENCE_A}, ${EVIDENCE_B})`;
   await ownerSql`DELETE FROM task_packets WHERE id IN (${PACKET_A}, ${PACKET_B})`;
   await ownerSql`DELETE FROM workspaces WHERE id IN (${WORKSPACE_A}, ${WORKSPACE_B})`;
+  await ownerSql(`REVOKE ALL ON operation_events FROM ${sqlIdentifier(ROLE)}`);
   await ownerSql(`REVOKE ALL ON metric_deltas FROM ${sqlIdentifier(ROLE)}`);
   await ownerSql(`REVOKE ALL ON tool_events FROM ${sqlIdentifier(ROLE)}`);
   await ownerSql(`REVOKE ALL ON approval_requests FROM ${sqlIdentifier(ROLE)}`);
@@ -99,6 +105,8 @@ describeLive('operational spine live RLS route proof', () => {
     await ownerSql(`GRANT SELECT, INSERT, UPDATE ON approval_requests TO ${sqlIdentifier(ROLE)}`);
     await ownerSql(`GRANT SELECT, INSERT, UPDATE ON tool_events TO ${sqlIdentifier(ROLE)}`);
     await ownerSql(`GRANT SELECT, INSERT, UPDATE ON metric_deltas TO ${sqlIdentifier(ROLE)}`);
+    // Packet/evidence/approval writes now record durable operation-event receipts (RLS'd, mig 043+).
+    await ownerSql(`GRANT SELECT, INSERT, UPDATE ON operation_events TO ${sqlIdentifier(ROLE)}`);
     await ownerSql`
       INSERT INTO workspaces(id, name, owner_user_id, slug)
       VALUES
@@ -123,14 +131,14 @@ describeLive('operational spine live RLS route proof', () => {
     const createA = await appA.request('/api/v1/packets', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ id: PACKET_A, title: 'A', summary: 'workspace A packet' }),
+      body: JSON.stringify({ id: PACKET_A, title: 'Live RLS probe packet for workspace A', summary: 'Prove workspace A rows stay isolated for workspace A operators during the live RLS proof.' }),
     });
     await expectStatus(createA, 201);
 
     const createB = await appB.request('/api/v1/packets', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ id: PACKET_B, title: 'B', summary: 'workspace B packet' }),
+      body: JSON.stringify({ id: PACKET_B, title: 'Live RLS probe packet for workspace B', summary: 'Prove workspace B rows stay isolated for workspace B operators during the live RLS proof.' }),
     });
     await expectStatus(createB, 201);
 

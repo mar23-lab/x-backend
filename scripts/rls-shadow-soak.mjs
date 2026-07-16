@@ -44,12 +44,21 @@ const owner = neon(OWNER);
 const app = neon(APP);
 const failures = [];
 
+// Table identifiers come ONLY from the fixed TABLES allowlist above; the pinned
+// @neondatabase/serverless 0.10.4 has no sql.unsafe, so identifiers are guarded
+// here and interpolated into plain-call queries (values stay parameterized).
+function ident(table) {
+  if (!TABLES.includes(table) || !/^[a-z_]+$/.test(table)) throw new Error(`table not in allowlist: ${table}`);
+  return table;
+}
+
 // app role: rows visible for a given workspace GUC, optionally restricted to a different ws's id via WHERE.
 async function appCount(table, gucWs, whereWs) {
-  const where = whereWs == null ? app`` : app`WHERE workspace_id = ${whereWs}`;
-  const [, rows] = await app.transaction([
-    app`SELECT set_config('xlooop.current_workspace_id', ${gucWs}, true)`,
-    app`SELECT count(*)::int AS n FROM ${app.unsafe(table)} ${where}`,
+  const where = whereWs == null ? '' : 'WHERE workspace_id = $1';
+  const countParams = whereWs == null ? [] : [whereWs];
+  const [, rows] = await app.transaction((tx) => [
+    tx("SELECT set_config('xlooop.current_workspace_id', $1, true)", [gucWs]),
+    tx(`SELECT count(*)::int AS n FROM ${ident(table)} ${where}`, countParams),
   ]);
   return rows[0]?.n ?? 0;
 }
@@ -63,13 +72,13 @@ const main = async () => {
 
   for (const table of TABLES) {
     // workspaces that actually have rows in this table (owner sees all)
-    const wsRows = await owner`SELECT DISTINCT workspace_id FROM ${owner.unsafe(table)} WHERE workspace_id IS NOT NULL LIMIT ${SAMPLE_WORKSPACES}`;
+    const wsRows = await owner(`SELECT DISTINCT workspace_id FROM ${ident(table)} WHERE workspace_id IS NOT NULL LIMIT $1`, [SAMPLE_WORKSPACES]);
     const workspaces = wsRows.map((r) => r.workspace_id);
     if (workspaces.length === 0) { console.log(`· ${table}: no rows — skipped`); continue; }
 
     for (const ws of workspaces) {
       // (1) zero divergence: app(GUC=ws, no WHERE) === owner(WHERE ws)
-      const [{ n: ownerN }] = await owner`SELECT count(*)::int AS n FROM ${owner.unsafe(table)} WHERE workspace_id = ${ws}`;
+      const [{ n: ownerN }] = await owner(`SELECT count(*)::int AS n FROM ${ident(table)} WHERE workspace_id = $1`, [ws]);
       const appN = await appCount(table, ws, null);
       if (appN !== ownerN) failures.push(`${table} ws=${ws}: DIVERGENCE app=${appN} owner=${ownerN}`);
 
