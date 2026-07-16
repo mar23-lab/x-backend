@@ -173,9 +173,19 @@ eventsRoute.post('/events/:id/restore', async (ctx) => {
     const denial = await selfServiceDenial(ctx, ctx.env, auth);
     if (denial) return errorEnvelope(ctx, denial);
     const id = ctx.req.param('id');
-    const { updated } = await ctx.get('dal').restoreEvent(auth.workspace_id!, id);
-    if (!updated) return errorEnvelope(ctx, { status: 404, code: 'NOT_FOUND', message: 'no restorable event with that id in this workspace' });
-    return ctx.json({ ok: true, id, restored: true });
+    const restored = await ctx.get('dal').restoreEvent(auth.workspace_id!, id, auth.user_id ?? null, ctx.get('request_id') ?? null);
+    if (!restored.updated) return errorEnvelope(ctx, { status: 404, code: 'NOT_FOUND', message: 'no restorable event with that id in this workspace' });
+    if (!restored.restore_receipt_id || !restored.target_event_id) {
+      return errorEnvelope(ctx, { status: 500, code: 'RESTORE_RECEIPT_MISSING', message: 'event restore did not produce a durable receipt' });
+    }
+    return ctx.json({
+      ok: true,
+      id,
+      target_event_id: restored.target_event_id,
+      restored: true,
+      restore_receipt_id: restored.restore_receipt_id,
+      audit_event_id: restored.audit_event_id ?? restored.restore_receipt_id,
+    });
   } catch (err) {
     return errorEnvelope(ctx, err);
   }

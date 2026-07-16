@@ -382,18 +382,72 @@ export async function archiveEventRow(sql: Sql, workspaceId: string, eventId: st
 }
 
 // F2 · restore a soft-deleted event (clear archived_at). Tenant-scoped; only restores rows that
-// ARE currently archived (idempotent: a non-archived/foreign id → updated:0). Reverses archiveEventRow.
-export async function restoreEventRow(sql: Sql, workspaceId: string, eventId: string): Promise<{ updated: number }> {
-  if (!workspaceId || !eventId) return { updated: 0 };
+// ARE currently archived (a non-archived/foreign id → updated:0). Reverses archiveEventRow and
+// writes the operation-event restore receipt from the same statement. The receipt SELECT is joined
+// to target_updated, so a missing/ineligible target cannot produce a successful receipt.
+export async function restoreEventRow(
+  sql: Sql,
+  workspaceId: string,
+  eventId: string,
+  actorUserId?: string | null,
+  requestId?: string | null,
+): Promise<{ updated: number; target_event_id: string | null; restore_receipt_id: string | null; audit_event_id: string | null }> {
+  if (!workspaceId || !eventId) {
+    return { updated: 0, target_event_id: null, restore_receipt_id: null, audit_event_id: null };
+  }
   const changed = (await sql/*sql*/`
-    UPDATE operation_events
-       SET archived_at = NULL
-     WHERE id = ${eventId}
-       AND workspace_id = ${workspaceId}
-       AND archived_at IS NOT NULL
-    RETURNING id
-  `) as Array<{ id: string }>;
-  return { updated: changed.length };
+    WITH target_updated AS (
+      UPDATE operation_events
+         SET archived_at = NULL
+       WHERE id = ${eventId}
+         AND workspace_id = ${workspaceId}
+         AND archived_at IS NOT NULL
+      RETURNING id, workspace_id, project_id
+    ), event_written AS (
+      INSERT INTO operation_events (
+        id, workspace_id, project_id, source_tool, agent_id, status, summary, body,
+        visibility, occurred_at, parent_event_id, authorized_by_user_id,
+        instrument_kind, authority_source, request_id
+      )
+      SELECT
+        LEFT(
+          'evt_restore_' ||
+          regexp_replace(target_updated.id, '[^a-zA-Z0-9_:-]', '_', 'g') ||
+          '_' ||
+          substr(md5(coalesce(${requestId ?? null}::text, '') || clock_timestamp()::text || random()::text), 1, 12),
+          128
+        ),
+        target_updated.workspace_id,
+        target_updated.project_id,
+        'xlooop',
+        'xlooop:event-restore',
+        'completed',
+        'Event restored: ' || target_updated.id,
+        'Restored soft-deleted operation event "' || target_updated.id || '" after explicit user request.',
+        'internal_workspace',
+        now(),
+        target_updated.id,
+        ${actorUserId ?? null},
+        CASE WHEN ${actorUserId ?? null}::text IS NULL THEN 'system' ELSE 'human' END,
+        'explicit_approval',
+        ${requestId ?? null}
+      FROM target_updated
+      RETURNING id
+    )
+    SELECT
+      target_updated.id AS target_event_id,
+      event_written.id AS restore_receipt_id,
+      event_written.id AS audit_event_id
+    FROM target_updated
+    JOIN event_written ON TRUE
+  `) as Array<{ target_event_id: string; restore_receipt_id: string; audit_event_id: string }>;
+  const row = changed[0];
+  return {
+    updated: changed.length,
+    target_event_id: row?.target_event_id ?? null,
+    restore_receipt_id: row?.restore_receipt_id ?? null,
+    audit_event_id: row?.audit_event_id ?? null,
+  };
 }
 
 // E3 (260628) · "recently deleted" — a workspace's soft-deleted events still inside the restore

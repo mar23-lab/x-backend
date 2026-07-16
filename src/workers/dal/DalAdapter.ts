@@ -180,8 +180,13 @@ export interface DalAdapter {
   /** F2 (260628) · customer self-service soft-delete: set archived_at (REVERSIBLE). Tenant-scoped
    *  (WHERE workspace_id) → a foreign/guessed event id returns updated:0. Content untouched (IA-001). */
   archiveEvent(workspaceId: WorkspaceId, eventId: string): Promise<{ updated: number }>;
-  /** F2 · restore a soft-deleted event (clear archived_at). Tenant-scoped; reverses archiveEvent. */
-  restoreEvent(workspaceId: WorkspaceId, eventId: string): Promise<{ updated: number }>;
+  /** F2 · restore a soft-deleted event (clear archived_at). Tenant-scoped; returns a durable receipt. */
+  restoreEvent(
+    workspaceId: WorkspaceId,
+    eventId: string,
+    actorUserId?: UserId | string | null,
+    requestId?: string | null,
+  ): Promise<{ updated: number; target_event_id: string | null; restore_receipt_id: string | null; audit_event_id: string | null }>;
   /** E3 (260628) · "recently deleted" — soft-deleted events within the restore window (sinceDays),
    *  newest first. Powers the Profile rollback panel (the countdown is derived in the UI). */
   listArchivedEvents(workspaceId: WorkspaceId, sinceDays: number, limit?: number): Promise<Array<{ id: string; summary: string | null; body: string | null; source_tool: string | null; project_id: string | null; archived_at: string }>>;

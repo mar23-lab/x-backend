@@ -357,8 +357,8 @@ export class WorkersDalAdapter implements DalAdapter {
   async archiveEvent(workspaceId: WorkspaceId, eventId: string): Promise<{ updated: number }> {
     return archiveEventRow(this.sql, workspaceId, eventId);
   }
-  async restoreEvent(workspaceId: WorkspaceId, eventId: string): Promise<{ updated: number }> {
-    return restoreEventRow(this.sql, workspaceId, eventId);
+  async restoreEvent(workspaceId: WorkspaceId, eventId: string, actorUserId?: UserId | string | null, requestId?: string | null) {
+    return restoreEventRow(this.sql, workspaceId, eventId, actorUserId, requestId);
   }
   async listArchivedEvents(workspaceId: WorkspaceId, sinceDays: number, limit?: number) {
     return listArchivedEventsRow(this.sql, workspaceId, sinceDays, limit);
