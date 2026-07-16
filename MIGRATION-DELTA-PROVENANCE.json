@@ -558,6 +558,27 @@
           "reason": "restamps current pilot-shadow trust, receipt, RLS, and source-binding proof surface after governed local hardening"
         }
       ]
+    },
+    {
+      "delta_id": "pilot-shadow-signed-chain-evidence-gate-20260717",
+      "generated_at": "2026-07-17T00:00:00Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "f53630b1a5f6a5c563e83202aae04969edc4f1e5",
+      "target_base_commit": "f53630b1a5f6a5c563e83202aae04969edc4f1e5",
+      "authority": "shadow_only_no_production_cutover",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "package.json",
+          "target_blob": "30e3f2925320eca9fb9cc7779feccd5775abd6dc",
+          "reason": "adds a fail-closed pilot-shadow signed Gmail/document chain evidence gate without production authority"
+        },
+        {
+          "path": "scripts/verify-pilot-shadow-signed-chain-evidence.mjs",
+          "target_blob": "670be98568fe1076e6a482ba88f87d2706477453",
+          "reason": "adds a fail-closed pilot-shadow signed Gmail/document chain evidence gate without production authority"
+        }
+      ]
     }
   ]
 }

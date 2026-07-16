@@ -33,6 +33,8 @@
     "verify:rls-shadow-soak": "node scripts/rls-shadow-soak.mjs --strict",
     "verify:trust-proofs": "node scripts/run-trust-proofs.mjs",
     "verify:trust-proofs:live": "node scripts/run-trust-proofs.mjs --live",
+    "verify:pilot-shadow-signed-chain-evidence": "node scripts/verify-pilot-shadow-signed-chain-evidence.mjs --strict",
+    "verify:pilot-shadow-signed-chain-evidence:self-test": "node scripts/verify-pilot-shadow-signed-chain-evidence.mjs --self-test",
     "verify:bundle": "wrangler deploy --config wrangler.toml --dry-run --outdir dist-workers-dryrun",
     "verify:pilot-shadow-config": "node scripts/verify-pilot-shadow-config.mjs",
     "secret-scan": "node scripts/secret-scan.mjs --all"
