@@ -316,7 +316,7 @@ sourcesRoute.post('/sources/connect/:provider', async (ctx) => {
     // a re-connect of an existing provider updates scopes/external_account_id
     // rather than duplicating.
     const dal = ctx.get('dal');
-    const row = await dal.upsertUserSource({
+    const write = await dal.upsertUserSource({
       // OAuth identity is user-owned, but customer ingestion must have an explicit tenant target.
       // Orgless operator sessions remain user-account scoped; workspace sessions bind to that workspace.
       workspace_id: auth.workspace_id || null,
@@ -327,7 +327,12 @@ sourcesRoute.post('/sources/connect/:provider', async (ctx) => {
       scopes: snapshot.scopes,
       // contract: omitted · DB default applies (migration 008)
     });
-    return ctx.json({ source: toApiResponse(row) }, 201);
+    return ctx.json({
+      source: toApiResponse(write.source),
+      source_binding_id: write.source_binding_id,
+      source_connection_receipt_id: write.source_connection_receipt_id,
+      audit_event_id: write.audit_event_id,
+    }, 201);
   } catch (err) {
     return errorEnvelope(ctx, { status: 500, code: 'INTERNAL_ERROR', message: (err as Error).message });
   }
@@ -357,30 +362,11 @@ sourcesRoute.delete('/sources/:id', async (ctx) => {
     if (!existing) {
       return errorEnvelope(ctx, { status: 404, code: 'NOT_FOUND', message: `source ${id} not found` });
     }
-    await dal.disconnectUserSource(auth.user_id, id);
-    // Recoverability doctrine (260706): this is currently a HARD delete (R50.3b operator-intended
-    // semantics — row removal IS the "I'm done with this source" gesture), which also destroys the
-    // customer's visibility of the action. Mirror it onto the customer-visible operation_events
-    // spine so the disconnect is at least AUDITABLE server-side even though the row is gone.
-    // (Soft-delete conversion is a separate operator-dispositioned change — see plan P1a.)
-    // Best-effort: never block the disconnect; requires a workspace scope to attribute the event.
-    try {
-      if (auth.workspace_id) {
-        await dal.upsertEvent(auth.workspace_id, {
-          id: `evt_source_disconnect_${id}`.replace(/[^a-zA-Z0-9_]/g, '_').slice(0, 128),
-          source_tool: 'xlooop',
-          agent_id: 'xlooop:operator-action',
-          status: 'completed',
-          summary: `[source disconnected] ${String(existing.provider || 'source')}`.slice(0, 512),
-          body: 'OAuth source row removed (hard delete per R50.3b). Clerk-side authorization must be revoked separately at accounts.xlooop.com.',
-          visibility: 'internal_workspace',
-          occurred_at: new Date().toISOString(),
-        });
-      }
-    } catch (err) {
-      console.warn('[sources] disconnect event mirror failed (best-effort)', { user_id: auth.user_id, error: (err as Error)?.message });
+    const write = await dal.disconnectUserSource(auth.user_id, id, auth.workspace_id || existing.workspace_id || null);
+    if (!write.source_disconnect_receipt_id || !write.audit_event_id) {
+      return errorEnvelope(ctx, { status: 500, code: 'SOURCE_RECEIPT_MISSING', message: 'source disconnect did not produce an audit receipt' });
     }
-    return ctx.json({ disconnected: { id, provider: existing.provider } });
+    return ctx.json(write);
   } catch (err) {
     return errorEnvelope(ctx, { status: 500, code: 'INTERNAL_ERROR', message: (err as Error).message });
   }
@@ -429,7 +415,16 @@ sourcesRoute.patch('/sources/:id', (ctx) => withIdempotency(ctx, 'PATCH /api/v1/
     }
     let updated: UserSourceConnection;
     try {
-      updated = await dal.plan.setUserSourceReadPolicy(auth.user_id, id, policy);
+      const write = await dal.plan.setUserSourceReadPolicy(auth.user_id, id, policy, auth.workspace_id || existing.workspace_id || null);
+      if (!write.read_policy_revision_id || !write.audit_event_id) {
+        return errorEnvelope(ctx, { status: 500, code: 'SOURCE_RECEIPT_MISSING', message: 'source access-level change did not produce an audit receipt' });
+      }
+      updated = write.source;
+      return ctx.json({
+        source: toApiResponse(updated),
+        read_policy_revision_id: write.read_policy_revision_id,
+        audit_event_id: write.audit_event_id,
+      });
     } catch (err) {
       const e = err as { status?: number; code?: string; message?: string };
       if (e.code === 'READ_POLICY_UNAVAILABLE' || e.status === 409) {
@@ -439,24 +434,6 @@ sourcesRoute.patch('/sources/:id', (ctx) => withIdempotency(ctx, 'PATCH /api/v1/
       if (e.status === 422) return errorEnvelope(ctx, { status: 422, code: 'INVALID_READ_POLICY', message: e.message || 'invalid read_policy' });
       throw err;
     }
-    // Best-effort audit mirror onto the customer-visible spine (requires a workspace to attribute).
-    try {
-      if (auth.workspace_id) {
-        await dal.upsertEvent(auth.workspace_id, {
-          id: `evt_source_retier_${id}_${policy}`.replace(/[^a-zA-Z0-9_]/g, '_').slice(0, 128),
-          source_tool: 'xlooop',
-          agent_id: 'xlooop:operator-action',
-          status: 'completed',
-          summary: `[source access-level] ${String(existing.provider || 'source')} -> ${policy}`.slice(0, 512),
-          body: `Source read_policy set to ${policy} (access tier). Governs grounding weight per source-tier.ts.`,
-          visibility: 'internal_workspace',
-          occurred_at: new Date().toISOString(),
-        });
-      }
-    } catch (err) {
-      console.warn('[sources] read_policy event mirror failed (best-effort)', { user_id: auth.user_id, error: (err as Error)?.message });
-    }
-    return ctx.json({ source: toApiResponse(updated) });
   } catch (err) {
     return errorEnvelope(ctx, { status: 500, code: 'INTERNAL_ERROR', message: (err as Error).message });
   }
@@ -501,7 +478,7 @@ sourcesRoute.post('/sources/:id/sync', async (ctx) => {
       await adapter.getAccessToken(auth.user_id, existing.provider, { force_refresh: true });
     } catch (err) {
       const msg = (err as Error).message || 'unknown error';
-      await dal.markUserSourceSync(auth.user_id, id, { success: false, error: msg });
+      await dal.markUserSourceSync(auth.user_id, id, { success: false, error: msg }, auth.workspace_id || existing.workspace_id || null);
       const e = err as { code?: string };
       return errorEnvelope(ctx, { status: 502, code: e.code || 'OAUTH_CLERK_API_ERROR', message: msg });
     }
@@ -513,7 +490,7 @@ sourcesRoute.post('/sources/:id/sync', async (ctx) => {
         const targetWorkspaceId = existing.workspace_id || auth.workspace_id || null;
         if (!targetWorkspaceId) {
           const msg = 'SOURCE_WORKSPACE_BINDING_REQUIRED: source sync needs a workspace target before provider events can be ingested.';
-          await dal.markUserSourceSync(auth.user_id, id, { success: false, error: msg });
+          await dal.markUserSourceSync(auth.user_id, id, { success: false, error: msg }, auth.workspace_id || existing.workspace_id || null);
           return errorEnvelope(ctx, { status: 409, code: 'SOURCE_WORKSPACE_BINDING_REQUIRED', message: msg });
         }
         sync = await translator({
@@ -524,20 +501,21 @@ sourcesRoute.post('/sources/:id/sync', async (ctx) => {
           // first-run lookback when never synced).
           since: existing.last_sync_at || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
         });
-        await dal.markUserSourceSync(auth.user_id, id, { success: true });
+        const write = await dal.markUserSourceSync(auth.user_id, id, { success: true }, targetWorkspaceId);
         emitEvent('source_sync_completed', { provider: existing.provider, workspace_id: existing.workspace_id ?? auth.workspace_id ?? null, events: (sync as { events?: unknown[] })?.events?.length ?? 0 }); // T3/P6
+        const refreshed = await dal.getUserSource(auth.user_id, id);
+        return ctx.json({ source: refreshed ? toApiResponse(refreshed) : null, sync, source_sync_receipt_id: write.source_sync_receipt_id, audit_event_id: write.audit_event_id });
       } catch (err) {
         const msg = (err as Error).message || 'translator error';
-        await dal.markUserSourceSync(auth.user_id, id, { success: false, error: msg });
+        await dal.markUserSourceSync(auth.user_id, id, { success: false, error: msg }, auth.workspace_id || existing.workspace_id || null);
         emitEvent('source_sync_failed', { provider: existing.provider, workspace_id: existing.workspace_id ?? auth.workspace_id ?? null, error: msg.slice(0, 200) }); // T3/P6
         return errorEnvelope(ctx, { status: 502, code: 'SOURCE_SYNC_ERROR', message: msg });
       }
     } else {
-      await dal.markUserSourceSync(auth.user_id, id, { success: true });
+      const write = await dal.markUserSourceSync(auth.user_id, id, { success: true }, auth.workspace_id || existing.workspace_id || null);
+      const refreshed = await dal.getUserSource(auth.user_id, id);
+      return ctx.json({ source: refreshed ? toApiResponse(refreshed) : null, sync, source_sync_receipt_id: write.source_sync_receipt_id, audit_event_id: write.audit_event_id });
     }
-
-    const refreshed = await dal.getUserSource(auth.user_id, id);
-    return ctx.json({ source: refreshed ? toApiResponse(refreshed) : null, sync });
   } catch (err) {
     return errorEnvelope(ctx, { status: 500, code: 'INTERNAL_ERROR', message: (err as Error).message });
   }

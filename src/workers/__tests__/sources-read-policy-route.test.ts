@@ -32,6 +32,11 @@ const source = {
   connected_at: '2026-07-11T00:00:00Z', last_sync_at: null, last_sync_error: null,
   created_at: '2026-07-11T00:00:00Z', updated_at: '2026-07-11T00:00:00Z',
 };
+const policyReceipt = (read_policy: string) => ({
+  source: { ...source, read_policy },
+  read_policy_revision_id: `source-read-policy:usc_1:${read_policy}:audit_source_policy`,
+  audit_event_id: 'audit_source_policy',
+});
 
 function patch(app: ReturnType<typeof appFor>, body: unknown) {
   return app.request('/api/v1/sources/usc_1', {
@@ -42,31 +47,33 @@ function patch(app: ReturnType<typeof appFor>, body: unknown) {
 describe('PATCH /sources/:id — read_policy', () => {
   it('200 — {read_policy} persisted; DAL called with (user, id, policy); response carries read_policy', async () => {
     const getUserSource = vi.fn(async () => source);
-    const setUserSourceReadPolicy = vi.fn(async () => ({ ...source, read_policy: 'read_only' }));
+    const setUserSourceReadPolicy = vi.fn(async () => policyReceipt('read_only'));
     const upsertEvent = vi.fn(async () => undefined);
     const res = await patch(appFor({ getUserSource, setUserSourceReadPolicy, upsertEvent }), { read_policy: 'read_only' });
     expect(res.status).toBe(200);
-    const j = (await res.json()) as { source: { read_policy: string } };
+    const j = (await res.json()) as { source: { read_policy: string }; read_policy_revision_id: string; audit_event_id: string };
     expect(j.source.read_policy).toBe('read_only');
-    expect(setUserSourceReadPolicy).toHaveBeenCalledWith('u1', 'usc_1', 'read_only');
+    expect(j.read_policy_revision_id).toBe('source-read-policy:usc_1:read_only:audit_source_policy');
+    expect(j.audit_event_id).toBe('audit_source_policy');
+    expect(setUserSourceReadPolicy).toHaveBeenCalledWith('u1', 'usc_1', 'read_only', 'org_a');
   });
 
   it('200 — UI {level:"operate"} maps to proposal_only', async () => {
     const getUserSource = vi.fn(async () => source);
-    const setUserSourceReadPolicy = vi.fn(async () => ({ ...source, read_policy: 'proposal_only' }));
+    const setUserSourceReadPolicy = vi.fn(async () => policyReceipt('proposal_only'));
     const upsertEvent = vi.fn(async () => undefined);
     const res = await patch(appFor({ getUserSource, setUserSourceReadPolicy, upsertEvent }), { level: 'operate' });
     expect(res.status).toBe(200);
-    expect(setUserSourceReadPolicy).toHaveBeenCalledWith('u1', 'usc_1', 'proposal_only');
+    expect(setUserSourceReadPolicy).toHaveBeenCalledWith('u1', 'usc_1', 'proposal_only', 'org_a');
   });
 
   it('200 — UI {level:"index"} maps to metadata_only, {level:"rely"} maps to read_only', async () => {
-    const setUserSourceReadPolicy = vi.fn(async () => source);
+    const setUserSourceReadPolicy = vi.fn(async (_u, _id, policy) => policyReceipt(policy));
     const app = appFor({ getUserSource: vi.fn(async () => source), setUserSourceReadPolicy, upsertEvent: vi.fn() });
     await patch(app, { level: 'index' });
     await patch(app, { level: 'rely' });
-    expect(setUserSourceReadPolicy).toHaveBeenNthCalledWith(1, 'u1', 'usc_1', 'metadata_only');
-    expect(setUserSourceReadPolicy).toHaveBeenNthCalledWith(2, 'u1', 'usc_1', 'read_only');
+    expect(setUserSourceReadPolicy).toHaveBeenNthCalledWith(1, 'u1', 'usc_1', 'metadata_only', 'org_a');
+    expect(setUserSourceReadPolicy).toHaveBeenNthCalledWith(2, 'u1', 'usc_1', 'read_only', 'org_a');
   });
 
   it('422 — invalid value rejected before any set call', async () => {
@@ -99,5 +106,14 @@ describe('PATCH /sources/:id — read_policy', () => {
     });
     const res = await patch(appFor({ getUserSource, setUserSourceReadPolicy, upsertEvent: vi.fn() }), { read_policy: 'read_only' });
     expect(res.status).toBe(409);
+  });
+
+  it('500 — route fails closed when the DAL does not return a read-policy audit receipt', async () => {
+    const getUserSource = vi.fn(async () => source);
+    const setUserSourceReadPolicy = vi.fn(async () => ({ source: { ...source, read_policy: 'read_only' } }));
+    const res = await patch(appFor({ getUserSource, setUserSourceReadPolicy }), { read_policy: 'read_only' });
+    expect(res.status).toBe(500);
+    const json = (await res.json()) as { code?: string };
+    expect(json.code).toBe('SOURCE_RECEIPT_MISSING');
   });
 });

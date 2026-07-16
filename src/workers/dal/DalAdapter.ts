@@ -920,14 +920,14 @@ export interface DalAdapter {
    *   - GET /api/v1/sources reconciliation (DB row materialized from Clerk state)
    * Returns the canonical row (with DB-generated id + timestamps).
    */
-  upsertUserSource(input: import('./types').UserSourceConnectionInput): Promise<import('./types').UserSourceConnection>;
+  upsertUserSource(input: import('./types').UserSourceConnectionInput): Promise<import('./source-store').SourceConnectionWriteReceipt>;
 
   /**
    * DELETE /api/v1/sources/:id · disconnect a source.
-   * Removes the user_source_connections row; does NOT revoke at Clerk.
-   * Operator must visit dashboard.clerk.com → Account → Connections to revoke.
+   * Soft-disconnects the user_source_connections row and returns an audit receipt.
+   * Does NOT revoke at Clerk; the operator must visit dashboard.clerk.com → Account → Connections to revoke.
    */
-  disconnectUserSource(userId: UserId, id: string): Promise<void>;
+  disconnectUserSource(userId: UserId, id: string, workspaceId?: WorkspaceId | null): Promise<import('./source-store').SourceDisconnectWriteReceipt>;
 
   /**
    * POST /api/v1/sources/:id/sync result · update last_sync_at + last_sync_error.
@@ -939,7 +939,8 @@ export interface DalAdapter {
     userId: UserId,
     id: string,
     result: { success: true } | { success: false; error: string },
-  ): Promise<void>;
+    workspaceId?: WorkspaceId | null,
+  ): Promise<import('./source-store').SourceSyncWriteReceipt>;
 
   // G1 plan_entities (writes 1–8) + G2 source read_policy (write 25) · composed sub-facade,
   // accessed as dal.plan.<method> (createPlanEntity/listPlanEntities/getPlanEntity/updatePlanEntity/

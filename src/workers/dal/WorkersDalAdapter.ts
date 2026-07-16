@@ -1492,20 +1492,21 @@ export class WorkersDalAdapter implements DalAdapter {
 
   async upsertUserSource(
     input: import('./types').UserSourceConnectionInput,
-  ): Promise<import('./types').UserSourceConnection> {
+  ): Promise<import('./source-store').SourceConnectionWriteReceipt> {
     return upsertUserSourceRow(this.sql, input);
   }
 
-  async disconnectUserSource(userId: UserId, id: string): Promise<void> {
-    return disconnectUserSourceRow(this.sql, userId, id);
+  async disconnectUserSource(userId: UserId, id: string, workspaceId?: WorkspaceId | null): Promise<import('./source-store').SourceDisconnectWriteReceipt> {
+    return disconnectUserSourceRow(this.sql, userId, id, workspaceId);
   }
 
   async markUserSourceSync(
     userId: UserId,
     id: string,
     result: { success: true } | { success: false; error: string },
-  ): Promise<void> {
-    return markUserSourceSyncRow(this.sql, userId, id, result);
+    workspaceId?: WorkspaceId | null,
+  ): Promise<import('./source-store').SourceSyncWriteReceipt> {
+    return markUserSourceSyncRow(this.sql, userId, id, result, workspaceId);
   }
   // ============================================================
   // R51-γ · LEM-v4 inference quality framework (impls)

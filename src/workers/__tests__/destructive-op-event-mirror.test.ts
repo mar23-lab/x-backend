@@ -1,12 +1,9 @@
 // destructive-op-event-mirror.test.ts · Recoverability doctrine (260706)
 //
-// Route tests for the operator-action event mirror on DESTRUCTIVE customer-API ops.
-// Backend-alignment audit (260706) found destructive endpoints emit audit_logs (operator
-// trail) but NOT operation_events (customer-visible spine) — so a customer could not see
-// that their project/workspace/source was archived/disconnected. These tests lock the fix:
-// every destructive op mirrors a `xlooop:operator-action` event via dal.upsertEvent
-// (the ADR-XLOOP-IA-001 sanctioned insert path), best-effort (a mirror failure must
-// NEVER fail the destructive op itself).
+// Route tests for operator-action evidence on DESTRUCTIVE customer-API ops.
+// Project/workspace archival still mirrors a customer-visible operation_event, best-effort.
+// Source disconnect moved to the newer fail-closed audit receipt contract: no legacy
+// best-effort operation_event may be required or treated as authority for success.
 //
 // Mocks the DAL (ctx.set) — same pattern as projects-events-operator-overlay.test.ts.
 
@@ -74,31 +71,48 @@ describe('destructive-op event mirror (recoverability doctrine 260706)', () => {
     expect(String(events[0].event.summary)).toContain('[project source archived] github_repo · org/repo');
   });
 
-  it('DELETE /sources/:id → mirrors [source disconnected] when auth carries a workspace', async () => {
+  it('DELETE /sources/:id → returns a source disconnect receipt, no best-effort mirror', async () => {
     const events: EventCall[] = [];
+    let disconnectArgs: unknown[] | null = null;
     const dal = {
-      getUserSource: async () => ({ id: 'src-1', provider: 'google' }),
-      disconnectUserSource: async () => undefined,
+      getUserSource: async () => ({ id: 'src-1', workspace_id: 'ws-a', provider: 'google' }),
+      disconnectUserSource: async (...args: unknown[]) => {
+        disconnectArgs = args;
+        return {
+          disconnected: { id: 'src-1', provider: 'google' },
+          source_disconnect_receipt_id: 'source-disconnect:src-1:audit-source-disconnect',
+          audit_event_id: 'audit-source-disconnect',
+        };
+      },
       upsertEvent: async (ws: string, event: Record<string, unknown>) => { events.push({ ws, event }); return { inserted: 1 }; },
     };
     const app = appFor(sourcesRoute, { user_id: 'u1', workspace_id: 'ws-a' }, dal);
     const res = await app.request('/api/v1/sources/src-1', { method: 'DELETE' }, ENV as never);
     expect(res.status).toBe(200);
-    expect(events).toHaveLength(1);
-    expect(events[0].ws).toBe('ws-a');
-    expect(String(events[0].event.summary)).toContain('[source disconnected] google');
+    const body = await res.json() as { source_disconnect_receipt_id?: string; audit_event_id?: string };
+    expect(body.source_disconnect_receipt_id).toBe('source-disconnect:src-1:audit-source-disconnect');
+    expect(body.audit_event_id).toBe('audit-source-disconnect');
+    expect(disconnectArgs).toEqual(['u1', 'src-1', 'ws-a']);
+    expect(events).toHaveLength(0);
   });
 
-  it('DELETE /sources/:id → no workspace scope → disconnect still succeeds, no mirror', async () => {
+  it('DELETE /sources/:id → no workspace scope still requires a receipt and no mirror', async () => {
     const events: EventCall[] = [];
     const dal = {
       getUserSource: async () => ({ id: 'src-1', provider: 'google' }),
-      disconnectUserSource: async () => undefined,
+      disconnectUserSource: async () => ({
+        disconnected: { id: 'src-1', provider: 'google' },
+        source_disconnect_receipt_id: 'source-disconnect:src-1:audit-source-disconnect',
+        audit_event_id: 'audit-source-disconnect',
+      }),
       upsertEvent: async (ws: string, event: Record<string, unknown>) => { events.push({ ws, event }); return { inserted: 1 }; },
     };
     const app = appFor(sourcesRoute, { user_id: 'u1' }, dal);
     const res = await app.request('/api/v1/sources/src-1', { method: 'DELETE' }, ENV as never);
     expect(res.status).toBe(200);
+    const body = await res.json() as { source_disconnect_receipt_id?: string; audit_event_id?: string };
+    expect(body.source_disconnect_receipt_id).toBe('source-disconnect:src-1:audit-source-disconnect');
+    expect(body.audit_event_id).toBe('audit-source-disconnect');
     expect(events).toHaveLength(0);
   });
 

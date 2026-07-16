@@ -12,8 +12,8 @@ import type {
   PlanEntityListContext,
   PlanEntityPatch,
   SourceReadPolicy,
-  UserSourceConnection,
 } from './types';
+import type { SourceReadPolicyWriteReceipt } from './source-store';
 import {
   createPlanEntityRow,
   listPlanEntitiesRow,
@@ -29,7 +29,7 @@ export interface PlanEntitiesFacade {
   getPlanEntity(id: string, workspaceId: WorkspaceId): Promise<PlanEntity | null>;
   updatePlanEntity(id: string, patch: PlanEntityPatch, actorUserId: UserId): Promise<PlanEntity>;
   softDeletePlanEntity(id: string, actorUserId: UserId): Promise<PlanEntityDeleteReceipt>;
-  setUserSourceReadPolicy(userId: UserId, id: string, readPolicy: SourceReadPolicy): Promise<UserSourceConnection>;
+  setUserSourceReadPolicy(userId: UserId, id: string, readPolicy: SourceReadPolicy, workspaceId?: WorkspaceId | null): Promise<SourceReadPolicyWriteReceipt>;
 }
 
 export function makePlanEntitiesFacade(getSql: () => Sql): PlanEntitiesFacade {
@@ -39,6 +39,6 @@ export function makePlanEntitiesFacade(getSql: () => Sql): PlanEntitiesFacade {
     getPlanEntity: (id, workspaceId) => getPlanEntityRow(getSql(), id, workspaceId),
     updatePlanEntity: (id, patch, actorUserId) => updatePlanEntityRow(getSql(), id, patch, actorUserId),
     softDeletePlanEntity: (id, actorUserId) => softDeletePlanEntityRow(getSql(), id, actorUserId),
-    setUserSourceReadPolicy: (userId, id, readPolicy) => setUserSourceReadPolicyRow(getSql(), userId, id, readPolicy),
+    setUserSourceReadPolicy: (userId, id, readPolicy, workspaceId) => setUserSourceReadPolicyRow(getSql(), userId, id, readPolicy, workspaceId),
   };
 }

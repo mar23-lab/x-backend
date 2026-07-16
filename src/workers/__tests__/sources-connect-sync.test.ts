@@ -43,6 +43,22 @@ const UNLOCKED = {
   workspace_id: 'org_acme', unlocked: true, operator_approved: true, consent_acked: true,
   allowed_modes: [], allowed_apps: [], consent: null,
 };
+const sourceRow = (overrides: Record<string, unknown> = {}) => ({
+  id: 'src_1', workspace_id: 'org_acme', provider: 'github', provider_username: 'octocat', scopes: ['repo'],
+  status: 'connected', contract: 'metadata_only', read_policy: 'metadata_only', connected_at: '2026-01-01T00:00:00Z',
+  user_id: 'u1', last_sync_at: null, last_sync_error: null, created_at: '2026-01-01T00:00:00Z', updated_at: '2026-01-01T00:00:00Z',
+  ...overrides,
+});
+const connectReceipt = (source: Record<string, unknown>) => ({
+  source,
+  source_binding_id: source.id,
+  source_connection_receipt_id: `source-connect:${source.id}:audit_source_connect`,
+  audit_event_id: 'audit_source_connect',
+});
+const syncReceipt = (id = 'src_1') => ({
+  source_sync_receipt_id: `source-sync:${id}:success:audit_source_sync`,
+  audit_event_id: 'audit_source_sync',
+});
 
 function appFor(auth: Record<string, unknown>, dal: Record<string, unknown>) {
   const app = new Hono();
@@ -65,11 +81,7 @@ beforeEach(() => {
 
 describe('POST /sources/connect/:provider · materialize (happy path)', () => {
   it('201 upserts the user_source row when the Clerk OAuth token is retrievable', async () => {
-    const upsertUserSource = vi.fn(async () => ({
-      id: 'src_1', provider: 'github', provider_username: 'octocat', scopes: ['repo'],
-      status: 'connected', contract: 'metadata_only', connected_at: '2026-01-01T00:00:00Z',
-      last_sync_at: null, last_sync_error: null,
-    }));
+    const upsertUserSource = vi.fn(async () => connectReceipt(sourceRow()));
     const app = appFor(
       { user_id: 'u1', workspace_id: 'org_acme' },
       { getCustomerAuthorityState: async () => UNLOCKED, upsertUserSource }
@@ -79,6 +91,8 @@ describe('POST /sources/connect/:provider · materialize (happy path)', () => {
     const json = (await res.json()) as Record<string, any>;
     expect(json.source).toBeTruthy();
     expect(json.source.id).toBe('src_1');
+    expect(json.source_connection_receipt_id).toBe('source-connect:src_1:audit_source_connect');
+    expect(json.audit_event_id).toBe('audit_source_connect');
     expect(upsertUserSource).toHaveBeenCalledOnce();
     // The materialize must persist the Clerk external-account identity, not a silent placeholder.
     expect(upsertUserSource.mock.calls[0][0]).toMatchObject({
@@ -87,11 +101,7 @@ describe('POST /sources/connect/:provider · materialize (happy path)', () => {
   });
 
   it('keeps orgless connections user-scoped', async () => {
-    const upsertUserSource = vi.fn(async () => ({
-      id: 'src_1', workspace_id: null, provider: 'github', provider_username: 'octocat', scopes: ['repo'],
-      status: 'connected', contract: 'metadata_only', connected_at: '2026-01-01T00:00:00Z',
-      last_sync_at: null, last_sync_error: null,
-    }));
+    const upsertUserSource = vi.fn(async () => connectReceipt(sourceRow({ workspace_id: null })));
     const app = appFor(
       { user_id: 'u1', workspace_id: '' },
       { upsertUserSource }
@@ -111,39 +121,38 @@ describe('POST /sources/:id/sync', () => {
 
   it('502 + records last_sync_error when the OAuth token fetch fails', async () => {
     oauthState.mode = 'fail';
-    const markUserSourceSync = vi.fn(async () => undefined);
+    const markUserSourceSync = vi.fn(async () => syncReceipt());
     const app = appFor(
       { user_id: 'u1', workspace_id: 'org_acme' },
-      { getUserSource: async () => ({ id: 'src_1', provider: 'github', user_id: 'u1', last_sync_at: null }), markUserSourceSync }
+      { getUserSource: async () => sourceRow(), markUserSourceSync }
     );
     const res = await app.request('/api/v1/sources/src_1/sync', { method: 'POST' }, ENV as never);
     expect(res.status).toBe(502);
-    expect(markUserSourceSync).toHaveBeenCalledWith('u1', 'src_1', expect.objectContaining({ success: false }));
+    expect(markUserSourceSync).toHaveBeenCalledWith('u1', 'src_1', expect.objectContaining({ success: false }), 'org_acme');
   });
 
   it('200 + records sync success when the token is valid and no translator is registered', async () => {
-    const markUserSourceSync = vi.fn(async () => undefined);
-    const src = {
-      id: 'src_1', provider: 'github', provider_username: 'octocat', scopes: ['repo'], status: 'connected',
-      contract: 'metadata_only', connected_at: '2026-01-01T00:00:00Z', user_id: 'u1', last_sync_at: null, last_sync_error: null,
-    };
+    const markUserSourceSync = vi.fn(async () => syncReceipt());
+    const src = sourceRow();
     const app = appFor(
       { user_id: 'u1', workspace_id: 'org_acme' },
       { getUserSource: async () => src, markUserSourceSync }
     );
     const res = await app.request('/api/v1/sources/src_1/sync', { method: 'POST' }, ENV as never);
     expect(res.status).toBe(200);
-    expect(markUserSourceSync).toHaveBeenCalledWith('u1', 'src_1', expect.objectContaining({ success: true }));
+    const json = (await res.json()) as Record<string, any>;
+    expect(json.source_sync_receipt_id).toBe('source-sync:src_1:success:audit_source_sync');
+    expect(json.audit_event_id).toBe('audit_source_sync');
+    expect(markUserSourceSync).toHaveBeenCalledWith('u1', 'src_1', expect.objectContaining({ success: true }), 'org_acme');
   });
 
   it('passes the signed-in workspace as translator target for legacy user-scoped rows', async () => {
     translatorState.translator = async () => ({ events_emitted: 0, events_rejected: 0, errors: [], completed_at: '2026-07-01T00:00:00Z' });
-    const markUserSourceSync = vi.fn(async () => undefined);
-    const src = {
-      id: 'src_1', workspace_id: null, provider: 'gmail', provider_username: 'me@gmail.test', scopes: ['gmail.readonly'],
+    const markUserSourceSync = vi.fn(async () => syncReceipt());
+    const src = sourceRow({
+      workspace_id: null, provider: 'gmail', provider_username: 'me@gmail.test', scopes: ['gmail.readonly'],
       status: 'connected', contract: { version: 1, ingestion_mode: 'reflection_only', allowed_fields: [], max_body_bytes: 200, rate_limit: { per_hour: 5000 } },
-      connected_at: '2026-01-01T00:00:00Z', user_id: 'u1', last_sync_at: null, last_sync_error: null,
-    };
+    });
     const app = appFor(
       { user_id: 'u1', workspace_id: 'org_acme' },
       { getUserSource: async () => src, markUserSourceSync }
@@ -151,17 +160,16 @@ describe('POST /sources/:id/sync', () => {
     const res = await app.request('/api/v1/sources/src_1/sync', { method: 'POST' }, ENV as never);
     expect(res.status).toBe(200);
     expect(translatorState.lastInput.userSource.workspace_id).toBe('org_acme');
-    expect(markUserSourceSync).toHaveBeenCalledWith('u1', 'src_1', expect.objectContaining({ success: true }));
+    expect(markUserSourceSync).toHaveBeenCalledWith('u1', 'src_1', expect.objectContaining({ success: true }), 'org_acme');
   });
 
   it('409 + records sync error when a translator source has no workspace target', async () => {
     translatorState.translator = async () => ({ events_emitted: 0, events_rejected: 0, errors: [], completed_at: '2026-07-01T00:00:00Z' });
-    const markUserSourceSync = vi.fn(async () => undefined);
-    const src = {
-      id: 'src_1', workspace_id: null, provider: 'gmail', provider_username: 'me@gmail.test', scopes: ['gmail.readonly'],
+    const markUserSourceSync = vi.fn(async () => syncReceipt());
+    const src = sourceRow({
+      workspace_id: null, provider: 'gmail', provider_username: 'me@gmail.test', scopes: ['gmail.readonly'],
       status: 'connected', contract: { version: 1, ingestion_mode: 'reflection_only', allowed_fields: [], max_body_bytes: 200, rate_limit: { per_hour: 5000 } },
-      connected_at: '2026-01-01T00:00:00Z', user_id: 'u1', last_sync_at: null, last_sync_error: null,
-    };
+    });
     const app = appFor(
       { user_id: 'u1', workspace_id: '' },
       { getUserSource: async () => src, markUserSourceSync }
@@ -169,7 +177,7 @@ describe('POST /sources/:id/sync', () => {
     const res = await app.request('/api/v1/sources/src_1/sync', { method: 'POST' }, ENV as never);
     expect(res.status).toBe(409);
     expect(translatorState.lastInput).toBeNull();
-    expect(markUserSourceSync).toHaveBeenCalledWith('u1', 'src_1', expect.objectContaining({ success: false }));
+    expect(markUserSourceSync).toHaveBeenCalledWith('u1', 'src_1', expect.objectContaining({ success: false }), null);
   });
 
   it('401 when unauthenticated', async () => {
@@ -179,12 +187,44 @@ describe('POST /sources/:id/sync', () => {
   });
 });
 
+describe('DELETE /sources/:id · audited disconnect', () => {
+  it('200 + returns a source disconnect receipt before the UI may remove local state', async () => {
+    const disconnectUserSource = vi.fn(async () => ({
+      disconnected: { id: 'src_1', provider: 'github' },
+      source_disconnect_receipt_id: 'source-disconnect:src_1:audit_source_disconnect',
+      audit_event_id: 'audit_source_disconnect',
+    }));
+    const app = appFor(
+      { user_id: 'u1', workspace_id: 'org_acme' },
+      { getUserSource: async () => sourceRow(), disconnectUserSource }
+    );
+    const res = await app.request('/api/v1/sources/src_1', { method: 'DELETE' }, ENV as never);
+    expect(res.status).toBe(200);
+    const json = (await res.json()) as Record<string, any>;
+    expect(json.source_disconnect_receipt_id).toBe('source-disconnect:src_1:audit_source_disconnect');
+    expect(json.audit_event_id).toBe('audit_source_disconnect');
+    expect(disconnectUserSource).toHaveBeenCalledWith('u1', 'src_1', 'org_acme');
+  });
+
+  it('500 when the DAL cannot provide an audit receipt', async () => {
+    const app = appFor(
+      { user_id: 'u1', workspace_id: 'org_acme' },
+      { getUserSource: async () => sourceRow(), disconnectUserSource: async () => ({ disconnected: { id: 'src_1', provider: 'github' } }) }
+    );
+    const res = await app.request('/api/v1/sources/src_1', { method: 'DELETE' }, ENV as never);
+    expect(res.status).toBe(500);
+    const json = (await res.json()) as Record<string, any>;
+    expect(json.code).toBe('SOURCE_RECEIPT_MISSING');
+  });
+});
+
 // ── T1/P3 (260710) · restricted-scope guard on connect (SOURCE_SCOPE_ENFORCEMENT_ENABLED) ─────────
 describe('POST /sources/connect/gmail · restricted-scope guard', () => {
   const upsertGmail = () => vi.fn(async () => ({
-    id: 'src_g', workspace_id: 'org_acme', provider: 'gmail', provider_username: 'me@gmail.test',
-    scopes: ['repo'], status: 'connected', contract: 'metadata_only',
-    connected_at: '2026-01-01T00:00:00Z', last_sync_at: null, last_sync_error: null,
+    source: sourceRow({ id: 'src_g', workspace_id: 'org_acme', provider: 'gmail', provider_username: 'me@gmail.test' }),
+    source_binding_id: 'src_g',
+    source_connection_receipt_id: 'source-connect:src_g:audit_source_connect',
+    audit_event_id: 'audit_source_connect',
   }));
 
   it('flag ON + granted scopes MISSING gmail.readonly → 422 SOURCE_SCOPE_MISSING, row NOT materialized', async () => {
@@ -207,11 +247,7 @@ describe('POST /sources/connect/gmail · restricted-scope guard', () => {
   });
 
   it('flag ON does not affect providers WITHOUT a restricted scope (github still 201)', async () => {
-    const upsertUserSource = vi.fn(async () => ({
-      id: 'src_1', provider: 'github', provider_username: 'octocat', scopes: ['repo'],
-      status: 'connected', contract: 'metadata_only', connected_at: '2026-01-01T00:00:00Z',
-      last_sync_at: null, last_sync_error: null,
-    }));
+    const upsertUserSource = vi.fn(async () => connectReceipt(sourceRow()));
     const app = appFor({ user_id: 'u1', workspace_id: 'org_acme' }, { getCustomerAuthorityState: async () => UNLOCKED, upsertUserSource });
     const res = await app.request('/api/v1/sources/connect/github', { method: 'POST' }, { ...ENV, SOURCE_SCOPE_ENFORCEMENT_ENABLED: 'true' } as never);
     expect(res.status).toBe(201);
