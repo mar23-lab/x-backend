@@ -10,11 +10,15 @@
 // clause confines the query to the passed workspace, so a caller can never
 // enumerate another tenant's members.
 
-import type { UserId, WorkspaceId, WorkspaceMember, WorkspaceMemberRole } from './types';
+import type { UserId, WorkspaceId, WorkspaceMember, WorkspaceMemberRole, WorkspaceMemberRoleMutationReceipt, WorkspaceMemberRemovalReceipt } from './types';
 import type { Sql, SqlTx } from '../db/client';
 import { assertWorkspaceScope } from './DalAdapter';
 import { makeError } from './shared-helpers';
 import { memberAuthorityProvisioningStatements } from './member-authority-provisioning';
+
+function memberMutationReceipt(workspaceId: WorkspaceId, targetUserId: UserId, action: string, auditEventId: string): string {
+  return `workspace-member:${workspaceId}:${targetUserId}:${action}:${auditEventId}`;
+}
 
 // A1 (260710-B) · true when the error is Postgres "column does not exist" (42703) — used to degrade the
 // roster reads to the legacy shape during the migrate→deploy window (before migration 062 adds removed_at).
@@ -190,7 +194,7 @@ export async function setWorkspaceMemberRoleRow(
   targetUserId: UserId,
   role: WorkspaceMemberRole,
   actorUserId: UserId,
-): Promise<WorkspaceMember> {
+): Promise<WorkspaceMemberRoleMutationReceipt> {
   assertWorkspaceScope(workspaceId);
 
   // Guard: never orphan a workspace by demoting/removing its last owner.
@@ -215,26 +219,44 @@ export async function setWorkspaceMemberRoleRow(
 
   const [rows] = (await (sql as SqlTx).transaction([
     sql/*sql*/`
-      UPDATE workspace_members
-      SET role = ${role}
-      WHERE workspace_id = ${workspaceId} AND user_id = ${targetUserId}
-      RETURNING user_id, workspace_id, role, invited_by, joined_at
-    `,
-    sql/*sql*/`
-      INSERT INTO audit_logs (actor_user_id, action, target_type, target_id, workspace_id, reason)
-      VALUES (${actorUserId}, 'member_role_change'::text, 'workspace_member', ${targetUserId}, ${workspaceId}, ${'role -> ' + role})
+      WITH member_updated AS (
+        UPDATE workspace_members
+        SET role = ${role}
+        WHERE workspace_id = ${workspaceId} AND user_id = ${targetUserId}
+        RETURNING user_id, workspace_id, role, invited_by, joined_at
+      ),
+      audit_written AS (
+        INSERT INTO audit_logs (actor_user_id, action, target_type, target_id, workspace_id, reason)
+        SELECT ${actorUserId}, 'member_role_change'::text, 'workspace_member', member_updated.user_id,
+               member_updated.workspace_id, ${'role -> ' + role}
+        FROM member_updated
+        RETURNING id::text AS audit_event_id
+      )
+      SELECT member_updated.user_id, member_updated.workspace_id, member_updated.role,
+             member_updated.invited_by, member_updated.joined_at, audit_written.audit_event_id
+      FROM member_updated
+      JOIN audit_written ON TRUE
     `,
     // P5(a) §5e: a role change re-mirrors the entitlement + operating-mode axes IN THE SAME TRANSACTION —
     // promote seeds operator authority; demote downgrades it (else a post-flip demotion would be a lie).
     ...(memberAuthorityProvisioningStatements(sql, {
       userId: targetUserId, workspaceId, role, actorUserId,
     }) as never[]),
-  ])) as [Array<Omit<WorkspaceMember, 'email' | 'status'>>, unknown];
+  ])) as [Array<Omit<WorkspaceMember, 'email' | 'status'> & { audit_event_id: string }>, unknown];
 
-  if (!rows[0]) {
+  const row = rows[0];
+  if (!row) {
     throw makeError('NOT_FOUND', `member ${targetUserId} not in workspace ${workspaceId}`, 404);
   }
-  return { ...rows[0], email: null, status: null } as WorkspaceMember;
+  if (!row.audit_event_id) {
+    throw makeError('MEMBER_AUDIT_RECEIPT_MISSING', 'member role change did not produce an audit receipt', 500);
+  }
+  const { audit_event_id, ...memberRow } = row;
+  return {
+    member: { ...memberRow, email: null, status: null } as WorkspaceMember,
+    audit_event_id,
+    member_mutation_receipt_id: memberMutationReceipt(workspaceId, targetUserId, 'role', audit_event_id),
+  };
 }
 
 // A1 (260710-B) · SOFT-remove a member from a workspace (backs the cockpit "Remove from workspace" control).
@@ -260,7 +282,7 @@ export async function removeWorkspaceMemberRow(
   workspaceId: WorkspaceId,
   targetUserId: UserId,
   actorUserId: UserId,
-): Promise<{ user_id: UserId; workspace_id: WorkspaceId; removed_at: string }> {
+): Promise<WorkspaceMemberRemovalReceipt> {
   assertWorkspaceScope(workspaceId);
 
   if (String(targetUserId) === String(actorUserId)) {
@@ -286,19 +308,37 @@ export async function removeWorkspaceMemberRow(
 
   const [rows] = (await (sql as SqlTx).transaction([
     sql/*sql*/`
-      UPDATE workspace_members
-      SET removed_at = now()
-      WHERE workspace_id = ${workspaceId} AND user_id = ${targetUserId} AND removed_at IS NULL
-      RETURNING user_id, workspace_id, removed_at
+      WITH member_removed AS (
+        UPDATE workspace_members
+        SET removed_at = now()
+        WHERE workspace_id = ${workspaceId} AND user_id = ${targetUserId} AND removed_at IS NULL
+        RETURNING user_id, workspace_id, removed_at
+      ),
+      audit_written AS (
+        INSERT INTO audit_logs (actor_user_id, action, target_type, target_id, workspace_id, reason)
+        SELECT ${actorUserId}, 'member_removed'::text, 'workspace_member', member_removed.user_id,
+               member_removed.workspace_id, ${'removed from workspace'}
+        FROM member_removed
+        RETURNING id::text AS audit_event_id
+      )
+      SELECT member_removed.user_id, member_removed.workspace_id, member_removed.removed_at,
+             audit_written.audit_event_id
+      FROM member_removed
+      JOIN audit_written ON TRUE
     `,
-    sql/*sql*/`
-      INSERT INTO audit_logs (actor_user_id, action, target_type, target_id, workspace_id, reason)
-      VALUES (${actorUserId}, 'member_removed'::text, 'workspace_member', ${targetUserId}, ${workspaceId}, ${'removed from workspace'})
-    `,
-  ])) as [Array<{ user_id: UserId; workspace_id: WorkspaceId; removed_at: string }>, unknown];
+  ])) as [Array<{ user_id: UserId; workspace_id: WorkspaceId; removed_at: string; audit_event_id: string }>, unknown];
 
-  if (!rows[0]) {
+  const row = rows[0];
+  if (!row) {
     throw makeError('NOT_FOUND', `member ${targetUserId} not in workspace ${workspaceId}`, 404);
   }
-  return rows[0];
+  if (!row.audit_event_id) {
+    throw makeError('MEMBER_AUDIT_RECEIPT_MISSING', 'member removal did not produce an audit receipt', 500);
+  }
+  const { audit_event_id, ...removed } = row;
+  return {
+    removed,
+    audit_event_id,
+    member_mutation_receipt_id: memberMutationReceipt(workspaceId, targetUserId, 'remove', audit_event_id),
+  };
 }

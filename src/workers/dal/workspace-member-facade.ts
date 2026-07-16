@@ -8,7 +8,7 @@
 // to the adapter's live sql handle.
 
 import type { Sql } from '../db/client';
-import type { UserId, WorkspaceId, WorkspaceMember, WorkspaceMemberRole } from './types';
+import type { UserId, WorkspaceId, WorkspaceMember, WorkspaceMemberRole, WorkspaceMemberRoleMutationReceipt, WorkspaceMemberRemovalReceipt } from './types';
 import { listWorkspaceMembersRow, listWorkspaceMembersForWorkspacesRow, setWorkspaceMemberRoleRow, removeWorkspaceMemberRow, userCanScopeWorkspaceRow, userOwnsWorkspaceRow } from './workspace-member-store';
 
 export interface WorkspaceMemberFacade {
@@ -24,13 +24,13 @@ export interface WorkspaceMemberFacade {
     targetUserId: UserId,
     role: WorkspaceMemberRole,
     actorUserId: UserId,
-  ): Promise<WorkspaceMember>;
+  ): Promise<WorkspaceMemberRoleMutationReceipt>;
   // A1 · SOFT-remove a member (owner-only at the route; last-owner + self guards in the store).
   removeWorkspaceMember(
     workspaceId: WorkspaceId,
     targetUserId: UserId,
     actorUserId: UserId,
-  ): Promise<{ user_id: UserId; workspace_id: WorkspaceId; removed_at: string }>;
+  ): Promise<WorkspaceMemberRemovalReceipt>;
   // JA · authorization read: may this user scope a read to this workspace? (owner OR active member)
   userCanScopeWorkspace(userId: UserId, workspaceId: WorkspaceId): Promise<boolean>;
   // JB · authorization for WRITES: does this user OWN this workspace? (owner_user_id only — stricter)

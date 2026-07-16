@@ -53,6 +53,8 @@ import type {
   CustomerAuthorityConsent,
   CustomerAuthorityState,
   CustomerConsentAckInput,
+  CustomerInviteAuditInput,
+  CustomerInviteAuditReceipt,
   OperatorAuthorityInput,
   RevokeCustomerAuthorityInput,
   PendingCustomerAuthorityApproval,
@@ -103,6 +105,7 @@ import {
 import {
   getCustomerAuthorityStateRow,
   recordCustomerConsentAckRow,
+  recordCustomerInviteAuditRow,
   recordOperatorAuthorityRow,
   revokeCustomerAuthorityRow,
   listPendingCustomerAuthorityApprovalsRow,
@@ -958,6 +961,10 @@ export class WorkersDalAdapter implements DalAdapter {
 
   async recordCustomerConsentAck(input: CustomerConsentAckInput): Promise<CustomerAuthorityConsent> {
     return recordCustomerConsentAckRow(this.sql, input);
+  }
+
+  async recordCustomerInviteAudit(input: CustomerInviteAuditInput): Promise<CustomerInviteAuditReceipt> {
+    return recordCustomerInviteAuditRow(this.sql, input);
   }
 
   async getCustomerAuthorityState(workspaceId: WorkspaceId): Promise<CustomerAuthorityState> {

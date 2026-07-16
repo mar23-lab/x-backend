@@ -24,6 +24,7 @@ vi.mock('../services/clerk-org', async (importOriginal) => {
 
 import { Hono } from 'hono';
 import { customerRoute } from '../routes/customer';
+import { createTeamInvitation } from '../services/clerk-org';
 
 const ENV = { CLERK_SECRET_KEY: 'sk_test_x', DATABASE_URL: 'postgres://test' };
 
@@ -373,6 +374,10 @@ describe('POST /customer/invites', () => {
     getCustomerAuthorityState: vi.fn(async () =>
       authorityState({ unlocked: true, operator_approved: true, consent_acked: true })
     ),
+    recordCustomerInviteAudit: vi.fn(async () => ({
+      invite_receipt_id: 'member-invite:org_acme:alice@acme.com:audit_invite_1',
+      audit_event_id: 'audit_invite_1',
+    })),
   });
 
   it('401 when unauthenticated', async () => {
@@ -427,6 +432,8 @@ describe('POST /customer/invites', () => {
     const json = (await res.json()) as Record<string, any>;
     expect(json.invited.email).toBe('alice@acme.com');
     expect(json.invited.role).toBe('org:member');
+    expect(json.invite_receipt_id).toMatch(/^member-invite:/);
+    expect(json.audit_event_id).toBe('audit_invite_1');
     expect(json.message).toMatch(/alice@acme.com/);
   });
 
@@ -439,5 +446,25 @@ describe('POST /customer/invites', () => {
     expect(res.status).toBe(201);
     const json = (await res.json()) as Record<string, any>;
     expect(json.invited.role).toBe('org:admin');
+  });
+
+  it('500 and does not call Clerk when invite audit receipt is missing', async () => {
+    vi.mocked(createTeamInvitation).mockClear();
+    const res = await post(
+      appFor(
+        { user_id: 'u1', workspace_id: 'org_acme', role: 'owner' },
+        {
+          getCustomerAuthorityState: vi.fn(async () => authorityState({ unlocked: true, operator_approved: true, consent_acked: true })),
+          recordCustomerInviteAudit: vi.fn(async () => {
+            const e = Object.assign(new Error('audit down'), { status: 500, code: 'INVITE_AUDIT_RECEIPT_MISSING' });
+            throw e;
+          }),
+        },
+      ),
+      '/customer/invites',
+      { email: 'block@acme.com' }
+    );
+    expect(res.status).toBe(500);
+    expect(createTeamInvitation).not.toHaveBeenCalled();
   });
 });

@@ -40,6 +40,8 @@ import {
   CustomerAuthorityConsent,
   CustomerAuthorityState,
   CustomerConsentAckInput,
+  CustomerInviteAuditInput,
+  CustomerInviteAuditReceipt,
   OperatorAuthorityInput,
   RevokeCustomerAuthorityInput,
   PendingCustomerAuthorityApproval,
@@ -48,6 +50,8 @@ import {
   AccessRequestListOpts,
   AuditLogInput,
   UserListOpts,
+  WorkspaceMemberRoleMutationReceipt,
+  WorkspaceMemberRemovalReceipt,
   SyntheticDomain,
   SyntheticDomainId,
   SyntheticDomainCreateInput,
@@ -613,6 +617,9 @@ export interface DalAdapter {
   /** Records the CUSTOMER side (in-app typed-name consent ack). Upserts the active row. */
   recordCustomerConsentAck(input: CustomerConsentAckInput): Promise<CustomerAuthorityConsent>;
 
+  /** Records the customer invite audit receipt before the external Clerk invite side effect. */
+  recordCustomerInviteAudit(input: CustomerInviteAuditInput): Promise<CustomerInviteAuditReceipt>;
+
   /** Returns the unlock state for a workspace; connectors + team invites gate on `unlocked`. */
   getCustomerAuthorityState(workspaceId: WorkspaceId): Promise<CustomerAuthorityState>;
 
@@ -663,7 +670,7 @@ export interface DalAdapter {
     targetUserId: UserId,
     role: WorkspaceMemberRole,
     actorUserId: UserId,
-  ): Promise<WorkspaceMember>;
+  ): Promise<WorkspaceMemberRoleMutationReceipt>;
 
   /**
    * A1 · Owner-only: SOFT-remove a member from a workspace (backs the cockpit "Remove from workspace"
@@ -674,7 +681,7 @@ export interface DalAdapter {
     workspaceId: WorkspaceId,
     targetUserId: UserId,
     actorUserId: UserId,
-  ): Promise<{ user_id: UserId; workspace_id: WorkspaceId; removed_at: string }>;
+  ): Promise<WorkspaceMemberRemovalReceipt>;
 
   /**
    * JA (260714) · operator-workspace-scope AUTHORIZATION read. TRUE iff `userId` OWNS `workspaceId`

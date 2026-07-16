@@ -27,7 +27,11 @@ const OFF = { DATABASE_URL: 'p' } as never;
 function dalStub(over: Record<string, unknown> = {}) {
   return {
     operatorOwnsWorkspace: vi.fn(async () => true),
-    removeWorkspaceMember: vi.fn(async (w: string, u: string) => ({ user_id: u, workspace_id: w, removed_at: '2026-07-10T00:00:00Z' })),
+    removeWorkspaceMember: vi.fn(async (w: string, u: string) => ({
+      removed: { user_id: u, workspace_id: w, removed_at: '2026-07-10T00:00:00Z' },
+      member_mutation_receipt_id: `workspace-member:${w}:${u}:remove:audit_remove_1`,
+      audit_event_id: 'audit_remove_1',
+    })),
     ...over,
   };
 }
@@ -56,10 +60,24 @@ describe('DELETE /members/:userId · soft member removal', () => {
     const dal = dalStub();
     const res = await del(appFor(OWNER, dal), '/api/v1/members/u_target', ON);
     expect(res.status).toBe(200);
-    const body = await res.json() as { removed: { user_id: string; workspace_id: string } };
+    const body = await res.json() as { removed: { user_id: string; workspace_id: string }; member_mutation_receipt_id: string; audit_event_id: string };
     expect(body.removed.user_id).toBe('u_target');
+    expect(body.member_mutation_receipt_id).toMatch(/^workspace-member:/);
+    expect(body.audit_event_id).toBe('audit_remove_1');
     // dal called (workspace, target, actor) — workspace + actor from the JWT, target from the path
     expect(dal.removeWorkspaceMember).toHaveBeenCalledWith('org_acme', 'u_target', 'u_owner');
+  });
+
+  it('flag ON, owner → 500 if removal does not return an audit receipt', async () => {
+    const dal = dalStub({
+      removeWorkspaceMember: vi.fn(async (w: string, u: string) => ({
+        removed: { user_id: u, workspace_id: w, removed_at: '2026-07-10T00:00:00Z' },
+      })),
+    });
+    const res = await del(appFor(OWNER, dal), '/api/v1/members/u_target', ON);
+    expect(res.status).toBe(500);
+    const body = await res.json();
+    expect(JSON.stringify(body)).toMatch(/MEMBER_AUDIT_RECEIPT_MISSING/);
   });
 
   it('flag ON, owner + ?workspace_id they own → uses that workspace', async () => {

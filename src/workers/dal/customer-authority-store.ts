@@ -10,6 +10,8 @@ import type {
   CustomerAuthorityConsent,
   CustomerAuthorityState,
   CustomerConsentAckInput,
+  CustomerInviteAuditInput,
+  CustomerInviteAuditReceipt,
   OperatorAuthorityInput,
   PendingCustomerAuthorityApproval,
   PendingCustomerAuthorityListOpts,
@@ -116,6 +118,33 @@ export async function getCustomerAuthorityStateRow(
     allowed_modes: consent?.allowed_modes ?? [],
     allowed_apps: consent?.allowed_apps ?? [],
     consent,
+  };
+}
+
+export async function recordCustomerInviteAuditRow(
+  sql: Sql,
+  input: CustomerInviteAuditInput,
+): Promise<CustomerInviteAuditReceipt> {
+  if (!input?.workspace_id || !input?.actor_user_id || !input?.email?.trim()) {
+    throw makeError('VALIDATION_ERROR', 'workspace_id, actor_user_id and email are required', 400);
+  }
+  assertWorkspaceScope(input.workspace_id);
+  const email = input.email.trim().toLowerCase();
+  const role = input.role || 'client';
+  const metadata = JSON.stringify({ email, role });
+  const rows = (await sql/*sql*/`
+    INSERT INTO audit_logs (actor_user_id, action, target_type, target_id, workspace_id, reason, metadata)
+    VALUES (
+      ${input.actor_user_id}, 'member_invite_request'::text, 'workspace_member',
+      ${email}, ${input.workspace_id}, ${'invite -> ' + role}, ${metadata}::jsonb
+    )
+    RETURNING id::text AS audit_event_id
+  `) as Array<{ audit_event_id: string }>;
+  const auditEventId = rows[0]?.audit_event_id;
+  if (!auditEventId) throw makeError('INVITE_AUDIT_RECEIPT_MISSING', 'invite audit receipt was not created', 500);
+  return {
+    audit_event_id: auditEventId,
+    invite_receipt_id: `member-invite:${input.workspace_id}:${email}:${auditEventId}`,
   };
 }
 

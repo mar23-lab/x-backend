@@ -30,6 +30,11 @@ const member = {
   user_id: 'u1', workspace_id: 'org_a', role: 'operator',
   email: null, status: null, invited_by: null, joined_at: null,
 };
+const roleReceipt = (role = 'viewer') => ({
+  member: { ...member, role },
+  member_mutation_receipt_id: 'workspace-member:org_a:u1:role:audit_1',
+  audit_event_id: 'audit_1',
+});
 
 function patch(app: ReturnType<typeof appFor>, roleBody: unknown) {
   return app.request('/api/v1/members/u1/role', {
@@ -42,12 +47,23 @@ function patch(app: ReturnType<typeof appFor>, roleBody: unknown) {
 describe('PATCH /members/:userId/role', () => {
   it('200 — an owner changes a member role; DAL called with (ws, user, role, actor)', async () => {
     const operatorOwnsWorkspace = vi.fn(async () => true);
-    const setWorkspaceMemberRole = vi.fn(async () => ({ ...member, role: 'viewer' }));
+    const setWorkspaceMemberRole = vi.fn(async () => roleReceipt('viewer'));
     const res = await patch(appFor({ operatorOwnsWorkspace, setWorkspaceMemberRole }), 'viewer');
     expect(res.status).toBe(200);
-    const j = (await res.json()) as { member: { role: string } };
+    const j = (await res.json()) as { member: { role: string }; member_mutation_receipt_id: string; audit_event_id: string };
     expect(j.member.role).toBe('viewer');
+    expect(j.member_mutation_receipt_id).toMatch(/^workspace-member:/);
+    expect(j.audit_event_id).toBe('audit_1');
     expect(setWorkspaceMemberRole).toHaveBeenCalledWith('org_a', 'u1', 'viewer', 'op');
+  });
+
+  it('500 — a member role mutation cannot succeed without an audit receipt', async () => {
+    const operatorOwnsWorkspace = vi.fn(async () => true);
+    const setWorkspaceMemberRole = vi.fn(async () => ({ member: { ...member, role: 'viewer' } }));
+    const res = await patch(appFor({ operatorOwnsWorkspace, setWorkspaceMemberRole }), 'viewer');
+    expect(res.status).toBe(500);
+    const body = await res.json();
+    expect(JSON.stringify(body)).toMatch(/MEMBER_AUDIT_RECEIPT_MISSING/);
   });
 
   it('403 — caller is NOT the workspace owner; DAL never called', async () => {

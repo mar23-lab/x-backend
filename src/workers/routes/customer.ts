@@ -297,6 +297,14 @@ customerRoute.post('/customer/invites', async (ctx) => {
     // Map the requested workspace role to a Clerk org role (default: member).
     const clerkRole =
       body.role === 'owner' || body.role === 'operator' || body.role === 'admin' ? 'org:admin' : 'org:member';
+    const requestedRole = clerkRole === 'org:admin' ? 'operator' : (body.role || 'client');
+
+    const audit = await dal.recordCustomerInviteAudit({
+      workspace_id: auth.workspace_id,
+      actor_user_id: auth.user_id,
+      email,
+      role: requestedRole,
+    });
 
     const result = await createTeamInvitation(ctx.env.CLERK_SECRET_KEY, {
       organizationId: auth.workspace_id,
@@ -306,7 +314,12 @@ customerRoute.post('/customer/invites', async (ctx) => {
     });
 
     ctx.status(201);
-    return ctx.json({ invited: result, message: `Invitation sent to ${email}.` });
+    return ctx.json({
+      invited: result,
+      invite_receipt_id: audit.invite_receipt_id,
+      audit_event_id: audit.audit_event_id,
+      message: `Invitation sent to ${email}.`,
+    });
   } catch (err) {
     return errorEnvelope(ctx, err);
   }

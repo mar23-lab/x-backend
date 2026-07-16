@@ -46,6 +46,18 @@ export interface WorkspaceMember {
   joined_at: string | null;
 }
 
+export interface WorkspaceMemberRoleMutationReceipt {
+  member: WorkspaceMember;
+  member_mutation_receipt_id: string;
+  audit_event_id: string;
+}
+
+export interface WorkspaceMemberRemovalReceipt {
+  removed: { user_id: UserId; workspace_id: WorkspaceId; removed_at: string };
+  member_mutation_receipt_id: string;
+  audit_event_id: string;
+}
+
 export type MembershipStatus = 'pending' | 'active' | 'revoked' | 'suspended';
 
 export type AccessRequestStatus = 'pending' | 'approved' | 'rejected' | 'invited' | 'expired';
@@ -346,6 +358,18 @@ export interface OperatorAuthorityInput {
   workspace_id: WorkspaceId;
   operator_user_id: UserId;
   access_request_id?: string | null;
+}
+
+export interface CustomerInviteAuditInput {
+  workspace_id: WorkspaceId;
+  actor_user_id: UserId;
+  email: string;
+  role: string;
+}
+
+export interface CustomerInviteAuditReceipt {
+  invite_receipt_id: string;
+  audit_event_id: string;
 }
 
 // Lifecycle L1 (2026-06-15) · in-app withdrawal of authority/consent. Sets revoked_at on the

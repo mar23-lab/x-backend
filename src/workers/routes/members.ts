@@ -36,6 +36,16 @@ export interface MembersVariables extends AuthVariables {
 
 export const membersRoute = new Hono<{ Bindings: MembersEnv; Variables: MembersVariables }>();
 
+function requireMemberMutationReceipt(result: { member_mutation_receipt_id?: string; audit_event_id?: string } | null | undefined): string {
+  if (!result?.member_mutation_receipt_id || !result.audit_event_id) {
+    throw Object.assign(new Error('member mutation did not produce a durable audit receipt'), {
+      status: 500,
+      code: 'MEMBER_AUDIT_RECEIPT_MISSING',
+    });
+  }
+  return result.member_mutation_receipt_id;
+}
+
 membersRoute.get('/members', async (ctx) => {
   try {
     const auth = ctx.get('auth');
@@ -165,8 +175,13 @@ membersRoute.patch('/members/:userId/role', async (ctx) => {
         status: 403, code: 'FORBIDDEN', message: 'only a workspace owner can change member roles',
       });
     }
-    const member = await dal.setWorkspaceMemberRole(targetWorkspaceId, targetUserId, role, auth.user_id);
-    return ctx.json({ member });
+    const saved = await dal.setWorkspaceMemberRole(targetWorkspaceId, targetUserId, role, auth.user_id);
+    const receiptId = requireMemberMutationReceipt(saved);
+    return ctx.json({
+      member: saved.member,
+      member_mutation_receipt_id: receiptId,
+      audit_event_id: saved.audit_event_id,
+    });
   } catch (err) {
     return errorEnvelope(ctx, err);
   }
@@ -201,8 +216,13 @@ membersRoute.delete('/members/:userId', async (ctx) => {
     if (!owns) {
       return errorEnvelope(ctx, { status: 403, code: 'FORBIDDEN', message: 'only a workspace owner can remove members' });
     }
-    const removed = await dal.removeWorkspaceMember(targetWorkspaceId, targetUserId, auth.user_id);
-    return ctx.json({ removed });
+    const saved = await dal.removeWorkspaceMember(targetWorkspaceId, targetUserId, auth.user_id);
+    const receiptId = requireMemberMutationReceipt(saved);
+    return ctx.json({
+      removed: saved.removed,
+      member_mutation_receipt_id: receiptId,
+      audit_event_id: saved.audit_event_id,
+    });
   } catch (err) {
     return errorEnvelope(ctx, err);
   }
