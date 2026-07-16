@@ -25,6 +25,16 @@ describe('D-16 · buildSourceFacts — absent tier map ⇒ byte-identical', () =
     expect(facts.map((f) => f.provider)).toEqual(['gmail', 'slack']);
     expect(facts.every((f) => f.access_tier === undefined)).toBe(true);
   });
+
+  it('requires explicit workspace binding and drops legacy null-bound or other-workspace source facts', () => {
+    const facts = buildSourceFacts('org_hy', [
+      row('c1', 'gmail', 'org_hy'),
+      row('c2', 'slack', null),
+      row('c3', 'drive', 'org_other'),
+    ], []);
+    expect(facts.map((f) => f.provider)).toEqual(['gmail']);
+    expect(facts[0]?.workspace_binding).toBe('workspace_bound');
+  });
 });
 
 describe('D-16 · buildSourceFacts — present tier map ⇒ annotate + rely-first order', () => {

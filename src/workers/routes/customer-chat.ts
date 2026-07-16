@@ -87,7 +87,10 @@ export function buildSourceFacts(
   events: HarnessFlowEvent[],
   tierByConnId?: Map<string, SourceTier>, // D-16 · absent ⇒ no tier weighting (byte-identical)
 ): SourceGroundingFact[] {
-  const scopedRows = rows.filter((row) => row && (row.workspace_id === workspaceId || row.workspace_id === null));
+  // Commercial customer grounding requires an explicit workspace binding. Legacy user-account
+  // source rows with workspace_id NULL are not tenant facts; admitting them here can leak one
+  // user's unbound source truth into multiple workspaces for that user.
+  const scopedRows = rows.filter((row) => row && row.workspace_id === workspaceId);
   const facts: SourceGroundingFact[] = scopedRows.map((row): SourceGroundingFact => {
     const provider = String(row.provider || '');
     const providerEvents = events.filter((event) => String(event?.source_tool || '') === provider);
@@ -100,7 +103,7 @@ export function buildSourceFacts(
       status: String(row.status || 'unknown'),
       provider_username: row.provider_username ?? null,
       workspace_id: row.workspace_id ?? null,
-      workspace_binding: row.workspace_id === workspaceId ? 'workspace_bound' : 'legacy_user_account_unbound',
+      workspace_binding: 'workspace_bound',
       connected_at: row.connected_at ?? null,
       last_sync_at: row.last_sync_at ?? null,
       last_sync_error: row.last_sync_error ?? null,

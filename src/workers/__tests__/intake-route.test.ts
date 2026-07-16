@@ -4,7 +4,7 @@ import { intakeRoute } from '../routes/intake';
 
 const AUTH = { user_id: 'user_a', workspace_id: 'tenant_a', role: 'owner' };
 
-function appFor(opts: { enabled?: boolean; packets?: any[]; approvals?: any[] } = {}) {
+function appFor(opts: { enabled?: boolean; packets?: any[]; approvals?: any[]; auth?: Record<string, unknown> } = {}) {
   const calls: Array<Record<string, unknown>> = [];
   const dal = {
     listTaskPackets: async (workspace_id: string) => { calls.push({ method: 'listTaskPackets', workspace_id }); return opts.packets ?? []; },
@@ -21,7 +21,7 @@ function appFor(opts: { enabled?: boolean; packets?: any[]; approvals?: any[] } 
   const app = new Hono();
   app.use('*', async (ctx, next) => {
     ctx.set('request_id', 'req_test');
-    ctx.set('auth', AUTH as never);
+    ctx.set('auth', (opts.auth ?? AUTH) as never);
     ctx.set('dal', dal as never);
     await next();
   });
@@ -50,6 +50,26 @@ describe('single intake route', () => {
     expect(input.prior_work).toMatchObject({ discovery_executed: true, active_work_count: 0, pending_approval_count: 0 });
     expect(input.prior_work.digest_sha256).toMatch(/^[a-f0-9]{64}$/);
     expect(input.guardrails).toContain('tenant_and_workspace_scope_required');
+  });
+
+  it('preserves commercial role labels instead of collapsing operators and admins to viewer', async () => {
+    const cases = [
+      ['owner', 'Workspace owner'],
+      ['operator', 'Workspace operator'],
+      ['admin', 'Workspace admin'],
+      ['member', 'Workspace member'],
+      ['viewer', 'Workspace viewer'],
+      ['client', 'Workspace client'],
+    ];
+    for (const [role, label] of cases) {
+      const { app, calls, env } = appFor({ enabled: true, auth: { ...AUTH, role } });
+      const res = await app.request('/api/v1/intake/resolve', {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ text: `Create a task as ${role}`, client_request_id: `role-${role}` }),
+      }, env);
+      expect(res.status).toBe(201);
+      expect((calls.at(-1) as any).input.role_label).toBe(label);
+    }
   });
 
   it('requires immutable resolution and current-work versions to execute', async () => {

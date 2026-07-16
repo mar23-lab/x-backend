@@ -27,6 +27,21 @@ async function digest(value: string): Promise<string> {
   return Array.from(new Uint8Array(hash), (b) => b.toString(16).padStart(2, '0')).join('');
 }
 
+function workspaceRoleLabel(role: string | undefined): string {
+  const key = String(role || '').toLowerCase();
+  return ({
+    owner: 'Workspace owner',
+    operator: 'Workspace operator',
+    admin: 'Workspace admin',
+    member: 'Workspace member',
+    collaborator: 'Workspace member',
+    contributor: 'Workspace contributor',
+    reviewer: 'Workspace reviewer',
+    viewer: 'Workspace viewer',
+    client: 'Workspace client',
+  } as Record<string, string>)[key] ?? 'Workspace member';
+}
+
 intakeRoute.post('/intake/resolve', async (ctx) => {
   try {
     if (!envFlagTrue(ctx.env.SINGLE_INTAKE_ENABLED)) return fail(ctx, 404, 'FEATURE_DISABLED', 'single intake is not enabled');
@@ -69,7 +84,7 @@ intakeRoute.post('/intake/resolve', async (ctx) => {
       ...input,
       prior_work: { discovery_executed: true, active_work_count: activeWorkCount, pending_approval_count: pendingApprovalCount, digest_sha256: priorDigest },
       governance_summary: input.authority.allowed ? 'Tenant-scoped interpretation; writes require immutable preview confirmation.' : `Blocked: ${input.authority.safe_reason}`,
-      role_label: role === 'owner' ? 'Workspace owner' : role === 'client' ? 'Workspace client' : 'Workspace viewer',
+      role_label: workspaceRoleLabel(role),
       approach_label: approachLabel,
       grounding_summary: `${input.context_summary.reference_count} references, ${input.context_summary.source_count} sources, ${input.context_summary.evidence_count} evidence items`,
       guardrails: [
