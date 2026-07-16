@@ -652,6 +652,32 @@
           "reason": "records the fresh 2026-07-17 pilot-shadow census: intents 4, caused_by 6, task_packets 11, graph 6421 nodes / 6225 edges, cross-tenant edge refs 0, projection dispatch->processed p95 19.6s via the deployed pilot worker"
         }
       ]
+    },
+    {
+      "delta_id": "pilot-shadow-soak-sampler-and-rollback-drill-20260717",
+      "generated_at": "2026-07-16T18:38:15Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "3bb1639056bf4b26d9dd93a707c8684d3412d4f6",
+      "target_base_commit": "3bb1639056bf4b26d9dd93a707c8684d3412d4f6",
+      "authority": "shadow_only_no_production_cutover",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "package.json",
+          "target_blob": "ea633174976a001b262a06d7f0b43fa60e53391d",
+          "reason": "wires soak:sample / soak:arm / soak:status / soak:disarm so the 48-72h soak evidence window is runnable and inspectable"
+        },
+        {
+          "path": "scripts/pilot-shadow-soak-sampler.mjs",
+          "target_blob": "ad78076a35e90c01448f04a84fc4dd11a3773771",
+          "reason": "adds the accumulating soak evidence sampler: real /health readbacks only, refuses a production API base, and leaves metrics/queue null until --finalize supplies measured values so an unfinalized window cannot claim the gate"
+        },
+        {
+          "path": "scripts/pilot-shadow-soak-arm.sh",
+          "target_blob": "c2889f200e717d9f7c4835979374c933d299181a",
+          "reason": "adds the operator-run launchd arm/status/disarm for the soak window; refuses to arm without recorded rollback-rehearsal evidence and avoids the bash -lc PATH trap"
+        }
+      ]
     }
   ]
 }
