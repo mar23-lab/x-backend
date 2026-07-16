@@ -579,6 +579,27 @@
           "reason": "adds a fail-closed pilot-shadow signed Gmail/document chain evidence gate without production authority"
         }
       ]
+    },
+    {
+      "delta_id": "pilot-shadow-soak-rollback-evidence-gate-20260717",
+      "generated_at": "2026-07-17T00:00:00Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "6a782cc515f161d1ac48a311d8d21106be3de1e8",
+      "target_base_commit": "6a782cc515f161d1ac48a311d8d21106be3de1e8",
+      "authority": "shadow_only_no_production_cutover",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "package.json",
+          "target_blob": "4582e1a615554e2ed75ea974a5d1f6e99110b9da",
+          "reason": "adds a fail-closed pilot-shadow 48-72h soak and rollback evidence gate without production authority"
+        },
+        {
+          "path": "scripts/verify-pilot-shadow-soak-rollback-evidence.mjs",
+          "target_blob": "6de77936bfbfa2a21de2a2252869094ea1688744",
+          "reason": "adds a fail-closed pilot-shadow 48-72h soak and rollback evidence gate without production authority"
+        }
+      ]
     }
   ]
 }
