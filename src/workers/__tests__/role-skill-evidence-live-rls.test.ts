@@ -19,8 +19,18 @@ import { neonClient, type Sql } from '../db/client';
 import { withWorkspaceRlsContext } from '../dal/operational-spine-store';
 
 const liveEnv = env as { XLOOOP_RUN_LIVE_RLS?: string; DATABASE_URL?: string };
-const shouldRun = liveEnv.XLOOOP_RUN_LIVE_RLS === '1' && !!liveEnv.DATABASE_URL;
+const liveGateRequested = liveEnv.XLOOOP_RUN_LIVE_RLS === '1';
+const databaseUrl = liveEnv.DATABASE_URL || '';
+const shouldRun = liveGateRequested && !!databaseUrl;
 const describeLive = shouldRun ? describe : describe.skip;
+
+if (liveGateRequested && !databaseUrl) {
+  describe('role-skill evidence live RLS prerequisite gate', () => {
+    it('fails closed when XLOOOP_RUN_LIVE_RLS=1 is set without DATABASE_URL', () => {
+      throw new Error('DATABASE_URL is required for live role-skill RLS proof; skipped live-RLS runs cannot satisfy acceptance.');
+    });
+  });
+}
 
 const ROLE = `xlooop_evidence_rls_probe_${randomUUID().replace(/-/g, '').slice(0, 12)}`;
 const WS_A = 'ev_rls_live_ws_a';
@@ -52,7 +62,7 @@ describeLive('role-skill evidence plane live RLS proof (mig 070)', () => {
   let probeSql: Sql;
 
   beforeAll(async () => {
-    ownerSql = neonClient(liveEnv.DATABASE_URL);
+    ownerSql = neonClient(databaseUrl);
     await cleanup(ownerSql).catch(() => undefined);
 
     // probe role: LOGIN + non-bypass (the xlooop_app shape); SELECT-only on the evidence tables —
@@ -82,7 +92,7 @@ describeLive('role-skill evidence plane live RLS proof (mig 070)', () => {
         (${DEN_B}, ${WS_B}, 'u_b', 'operator', 'packet:create', 'operator', 'entitlement', 'safe B', ${SHA})
     `;
 
-    const probeUrl = new URL(liveEnv.DATABASE_URL!);
+    const probeUrl = new URL(databaseUrl);
     probeUrl.username = ROLE;
     probeUrl.password = password;
     probeSql = neonClient(probeUrl.toString());

@@ -24,10 +24,10 @@ writeFileSync(
 );
 
 const liveRlsBindings =
-  process.env.XLOOOP_RUN_LIVE_RLS === '1' && process.env.DATABASE_URL
+  process.env.XLOOOP_RUN_LIVE_RLS === '1'
     ? {
         XLOOOP_RUN_LIVE_RLS: '1',
-        DATABASE_URL: process.env.DATABASE_URL,
+        ...(process.env.DATABASE_URL ? { DATABASE_URL: process.env.DATABASE_URL } : {}),
       }
     : {};
 

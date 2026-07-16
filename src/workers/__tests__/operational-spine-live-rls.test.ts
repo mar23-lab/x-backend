@@ -14,8 +14,18 @@ import { WorkersDalAdapter } from '../dal/WorkersDalAdapter';
 import { operationalSpineRoute } from '../routes/operational-spine';
 
 const liveEnv = env as { XLOOOP_RUN_LIVE_RLS?: string; DATABASE_URL?: string };
-const shouldRun = liveEnv.XLOOOP_RUN_LIVE_RLS === '1' && !!liveEnv.DATABASE_URL;
+const liveGateRequested = liveEnv.XLOOOP_RUN_LIVE_RLS === '1';
+const databaseUrl = liveEnv.DATABASE_URL || '';
+const shouldRun = liveGateRequested && !!databaseUrl;
 const describeLive = shouldRun ? describe : describe.skip;
+
+if (liveGateRequested && !databaseUrl) {
+  describe('operational spine live RLS prerequisite gate', () => {
+    it('fails closed when XLOOOP_RUN_LIVE_RLS=1 is set without DATABASE_URL', () => {
+      throw new Error('DATABASE_URL is required for live RLS proof; skipped live-RLS runs cannot satisfy acceptance.');
+    });
+  });
+}
 
 const ROLE = `xlooop_rls_live_probe_${randomUUID().replace(/-/g, '').slice(0, 12)}`;
 const WORKSPACE_A = 'rls_live_ws_a';
@@ -78,7 +88,7 @@ describeLive('operational spine live RLS route proof', () => {
   let probeSql: Sql;
 
   beforeAll(async () => {
-    ownerSql = neonClient(liveEnv.DATABASE_URL);
+    ownerSql = neonClient(databaseUrl);
     await cleanup(ownerSql).catch(() => undefined);
 
     const password = `xlooop-${randomUUID()}-${randomUUID()}`;
@@ -96,7 +106,7 @@ describeLive('operational spine live RLS route proof', () => {
         (${WORKSPACE_B}, 'RLS Live Probe B', 'rls_live_owner', 'rls-live-b')
     `;
 
-    const probeUrl = new URL(liveEnv.DATABASE_URL!);
+    const probeUrl = new URL(databaseUrl);
     probeUrl.username = ROLE;
     probeUrl.password = password;
     probeSql = neonClient(probeUrl.toString());
