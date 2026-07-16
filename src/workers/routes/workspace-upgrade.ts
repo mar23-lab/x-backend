@@ -8,7 +8,8 @@
 //
 // TENANT-SAFE: the workspace is ONLY ever the verified JWT's; behind the provisioning-entitlement guard.
 // Any provisioned member may raise the request (it is a business ask, not a governed write) — the audited row
-// records exactly who asked. Both writes are best-effort so a notifier/DB hiccup never fails the ack.
+// records exactly who asked. The audit row is required before the customer sees success; admin notify stays
+// best-effort because the durable operator triage record is the audit request itself.
 
 import { Hono } from 'hono';
 import { errorEnvelope } from '../middleware/error';
@@ -45,16 +46,21 @@ workspaceUpgradeRoute.post('/workspace/upgrade-request', async (ctx) => {
     const request_id = `upreq_${crypto.randomUUID()}`;
     const created_at = new Date().toISOString();
 
-    // Durable audited request event — the record an auditor / the operator can act on later.
-    await dal.appendAuditLog({
-      actor_user_id: auth.user_id,
-      action: 'account_upgrade_requested',
-      target_type: 'workspace',
-      target_id: ws,
-      workspace_id: ws,
-      reason: note,
-      metadata: { request_id, requested_tier: tier, requested_by_email: auth.email ?? null, created_at },
-    }).catch(() => { /* best-effort: an audit hiccup must not fail the customer's ack */ });
+    // Durable audited request event — the record an auditor / the operator can act on later. Fail closed:
+    // without this row the returned request_id would not point at a durable operator-triable request.
+    try {
+      await dal.appendAuditLog({
+        actor_user_id: auth.user_id,
+        action: 'account_upgrade_requested',
+        target_type: 'workspace',
+        target_id: ws,
+        workspace_id: ws,
+        reason: note,
+        metadata: { request_id, requested_tier: tier, requested_by_email: auth.email ?? null, created_at },
+      });
+    } catch {
+      return errorEnvelope(ctx, { status: 503, code: 'SERVICE_UNAVAILABLE', message: 'upgrade request could not be recorded' });
+    }
 
     // Best-effort admin notify (log + email). Framed as an upgrade via source/reason (returns delivered:false on failure).
     await notifyAdminAccessRequest(ctx.env, {

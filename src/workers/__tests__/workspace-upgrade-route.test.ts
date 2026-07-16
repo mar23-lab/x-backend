@@ -1,6 +1,6 @@
 // workspace-upgrade-route.test.ts · U4a (260708) · the audited "request upgrade" backend (no billing).
 // DECLARED AXES: actor [provisioned member · unprovisioned · no-workspace] · effect [durable audit row
-// written with the right action/target · NO entitlement mutation · ack even if notify/audit throws].
+// written with the right action/target · NO entitlement mutation · ack only after durable audit; notify remains best-effort].
 
 import { describe, it, expect, vi } from 'vitest';
 import { Hono } from 'hono';
@@ -54,10 +54,11 @@ describe('POST /workspace/upgrade-request', () => {
     expect(res.status).toBe(403);
   });
 
-  it('a durable-audit throw still returns 202 (best-effort; the customer ack is never blocked)', async () => {
+  it('audit persistence failure fails closed before minting a customer ack', async () => {
     const { app, env } = appFor({ user_id: 'u1', workspace_id: 'ws-MINE', email: 'a@b.co', role: 'owner' },
       { appendAuditLog: async () => { throw new Error('db down'); } });
     const res = await post(app, { note: 'x' }, env);
-    expect(res.status).toBe(202);
+    expect(res.status).toBe(503);
+    expect((await res.json() as { code: string }).code).toBe('SERVICE_UNAVAILABLE');
   });
 });
