@@ -15,6 +15,9 @@ import {
   setOverrideRow,
   type ModelRuntimeProvider,
   type ProviderConfigRow,
+  type ProviderConfigWriteReceipt,
+  type ProviderConfigDeleteReceipt,
+  type ProviderDefaultWriteReceipt,
   type ProviderUpsertInput,
   type SealedProviderCredential,
 } from './model-runtime-store';
@@ -25,11 +28,11 @@ export interface ModelRuntimesFacade {
   /** The sealed credential for one provider — INTERNAL ONLY (provider-call decrypt path); never serialized. */
   getProviderCredential(workspaceId: WorkspaceId, provider: ModelRuntimeProvider): Promise<SealedProviderCredential | null>;
   /** Upsert a provider config (audited). input.sealed null → metadata-only update, credential preserved. */
-  upsertProvider(workspaceId: WorkspaceId, provider: ModelRuntimeProvider, input: ProviderUpsertInput, actorUserId: UserId): Promise<ProviderConfigRow>;
-  /** Delete a provider config (audited). true iff a row was removed. */
-  deleteProvider(workspaceId: WorkspaceId, provider: ModelRuntimeProvider, actorUserId: UserId): Promise<boolean>;
+  upsertProvider(workspaceId: WorkspaceId, provider: ModelRuntimeProvider, input: ProviderUpsertInput, actorUserId: UserId): Promise<ProviderConfigWriteReceipt>;
+  /** Delete a provider config (audited). null when no row was removed. */
+  deleteProvider(workspaceId: WorkspaceId, provider: ModelRuntimeProvider, actorUserId: UserId): Promise<ProviderConfigDeleteReceipt | null>;
   /** Flip the workspace default (audited governed change). null when the id is not in the workspace. */
-  setDefaultProvider(workspaceId: WorkspaceId, providerId: string, actorUserId: UserId): Promise<ProviderConfigRow | null>;
+  setDefaultProvider(workspaceId: WorkspaceId, providerId: string, actorUserId: UserId): Promise<ProviderDefaultWriteReceipt | null>;
   /** The caller's per-workspace session override (provider id) or null. */
   getOverride(userId: UserId, workspaceId: WorkspaceId): Promise<string | null>;
   /** Set the caller's per-workspace session override (personal preference; not audited). */

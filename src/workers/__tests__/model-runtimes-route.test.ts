@@ -16,6 +16,22 @@ const maskedRow = (over: Record<string, any> = {}) => ({
   credential_last4: 'wxyz', enabled: true, is_default: false, created_by: 'u1',
   created_at: '2026-07-08T00:00:00Z', updated_at: '2026-07-08T00:00:00Z', ...over,
 });
+const providerReceipt = (over: Record<string, any> = {}) => ({
+  provider: maskedRow(over.provider || {}),
+  provider_config_version_id: over.provider_config_version_id || 'model-runtime-provider:mrp_1:2026-07-08T00:00:00Z',
+  audit_event_id: over.audit_event_id || 'audit_1',
+});
+const defaultReceipt = (over: Record<string, any> = {}) => ({
+  provider: maskedRow({ is_default: true, ...(over.provider || {}) }),
+  default_revision_id: over.default_revision_id || 'model-runtime-default:mrp_1:2026-07-08T00:00:00Z',
+  audit_event_id: over.audit_event_id || 'audit_default_1',
+});
+const deleteReceipt = (over: Record<string, any> = {}) => ({
+  provider: over.provider || 'anthropic',
+  deleted_provider_config_id: over.deleted_provider_config_id || 'mrp_1',
+  provider_config_version_id: over.provider_config_version_id || 'model-runtime-provider:mrp_1:deleted:audit_delete_1',
+  audit_event_id: over.audit_event_id || 'audit_delete_1',
+});
 
 function makeDal(over: Record<string, any> = {}) {
   return {
@@ -23,9 +39,9 @@ function makeDal(over: Record<string, any> = {}) {
       listProviders: vi.fn(async () => [] as any[]),
       getOverride: vi.fn(async () => null),
       getProviderCredential: vi.fn(async () => null),
-      upsertProvider: vi.fn(async () => maskedRow()),
-      deleteProvider: vi.fn(async () => true),
-      setDefaultProvider: vi.fn(async () => maskedRow({ is_default: true })),
+      upsertProvider: vi.fn(async () => providerReceipt()),
+      deleteProvider: vi.fn(async () => deleteReceipt()),
+      setDefaultProvider: vi.fn(async () => defaultReceipt()),
       setOverride: vi.fn(async (_u: string, _w: string, id: string) => id),
       ...over,
     },
@@ -102,6 +118,15 @@ describe('PUT /model-runtimes/providers/:provider — encrypt-on-write', () => {
     const text = await res.text();
     expect(text).not.toContain(RAW_API_KEY);
     expect(text).not.toContain(arg.sealed.ciphertext);
+    const body = JSON.parse(text);
+    expect(body.provider_config_version_id).toMatch(/^model-runtime-provider:/);
+    expect(body.audit_event_id).toBe('audit_1');
+  });
+
+  it('500 — provider write without an audit receipt fails closed', async () => {
+    const dal = makeDal({ upsertProvider: vi.fn(async () => ({ provider: maskedRow(), provider_config_version_id: '', audit_event_id: '' })) });
+    const res = await call(appFor(dal), '/model-runtimes/providers/anthropic', 'PUT', { credential: { api_key: RAW_API_KEY } });
+    expect(res.status).toBe(500);
   });
 
   it('403 — a viewer cannot configure (owner/operator only)', async () => {
@@ -135,7 +160,7 @@ describe('PUT /model-runtimes/providers/:provider — encrypt-on-write', () => {
   });
 
   it('200 — keyless-local provider configures with just a base_url (no credential)', async () => {
-    const dal = makeDal({ upsertProvider: vi.fn(async () => maskedRow({ provider: 'ollama', auth_kind: 'none', base_url: 'http://localhost:11434', credential_last4: null })) });
+    const dal = makeDal({ upsertProvider: vi.fn(async () => providerReceipt({ provider: { provider: 'ollama', auth_kind: 'none', base_url: 'http://localhost:11434', credential_last4: null } })) });
     const res = await call(appFor(dal), '/model-runtimes/providers/ollama', 'PUT', { base_url: 'http://localhost:11434' });
     expect(res.status).toBe(200);
     expect((await res.json()).provider.masked_key).toBeNull();
@@ -158,6 +183,18 @@ describe('PUT /model-runtimes/default — audited flip', () => {
     const res = await call(appFor(dal), '/model-runtimes/default', 'PUT', { provider_id: 'mrp_1' });
     expect(res.status).toBe(200);
     expect(dal.modelRuntimes.setDefaultProvider).toHaveBeenCalledWith('org_a', 'mrp_1', 'u1');
+    const body = await res.json();
+    expect(body.default_revision_id).toMatch(/^model-runtime-default:/);
+    expect(body.audit_event_id).toBe('audit_default_1');
+  });
+
+  it('500 — default write without an audit receipt fails closed', async () => {
+    const dal = makeDal({
+      listProviders: vi.fn(async () => [maskedRow({ id: 'mrp_1' })]),
+      setDefaultProvider: vi.fn(async () => ({ provider: maskedRow({ is_default: true }), default_revision_id: '', audit_event_id: '' })),
+    });
+    const res = await call(appFor(dal), '/model-runtimes/default', 'PUT', { provider_id: 'mrp_1' });
+    expect(res.status).toBe(500);
   });
 
   it('404 — a provider_id not configured in this workspace is rejected (no flip)', async () => {
@@ -175,9 +212,24 @@ describe('PUT /model-runtimes/default — audited flip', () => {
 
 describe('DELETE + override', () => {
   it('DELETE 404 when nothing was removed', async () => {
-    const dal = makeDal({ deleteProvider: vi.fn(async () => false) });
+    const dal = makeDal({ deleteProvider: vi.fn(async () => null) });
     const res = await call(appFor(dal), '/model-runtimes/providers/anthropic', 'DELETE');
     expect(res.status).toBe(404);
+  });
+
+  it('DELETE 200 requires provider config and audit receipt ids', async () => {
+    const res = await call(appFor(makeDal()), '/model-runtimes/providers/anthropic', 'DELETE');
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.deleted_provider_config_id).toBe('mrp_1');
+    expect(body.provider_config_version_id).toMatch(/^model-runtime-provider:/);
+    expect(body.audit_event_id).toBe('audit_delete_1');
+  });
+
+  it('DELETE 500 when the DAL omits the audit receipt', async () => {
+    const dal = makeDal({ deleteProvider: vi.fn(async () => ({ provider: 'anthropic', deleted_provider_config_id: 'mrp_1', provider_config_version_id: '', audit_event_id: '' })) });
+    const res = await call(appFor(dal), '/model-runtimes/providers/anthropic', 'DELETE');
+    expect(res.status).toBe(500);
   });
 
   it('PUT override — self-scoped; 404 when the provider is not in the workspace', async () => {

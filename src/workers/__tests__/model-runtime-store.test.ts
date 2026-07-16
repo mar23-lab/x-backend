@@ -1,7 +1,7 @@
 // model-runtime-store.test.ts · Wave C · locks the DAL-layer security + audit invariants of the
 // model-runtime store (migration 053). Mocks the `Sql` tagged-template (repo store-test convention) and
 // records every query, so we can prove: (a) list reads NEVER select the ciphertext/iv columns
-// (mask-by-construction), (b) every provider write commits an audit_logs row in the SAME transaction,
+// (mask-by-construction), (b) every provider write returns only after a joined audit_logs receipt,
 // (c) the sealed credential is passed through verbatim (never logged/transformed), (d) the default flip is
 // audited with the correct action + target_type.
 
@@ -69,19 +69,21 @@ describe('model-runtime-store · read safety', () => {
 });
 
 describe('model-runtime-store · audited writes', () => {
-  it('upsertProviderRow writes the config AND an audit row in one transaction; passes the sealed credential verbatim', async () => {
-    const sql = makeSql((q) => (/INSERT INTO model_runtime_providers/.test(q) ? [maskedRow()] : []));
+  it('upsertProviderRow writes the config AND returns only after a joined audit receipt; passes the sealed credential verbatim', async () => {
+    const sql = makeSql((q) => (/INSERT INTO model_runtime_providers/.test(q) ? [{ ...maskedRow(), audit_event_id: '9001' }] : []));
     const sealed = { ciphertext: 'CIPHER', iv: 'IVIV', last4: '1234' };
-    const row = await upsertProviderRow(
+    const receipt = await upsertProviderRow(
       sql, 'ws_a' as any, 'anthropic',
       { auth_kind: 'api_key', base_url: null, model: null, enabled: true, sealed },
       'actor1' as any,
     );
-    expect(row.id).toBe('mrp_1');
-    const upsert = sql.calls.find((c: any) => /INSERT INTO model_runtime_providers/.test(c.query))!;
-    const audit = sql.calls.find((c: any) => isAuditInsert(c.query))!;
-    expect(upsert).toBeTruthy();
-    expect(audit).toBeTruthy(); // audit ALWAYS accompanies a write
+    expect(receipt.provider.id).toBe('mrp_1');
+    expect(receipt.provider_config_version_id).toBe('model-runtime-provider:mrp_1:2026-07-08T00:00:00Z');
+    expect(receipt.audit_event_id).toBe('9001');
+    const upsert = sql.calls[0]!;
+    expect(upsert.query).toMatch(/provider_written AS/);
+    expect(upsert.query).toMatch(/audit_written AS/);
+    expect(upsert.query).toMatch(/JOIN audit_written ON TRUE/);
     // the sealed credential is passed as bound values verbatim (never logged/rewritten)
     expect(upsert.values).toContain('CIPHER');
     expect(upsert.values).toContain('IVIV');
@@ -89,12 +91,21 @@ describe('model-runtime-store · audited writes', () => {
     // the RETURNING clause is the masked column set (no ciphertext leaves the DAL on a write either)
     expect(upsert.query).not.toMatch(/RETURNING[^`]*credential_ciphertext/);
     // audit action + target_type
-    expect(audit.values).toContain('model_runtime_provider_set');
-    expect(audit.query).toMatch(/'model_runtime_provider'/);
+    expect(upsert.query).toContain('model_runtime_provider_set');
+    expect(upsert.query).toMatch(/'model_runtime_provider'/);
+  });
+
+  it('upsertProviderRow fails closed when the audit receipt is absent', async () => {
+    const sql = makeSql((q) => (/INSERT INTO model_runtime_providers/.test(q) ? [maskedRow()] : []));
+    await expect(upsertProviderRow(
+      sql, 'ws_a' as any, 'anthropic',
+      { auth_kind: 'api_key', base_url: null, model: null, enabled: true, sealed: null },
+      'actor1' as any,
+    )).rejects.toThrow(/audit receipt/);
   });
 
   it('upsert with sealed=null preserves the stored credential via COALESCE (metadata-only update)', async () => {
-    const sql = makeSql((q) => (/INSERT INTO model_runtime_providers/.test(q) ? [maskedRow()] : []));
+    const sql = makeSql((q) => (/INSERT INTO model_runtime_providers/.test(q) ? [{ ...maskedRow(), audit_event_id: '9001' }] : []));
     await upsertProviderRow(sql, 'ws_a' as any, 'ollama', { auth_kind: 'none', base_url: 'http://x', model: null, enabled: false, sealed: null }, 'actor1' as any);
     const upsert = sql.calls.find((c: any) => /INSERT INTO model_runtime_providers/.test(c.query))!;
     expect(upsert.query).toMatch(/COALESCE\(EXCLUDED.credential_ciphertext, model_runtime_providers.credential_ciphertext\)/);
@@ -103,23 +114,43 @@ describe('model-runtime-store · audited writes', () => {
   });
 
   it('setDefaultProviderRow flips in one UPDATE and audits with model_runtime_default_change', async () => {
-    const sql = makeSql((q) => (/UPDATE model_runtime_providers/.test(q) ? [maskedRow({ is_default: true })] : []));
-    const row = await setDefaultProviderRow(sql, 'ws_a' as any, 'mrp_1', 'actor1' as any);
-    expect(row?.is_default).toBe(true);
+    const sql = makeSql((q) => (/UPDATE model_runtime_providers/.test(q) ? [{ ...maskedRow({ is_default: true }), audit_event_id: '9002' }] : []));
+    const receipt = await setDefaultProviderRow(sql, 'ws_a' as any, 'mrp_1', 'actor1' as any);
+    expect(receipt?.provider.is_default).toBe(true);
+    expect(receipt?.default_revision_id).toBe('model-runtime-default:mrp_1:2026-07-08T00:00:00Z');
+    expect(receipt?.audit_event_id).toBe('9002');
     const upd = sql.calls.find((c: any) => /UPDATE model_runtime_providers/.test(c.query))!;
-    const audit = sql.calls.find((c: any) => isAuditInsert(c.query))!;
     expect(upd.query).toMatch(/SET is_default = \(id = \?\s*\)/); // single-statement flip (partial-unique-safe)
-    expect(audit.values).toContain('model_runtime_default_change');
-    expect(audit.query).toMatch(/'model_runtime_provider'/);
+    expect(upd.query).toContain('model_runtime_default_change');
+    expect(upd.query).toMatch(/default_written AS/);
+    expect(upd.query).toMatch(/JOIN audit_written ON TRUE/);
+  });
+
+  it('setDefaultProviderRow fails closed when the audit receipt is absent', async () => {
+    const sql = makeSql((q) => (/UPDATE model_runtime_providers/.test(q) ? [maskedRow({ is_default: true })] : []));
+    await expect(setDefaultProviderRow(sql, 'ws_a' as any, 'mrp_1', 'actor1' as any)).rejects.toThrow(/audit receipt/);
   });
 
   it('deleteProviderRow audits with model_runtime_provider_delete; true iff a row was removed', async () => {
-    const sql = makeSql((q) => (/DELETE FROM model_runtime_providers/.test(q) ? [{ id: 'mrp_1' }] : []));
-    expect(await deleteProviderRow(sql, 'ws_a' as any, 'anthropic', 'actor1' as any)).toBe(true);
-    const audit = sql.calls.find((c: any) => isAuditInsert(c.query))!;
-    expect(audit.values).toContain('model_runtime_provider_delete');
+    const sql = makeSql((q) => (/DELETE FROM model_runtime_providers/.test(q) ? [{ deleted_provider_config_id: 'mrp_1', provider: 'anthropic', audit_event_id: '9003' }] : []));
+    const receipt = await deleteProviderRow(sql, 'ws_a' as any, 'anthropic', 'actor1' as any);
+    expect(receipt).toEqual({
+      provider: 'anthropic',
+      deleted_provider_config_id: 'mrp_1',
+      provider_config_version_id: 'model-runtime-provider:mrp_1:deleted:9003',
+      audit_event_id: '9003',
+    });
+    const del = sql.calls.find((c: any) => /DELETE FROM model_runtime_providers/.test(c.query))!;
+    expect(del.query).toContain('model_runtime_provider_delete');
+    expect(del.query).toMatch(/FROM provider_deleted/);
+    expect(del.query).toMatch(/JOIN audit_written ON TRUE/);
     const sqlNone = makeSql(() => []); // nothing deleted
-    expect(await deleteProviderRow(sqlNone, 'ws_a' as any, 'anthropic', 'actor1' as any)).toBe(false);
+    expect(await deleteProviderRow(sqlNone, 'ws_a' as any, 'anthropic', 'actor1' as any)).toBeNull();
+  });
+
+  it('deleteProviderRow fails closed when the delete row has no audit receipt', async () => {
+    const sql = makeSql((q) => (/DELETE FROM model_runtime_providers/.test(q) ? [{ deleted_provider_config_id: 'mrp_1', provider: 'anthropic' }] : []));
+    await expect(deleteProviderRow(sql, 'ws_a' as any, 'anthropic', 'actor1' as any)).rejects.toThrow(/audit receipt/);
   });
 
   it('setOverrideRow is a personal preference — UPSERTs, and does NOT write an audit row', async () => {

@@ -68,6 +68,12 @@ function toClientProvider(row: ProviderConfigRow) {
   };
 }
 
+function requireRuntimeReceipt(value: unknown, field: string): string {
+  const id = value && typeof value === 'object' ? (value as Record<string, unknown>)[field] : null;
+  if (typeof id !== 'string' || !id.trim()) throw new Error(`model runtime write missing ${field}`);
+  return id;
+}
+
 // The full 13-provider catalog merged with stored config, so the UI can render every provider + its state.
 function catalogView(rows: ProviderConfigRow[]) {
   const byProvider = new Map(rows.map((r) => [r.provider, r]));
@@ -190,7 +196,13 @@ modelRuntimesRoute.put('/model-runtimes/providers/:provider', async (ctx) => {
       { auth_kind: spec.auth_kind, base_url, model, enabled, sealed },
       auth.user_id,
     );
-    return ctx.json({ provider: toClientProvider(saved) });
+    const providerConfigVersionId = requireRuntimeReceipt(saved, 'provider_config_version_id');
+    const auditEventId = requireRuntimeReceipt(saved, 'audit_event_id');
+    return ctx.json({
+      provider: toClientProvider(saved.provider),
+      provider_config_version_id: providerConfigVersionId,
+      audit_event_id: auditEventId,
+    });
   } catch (err) {
     return errorEnvelope(ctx, err);
   }
@@ -208,7 +220,15 @@ modelRuntimesRoute.delete('/model-runtimes/providers/:provider', async (ctx) => 
     if (!isModelRuntimeProvider(provider)) return errorEnvelope(ctx, { status: 400, code: 'VALIDATION_ERROR', message: 'unknown provider' });
     const removed = await ctx.get('dal').modelRuntimes.deleteProvider(auth.workspace_id, provider, auth.user_id);
     if (!removed) return errorEnvelope(ctx, { status: 404, code: 'NOT_FOUND', message: 'provider not configured' });
-    return ctx.json({ ok: true, provider });
+    const providerConfigVersionId = requireRuntimeReceipt(removed, 'provider_config_version_id');
+    const auditEventId = requireRuntimeReceipt(removed, 'audit_event_id');
+    return ctx.json({
+      ok: true,
+      provider,
+      deleted_provider_config_id: removed.deleted_provider_config_id,
+      provider_config_version_id: providerConfigVersionId,
+      audit_event_id: auditEventId,
+    });
   } catch (err) {
     return errorEnvelope(ctx, err);
   }
@@ -232,7 +252,14 @@ modelRuntimesRoute.put('/model-runtimes/default', async (ctx) => {
     if (!rows.some((r) => r.id === providerId)) return errorEnvelope(ctx, { status: 404, code: 'NOT_FOUND', message: 'provider not configured in this workspace' });
     const saved = await dal.modelRuntimes.setDefaultProvider(auth.workspace_id, providerId, auth.user_id);
     if (!saved) return errorEnvelope(ctx, { status: 404, code: 'NOT_FOUND', message: 'provider not configured in this workspace' });
-    return ctx.json({ workspace_default: saved.id, provider: toClientProvider(saved) });
+    const defaultRevisionId = requireRuntimeReceipt(saved, 'default_revision_id');
+    const auditEventId = requireRuntimeReceipt(saved, 'audit_event_id');
+    return ctx.json({
+      workspace_default: saved.provider.id,
+      provider: toClientProvider(saved.provider),
+      default_revision_id: defaultRevisionId,
+      audit_event_id: auditEventId,
+    });
   } catch (err) {
     return errorEnvelope(ctx, err);
   }

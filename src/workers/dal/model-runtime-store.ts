@@ -67,6 +67,25 @@ export interface ProviderConfigRow {
   updated_at: string;
 }
 
+export interface ProviderConfigWriteReceipt {
+  provider: ProviderConfigRow;
+  provider_config_version_id: string;
+  audit_event_id: string;
+}
+
+export interface ProviderConfigDeleteReceipt {
+  provider: ModelRuntimeProvider;
+  deleted_provider_config_id: string;
+  provider_config_version_id: string;
+  audit_event_id: string;
+}
+
+export interface ProviderDefaultWriteReceipt {
+  provider: ProviderConfigRow;
+  default_revision_id: string;
+  audit_event_id: string;
+}
+
 /** The sealed credential (base64 ciphertext + iv), plus its auth_kind. Internal-only — never serialized. */
 export interface SealedProviderCredential {
   auth_kind: RuntimeAuthKind;
@@ -87,17 +106,16 @@ export interface ProviderUpsertInput {
 // The client-safe RETURNING/SELECT column set is written out literally in each query below —
 // deliberately WITHOUT credential_ciphertext / credential_iv, so a read path cannot leak the sealed key.
 
-function txn(sql: Sql): { transaction: (q: unknown[]) => Promise<unknown[]> } {
-  return sql as unknown as { transaction: (q: unknown[]) => Promise<unknown[]> };
+function providerConfigVersion(row: Pick<ProviderConfigRow, 'id' | 'updated_at'>): string {
+  return `model-runtime-provider:${row.id}:${row.updated_at}`;
 }
 
-function auditRow(sql: Sql, actor: UserId, action: string, targetId: string, workspaceId: WorkspaceId, reason: string) {
-  // action strings are strictly lowercase+underscore (audit_logs.action CHECK ^[a-z_]+$);
-  // target_type 'model_runtime_provider' was added to the audit_logs CHECK by migration 053.
-  return sql/*sql*/`
-    INSERT INTO audit_logs (actor_user_id, action, target_type, target_id, workspace_id, reason)
-    VALUES (${actor}, ${action}::text, 'model_runtime_provider', ${targetId}, ${workspaceId}, ${reason})
-  `;
+function deletedProviderConfigVersion(id: string, auditEventId: string): string {
+  return `model-runtime-provider:${id}:deleted:${auditEventId}`;
+}
+
+function defaultRevision(row: Pick<ProviderConfigRow, 'id' | 'updated_at'>): string {
+  return `model-runtime-default:${row.id}:${row.updated_at}`;
 }
 
 /** List a workspace's provider configs (masked — no ciphertext). Degrade-safe: [] pre-migration/on error. */
@@ -136,13 +154,14 @@ export async function upsertProviderRow(
   provider: ModelRuntimeProvider,
   input: ProviderUpsertInput,
   actorUserId: UserId,
-): Promise<ProviderConfigRow> {
+): Promise<ProviderConfigWriteReceipt> {
   const id = 'mrp_' + crypto.randomUUID().replace(/-/g, '');
   const ct = input.sealed?.ciphertext ?? null;
   const iv = input.sealed?.iv ?? null;
   const last4 = input.sealed?.last4 ?? null;
-  const results = await txn(sql).transaction([
-    sql/*sql*/`
+  const reason = input.sealed ? 'set config + credential' : 'set config (credential preserved)';
+  const rows = (await sql/*sql*/`
+    WITH provider_written AS (
       INSERT INTO model_runtime_providers
         (id, workspace_id, provider, auth_kind, base_url, model,
          credential_ciphertext, credential_iv, credential_last4, enabled, created_by, updated_at)
@@ -160,36 +179,89 @@ export async function upsertProviderRow(
         credential_last4      = COALESCE(EXCLUDED.credential_last4, model_runtime_providers.credential_last4),
         updated_at = now()
       RETURNING id, provider, auth_kind, base_url, model, credential_last4, enabled, is_default, created_by, created_at, updated_at
-    `,
-    auditRow(sql, actorUserId, 'model_runtime_provider_set', provider, workspaceId, input.sealed ? 'set config + credential' : 'set config (credential preserved)'),
-  ]);
-  return (results[0] as ProviderConfigRow[])[0];
+    ),
+    audit_written AS (
+      INSERT INTO audit_logs (actor_user_id, action, target_type, target_id, workspace_id, reason)
+      SELECT ${actorUserId}, 'model_runtime_provider_set'::text, 'model_runtime_provider', provider_written.id, ${workspaceId}, ${reason}
+      FROM provider_written
+      RETURNING id::text AS audit_event_id
+    )
+    SELECT provider_written.id, provider_written.provider, provider_written.auth_kind, provider_written.base_url,
+           provider_written.model, provider_written.credential_last4, provider_written.enabled,
+           provider_written.is_default, provider_written.created_by, provider_written.created_at,
+           provider_written.updated_at, audit_written.audit_event_id
+    FROM provider_written
+    JOIN audit_written ON TRUE
+  `) as Array<ProviderConfigRow & { audit_event_id: string }>;
+  const row = rows[0];
+  if (!row?.audit_event_id) throw new Error('model runtime provider write missing audit receipt');
+  const { audit_event_id, ...providerRow } = row;
+  return { provider: providerRow, provider_config_version_id: providerConfigVersion(providerRow), audit_event_id };
 }
 
 /** Delete a provider config (audited). Returns true iff a row was removed. */
-export async function deleteProviderRow(sql: Sql, workspaceId: WorkspaceId, provider: ModelRuntimeProvider, actorUserId: UserId): Promise<boolean> {
-  const results = await txn(sql).transaction([
-    sql/*sql*/`DELETE FROM model_runtime_providers WHERE workspace_id = ${workspaceId} AND provider = ${provider} RETURNING id`,
-    auditRow(sql, actorUserId, 'model_runtime_provider_delete', provider, workspaceId, 'delete provider config'),
-  ]);
-  return (results[0] as Array<{ id: string }>).length > 0;
+export async function deleteProviderRow(sql: Sql, workspaceId: WorkspaceId, provider: ModelRuntimeProvider, actorUserId: UserId): Promise<ProviderConfigDeleteReceipt | null> {
+  const rows = (await sql/*sql*/`
+    WITH provider_deleted AS (
+      DELETE FROM model_runtime_providers
+      WHERE workspace_id = ${workspaceId} AND provider = ${provider}
+      RETURNING id, provider
+    ),
+    audit_written AS (
+      INSERT INTO audit_logs (actor_user_id, action, target_type, target_id, workspace_id, reason)
+      SELECT ${actorUserId}, 'model_runtime_provider_delete'::text, 'model_runtime_provider', provider_deleted.id, ${workspaceId}, 'delete provider config'
+      FROM provider_deleted
+      RETURNING id::text AS audit_event_id
+    )
+    SELECT provider_deleted.id AS deleted_provider_config_id, provider_deleted.provider, audit_written.audit_event_id
+    FROM provider_deleted
+    JOIN audit_written ON TRUE
+  `) as Array<{ deleted_provider_config_id: string; provider: ModelRuntimeProvider; audit_event_id: string }>;
+  const row = rows[0];
+  if (!row) return null;
+  if (!row.audit_event_id) throw new Error('model runtime provider delete missing audit receipt');
+  return {
+    provider: row.provider,
+    deleted_provider_config_id: row.deleted_provider_config_id,
+    provider_config_version_id: deletedProviderConfigVersion(row.deleted_provider_config_id, row.audit_event_id),
+    audit_event_id: row.audit_event_id,
+  };
 }
 
 /** Flip the workspace default to `providerId` (audited governed change). Sets exactly one default per
  *  workspace in a single UPDATE (the partial unique index tolerates the transition). Returns the new
  *  default row, or null when the id is not in the workspace (caller should validate first). */
-export async function setDefaultProviderRow(sql: Sql, workspaceId: WorkspaceId, providerId: string, actorUserId: UserId): Promise<ProviderConfigRow | null> {
-  const results = await txn(sql).transaction([
-    sql/*sql*/`
+export async function setDefaultProviderRow(sql: Sql, workspaceId: WorkspaceId, providerId: string, actorUserId: UserId): Promise<ProviderDefaultWriteReceipt | null> {
+  const rows = (await sql/*sql*/`
+    WITH providers_updated AS (
       UPDATE model_runtime_providers
       SET is_default = (id = ${providerId}), updated_at = now()
       WHERE workspace_id = ${workspaceId}
       RETURNING id, provider, auth_kind, base_url, model, credential_last4, enabled, is_default, created_by, created_at, updated_at
-    `,
-    auditRow(sql, actorUserId, 'model_runtime_default_change', providerId, workspaceId, 'default -> ' + providerId),
-  ]);
-  const rows = results[0] as ProviderConfigRow[];
-  return rows.find((r) => r.is_default) ?? null;
+    ),
+    default_written AS (
+      SELECT id, provider, auth_kind, base_url, model, credential_last4, enabled, is_default, created_by, created_at, updated_at
+      FROM providers_updated
+      WHERE id = ${providerId} AND is_default = TRUE
+    ),
+    audit_written AS (
+      INSERT INTO audit_logs (actor_user_id, action, target_type, target_id, workspace_id, reason)
+      SELECT ${actorUserId}, 'model_runtime_default_change'::text, 'model_runtime_provider', default_written.id, ${workspaceId}, ${'default -> ' + providerId}
+      FROM default_written
+      RETURNING id::text AS audit_event_id
+    )
+    SELECT default_written.id, default_written.provider, default_written.auth_kind, default_written.base_url,
+           default_written.model, default_written.credential_last4, default_written.enabled,
+           default_written.is_default, default_written.created_by, default_written.created_at,
+           default_written.updated_at, audit_written.audit_event_id
+    FROM default_written
+    JOIN audit_written ON TRUE
+  `) as Array<ProviderConfigRow & { audit_event_id: string }>;
+  const row = rows[0];
+  if (!row) return null;
+  if (!row.audit_event_id) throw new Error('model runtime default write missing audit receipt');
+  const { audit_event_id, ...providerRow } = row;
+  return { provider: providerRow, default_revision_id: defaultRevision(providerRow), audit_event_id };
 }
 
 /** The caller's per-workspace session override (provider id), or null when unset. Degrade-safe. */
