@@ -14,6 +14,7 @@ const gates = [
   ['model execution callsite coverage', 'npm', ['run', 'verify:model-execution-callsites']],
   ['shadow observability storage', 'npm', ['run', 'verify:shadow-observability-storage']],
   ['backend trust proofs (static)', 'npm', ['run', 'verify:trust-proofs']],
+  ['rls grant parity', 'npm', ['run', 'verify:rls-grant-parity']],
   ['data schemas', 'npm', ['run', 'verify:data-schemas']],
   ['orphan tests', 'npm', ['run', 'verify:no-orphan-worker-tests']],
   ['typecheck', 'npm', ['run', 'typecheck']],

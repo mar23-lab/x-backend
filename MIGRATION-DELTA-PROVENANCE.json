@@ -793,6 +793,27 @@
           "reason": "W2 R3 (audit gap G7): normalise the completion aliases done|completed -> achieved at the route edge before dal.updateGoal. The route's own shadow-policy block already recognised those aliases, but body.status reached the DAL raw while the DB CHECK (006:101) admits only proposed|active|achieved|abandoned - a latent constraint violation. The DB vocabulary stays the glossary truth; the CHECK is not widened."
         }
       ]
+    },
+    {
+      "delta_id": "rls-grant-parity-gate-20260717",
+      "generated_at": "2026-07-17T09:33:02Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "3242fc5665b268fc5a2bbc70ae080e9cc5b25c3c",
+      "target_base_commit": "3242fc5665b268fc5a2bbc70ae080e9cc5b25c3c",
+      "authority": "shadow_only_no_production_cutover",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "package.json",
+          "target_blob": "a85adc7b59200b026d91be84110a0053b1ea1d33",
+          "reason": "adds the verify:rls-grant-parity script. The gate asserts the invariant behind the whole RLS cutover: a table GRANTed to the NOBYPASSRLS role xlooop_app must have row-level security, or carry a reasoned exemption. Until now that pairing was enforced only by migration authors reading each other's header comments (047 argues its folder_snapshots grant is safe in prose) - a rule with no tool."
+        },
+        {
+          "path": "scripts/ci-local.mjs",
+          "target_blob": "64d7aa9fd4b897808dffb6d261a3df3f9d081ef3",
+          "reason": "binds verify:rls-grant-parity into the local gate chain beside the other static trust proofs, so the invariant is checked on every run rather than on recall."
+        }
+      ]
     }
   ]
 }

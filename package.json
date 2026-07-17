@@ -30,6 +30,7 @@
     "verify:no-orphan-worker-tests": "node scripts/verify-no-orphan-worker-tests.mjs",
     "verify:operational-spine-api": "vitest run --config vitest.workers.config.ts src/workers/__tests__/operational-spine-route.test.ts src/workers/__tests__/operational-spine-rls-context.test.ts src/workers/__tests__/mcp-gateway-route.test.ts src/workers/__tests__/template-policy-registry-route.test.ts",
     "verify:operational-spine-live-rls": "XLOOOP_RUN_LIVE_RLS=1 vitest run --config vitest.workers.config.ts --no-file-parallelism src/workers/__tests__/operational-spine-live-rls.test.ts src/workers/__tests__/role-skill-evidence-live-rls.test.ts",
+    "verify:rls-grant-parity": "node scripts/verify-rls-grant-parity.mjs",
     "verify:rls-shadow-soak": "node scripts/rls-shadow-soak.mjs --strict",
     "verify:trust-proofs": "node scripts/run-trust-proofs.mjs",
     "verify:trust-proofs:live": "node scripts/run-trust-proofs.mjs --live",
