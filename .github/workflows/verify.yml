@@ -1,0 +1,59 @@
+# CI bootstrap — 2026-07-17 architecture-audit Phase 2 (P1-D: zero CI in the production lane).
+#
+# Binds EXISTING gates; authors none. The required job is scripts/ci-local.mjs's own gate
+# chain minus its final entry (the vitest worker suite) — all 15 static gates were proven
+# green locally at authoring time, so this bootstrap starts useful instead of red-noisy.
+# The worker suite runs report-only until it proves stable under CI runners; once it does,
+# collapse the required job to a single `npm run ci-local` step and delete the report job.
+#
+# Ratchet rule: promotion from report-only to required is one PR that moves one line.
+
+name: verify
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  required:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: static gate chain (ci-local minus worker suite)
+        run: |
+          npm run verify:installed-dependencies
+          npm run verify:provenance
+          npm run verify:boundary
+          npm run verify:no-mbp-runtime-dependency
+          npm run verify:contract
+          npm run verify:packet-completion-contract
+          npm run verify:typed-work-relationships
+          npm run verify:action-intent-shadow
+          npm run verify:role-skill-catalog-loader-fresh
+          npm run verify:model-execution-callsites
+          npm run verify:shadow-observability-storage
+          npm run verify:trust-proofs
+          npm run verify:data-schemas
+          npm run verify:no-orphan-worker-tests
+
+  worker-suite-report-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: vitest worker batches (report-only until proven stable in CI)
+        continue-on-error: true
+        run: npm test
