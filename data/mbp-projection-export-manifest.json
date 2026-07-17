@@ -1,21 +1,21 @@
 {
   "export_kind": "mbp_projection_export_manifest",
   "export_contract_version": "v0.1.0",
-  "export_id": "export:mbp:xlooop:r-m-d-i-20260711-0330",
+  "export_id": "export:mbp:xlooop:r-m-d-i-20260717-1131",
   "producer_repo": "MB-P",
   "consumer_repo": "Xlooop-XCP-demo",
   "consumer_workspace_id": "xlooop",
   "output_projection_kind": "mbp_operations_projection",
   "output_projection_contract_version": "v0.1.0",
-  "output_projection_id": "projection:mbp:xlooop:r-m-d-i-20260711-0330",
+  "output_projection_id": "projection:mbp:xlooop:r-m-d-i-20260717-1131",
   "authority_source": "mbp_governance_projection",
   "source_mode": "read_only_projection",
   "export_mode": "metadata_only_snapshot",
   "owner_approval_state": "owner_approved",
   "owner_approved_by": "Marat Basyrov",
-  "owner_approved_at": "2026-07-11T03:30:05+10:00",
-  "generated_at": "2026-07-11T03:30:05+10:00",
-  "valid_until": "2026-07-12T03:30:05+10:00",
+  "owner_approved_at": "2026-07-17T11:31:10+10:00",
+  "generated_at": "2026-07-17T11:31:10+10:00",
+  "valid_until": "2026-07-18T11:31:10+10:00",
   "redaction_state": "metadata_only",
   "private_raw_content_included": false,
   "writes_back_to_source_allowed": false,
@@ -96,8 +96,8 @@
     },
     {
       "ref_id": "source:mbp:wave:2",
-      "label": "260511-wave-r-m-c-iii-p4-p5-verifier-batch-hr-t4-promotion-criteria",
-      "uri": "mbp://wave-reports/260511-wave-r-m-c-iii-p4-p5-verifier-batch-hr-t4-promotion-criteria.md",
+      "label": "260511-wave-r-m-d-i-c108-pre-a-mb-p-side-export-script-attestation-chain",
+      "uri": "mbp://wave-reports/260511-wave-r-m-d-i-c108-pre-a-mb-p-side-export-script-attestation-chain.md",
       "ref_kind": "evidence",
       "source_repo": "MB-P",
       "graph_context": "lean_graph",
@@ -107,8 +107,8 @@
     },
     {
       "ref_id": "source:mbp:wave:3",
-      "label": "260511-wave-r-m-d-i-c108-pre-a-mb-p-side-export-script-attestation-chain",
-      "uri": "mbp://wave-reports/260511-wave-r-m-d-i-c108-pre-a-mb-p-side-export-script-attestation-chain.md",
+      "label": "260511-wave-r-m-c-iii-p4-p5-verifier-batch-hr-t4-promotion-criteria",
+      "uri": "mbp://wave-reports/260511-wave-r-m-c-iii-p4-p5-verifier-batch-hr-t4-promotion-criteria.md",
       "ref_kind": "evidence",
       "source_repo": "MB-P",
       "graph_context": "lean_graph",
@@ -163,7 +163,7 @@
   ],
   "packets": [
     {
-      "packet_id": "packet-mbp-skills-260711",
+      "packet_id": "packet-mbp-skills-260717",
       "intent_id": "intent-mbp-skill-registry-projection",
       "title": "MB-P skill registry: 223 canonical skills",
       "workspace_id": "mbp-private",
@@ -186,9 +186,9 @@
       ]
     },
     {
-      "packet_id": "packet-mbp-hard-rules-260711",
+      "packet_id": "packet-mbp-hard-rules-260717",
       "intent_id": "intent-mbp-hard-rules-projection",
-      "title": "MB-P HARD_RULES v1.26.0 (279 HR-* IDs)",
+      "title": "MB-P HARD_RULES v1.26.0 (281 HR-* IDs)",
       "workspace_id": "mbp-private",
       "project_id": "mbp-governance",
       "lifecycle_state": "evidence_ready",
@@ -209,7 +209,7 @@
       ]
     },
     {
-      "packet_id": "packet-mbp-pillars-260711",
+      "packet_id": "packet-mbp-pillars-260717",
       "intent_id": "intent-mbp-pillar-maturity-projection",
       "title": "MB-P pillar maturity composite ~7.86; 0/7 at 10/10",
       "workspace_id": "mbp-private",
@@ -232,7 +232,7 @@
       ]
     },
     {
-      "packet_id": "packet-mbp-recent-waves-260711",
+      "packet_id": "packet-mbp-recent-waves-260717",
       "intent_id": "intent-mbp-recent-waves-projection",
       "title": "MB-P recent waves (5 most recent retrospectives)",
       "workspace_id": "mbp-private",
@@ -244,7 +244,7 @@
       "evidence_state": "ready",
       "signoff_state": "ready",
       "xcp_feedback_state": "ready_for_substrate",
-      "xcp_feedback_id": "xcp-feedback-mbp-recent-waves-260711",
+      "xcp_feedback_id": "xcp-feedback-mbp-recent-waves-260717",
       "owner_decision_state": "approved_for_substrate_learning",
       "owner_decision_ref": "operator_request:2026-05-13:projection-learning-100",
       "learning_summary": "Recent wave retrospectives are approved as reusable XCP learning input for the internal MB-P operations proof.",
@@ -265,15 +265,15 @@
         },
         {
           "ref_id": "source:mbp:wave:2",
-          "label": "260511-wave-r-m-c-iii-p4-p5-verifier-batch-hr-t4-promotion-criteria",
-          "uri": "mbp://wave-reports/260511-wave-r-m-c-iii-p4-p5-verifier-batch-hr-t4-promotion-criteria.md",
+          "label": "260511-wave-r-m-d-i-c108-pre-a-mb-p-side-export-script-attestation-chain",
+          "uri": "mbp://wave-reports/260511-wave-r-m-d-i-c108-pre-a-mb-p-side-export-script-attestation-chain.md",
           "ref_kind": "evidence",
           "raw_content_included": false
         },
         {
           "ref_id": "source:mbp:wave:3",
-          "label": "260511-wave-r-m-d-i-c108-pre-a-mb-p-side-export-script-attestation-chain",
-          "uri": "mbp://wave-reports/260511-wave-r-m-d-i-c108-pre-a-mb-p-side-export-script-attestation-chain.md",
+          "label": "260511-wave-r-m-c-iii-p4-p5-verifier-batch-hr-t4-promotion-criteria",
+          "uri": "mbp://wave-reports/260511-wave-r-m-c-iii-p4-p5-verifier-batch-hr-t4-promotion-criteria.md",
           "ref_kind": "evidence",
           "raw_content_included": false
         },
@@ -287,7 +287,7 @@
       ]
     },
     {
-      "packet_id": "packet-mbp-comprehensive-review-260711",
+      "packet_id": "packet-mbp-comprehensive-review-260717",
       "intent_id": "intent-mbp-comprehensive-ecosystem-review-scope",
       "title": "MB-P comprehensive ecosystem review scope is dashboard-visible and mandatory",
       "workspace_id": "mbp-private",
@@ -332,8 +332,8 @@
       "mbp://governance/pillars",
       "mbp://wave-reports/260511-wave-r-m-d-vi-adr-0049-ratified-path-b-supabase-mermaid-diagram.md",
       "mbp://wave-reports/260511-wave-r-m-d-v-adr-0049-c111-decision-gate-framework.md",
-      "mbp://wave-reports/260511-wave-r-m-c-iii-p4-p5-verifier-batch-hr-t4-promotion-criteria.md",
       "mbp://wave-reports/260511-wave-r-m-d-i-c108-pre-a-mb-p-side-export-script-attestation-chain.md",
+      "mbp://wave-reports/260511-wave-r-m-c-iii-p4-p5-verifier-batch-hr-t4-promotion-criteria.md",
       "mbp://wave-reports/260511-wave-r-m-c-ii-critical-review-backlog-overlay-5-hr-batch-signal-extractor-extension.md"
     ],
     "feature_packet_path": "specs/004-mbp-projection-export-contract",
@@ -342,8 +342,8 @@
   "manifest_kind": "mbp_projection_export_manifest",
   "manifest_contract_version": "v0.1.0",
   "projection_path": "_sys/xcp-system/cross_repo_drafts/Xlooop-XCP-demo/data/mbp-operations-projection.json",
-  "projection_sha256": "32416b2695738693873c383fd34792be3773429e5d16e1162709547330f1c674",
-  "projection_size_bytes": 7933,
+  "projection_sha256": "dc52bc7a3621b22e6063838b65f1c4493d72667a7a03726401b88050b6c40a47",
+  "projection_size_bytes": 10830,
   "exporter": "_sys/scripts/export_mbp_to_xlooop_projection.py",
   "exporter_wave": "R-M-D-i",
   "boundary_compliance": {

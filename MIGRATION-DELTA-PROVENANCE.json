@@ -709,6 +709,32 @@
           "reason": "requires exactly the two governed origin entries so the pilot boundary cannot silently widen to production or a bare apex wildcard"
         }
       ]
+    },
+    {
+      "delta_id": "mbp-domain-projection-freshness-producer-20260717",
+      "generated_at": "2026-07-17T01:35:19Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "a3680561c464356468e70aa6119f912ce0db5141",
+      "target_base_commit": "a3680561c464356468e70aa6119f912ce0db5141",
+      "authority": "shadow_only_no_production_cutover",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "scripts/verify-mbp-projection-freshness.mjs",
+          "target_blob": "adbe798b5e3b06b46275b259a718e3f4168f6a52",
+          "reason": "writes the freshness authority that never existed: ensure-mbp-projection-fresh.mjs:62-67 spawned this exact path and treated non-zero as stale, so MODULE_NOT_FOUND hard-wired freshnessOk() to false and a projection valid until tomorrow was reported expired; verify-projection-cron-liveness.mjs:21,88 names it as the owner of fail-closed freshness. Two consumers, no producer"
+        },
+        {
+          "path": "data/mbp-operations-projection.json",
+          "target_blob": "093fb2ab5fe5d65f2d9c11c7a49056fae2416e4e",
+          "reason": "restages the projection regenerated from MB-P main 8f3aa067 (PR #1610), now carrying domains[] with the operator's canonical 11-domain taxonomy; external-safe metadata_readonly/metadata_only, no path field, validates 3/3 against the unchanged v1 schema"
+        },
+        {
+          "path": "data/mbp-projection-export-manifest.json",
+          "target_blob": "5473001da7887e48558e8cb1ac61cf658f59dc5c",
+          "reason": "matching export manifest for the restaged projection"
+        }
+      ]
     }
   ]
 }

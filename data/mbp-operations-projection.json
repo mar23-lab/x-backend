@@ -1,20 +1,20 @@
 {
   "_meta": {
     "schema": "mbp-operations-projection.v1",
-    "generated_at": "2026-07-11T03:30:05+10:00",
+    "generated_at": "2026-07-17T11:31:10+10:00",
     "producer": "_sys/scripts/export_mbp_to_xlooop_projection.py",
-    "git_sha": "f878e0d78401834375a113aaad72e3dc9db8387a"
+    "git_sha": "c3bda5a1c7e7ca93aec7e4eb9b1dd82b25073bd8"
   },
   "projection_kind": "mbp_operations_projection",
   "projection_contract_version": "v0.1.0",
-  "projection_id": "projection:mbp:xlooop:r-m-d-i-20260711-0330",
+  "projection_id": "projection:mbp:xlooop:r-m-d-i-20260717-1131",
   "authority_source": "mbp_governance_projection",
   "source_repo": "MB-P",
   "source_mode": "read_only_projection",
   "operator_workspace_id": "mbp-private",
   "consumer_workspace_id": "xlooop",
-  "generated_at": "2026-07-11T03:30:05+10:00",
-  "valid_until": "2026-07-12T03:30:05+10:00",
+  "generated_at": "2026-07-17T11:31:10+10:00",
+  "valid_until": "2026-07-18T11:31:10+10:00",
   "health": "connected_snapshot",
   "redaction_state": "metadata_only",
   "private_raw_content_included": false,
@@ -28,6 +28,118 @@
     "no_private_raw_content",
     "no_writeback_to_mbp"
   ],
+  "domains": [
+    {
+      "domain_id": "career",
+      "label": "Career",
+      "sensitivity": "medium",
+      "has_agent": true,
+      "has_timeline": true,
+      "has_contacts": false,
+      "source_node": "mbp:domain:career",
+      "mutable_from_consumer": false
+    },
+    {
+      "domain_id": "car",
+      "label": "Car",
+      "sensitivity": "medium",
+      "has_agent": true,
+      "has_timeline": true,
+      "has_contacts": false,
+      "source_node": "mbp:domain:car",
+      "mutable_from_consumer": false
+    },
+    {
+      "domain_id": "health",
+      "label": "Health",
+      "sensitivity": "high",
+      "has_agent": true,
+      "has_timeline": true,
+      "has_contacts": false,
+      "source_node": "mbp:domain:health",
+      "mutable_from_consumer": false
+    },
+    {
+      "domain_id": "finances",
+      "label": "Finances",
+      "sensitivity": "high",
+      "has_agent": true,
+      "has_timeline": true,
+      "has_contacts": false,
+      "source_node": "mbp:domain:finances",
+      "mutable_from_consumer": false
+    },
+    {
+      "domain_id": "government",
+      "label": "Government",
+      "sensitivity": "high",
+      "has_agent": true,
+      "has_timeline": true,
+      "has_contacts": false,
+      "source_node": "mbp:domain:government",
+      "mutable_from_consumer": false
+    },
+    {
+      "domain_id": "home",
+      "label": "Home",
+      "sensitivity": "medium",
+      "has_agent": true,
+      "has_timeline": true,
+      "has_contacts": true,
+      "source_node": "mbp:domain:home",
+      "mutable_from_consumer": false
+    },
+    {
+      "domain_id": "travels",
+      "label": "Travels",
+      "sensitivity": "low",
+      "has_agent": true,
+      "has_timeline": true,
+      "has_contacts": false,
+      "source_node": "mbp:domain:travels",
+      "mutable_from_consumer": false
+    },
+    {
+      "domain_id": "personal-branding",
+      "label": "Personal branding",
+      "sensitivity": "medium",
+      "has_agent": true,
+      "has_timeline": true,
+      "has_contacts": false,
+      "source_node": "mbp:domain:personal-branding",
+      "mutable_from_consumer": false
+    },
+    {
+      "domain_id": "hobbies",
+      "label": "Hobbies",
+      "sensitivity": "low",
+      "has_agent": true,
+      "has_timeline": true,
+      "has_contacts": false,
+      "source_node": "mbp:domain:hobbies",
+      "mutable_from_consumer": false
+    },
+    {
+      "domain_id": "todos",
+      "label": "Todos",
+      "sensitivity": "low",
+      "has_agent": true,
+      "has_timeline": true,
+      "has_contacts": false,
+      "source_node": "mbp:domain:todos",
+      "mutable_from_consumer": false
+    },
+    {
+      "domain_id": "companies",
+      "label": "Companies",
+      "sensitivity": "high",
+      "has_agent": true,
+      "has_timeline": true,
+      "has_contacts": true,
+      "source_node": "mbp:domain:companies",
+      "mutable_from_consumer": false
+    }
+  ],
   "blocked_actions": [
     "write_mbp_repo",
     "copy_private_payload",
@@ -38,7 +150,7 @@
   ],
   "packets": [
     {
-      "packet_id": "packet-mbp-skills-260711",
+      "packet_id": "packet-mbp-skills-260717",
       "intent_id": "intent-mbp-skill-registry-projection",
       "title": "MB-P skill registry: 223 canonical skills",
       "workspace_id": "mbp-private",
@@ -61,9 +173,9 @@
       ]
     },
     {
-      "packet_id": "packet-mbp-hard-rules-260711",
+      "packet_id": "packet-mbp-hard-rules-260717",
       "intent_id": "intent-mbp-hard-rules-projection",
-      "title": "MB-P HARD_RULES v1.26.0 (279 HR-* IDs)",
+      "title": "MB-P HARD_RULES v1.26.0 (281 HR-* IDs)",
       "workspace_id": "mbp-private",
       "project_id": "mbp-governance",
       "lifecycle_state": "evidence_ready",
@@ -84,7 +196,7 @@
       ]
     },
     {
-      "packet_id": "packet-mbp-pillars-260711",
+      "packet_id": "packet-mbp-pillars-260717",
       "intent_id": "intent-mbp-pillar-maturity-projection",
       "title": "MB-P pillar maturity composite ~7.86; 0/7 at 10/10",
       "workspace_id": "mbp-private",
@@ -107,7 +219,7 @@
       ]
     },
     {
-      "packet_id": "packet-mbp-recent-waves-260711",
+      "packet_id": "packet-mbp-recent-waves-260717",
       "intent_id": "intent-mbp-recent-waves-projection",
       "title": "MB-P recent waves (5 most recent retrospectives)",
       "workspace_id": "mbp-private",
@@ -119,7 +231,7 @@
       "evidence_state": "ready",
       "signoff_state": "ready",
       "xcp_feedback_state": "ready_for_substrate",
-      "xcp_feedback_id": "xcp-feedback-mbp-recent-waves-260711",
+      "xcp_feedback_id": "xcp-feedback-mbp-recent-waves-260717",
       "owner_decision_state": "approved_for_substrate_learning",
       "owner_decision_ref": "operator_request:2026-05-13:projection-learning-100",
       "learning_summary": "Recent wave retrospectives are approved as reusable XCP learning input for the internal MB-P operations proof.",
@@ -140,15 +252,15 @@
         },
         {
           "ref_id": "source:mbp:wave:2",
-          "label": "260511-wave-r-m-c-iii-p4-p5-verifier-batch-hr-t4-promotion-criteria",
-          "uri": "mbp://wave-reports/260511-wave-r-m-c-iii-p4-p5-verifier-batch-hr-t4-promotion-criteria.md",
+          "label": "260511-wave-r-m-d-i-c108-pre-a-mb-p-side-export-script-attestation-chain",
+          "uri": "mbp://wave-reports/260511-wave-r-m-d-i-c108-pre-a-mb-p-side-export-script-attestation-chain.md",
           "ref_kind": "evidence",
           "raw_content_included": false
         },
         {
           "ref_id": "source:mbp:wave:3",
-          "label": "260511-wave-r-m-d-i-c108-pre-a-mb-p-side-export-script-attestation-chain",
-          "uri": "mbp://wave-reports/260511-wave-r-m-d-i-c108-pre-a-mb-p-side-export-script-attestation-chain.md",
+          "label": "260511-wave-r-m-c-iii-p4-p5-verifier-batch-hr-t4-promotion-criteria",
+          "uri": "mbp://wave-reports/260511-wave-r-m-c-iii-p4-p5-verifier-batch-hr-t4-promotion-criteria.md",
           "ref_kind": "evidence",
           "raw_content_included": false
         },
@@ -162,7 +274,7 @@
       ]
     },
     {
-      "packet_id": "packet-mbp-comprehensive-review-260711",
+      "packet_id": "packet-mbp-comprehensive-review-260717",
       "intent_id": "intent-mbp-comprehensive-ecosystem-review-scope",
       "title": "MB-P comprehensive ecosystem review scope is dashboard-visible and mandatory",
       "workspace_id": "mbp-private",
