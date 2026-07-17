@@ -777,6 +777,22 @@
           "reason": "2026-07-17 architecture-audit P0-B hardening: adds an opt-in GUC guard (xlooop.allow_personal_seed) so the operator-personal life-domain seed can never apply to a customer/fork deployment by default. Already-applied DBs unaffected (version-11 short-circuit). Companion migration 080 adds the missing RLS policy on synthetic_domains. The seed content itself is UNCHANGED - only the applicability gate is new."
         }
       ]
+    },
+    {
+      "delta_id": "goal-status-alias-normalisation-20260717",
+      "generated_at": "2026-07-17T09:30:46Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "4fff222ea7576836b5498d11523b138780ac349a",
+      "target_base_commit": "4fff222ea7576836b5498d11523b138780ac349a",
+      "authority": "shadow_only_no_production_cutover",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/routes/synthetic-domains.ts",
+          "target_blob": "757584f401e08f5ae8aafde80249537fd7b6b304",
+          "reason": "W2 R3 (audit gap G7): normalise the completion aliases done|completed -> achieved at the route edge before dal.updateGoal. The route's own shadow-policy block already recognised those aliases, but body.status reached the DAL raw while the DB CHECK (006:101) admits only proposed|active|achieved|abandoned - a latent constraint violation. The DB vocabulary stays the glossary truth; the CHECK is not widened."
+        }
+      ]
     }
   ]
 }
