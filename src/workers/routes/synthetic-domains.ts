@@ -643,6 +643,11 @@ syntheticDomainsRoute.patch('/synthetic-domain-goals/:goalId', async (ctx) => {
       ? 'goal.complete'
       : (body.status === 'abandoned' ? 'goal.archive' : 'goal.update');
     observePolicyShadow(ctx.env, { action: shadowAction, fields: body as Record<string, unknown>, role }, { goal_id: id });
+    // Normalize completion aliases AT THE EDGE (W2 R3 / audit gap G7): the UI and the shadow-policy
+    // block above both recognise done/completed, but the DB CHECK (006:101) admits only
+    // proposed|active|achieved|abandoned — passing an alias through raw is a latent 500.
+    // The DB vocabulary is the glossary truth; aliases never widen the CHECK.
+    if (body.status === 'done' || body.status === 'completed') body.status = 'achieved';
     const dal = ctx.get('dal');
     const goal = await dal.updateGoal(id, body, user_id);
     return ctx.json({ goal });
