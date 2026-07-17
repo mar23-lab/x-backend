@@ -14,6 +14,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { execSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { refuseIfInputUnavailableHere } from './lib/checkout-context.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..');
@@ -74,6 +75,12 @@ function checkFreshness(stateRel = STATE) {
 // ── (c) deploy receipt present + live_verified ────────────────────────────────
 function checkReceipt() {
   const raw = read(RECEIPT);
+  // Same lookup-failure trap as the generator: RECEIPT is gitignored (.gitignore:79) and exists only
+  // in the primary checkout, so from a linked worktree "missing" would report the state BROKEN on the
+  // strength of a file this checkout was never going to have. Refuse to render a verdict instead of
+  // failing a check that was never actually evaluated. In the PRIMARY, absence is a real failure and
+  // the ok(false) below still fires.
+  if (!raw) refuseIfInputUnavailableHere({ cwd: repoRoot, inputRelPath: RECEIPT, what: 'a production-readiness verdict' });
   if (!raw) { ok('(c) latest deploy receipt present', false, `${RECEIPT} missing`); return; }
   try {
     const r = JSON.parse(raw);

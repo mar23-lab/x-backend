@@ -14,6 +14,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { execSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { refuseIfInputUnavailableHere } from './lib/checkout-context.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..');
@@ -79,6 +80,12 @@ if (rcptRaw) {
     if (ageDays != null && ageDays > 14) drift.push(`latest deploy receipt is ${ageDays}d old (> 14d staleness threshold)`);
   } catch { drift.push('deploy receipt present but unparseable'); deploy.present = true; }
 } else {
+  // The receipt is gitignored (.gitignore:79) and therefore lives ONLY in the primary checkout —
+  // `git worktree add` never copies it. From a linked worktree its absence is a LOOKUP FAILURE, not
+  // evidence that no deploy receipt exists, and this script's output is a COMMITTED file carrying a
+  // production verdict. Refuse rather than emit: a written verdict can be committed over a correct
+  // one, a refusal cannot. In the PRIMARY this is a real finding and the drift flag below still fires.
+  refuseIfInputUnavailableHere({ cwd: repoRoot, inputRelPath: RECEIPT, what: OUT_YML });
   drift.push('no deploy receipt at evidence/latest-cloudflare-prod-deploy-receipt.json');
 }
 

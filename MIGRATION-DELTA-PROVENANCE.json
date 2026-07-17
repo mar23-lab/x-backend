@@ -735,6 +735,32 @@
           "reason": "matching export manifest for the restaged projection"
         }
       ]
+    },
+    {
+      "delta_id": "readiness-generator-worktree-safety-20260717",
+      "generated_at": "2026-07-17T03:05:00Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "713b27abb50ae090580ff390bc2ffbf0f0aa9538",
+      "target_base_commit": "713b27abb50ae090580ff390bc2ffbf0f0aa9538",
+      "authority": "shadow_only_no_production_cutover",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "scripts/lib/checkout-context.mjs",
+          "target_blob": "1cf2177a2106910554fc39e30c70c66bb76a8c54",
+          "reason": "new helper: answers 'can THIS checkout see machine-local (gitignored) inputs' via --absolute-git-dir != --git-common-dir. git worktree add never copies gitignored files, so a linked worktree cannot see the deploy receipt this repo already declares intentionally mutable in the seed_exclusion at delta backend-lifecycle-contracts-20260714. Resolves git's possibly-relative --git-common-dir the same way scripts/cwd-anchor.mjs:109 does, and fails CLOSED to false so callers never refuse on a guess"
+        },
+        {
+          "path": "scripts/build-production-readiness-state.mjs",
+          "target_blob": "642a2ed948d28b1418bfee9bee7b86fd46acaf95",
+          "reason": "stops the generator fabricating a production regression: run from a linked worktree it flipped verdict go -> operator_gated and emitted drift 'no deploy receipt at evidence/latest-cloudflare-prod-deploy-receipt.json', because that input is gitignored (.gitignore:79) and exists only in the primary checkout. Its output is a COMMITTED file carrying a production verdict, so an agent could push the false regression. Now refuses (exit 2, writes nothing) when the input is unavailable in this checkout; in the PRIMARY, absence is still a real finding and the drift flag fires unchanged"
+        },
+        {
+          "path": "scripts/verify-production-readiness-state.mjs",
+          "target_blob": "16be7908d9954a9f7093418fdb1536f2187643db",
+          "reason": "same lookup-failure trap in the sibling verifier (:77): from a linked worktree it reported 'production-readiness state BROKEN' on the strength of a file this checkout was never going to have. Now refuses rather than failing a check it never actually evaluated; its --self-test harness is untouched and still passes"
+        }
+      ]
     }
   ]
 }
