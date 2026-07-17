@@ -32,6 +32,17 @@ BEGIN;
 
 DO $$
 BEGIN
+  -- OPT-IN GUARD (added 2026-07-17, architecture-audit P0-B hardening): this seed is
+  -- OPERATOR-PERSONAL data (Marat's life-domain roots, workspace mbp-private). It must
+  -- never land in a customer/fork deployment by default. Future applies require the
+  -- applying operator to explicitly opt in FIRST, in the same session:
+  --   SELECT set_config('xlooop.allow_personal_seed', 'true', false);
+  -- Already-applied databases are unaffected (version-11 row present -> body skipped).
+  IF current_setting('xlooop.allow_personal_seed', true) IS DISTINCT FROM 'true' THEN
+    RAISE NOTICE '011_personal_life_seed: SKIPPED — operator opt-in GUC xlooop.allow_personal_seed not set (personal-data seed must not apply to customer deployments)';
+    RETURN;
+  END IF;
+
   IF NOT EXISTS (SELECT 1 FROM workers_schema_version WHERE version = 11) THEN
 
     -- Insert each life-domain root. We use deterministic IDs so the seed is

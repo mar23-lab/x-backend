@@ -761,6 +761,22 @@
           "reason": "same lookup-failure trap in the sibling verifier (:77): from a linked worktree it reported 'production-readiness state BROKEN' on the strength of a file this checkout was never going to have. Now refuses rather than failing a check it never actually evaluated; its --self-test harness is untouched and still passes"
         }
       ]
+    },
+    {
+      "delta_id": "personal-seed-opt-in-guard-20260717",
+      "generated_at": "2026-07-17T07:30:00Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "78951c07d502961d30d1171d8cca9dc2238c6aff",
+      "target_base_commit": "78951c07d502961d30d1171d8cca9dc2238c6aff",
+      "authority": "shadow_only_no_production_cutover",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/db/migrations/011_personal_life_seed.sql",
+          "target_blob": "dc312dfe925666b7fa1ca13e9e2aeaf9ae674f72",
+          "reason": "2026-07-17 architecture-audit P0-B hardening: adds an opt-in GUC guard (xlooop.allow_personal_seed) so the operator-personal life-domain seed can never apply to a customer/fork deployment by default. Already-applied DBs unaffected (version-11 short-circuit). Companion migration 080 adds the missing RLS policy on synthetic_domains. The seed content itself is UNCHANGED - only the applicability gate is new."
+        }
+      ]
     }
   ]
 }
