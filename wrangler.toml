@@ -13,6 +13,15 @@ main = "src/workers/index.ts"
 compatibility_date = "2026-05-26"
 compatibility_flags = ["nodejs_compat"]
 
+# Pre-deploy safety gate (260719): refuse to ship code that is ahead of the prod
+# DB schema. Runs before EVERY `wrangler deploy` (even a raw one), so it cannot be
+# skipped the way a bare `wrangler deploy` skipped `npm run deploy:api`. It binds
+# the existing scripts/verify-prod-migrations.mjs; DATABASE_URL unset -> advisory
+# skip (dev/CI safe); placeholder or behind-DB -> abort. Override (audited):
+# DEPLOY_MIGRATION_GATE_BYPASS=1.
+[build]
+command = "node scripts/predeploy-migration-gate.mjs"
+
 # Preserve dashboard-set vars/secrets across `wrangler deploy`. Without this (default false),
 # a deploy DELETES any variable set only in the dashboard and not in this file — e.g. the
 # operator-flipped CUSTOMER_INAPP_READINESS_GATE / CUSTOMER_AUTO_PROVISION_* (Parts M/O). keep_vars
