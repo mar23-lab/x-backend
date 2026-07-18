@@ -1,5 +1,10 @@
 # x-backend Agent Rules
 
+> **Read [`AGENTS.md`](AGENTS.md) first** — the agent-neutral capability contract (ADR-0035) for ALL
+> runtimes. It carries the harm-first rules in full, including the **RLS grant-parity invariant**
+> (a table GRANTed to `xlooop_app` without `ENABLE ROW LEVEL SECURITY` = silent cross-tenant read).
+> The rules below are the brief form.
+
 This repository is a shadow backend until an explicitly approved cutover.
 
 - Do not deploy, mutate production data, apply migrations, alter secrets, or flip feature flags.
