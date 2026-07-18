@@ -1,0 +1,13 @@
+{
+  "_comment": "Migrations the prod DB ledger (workers_schema_version) reports as NOT recorded, that are KNOWN and accepted as of the audit date — so the predeploy migration gate does not cry-wolf on them. The gate blocks only on missing migrations NOT in this list (genuine new deploy-ahead-of-schema drift), plus the placeholder/unreachable DATABASE_URL footguns. Burn this list down: when a 'staged_absent' entry is applied to prod, remove it; when an 'applied_unrecorded' entry's version is back-filled into the ledger, remove it.",
+  "audited": "2026-07-19",
+  "audit_method": "compared src/workers/db/migrations vs prod workers_schema_version + to_regclass() table-existence probes on prod flat-truth-23350426",
+  "accepted_pending": [
+    { "version": 37, "file": "037_customer_api_tokens.sql", "status": "applied_unrecorded", "evidence": "customer_api_tokens table EXISTS on prod; only the ledger row is missing", "action": "back-fill ledger: INSERT INTO workers_schema_version (version,...) VALUES (37,...)" },
+    { "version": 38, "file": "038_documents.sql", "status": "applied_unrecorded", "evidence": "documents table EXISTS on prod; only the ledger row is missing", "action": "back-fill ledger row for 38" },
+    { "version": 40, "file": "040_outlook_source.sql", "status": "verify", "evidence": "ALTER-only migration (admits outlook OAuth provider); table/column existence not yet confirmed", "action": "verify outlook columns/constraints exist on prod; back-fill ledger or apply" },
+    { "version": 63, "file": "063_mcp_access_log.sql", "status": "staged_absent", "evidence": "mcp_access_log table ABSENT; header says 'STAGED until operator applies'", "action": "operator cutover: apply when MCP access-logging is activated" },
+    { "version": 64, "file": "064_llm_usage_log.sql", "status": "staged_absent", "evidence": "llm_usage_log table ABSENT; header says 'STAGED until operator applies'", "action": "operator cutover: apply when per-tenant LLM metering is activated" },
+    { "version": 65, "file": "065_idempotency_keys.sql", "status": "staged_absent", "evidence": "idempotency_keys table ABSENT; header says 'STAGED until operator applies'", "action": "operator cutover: apply on the write-path cutover" }
+  ]
+}
