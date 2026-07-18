@@ -520,14 +520,23 @@ export async function createToolEventRow(
     tx/*sql*/`
       INSERT INTO operation_events (
         id, workspace_id, source_tool, status, summary, occurred_at, visibility,
-        authorized_by_user_id, instrument_kind, authority_source, request_id
+        authorized_by_user_id, instrument_kind, authority_source, request_id, intent_id
       ) VALUES (
         ${spineEventId}, ${workspaceId}, ${TOOL_ACTION_SOURCE}, ${spineStatusForToolEvent(input.status)},
         ${spineSummary}, now(), 'internal_workspace',
         ${lin?.authorized_by_user_id ?? null}, ${lin?.instrument_kind ?? null},
-        ${lin?.authority_source ?? null}, ${lin?.request_id ?? null}
+        ${lin?.authority_source ?? null}, ${lin?.request_id ?? null},
+        (SELECT oe.intent_id FROM task_packets tp
+           JOIN operation_events oe ON oe.id = tp.event_id AND oe.workspace_id = tp.workspace_id
+          WHERE tp.id = ${input.packet_id ?? null} AND tp.workspace_id = ${workspaceId})
       )
     `,
+    // S3 - intent-spine binding (260718): the companion event inherits the task packet's intent,
+    // derived SERVER-SIDE inside the same RLS transaction (task_packets.event_id ->
+    // operation_events.intent_id; both workspace-scoped), never body-carried (packet_id is the only
+    // client input and is workspace-asserted above). NULL packet / NULL event_id / intent-less event
+    // all collapse to NULL -- byte-identical to the prior behaviour for them. Closes the seam where
+    // agent tool actions wrote spine events but never joined the intent lineage spine (ADR-ABS-011).
   ]);
   return rows[0]!;
 }

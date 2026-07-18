@@ -814,6 +814,27 @@
           "reason": "binds verify:rls-grant-parity into the local gate chain beside the other static trust proofs, so the invariant is checked on every run rather than on recall."
         }
       ]
+    },
+    {
+      "delta_id": "spine-intent-lineage-20260718",
+      "generated_at": "2026-07-18T07:43:35Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "afd75d5d62cf644e2b8bc9f561477f50000d3027",
+      "target_base_commit": "afd75d5d62cf644e2b8bc9f561477f50000d3027",
+      "authority": "shadow_only_no_production_cutover",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/dal/operational-spine-store.ts",
+          "target_blob": "075e7ce4ad366176c39f6baf75b66a51ac40c9cd",
+          "reason": "S3 intent-spine binding: the W1 G2 companion operation_events INSERT now carries intent_id via a workspace-scoped scalar subquery (task_packets.event_id -> operation_events.intent_id) inside the same RLS transaction. Server-derived only; packet_id remains the sole client input. NULL packet / NULL event_id / intent-less event collapse to NULL (byte-identical for those cases). Closes the seam where agent tool actions wrote spine events but never joined the intent lineage spine (ADR-ABS-011: intents = sole spine SSOT)."
+        },
+        {
+          "path": "src/workers/__tests__/operational-spine-unification.test.ts",
+          "target_blob": "bd6b101a6fd0c73057456b926cde772ccc350c04",
+          "reason": "S3 tests: mock answers the packet-assert SELECT; 2 new tests pin server-side intent derivation (subquery text + parameterization, no body-carried intent) and packet-less NULL-collapse same-shape. 8/8 pass."
+        }
+      ]
     }
   ]
 }

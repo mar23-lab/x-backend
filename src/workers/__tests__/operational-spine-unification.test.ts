@@ -30,6 +30,10 @@ function mockSql() {
       if (text.includes('INSERT INTO tool_events')) {
         return [{ id: 'te_1', workspace_id: 'ws1', packet_id: null, tool_name: 'codex', action: 'report_tool_event', actor_user_id: 'u1', status: 'completed', evidence_item_id: null, summary: 's', created_at: 'now' }];
       }
+      // S3 (260718): let packet-carrying inputs pass assertPacketInWorkspace under the mock.
+      if (text.includes('SELECT id FROM task_packets')) {
+        return [{ id: 'pk_1' }];
+      }
       return [];
     });
   };
@@ -101,5 +105,27 @@ describe('createToolEventRow · flag ON == same-transaction companion emission',
     // simulate a malicious body that tries to smuggle the flag through input
     await createToolEventRow(sql, 'ws1', 'u1', { ...INPUT, emitSpineEvent: true } as never);
     expect(textsOf(stmts)).not.toContain('INSERT INTO operation_events');
+  });
+
+  // ── S3 · intent-spine binding (260718): the companion inherits the packet's intent ──
+  it('S3: companion derives intent_id SERVER-SIDE from the task packet (SQL subquery, never body)', async () => {
+    const { sql, stmts } = mockSql();
+    await createToolEventRow(sql, 'ws1', 'u1', { ...INPUT, packet_id: 'pk_1' }, { emitSpineEvent: true });
+    const evStmt = stmts.find((s) => s.text.includes('INSERT INTO operation_events'))!;
+    expect(evStmt.text).toContain('intent_id');
+    expect(evStmt.text).toContain('FROM task_packets');   // derivation rides IN SQL, workspace-scoped
+    expect(evStmt.values).toContain('pk_1');              // parameterized by packet id...
+    // ...and the workspace appears in BOTH the main VALUES and the subquery scope
+    expect(evStmt.values.filter((v) => v === 'ws1').length).toBeGreaterThanOrEqual(2);
+    // a client can never supply the intent: no intent value rides in from the body
+    expect(Object.keys(INPUT)).not.toContain('intent_id');
+  });
+
+  it('S3: packet-less tool events keep the SAME statement shape (NULL-collapse, no special-casing)', async () => {
+    const { sql, stmts } = mockSql();
+    await createToolEventRow(sql, 'ws1', 'u1', INPUT, { emitSpineEvent: true });
+    const evStmt = stmts.find((s) => s.text.includes('INSERT INTO operation_events'))!;
+    expect(evStmt.text).toContain('FROM task_packets');   // one statement shape for both cases
+    expect(evStmt.values).toContain(null);                // the packet param collapses to NULL
   });
 });
