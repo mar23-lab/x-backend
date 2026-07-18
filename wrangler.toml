@@ -80,6 +80,12 @@ binding = "AI"
 # Non-secret build/runtime config (secrets set via `wrangler secret put`)
 [vars]
 ENVIRONMENT = "production"
+# F9 (260719): single-intake production activation. GATED — DO NOT DEPLOY until migration
+# 075_single_intake_and_execution_receipts.sql is applied to prod Neon (it creates
+# intake_resolutions / governed_execution_receipts / projection_outbox; the endpoints 500 without
+# them). Validated apply-clean on an isolated Neon branch off prod 260719 (schema_version 75+82,
+# 0 rows, idempotent). Order at deploy: (1) apply 075 to prod, (2) this flag, (3) wrangler deploy.
+SINGLE_INTAKE_ENABLED = "true"
 CLERK_JWKS_CACHE_TTL_SECONDS = "300"
 ALLOWED_ORIGIN_PATTERN = "https://*.xlooop.com"
 LOG_LEVEL = "info"
