@@ -10,6 +10,7 @@
     "deploy:api": "wrangler deploy --config wrangler.toml",
     "dev:api": "wrangler dev --config wrangler.toml",
     "verify:prod-migrations": "node scripts/verify-prod-migrations.mjs",
+    "verify:prod-migrations:self-test": "node scripts/verify-prod-migrations.mjs --self-test",
     "ci-local": "node scripts/ci-local.mjs",
     "verify:installed-dependencies": "node scripts/verify-installed-dependencies.mjs",
     "typecheck": "tsc --noEmit -p tsconfig.workers.json",

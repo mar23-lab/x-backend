@@ -17,6 +17,7 @@ const gates = [
   ['rls grant parity', 'npm', ['run', 'verify:rls-grant-parity']],
   ['data schemas', 'npm', ['run', 'verify:data-schemas']],
   ['orphan tests', 'npm', ['run', 'verify:no-orphan-worker-tests']],
+  ['prod-migration object-probe classifier', 'npm', ['run', 'verify:prod-migrations:self-test']],
   ['typecheck', 'npm', ['run', 'typecheck']],
   ['worker suite', 'npm', ['test']],
 ];
