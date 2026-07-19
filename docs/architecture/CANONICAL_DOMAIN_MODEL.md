@@ -1,7 +1,7 @@
 # CANONICAL DOMAIN MODEL — Xlooop (N-UX.0 ontology ratification)
 
 ```
-status:      PROPOSED — awaiting operator ratification
+status: accepted (ratified by operator authorization 2026-07-20)
 owner:       marat
 date:        2026-07-20
 supersedes:  none

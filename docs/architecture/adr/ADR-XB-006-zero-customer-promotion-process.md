@@ -1,6 +1,6 @@
 # ADR-XB-006 — Zero-Customer (MB-P) Promotion Process
 
-- **Status:** proposed (awaiting operator ratification — N-UX.0; harvest #1 of the audit prompt)
+- **Status:** accepted (ratified by operator authorization, 2026-07-20 — Marat Basyrov, session 260720; execution rides the N-UX waves)
 - **Date:** 2026-07-20
 - **Owner:** marat
 - **Relates:** CANONICAL_DOMAIN_MODEL.md; `mbp-private` workspace (customer-0, live)

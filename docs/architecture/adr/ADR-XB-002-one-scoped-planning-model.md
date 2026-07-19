@@ -1,6 +1,6 @@
 # ADR-XB-002 — One Scoped Planning Model
 
-- **Status:** proposed (awaiting operator ratification — N-UX.0; execution = N-UX.3, P2)
+- **Status:** accepted (ratified by operator authorization, 2026-07-20 — Marat Basyrov, session 260720; execution rides the N-UX waves)
 - **Date:** 2026-07-20
 - **Owner:** marat
 - **Relates:** CANONICAL_DOMAIN_MODEL.md §1/§3; ADR-XB-007 R2/R5; mig 066/069/074

@@ -1,6 +1,6 @@
 # ADR-XB-005 — Events Are Not Work Items (Four Projections of One Spine)
 
-- **Status:** proposed (awaiting operator ratification — N-UX.0; build = N-UX.1's largest FE item)
+- **Status:** accepted (ratified by operator authorization, 2026-07-20 — Marat Basyrov, session 260720; execution rides the N-UX waves)
 - **Date:** 2026-07-20
 - **Owner:** marat
 - **Relates:** CANONICAL_DOMAIN_MODEL.md §1; `operation_events`; `operations_unified`

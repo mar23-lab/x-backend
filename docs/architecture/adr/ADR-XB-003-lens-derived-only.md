@@ -1,6 +1,6 @@
 # ADR-XB-003 — Lenses Are Derived-Only
 
-- **Status:** proposed (awaiting operator ratification — N-UX.0)
+- **Status:** accepted (ratified by operator authorization, 2026-07-20 — Marat Basyrov, session 260720; execution rides the N-UX waves)
 - **Date:** 2026-07-20
 - **Owner:** marat
 - **Relates:** CANONICAL_DOMAIN_MODEL.md §1/§3; mig 005 (synthetic_domains); the LEM-v4 recommendations plane
