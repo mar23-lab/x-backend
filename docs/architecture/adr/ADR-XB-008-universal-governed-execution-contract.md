@@ -1,6 +1,6 @@
 # ADR-XB-008 — The Universal Governed Execution Contract (UGEC)
 
-- **Status:** PROPOSED (operator ratification required; part of the N-UX.0 package)
+- **Status:** accepted (ratified by operator authorization, 2026-07-20 — Marat Basyrov, session 260720; execution rides the N-UX waves)
 - **Date:** 2026-07-20
 - **Authority context:** CANONICAL_DOMAIN_MODEL.md; ADR-XB-001..007; the 260720 enforcement map
   (measured @ `ed4d5aa`); MB-P PILLARS/HARD_RULES (the governance twin)

@@ -1,6 +1,6 @@
 # ADR-XB-004 — Chat Is an Interaction Surface, Never a Truth Container
 
-- **Status:** proposed (awaiting operator ratification — N-UX.0)
+- **Status:** accepted (ratified by operator authorization, 2026-07-20 — Marat Basyrov, session 260720; execution rides the N-UX waves)
 - **Date:** 2026-07-20
 - **Owner:** marat
 - **Relates:** CANONICAL_DOMAIN_MODEL.md §3/§4; mig 071 (context_receipts, staged); ADR-XB-007 R1

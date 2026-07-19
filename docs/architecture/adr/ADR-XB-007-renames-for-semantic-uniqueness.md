@@ -1,6 +1,6 @@
 # ADR-XB-007 — Renames for Semantic Uniqueness
 
-- **Status:** proposed (awaiting operator ratification — N-UX.0; executions ride N-UX.2/.3 migrations)
+- **Status:** accepted (ratified by operator authorization, 2026-07-20 — Marat Basyrov, session 260720; execution rides the N-UX waves)
 - **Date:** 2026-07-20
 - **Owner:** marat
 - **Relates:** CANONICAL_DOMAIN_MODEL.md §2 (the full rename register); ADR-XB-002

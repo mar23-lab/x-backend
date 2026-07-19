@@ -1,6 +1,6 @@
 # ADR-XB-001 — Tenant vs Workspace
 
-- **Status:** proposed (awaiting operator ratification — N-UX.0)
+- **Status:** accepted (ratified by operator authorization, 2026-07-20 — Marat Basyrov, session 260720; execution rides the N-UX waves)
 - **Date:** 2026-07-20
 - **Owner:** marat
 - **Relates:** CANONICAL_DOMAIN_MODEL.md §1/§3; external assessment "workspace-as-company / missing tenant boundary" (CONFIRMED by ground truth)
