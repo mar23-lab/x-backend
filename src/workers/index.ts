@@ -35,6 +35,7 @@ import { neonClient } from './db/client';
 import { WorkersDalAdapter } from './dal/WorkersDalAdapter';
 import type { DalAdapter } from './dal/DalAdapter';
 import { listGoalsWithReviewDueRow, updateGoalReviewDueRow } from './dal/propagation-store';
+import { listWorkspaceIdsForCensusRow, countIntakeResolutionsRow, recordCustomerCensusObservationRow } from './dal/customer-census-store';
 import { healthRoute } from './routes/health';
 import { sessionRoute } from './routes/session';
 import { eventsRoute } from './routes/events';
@@ -133,6 +134,7 @@ export interface AppEnv extends CorsEnv, AuthEnv, AdminEnv, NotifierEnv, MbpProj
   TENANT_PROJECTION_QUEUE_ENABLED?: string; // Commercial projection dispatcher; default OFF
   TENANT_PROJECTION_QUEUE?: ProjectionQueueBinding; // Provisioning intentionally excluded until approved
   GRAPH_DOCUMENT_NODES_ENABLED?: string;
+  CUSTOMER_CENSUS_ENABLED?: string;         // J-E TASK 2 (260719) · tenant sterility census (crons/customer-census.ts, chained into 05:00 slot) — BORN-OFF (only 'true' enables); OBSERVE-only, byte-inert when off
 }
 
 export type AppVariables = AuthVariables & {
@@ -372,6 +374,14 @@ const scheduledHandler = async (
       reviewSchedule: {
         listDue: (nowDateIso: string, limit: number) => listGoalsWithReviewDueRow(sql, nowDateIso, limit),
         bumpReviewDue: (goalId: string, nextReviewDue: string) => updateGoalReviewDueRow(sql, goalId, nextReviewDue),
+      },
+      // J-E TASK 2 (260719) · customer census data gateway, bound from store functions here (not added to the
+      // FROZEN WorkersDalAdapter). Only customerCensusCron (chained into 05:00) reads it, and only when
+      // CUSTOMER_CENSUS_ENABLED is on. The graph facts come from the existing dal.assembleDataGraphFacts.
+      census: {
+        listWorkspaceIds: (limit: number) => listWorkspaceIdsForCensusRow(sql, limit),
+        countIntakeResolutions: (workspaceId: string) => countIntakeResolutionsRow(sql, workspaceId),
+        recordObservation: (row) => recordCustomerCensusObservationRow(sql, row),
       },
       projectionOutbox: {
         claim: (limit, nowIso, staleBeforeIso) => claimProjectionOutboxRows(sql, limit, nowIso, staleBeforeIso),
