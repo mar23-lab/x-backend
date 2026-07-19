@@ -46,17 +46,24 @@ custom_domain = true
 # Wave ν (2026-05-28 · post-deploy-attempt) · CRITICAL Cloudflare Workers
 # account-plan limit: max 5 cron triggers per worker. Original Wave ζ
 # shipped 7; first wrangler-deploy returned "code: 10072 · limit of 5
-# cron triggers". Consolidated to 5 by chaining pairs of daily loops:
-#   - threshold_retune (04:00) now ALSO invokes pattern_suspend (was 04:30)
-#   - calibration_retrain (05:00) now ALSO invokes shadow_eval (was 05:15)
-# All 7 cron handlers remain registered + callable via admin endpoint /
-# scheduledHandler dispatcher; only the wrangler-managed schedules are 5.
+# cron triggers". Consolidated by chaining daily loops into shared slots.
+#
+# J-E TASK 1 (2026-07-19) · DEAD-CRON FIX. This comment PREVIOUSLY claimed the 04:00/05:00 slots ran
+# pattern_suspend/shadow_eval — but the composites actually ran purge_deleted/review_schedule, and
+# pattern_suspend/shadow_eval carried their OWN registry expressions ("30 4 * * *" / "15 5 * * *") that
+# were NEVER in this [triggers] array. scheduledHandler dispatches ONLY via CRON_BY_EXPRESSION[event.cron]
+# and Cloudflare only sends declared expressions, so §16.5 loops 3+6 NEVER fired autonomously. Fixed by
+# genuinely chaining them into the existing daily slots (crons/index.ts) — NOT by adding a 7th/8th trigger
+# (the account cap forbids it, and an undeclared expression itself never fires). CRON_REGISTRY now has
+# EXACTLY the 6 expressions below — a 1:1 match with this array, guarded by cron-registry-wrangler-parity.test.
+#   - 04:00 slot: threshold_retune + purge_deleted + pattern_suspend (§16.5 loops 2 & 3)
+#   - 05:00 slot: calibration_retrain + review_schedule + shadow_eval + customer_census (§16.5 loops 5 & 6)
 [triggers]
 crons = [
   "*/5 * * * *",   # propagation_tick (5min)
   "0 * * * *",     # permanent_suppress + graph_rebuild (hourly · ARCH-004 chained graph_rebuild into this slot — it FEEDS the data-graph substrate; see crons/index.ts permanentSuppressThenGraphRebuild)
-  "0 4 * * *",     # threshold_retune + pattern_suspend (daily 04:00 UTC)
-  "0 5 * * *",     # calibration_retrain + shadow_eval (daily 05:00 UTC)
+  "0 4 * * *",     # threshold_retune + purge_deleted + pattern_suspend (daily 04:00 UTC · see thresholdRetuneThenPurgeThenPatternSuspend)
+  "0 5 * * *",     # calibration_retrain + review_schedule + shadow_eval + customer_census (daily 05:00 UTC · see calibrationRetrainThenReviewThenShadowEvalThenCensus)
   "0 3 * * 1",     # weight_retune (weekly Mon 03:00 UTC)
   "45 * * * *",    # reclassify_unattributed — PR #517 self-heal backstop (hourly :45 · flag-gated RECLASSIFY_CRON_ENABLED, default OFF)
 ]

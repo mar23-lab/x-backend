@@ -11,11 +11,20 @@
 //   Loop 0 (propagation_tick)      · existing R49' PR-5+6     · @5min  · "*/5 * * * *"
 //   Loop 1 (weight_retune)         · §16.5 row 1 · weekly      · @weekly · "0 3 * * 1"   (Mon 03:00 UTC)
 //   Loop 2 (threshold_retune)      · §16.5 row 2 · daily       · @daily  · "0 4 * * *"   (Daily 04:00 UTC)
-//   Loop 3 (pattern_suspend)       · §16.5 row 3 · daily       · @daily  · "30 4 * * *"  (Daily 04:30 UTC)
+//   Loop 3 (pattern_suspend)       · §16.5 row 3 · daily       · CHAINED into the 04:00 slot (J-E; see below)
 //   Loop 4 (permanent_suppress)    · §16.5 row 4 · hourly      · @hourly · "0 * * * *"
 //   Loop 5 (calibration_retrain)   · §16.5 row 5 · daily       · @daily  · "0 5 * * *"   (Daily 05:00 UTC)
-//   Loop 6 (shadow_eval)           · §16.5 row 6 · daily       · @daily  · "15 5 * * *"  (Daily 05:15 UTC)
+//   Loop 6 (shadow_eval)           · §16.5 row 6 · daily       · CHAINED into the 05:00 slot (J-E; see below)
 //   Backstop (reclassify_unattributed) · PR #517 self-heal     · @hourly · "45 * * * *"  (hourly :45 · flag-gated, default OFF)
+//
+// J-E TASK 1 (260719) · pattern_suspend + shadow_eval were DEAD-REGISTERED: they carried their OWN registry
+// expressions ("30 4 * * *" / "15 5 * * *") that were NEVER declared in wrangler.toml [triggers]. The
+// scheduledHandler dispatches ONLY via CRON_BY_EXPRESSION[event.cron], and Cloudflare only ever sends an
+// expression that IS in [triggers] — so those two loops never fired autonomously (§16.5 loops 3+6 dead).
+// The 5-trigger account cap forbids adding their expressions, so they are CHAINED (the established pattern):
+//   - pattern_suspend → the daily 04:00 slot (thresholdRetuneThenPurgeThenPatternSuspend)
+//   - shadow_eval     → the daily 05:00 slot (calibrationRetrainThenReviewThenShadowEvalThenCensus)
+// Their standalone (never-firing) registry entries were REMOVED so CRON_REGISTRY == wrangler.toml [triggers].
 //
 // Why these specific times: keep self-maintenance loops in a low-traffic
 // window (03:00–05:30 UTC = 14:00–16:30 AEST = 23:00–01:30 EDT) so they
@@ -35,6 +44,7 @@ import { reviewScheduleCron } from './review-schedule';
 import { reclassifyUnattributedCron } from './reclassify-unattributed';
 import { graphRebuildCron } from './graph-rebuild';
 import { tenantProjectionDispatchCron } from './tenant-projection-dispatch';
+import { customerCensusCron } from './customer-census';
 import { runOperationsQueueConsumer, type QueueConsumerResult } from '../services/operations-queue-consumer';
 import type { CronHandler, CronHandlerResult, CronRegistryEntry } from './types';
 
@@ -49,6 +59,7 @@ export { shadowEvalCron } from './shadow-eval';
 export { reclassifyUnattributedCron } from './reclassify-unattributed';
 export { graphRebuildCron } from './graph-rebuild';
 export { tenantProjectionDispatchCron } from './tenant-projection-dispatch';
+export { customerCensusCron } from './customer-census';
 
 // Commercial single-intake projection dispatch shares the existing five-minute trigger. Both loops
 // execute independently; the projection lane is default-off and cannot degrade propagation while inert.
@@ -179,7 +190,14 @@ const reclassifyThenDrainQueue: CronHandler = async (ctx) => {
 // sweep). Same independent-composite shape as the others: threshold_retune runs first, the purge
 // second, and NEITHER aborts the other. The purge is flag-gated (PURGE_DELETED_ENABLED, default OFF)
 // and scoped to source_tool='xlooop', so it is inert + safe until explicitly enabled.
-const thresholdRetuneThenPurge: CronHandler = async (ctx) => {
+//
+// J-E TASK 1 (260719) · pattern_suspend (§16.5 loop 3) is now the THIRD independent arm of this slot. It
+// was dead-registered at "30 4 * * *" (an expression absent from wrangler.toml [triggers]), so Cloudflare
+// never fired it — §16.5 loop 3 did not run autonomously. Chaining it here (the 5-trigger cap forbids a new
+// expression) restores its daily cadence. It is NOT flag-gated (a core §16.5 loop) and runs unconditionally;
+// same best-effort isolation — a throw in ANY arm never aborts the others, and a failed secondary escalates
+// the composite to 'degraded'.
+const thresholdRetuneThenPurgeThenPatternSuspend: CronHandler = async (ctx) => {
   let primary: CronHandlerResult | null = null;
   let retuneErr: string | null = null;
   try { primary = await thresholdRetuneCron(ctx); } catch (e) { retuneErr = e instanceof Error ? e.message : String(e); }
@@ -188,21 +206,37 @@ const thresholdRetuneThenPurge: CronHandler = async (ctx) => {
   let purgeFailed = false;
   try { const p = await purgeDeletedCron(ctx); purgeMeta = { status: p.status, deleted: p.actions_taken, ...(p.metadata ?? {}) }; purgeFailed = p.status === 'failed' || p.status === 'degraded'; }
   catch (e) { purgeErr = e instanceof Error ? e.message : String(e); purgeFailed = true; }
+  // J-E · pattern_suspend arm (independent best-effort; unconditional core loop).
+  let suspendMeta: Record<string, unknown> | null = null;
+  let suspendErr: string | null = null;
+  let suspendFailed = false;
+  try { const s = await patternSuspendCron(ctx); suspendMeta = { status: s.status, actions_taken: s.actions_taken, ...(s.metadata ?? {}) }; suspendFailed = s.status === 'failed' || s.status === 'degraded'; }
+  catch (e) { suspendErr = e instanceof Error ? e.message : String(e); suspendFailed = true; }
   const base: CronHandlerResult = primary ?? {
-    loop_name: 'threshold_retune+purge_deleted', run_id: `composite_${ctx.now().toISOString()}`,
+    loop_name: 'threshold_retune+purge_deleted+pattern_suspend', run_id: `composite_${ctx.now().toISOString()}`,
     actions_taken: 0, cost_ms: 0, status: 'failed', error: retuneErr ?? undefined,
   };
-  // OBS-1 (J-W3): a failed purge (secondary) escalates the composite to 'degraded'.
-  const status = base.status === 'failed' ? 'failed' : (purgeFailed ? 'degraded' : base.status);
-  return { ...base, status, metadata: { ...(base.metadata ?? {}), threshold_retune_error: retuneErr, purge_deleted: purgeMeta, purge_deleted_error: purgeErr } };
+  // OBS-1 (J-W3): a failed purge OR pattern_suspend (secondary) escalates the composite to 'degraded'.
+  const status = base.status === 'failed' ? 'failed' : ((purgeFailed || suspendFailed) ? 'degraded' : base.status);
+  return { ...base, status, metadata: { ...(base.metadata ?? {}), threshold_retune_error: retuneErr, purge_deleted: purgeMeta, purge_deleted_error: purgeErr, pattern_suspend: suspendMeta, pattern_suspend_error: suspendErr } };
 };
 
 // A10 (260713) · the review-cadence loop CHAINS into the daily 05:00 UTC calibration_retrain slot (a
 // low-traffic window; daily is the right cadence to surface due goal-reviews). Same independent-composite
-// shape as thresholdRetuneThenPurge: calibration runs first, the review-scheduler second, and NEITHER
-// aborts the other. The review loop is flag-gated (REVIEW_SCHEDULER_ENABLED, default OFF) and performs
-// ZERO DB IO when off, so it is inert + safe until explicitly enabled.
-const calibrationRetrainThenReviewSchedule: CronHandler = async (ctx) => {
+// shape as thresholdRetuneThenPurgeThenPatternSuspend: calibration runs first, the review-scheduler second,
+// and NEITHER aborts the other. The review loop is flag-gated (REVIEW_SCHEDULER_ENABLED, default OFF) and
+// performs ZERO DB IO when off, so it is inert + safe until explicitly enabled.
+//
+// J-E TASK 1 (260719) · shadow_eval (§16.5 loop 6) is the THIRD arm. It was dead-registered at "15 5 * * *"
+// (an expression absent from wrangler.toml [triggers]), so Cloudflare never fired it — §16.5 loop 6 did not
+// run autonomously. Chained here (5-trigger cap forbids a new expression); unconditional core loop.
+//
+// J-E TASK 2 (260719) · the customer sterility census (§16.5 tenant-plane translation of MB-P's census) is
+// the FOURTH arm — OBSERVE-only. It is BORN-OFF (CUSTOMER_CENSUS_ENABLED unset → byte-inert: ZERO reads/
+// writes), mirroring reclassify-unattributed's default-off posture. It runs LAST so it observes the settled
+// state after the 04:00 data-lifecycle sweeps. It never remediates — reclassify_unattributed stays the only
+// remediation arm. Same best-effort isolation; a failed arm escalates the composite to 'degraded' only.
+const calibrationRetrainThenReviewThenShadowEvalThenCensus: CronHandler = async (ctx) => {
   let primary: CronHandlerResult | null = null;
   let calibErr: string | null = null;
   try { primary = await calibrationRetrainCron(ctx); } catch (e) { calibErr = e instanceof Error ? e.message : String(e); }
@@ -215,13 +249,25 @@ const calibrationRetrainThenReviewSchedule: CronHandler = async (ctx) => {
     reviewFailed = r.status === 'failed' || r.status === 'degraded';
   }
   catch (e) { reviewErr = e instanceof Error ? e.message : String(e); reviewFailed = true; }
+  // J-E · shadow_eval arm (independent best-effort; unconditional core loop).
+  let shadowMeta: Record<string, unknown> | null = null;
+  let shadowErr: string | null = null;
+  let shadowFailed = false;
+  try { const s = await shadowEvalCron(ctx); shadowMeta = { status: s.status, actions_taken: s.actions_taken, ...(s.metadata ?? {}) }; shadowFailed = s.status === 'failed' || s.status === 'degraded'; }
+  catch (e) { shadowErr = e instanceof Error ? e.message : String(e); shadowFailed = true; }
+  // J-E · customer census arm (independent best-effort; BORN-OFF, byte-inert when the flag is unset).
+  let censusMeta: Record<string, unknown> | null = null;
+  let censusErr: string | null = null;
+  let censusFailed = false;
+  try { const c = await customerCensusCron(ctx); censusMeta = { status: c.status, actions_taken: c.actions_taken, ...(c.metadata ?? {}) }; censusFailed = c.status === 'failed' || c.status === 'degraded'; }
+  catch (e) { censusErr = e instanceof Error ? e.message : String(e); censusFailed = true; }
   const base: CronHandlerResult = primary ?? {
-    loop_name: 'calibration_retrain+review_schedule', run_id: `composite_${ctx.now().toISOString()}`,
+    loop_name: 'calibration_retrain+review_schedule+shadow_eval+customer_census', run_id: `composite_${ctx.now().toISOString()}`,
     actions_taken: 0, cost_ms: 0, status: 'failed', error: calibErr ?? undefined,
   };
-  // OBS-1 (J-W3): a failed review-scheduler (secondary) escalates the composite to 'degraded'.
-  const status = base.status === 'failed' ? 'failed' : (reviewFailed ? 'degraded' : base.status);
-  return { ...base, status, metadata: { ...(base.metadata ?? {}), calibration_retrain_error: calibErr, review_schedule: reviewMeta, review_schedule_error: reviewErr } };
+  // OBS-1 (J-W3): a failed secondary arm (review-scheduler, shadow_eval, or census) escalates to 'degraded'.
+  const status = base.status === 'failed' ? 'failed' : ((reviewFailed || shadowFailed || censusFailed) ? 'degraded' : base.status);
+  return { ...base, status, metadata: { ...(base.metadata ?? {}), calibration_retrain_error: calibErr, review_schedule: reviewMeta, review_schedule_error: reviewErr, shadow_eval: shadowMeta, shadow_eval_error: shadowErr, customer_census: censusMeta, customer_census_error: censusErr } };
 };
 
 /**
@@ -245,26 +291,14 @@ export const CRON_REGISTRY: ReadonlyArray<CronRegistryEntry> = Object.freeze([
   {
     cron: '0 4 * * *',
     loop_name: 'threshold_retune',
-    handler: thresholdRetuneThenPurge,
-    description: '§16.5 loop 2 · raise E_min per pattern_kind when precision < 0.5. CHAINED (F3 260628): customer self-service rollback purge · hard-deletes source_tool=xlooop events archived past the 30-day window · flag-gated PURGE_DELETED_ENABLED (default OFF)',
-  },
-  {
-    cron: '30 4 * * *',
-    loop_name: 'pattern_suspend',
-    handler: patternSuspendCron,
-    description: '§16.5 loop 3 · auto-suspend pattern_kind when precision < 0.3',
+    handler: thresholdRetuneThenPurgeThenPatternSuspend,
+    description: '§16.5 loop 2 · raise E_min per pattern_kind when precision < 0.5. CHAINED (F3 260628): customer self-service rollback purge · hard-deletes source_tool=xlooop events archived past the 30-day window · flag-gated PURGE_DELETED_ENABLED (default OFF). CHAINED (J-E 260719): §16.5 loop 3 pattern_suspend · auto-suspend pattern_kind when precision < 0.3 (was dead-registered at "30 4 * * *" — never in wrangler.toml [triggers])',
   },
   {
     cron: '0 5 * * *',
     loop_name: 'calibration_retrain',
-    handler: calibrationRetrainThenReviewSchedule,
-    description: '§16.5 loop 5 · per-bucket calibration_error → trigger weight retune. CHAINED (A10 260713): review-scheduler surfaces due goal-reviews (needs_review events) + bumps review_due · flag-gated REVIEW_SCHEDULER_ENABLED (default OFF)',
-  },
-  {
-    cron: '15 5 * * *',
-    loop_name: 'shadow_eval',
-    handler: shadowEvalCron,
-    description: '§16.5 loop 6 · 30-day shadow window for weight=0 signals',
+    handler: calibrationRetrainThenReviewThenShadowEvalThenCensus,
+    description: '§16.5 loop 5 · per-bucket calibration_error → trigger weight retune. CHAINED (A10 260713): review-scheduler surfaces due goal-reviews (needs_review events) + bumps review_due · flag-gated REVIEW_SCHEDULER_ENABLED (default OFF). CHAINED (J-E 260719): §16.5 loop 6 shadow_eval · 30-day shadow window for weight=0 signals (was dead-registered at "15 5 * * *" — never in wrangler.toml [triggers]); + customer sterility census · OBSERVE-only tenant-plane orphan delta · flag-gated CUSTOMER_CENSUS_ENABLED (default OFF, byte-inert)',
   },
   {
     cron: '0 3 * * 1',

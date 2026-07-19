@@ -11,6 +11,8 @@ const batchCooldownMs = Number(process.env.XLOOOP_TEST_BATCH_COOLDOWN_MS || 3000
 const files = [];
 const nodeEnvironmentTests = new Set([
   'src/workers/__tests__/role-skill-catalog-publisher.test.ts',
+  // J-E TASK 1 (260719) · reads wrangler.toml + crons/index.ts via node:fs (unavailable in the workerd pool).
+  'src/workers/__tests__/cron-registry-wrangler-parity.test.ts',
 ]);
 
 function walk(dir) {

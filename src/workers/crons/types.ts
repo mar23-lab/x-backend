@@ -10,6 +10,7 @@ import type { DalAdapter } from '../dal/DalAdapter';
 import type { GoalReviewDueRow } from '../dal/propagation-store';
 import type { ProjectionOutboxGateway, ProjectionQueueBinding } from '../services/tenant-projection-queue';
 import type { GovernedModelLineageFactory } from '../lib/model-execution-lineage';
+import type { CustomerCensusObservationInsert } from '../dal/customer-census-store';
 
 /**
  * A10 review-scheduler data gateway. Injected into the cron context (like `env.AI`) rather than added to
@@ -21,6 +22,22 @@ export interface ReviewScheduleGateway {
   listDue(nowDateIso: string, limit: number): Promise<GoalReviewDueRow[]>;
   /** Advance a goal's review_due to the next cadence slot (idempotent). */
   bumpReviewDue(goalId: string, nextReviewDue: string): Promise<void>;
+}
+
+/**
+ * J-E TASK 2 (260719) · customer sterility census data gateway. Injected into the cron context (like
+ * reviewSchedule) rather than added to the FROZEN WorkersDalAdapter facade (S-R1). Only customerCensusCron
+ * (chained into the 05:00 slot) reads it, and only when CUSTOMER_CENSUS_ENABLED is on. The graph facts
+ * themselves come from the EXISTING dal.assembleDataGraphFacts — this gateway carries only the census-specific
+ * enumeration/read/write the frozen adapter must not grow.
+ */
+export interface CustomerCensusGateway {
+  /** Bounded, deterministic enumeration of workspace ids to observe. */
+  listWorkspaceIds(limit: number): Promise<string[]>;
+  /** Count of governed intake_resolutions (mig 079) for a workspace. */
+  countIntakeResolutions(workspaceId: string): Promise<number>;
+  /** Persist one workspace's census observation (customer-safe: counts + hashes only; mig 083). */
+  recordObservation(row: CustomerCensusObservationInsert): Promise<void>;
 }
 
 /**
@@ -62,6 +79,13 @@ export interface CronHandlerContext {
     // queue resource exists; enabled-without-binding fails visibly rather than dropping work.
     TENANT_PROJECTION_QUEUE_ENABLED?: string;
     TENANT_PROJECTION_QUEUE?: ProjectionQueueBinding;
+    // J-E TASK 2 (260719) · customer sterility census (crons/customer-census.ts), chained into the daily
+    // 05:00 slot. BORN-OFF: only the exact string "true" (case-insensitive) enables it — flag-off performs
+    // ZERO DB reads/writes (byte-inert). OBSERVE-only; it never remediates.
+    CUSTOMER_CENSUS_ENABLED?: string;
+    // Whether document nodes (mig 051) are tracked in the data graph. The census counts documents toward
+    // population only when this is on (same flag customer-lineage.ts honours); off ⇒ documents=0.
+    GRAPH_DOCUMENT_NODES_ENABLED?: string;
     CONTEXT_PACKET_PERSISTENCE_ENABLED?: string;
     ROLE_SKILL_CATALOG_ENABLED?: string;
     RESOLUTION_RECEIPT_SIGNING_SECRET?: string;
@@ -71,6 +95,9 @@ export interface CronHandlerContext {
   // A10 (260713) · review-scheduler data gateway (bound from store functions in the dispatcher). Optional
   // + additive: existing loops ignore it. Only reviewScheduleCron reads it, and only when its flag is on.
   readonly reviewSchedule?: ReviewScheduleGateway;
+  // J-E TASK 2 (260719) · customer census data gateway (bound from store functions in the dispatcher).
+  // Optional + additive: only customerCensusCron reads it, and only when CUSTOMER_CENSUS_ENABLED is on.
+  readonly census?: CustomerCensusGateway;
   /** Cross-tenant dispatcher control plane. Messages contain only opaque outbox/workspace ids; the
    * consumer re-binds every read/write to both values before projecting one tenant. */
   readonly projectionOutbox?: ProjectionOutboxGateway;
