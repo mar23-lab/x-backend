@@ -49,6 +49,14 @@ const serviceWiring = {
   flags: {
     DIGEST_SWEEP_ENABLED: wtVal('DIGEST_SWEEP_ENABLED'),
     RECLASSIFY_CRON_ENABLED: wtVal('RECLASSIFY_CRON_ENABLED'),
+    // Wave M-B (260719): widened to surface the safety-relevant production flags in the projection.
+    // CUSTOMER_CENSUS_ENABLED (OBSERVE-only census), EXECUTOR_MODE (execution-pipeline drainer),
+    // SAFETY_FLOOR_RATELIMIT_ENABLED (per-user LLM-cost caps), ENTITLEMENT_ENFORCEMENT (deliberately
+    // NOT flipped today — reads null, which is the honest projection of an unset var).
+    CUSTOMER_CENSUS_ENABLED: wtVal('CUSTOMER_CENSUS_ENABLED'),
+    EXECUTOR_MODE: wtVal('EXECUTOR_MODE'),
+    SAFETY_FLOOR_RATELIMIT_ENABLED: wtVal('SAFETY_FLOOR_RATELIMIT_ENABLED'),
+    ENTITLEMENT_ENFORCEMENT: wtVal('ENTITLEMENT_ENFORCEMENT'),
   },
 };
 if (!wt) drift.push('wrangler.toml unreadable — service_wiring is empty');
