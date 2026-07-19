@@ -1,0 +1,7 @@
+{
+  "schema_id": "ugec_conformance_baseline.v1",
+  "rule": "spine_authorize_calls MUST NOT decrease; uncovered_write_handlers MUST NOT increase. Monotone ratchet (ADR-XB-008), never an absolute-100% target. Lower uncovered/raise spine ceilings to lock gains.",
+  "spine_authorize_calls_floor": 24,
+  "uncovered_write_handlers_ceiling": 97,
+  "captured_at": "2026-07-19"
+}

@@ -18,6 +18,7 @@ import type {
   TaskPacket,
   ToolEventAction,
 } from '../dal/types';
+import { evaluateUgecFence } from '../lib/ugec-fence';
 import { whoamiEnvelope } from './template-policy-registry';
 import { emitEvent } from '../lib/observability'; // T3/P6 · structured events for the landed writes
 import { mcpCustomerReadsRoute } from './mcp-customer-reads'; // T4/P7 · tenant-scoped customer-data reads
@@ -131,6 +132,7 @@ async function ensureCustomerWriteScope(
   ctx: any,
   auth: AuthContext,
   packetId: string,
+  toolAction?: string,
 ): Promise<Response | null> {
   if (auth.service_principal !== 'customer_token') return null;
   const [packet] = await ctx.get('dal').listTaskPackets(auth.workspace_id, {
@@ -139,6 +141,31 @@ async function ensureCustomerWriteScope(
   });
   if (!packet) {
     return jsonError(ctx, 404, 'NOT_FOUND', 'task packet not found in your workspace');
+  }
+  // UGEC gap-2 (ADR-XB-008): the packet tool-fence + token packet_prefix scope, previously
+  // declarative-only (signed into the envelope, never checked). Born-SHADOW: violations are
+  // warn-logged; denial requires the explicit UGEC_FENCE_ENFORCEMENT flip. The fence must be
+  // ENFORCED before CUSTOMER_API_TOKENS_ENABLED ever opens the agent door (fence-before-door).
+  const violations = evaluateUgecFence({
+    packet_id: packetId,
+    packet_prefix: (auth as { packet_prefix?: string }).packet_prefix,
+    allowed_tools: (packet as TaskPacket).allowed_tools,
+    forbidden_tools: (packet as TaskPacket).forbidden_tools,
+    action: toolAction,
+  });
+  if (violations.length > 0) {
+    console.warn('[UGEC-FENCE]', JSON.stringify({
+      workspace_id: auth.workspace_id,
+      principal: auth.user_id,
+      packet_id: packetId,
+      action: toolAction ?? null,
+      violations,
+      enforced: envFlagTrue((ctx.env as { UGEC_FENCE_ENFORCEMENT?: string }).UGEC_FENCE_ENFORCEMENT),
+    }));
+    if (envFlagTrue((ctx.env as { UGEC_FENCE_ENFORCEMENT?: string }).UGEC_FENCE_ENFORCEMENT)) {
+      return jsonError(ctx, 403, 'UGEC_FENCE_VIOLATION',
+        `write blocked by the packet fence: ${violations.join(', ')}`);
+    }
   }
   return null;
 }
@@ -314,7 +341,7 @@ mcpGatewayRoute.post('/tool-events', async (ctx) => {
     if (typeof body.packet_id !== 'string' || !body.packet_id.trim()) {
       return jsonError(ctx, 400, 'VALIDATION_ERROR', 'packet_id is required');
     }
-    const toolEventScopeError = await ensureCustomerWriteScope(ctx, auth, body.packet_id);
+    const toolEventScopeError = await ensureCustomerWriteScope(ctx, auth, body.packet_id, String(body.action ?? ''));
     if (toolEventScopeError) return toolEventScopeError;
     if (!TOOL_ACTIONS.has(body.action as ToolEventAction)) {
       return jsonError(ctx, 400, 'VALIDATION_ERROR', 'invalid tool action');
