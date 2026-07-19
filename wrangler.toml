@@ -130,6 +130,11 @@ DIGEST_SWEEP_ENABLED = "true"
 # `wrangler secret put RECLASSIFY_CRON_ENABLED` / dashboard env var (no redeploy). PROD IS
 # OPERATOR-GATED — leave "false" until the operator enables it.
 RECLASSIFY_CRON_ENABLED = "true"
+# J-E Wave (260719, PR #16) - OBSERVE-only tenant sterility census, chained into the daily 05:00 slot.
+# Mig 083 applied to prod (workers_schema_version=83, RLS + xlooop_app grants verified) BEFORE this
+# flip, per the PR ordering contract. The census never remediates; reclassify stays the only
+# remediation arm.
+CUSTOMER_CENSUS_ENABLED = "true"
 # OS-3 UX Wave-2.1 · the execution-pipeline executor (services/operations-queue-consumer.ts, chained
 # into the hourly :45 reclassify slot). Default OFF ("disabled") — deploying the worker is INERT: the
 # executor makes ZERO DB calls until this flips. The keystone trust fix: WRITE-mode chat actions log
