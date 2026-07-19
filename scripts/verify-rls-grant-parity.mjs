@@ -26,18 +26,10 @@ const MIGRATIONS = join(dirname(fileURLToPath(import.meta.url)), '..', 'src', 'w
 // EXEMPTIONS — each needs a reason and the migration that argued it. An exemption says
 // "granted without RLS is SAFE HERE because of a named containment"; it must also name what
 // would BREAK that containment, so the next author knows exactly what not to do.
-const EXEMPT = {
-  folder_snapshots: {
-    reason:
-      '047 · the grant exists only so listProjectSourceBindingsRow can LEFT JOIN it for '
-      + 'file-count/synced-at enrichment; that read runs inside the workspace-GUC transaction and is '
-      + 'constrained by the RLS policy on the PARENT project_source_bindings. The direct reads '
-      + '(getFolderBaselineRow, putFolderBaselineRow) run on the OWNER connection (this.sql), not rlsSql.',
-    breaks_if:
-      'any folder_snapshots read is routed through this.rlsSql without first adding a policy '
-      + '(047 names the dedicated policy as a later increment).',
-  },
-};
+// folder_snapshots was exempted here (047 grant, prose-argued containment) until Wave M-B (260719):
+// migration 084 adds its dedicated workspace policy, so it now satisfies parity via RLS rather than a
+// prose exemption. The exemption is removed — the gate enforces folder_snapshots going forward.
+const EXEMPT = {};
 
 const sqlFiles = readdirSync(MIGRATIONS).filter((f) => f.endsWith('.sql')).sort();
 const corpus = sqlFiles.map((f) => ({ file: f, text: readFileSync(join(MIGRATIONS, f), 'utf8') }));

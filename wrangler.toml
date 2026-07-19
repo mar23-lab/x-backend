@@ -78,12 +78,35 @@ name = "EMAIL"
 
 # R56 Stage 1 · public-surface hardening — strict per-IP rate-limit on the unauthenticated
 # signup funnel (POST /api/v1/request-access, 5/min/IP). The rateLimit() middleware
-# (src/workers/middleware/rate-limit.ts) uses an in-isolate fallback bucket until this binding is
-# provisioned. To activate GLOBAL (distributed) limiting, UNCOMMENT and `npm run deploy:api`:
-# [[ratelimit]]
-# name = "RATE_LIMITER_SIGNUP"
-# namespace_id = "2001"
-# simple = { limit = 5, period = 60 }
+# (src/workers/middleware/rate-limit.ts) uses an in-isolate fallback bucket until these bindings are
+# provisioned. ACTIVATED (Wave M-B, 260719): the three [[ratelimit]] blocks below make limiting
+# GLOBAL (distributed across CF's edge) instead of per-isolate. CF rate-limit namespace_id is a
+# self-chosen integer namespace (NOT a pre-allocated resource) — 2001/2002/2003 are the SIGNUP /
+# CHAT / READINESS lanes. Wired in src/workers/index.ts (:181 request-access -> SIGNUP, unconditional;
+# :249 customer-chat -> CHAT and :250 readiness/* -> READINESS, both gated by SAFETY_FLOOR_RATELIMIT_ENABLED).
+# SYNTAX: the rate-limit binding is declared via [[unsafe.bindings]] with type = "ratelimit" — the exact
+# shape documented in src/workers/middleware/rate-limit.ts (the consuming code). The bare top-level
+# [[ratelimit]] form the earlier draft used is NOT recognised by wrangler 4.x (dry-run: "Unexpected
+# fields found in top-level field: ratelimit" and the binding never appears) — corrected Wave M-B 260719.
+[[unsafe.bindings]]
+name = "RATE_LIMITER_SIGNUP"
+type = "ratelimit"
+namespace_id = "2001"
+simple = { limit = 5, period = 60 }
+
+# customer-chat per-user cap (60/min) — gated by SAFETY_FLOOR_RATELIMIT_ENABLED (index.ts:249).
+[[unsafe.bindings]]
+name = "RATE_LIMITER_CHAT"
+type = "ratelimit"
+namespace_id = "2002"
+simple = { limit = 60, period = 60 }
+
+# readiness/* per-user cap (10/min, the LLM-cost lane) — gated by SAFETY_FLOOR_RATELIMIT_ENABLED (index.ts:250).
+[[unsafe.bindings]]
+name = "RATE_LIMITER_READINESS"
+type = "ratelimit"
+namespace_id = "2003"
+simple = { limit = 10, period = 60 }
 
 # Stage 3.5 (2026-06-08) · Cloudflare Workers AI — powers the LLM-richer governed digest agent
 # (services/agent-digest.ts buildWorkspaceDigestLLM). Native platform binding, NO API keys/secrets;
@@ -128,8 +151,17 @@ DIGEST_SWEEP_ENABLED = "true"
 # allactivity_split_260609) and ONLY into projects that already exist (FK-safe). Bounded to 500
 # events/run; idempotent; never-throws. Flip via redeploy with this var = "true", OR
 # `wrangler secret put RECLASSIFY_CRON_ENABLED` / dashboard env var (no redeploy). PROD IS
-# OPERATOR-GATED — leave "false" until the operator enables it.
+# OPERATOR-ENABLED (ON): the operator flipped this to "true" earlier (self-heal backstop active).
+# The hourly :45 cron RE-FILES the unattributed backlog into existing split projects (FK-safe,
+# bounded 500/run, idempotent). Rollback = set "false" + redeploy.
 RECLASSIFY_CRON_ENABLED = "true"
+
+# SF-2 (260711) · per-user rate-limit on the LLM-cost endpoints (customer-chat 60/min, readiness/*
+# 10/min). Gate for the rateLimitWhenFlag() middleware at index.ts:249-250 (OFF => byte-identical,
+# no limiter registered). ACTIVATED (Wave M-B, 260719) together with the [[ratelimit]] RATE_LIMITER_CHAT
+# / RATE_LIMITER_READINESS bindings above — the flag is inert without them, and they are inert without
+# the flag. Rollback = set "false" + redeploy (limiter unregisters, behaviour byte-identical).
+SAFETY_FLOOR_RATELIMIT_ENABLED = "true"
 # J-E Wave (260719, PR #16) - OBSERVE-only tenant sterility census, chained into the daily 05:00 slot.
 # Mig 083 applied to prod (workers_schema_version=83, RLS + xlooop_app grants verified) BEFORE this
 # flip, per the PR ordering contract. The census never remediates; reclassify stays the only
