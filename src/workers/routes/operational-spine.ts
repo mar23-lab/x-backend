@@ -14,11 +14,13 @@ import { errorEnvelope } from '../middleware/error';
 import type { AuthEnv, AuthVariables } from '../middleware/auth';
 import type { DalAdapter } from '../dal/DalAdapter';
 import { resolveScopedWorkspace } from '../lib/operator-workspace-scope'; // JB 260714 · write-path operator-workspace-scope
+import { evaluateUgecFence } from '../lib/ugec-fence';
 import type {
   AuthContext,
   ApprovalDecisionInput,
   EvidenceKind,
   PacketLifecycleState,
+  TaskPacket,
   ToolEventAction,
 } from '../dal/types';
 
@@ -103,6 +105,55 @@ function ensureCanaryLifecycleWrite(
 function jsonError(ctx: any, status: 400 | 403 | 404, code: string, error: string) {
   ctx.status(status);
   return ctx.json({ error, code, request_id: ctx.get('request_id') });
+}
+
+/**
+ * UGEC gap-2 (ADR-XB-008), shadow-only on this route. mcp-gateway.ts already wires
+ * evaluateUgecFence with a flag-gated deny (UGEC_FENCE_ENFORCEMENT); this spine route only
+ * report_tool_event's a subset of the same customer-token surface and was previously
+ * UNCOVERED — no fence check at all. This PR closes that gap in observation mode only:
+ * warn-log every violation, deny nothing, regardless of any enforcement flag. Ratcheting
+ * this route to the same enforce-capable shape as mcp-gateway.ts is a follow-up, not this
+ * change (doctrine: shadow → ratchet → enforce, one invariant/route at a time).
+ *
+ * Cheap by construction: fires only for customer_token principals (the only auth path this
+ * gap concerns — see auth.ts customerTokenAuth), and needs exactly one extra listTaskPackets
+ * lookup per write, same round-trip shape already paid by ensureCustomerWriteScope in
+ * mcp-gateway.ts. Human/JWT and other service-principal writes pay nothing extra.
+ */
+async function shadowCheckUgecFence(
+  ctx: any,
+  auth: AuthContext,
+  packetId: string,
+  toolAction?: string,
+): Promise<void> {
+  if (auth.service_principal !== 'customer_token') return;
+  if (!packetId) return; // no packet_id on the event ⇒ nothing to fence against; skip silently
+  let packet: TaskPacket | undefined;
+  try {
+    [packet] = await ctx.get('dal').listTaskPackets(auth.workspace_id, { packet_id: packetId, limit: 1 });
+  } catch {
+    return; // never let a fence lookup failure affect the write path
+  }
+  if (!packet) return; // unknown/foreign packet — the write itself is already workspace-scoped
+  const violations = evaluateUgecFence({
+    packet_id: packetId,
+    packet_prefix: (auth as { packet_prefix?: string }).packet_prefix,
+    allowed_tools: packet.allowed_tools,
+    forbidden_tools: packet.forbidden_tools,
+    action: toolAction,
+  });
+  if (violations.length > 0) {
+    console.warn('[UGEC-FENCE]', JSON.stringify({
+      route: 'operational-spine',
+      workspace_id: auth.workspace_id,
+      principal: auth.user_id,
+      packet_id: packetId,
+      action: toolAction ?? null,
+      violations,
+      shadow_only: true,
+    }));
+  }
 }
 
 function listOpts(ctx: any) {
@@ -312,6 +363,13 @@ operationalSpineRoute.post('/tool-events', async (ctx) => {
     if (canaryError) return canaryError;
     if (!TOOL_ACTIONS.has(body.action as ToolEventAction)) return jsonError(ctx, 400, 'VALIDATION_ERROR', 'invalid tool action');
     if (!TOOL_STATUSES.has(String(body.status))) return jsonError(ctx, 400, 'VALIDATION_ERROR', 'invalid tool-event status');
+    // UGEC gap-2 shadow check (ADR-XB-008) — warn-only, never denies; see shadowCheckUgecFence.
+    await shadowCheckUgecFence(
+      ctx,
+      auth,
+      typeof body.packet_id === 'string' ? body.packet_id.trim() : '',
+      typeof body.action === 'string' ? body.action : undefined,
+    );
     const tool_event = await ctx.get('dal').createToolEvent(workspace_id, user_id, body as never, {
       // W1 spine unification — SEPARATE param (never body-carried: the body is client-controlled).
       emitSpineEvent: envFlagTrue((ctx.env as { SPINE_TOOL_EVENT_UNIFICATION_ENABLED?: string }).SPINE_TOOL_EVENT_UNIFICATION_ENABLED),
