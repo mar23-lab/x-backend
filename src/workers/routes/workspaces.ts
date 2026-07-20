@@ -46,6 +46,7 @@ import { idempotencyMiddleware } from '../lib/idempotency'; // J-W1/IDEM-4
 import { persistAssistantContextLineage, completeAssistantSkillLineage, type AssistantContextLineage } from '../lib/assistant-context-lineage';
 import { createModelExecutionObserver } from '../lib/model-execution-lineage';
 import { listDocumentsRow } from '../lib/document-store';
+import { lineageFor } from '../lib/actor-lineage';
 import type { EventListOpts, HarnessFlowEvent } from '../dal/types/event';
 // Plane B fallback (defense in depth): the build-time operations-live-stream bundle — the SAME source
 // the project board falls back to (mbp-projection.ts) — used only when the DB snapshot table is empty.
@@ -831,6 +832,10 @@ workspacesRoute.post('/intents', async (ctx) => {
         visibility: 'internal_workspace',
         occurred_at: new Date().toISOString(),
         domain_id: intent.domain_id ?? null,
+        // A-W4/P6 · intent-create lineage: the operator is principal + instrument (role
+        // authority), server-derived from auth, never body -- mirrors projects.ts /
+        // documents.ts (UGEC I1/I6). Moves lineage_stamp_sites 4->5.
+        ...lineageFor(ctx.get('auth')),
       });
       event_recorded = true;
     } catch (_) { /* best-effort activity mirror — never block the intent create */ }
