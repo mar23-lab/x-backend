@@ -11,7 +11,8 @@
 // overwrite another tenant's workspace.
 
 import { Hono } from 'hono';
-import { operatorIds } from '../lib/permissions';
+import { operatorIds, canWrite } from '../lib/permissions';
+import { makeError } from '../dal/shared-helpers';
 import { errorEnvelope } from '../middleware/error';
 import { withDataClass } from '../lib/response-envelope';
 import { withAuthority } from '../lib/allowed-actions';
@@ -152,6 +153,84 @@ workspacesRoute.get('/workspaces/:id/plan', async (ctx) => {
     const dal = ctx.get('dal');
     const plan = await dal.listWorkspacePlan(id);
     return ctx.json(withDataClass(withAuthority(plan as unknown as Record<string, unknown>, auth, 'workspace'), 'live'));
+  } catch (err) {
+    return errorEnvelope(ctx, err);
+  }
+});
+
+// GET /api/v1/workspaces/:id/charter — Wave 1 · the workspace charter (mission/background/objectives
+// summary). Same fail-closed tenancy as /plan (member reads own; operator any; no client). Read-only,
+// RLS-subject connection. Null charter -> { charter: null } (unset is a valid state, not an error).
+workspacesRoute.get('/workspaces/:id/charter', async (ctx) => {
+  try {
+    const auth = ctx.get('auth');
+    const { user_id, workspace_id, role } = auth;
+    const id = ctx.req.param('id');
+    if (!id) {
+      ctx.status(400);
+      return ctx.json({ error: 'workspace id required', code: 'VALIDATION_ERROR', request_id: ctx.get('request_id') });
+    }
+    const { ownerUserId } = operatorIds(ctx.env);
+    const isOperator = !!ownerUserId && user_id === ownerUserId;
+    if (!isOperator && workspace_id !== id) {
+      ctx.status(403);
+      return ctx.json({ error: 'not a member of this workspace', code: 'FORBIDDEN', request_id: ctx.get('request_id') });
+    }
+    if (role === 'client') {
+      ctx.status(403);
+      return ctx.json({ error: 'client role cannot read the charter', code: 'FORBIDDEN', request_id: ctx.get('request_id') });
+    }
+    const dal = ctx.get('dal');
+    const charter = await dal.getCharter(id);
+    return ctx.json(withDataClass(withAuthority({ charter }, auth, 'workspace'), 'live'));
+  } catch (err) {
+    return errorEnvelope(ctx, err);
+  }
+});
+
+// PUT /api/v1/workspaces/:id/charter — Wave 1 · GOVERNED write (owner/operator only, per the W.2
+// two-tier ruling: the charter advances shared/company state). UPSERTs + an audit row (in charter-store).
+// Only provided fields change; omitted fields stay. Owner connection (bypasses RLS; workspace-scoped by PK).
+workspacesRoute.put('/workspaces/:id/charter', async (ctx) => {
+  try {
+    const auth = ctx.get('auth');
+    const { user_id, workspace_id, role } = auth;
+    const id = ctx.req.param('id');
+    if (!id) {
+      ctx.status(400);
+      return ctx.json({ error: 'workspace id required', code: 'VALIDATION_ERROR', request_id: ctx.get('request_id') });
+    }
+    const { ownerUserId } = operatorIds(ctx.env);
+    const isOperator = !!ownerUserId && user_id === ownerUserId;
+    if (!isOperator && workspace_id !== id) {
+      ctx.status(403);
+      return ctx.json({ error: 'not a member of this workspace', code: 'FORBIDDEN', request_id: ctx.get('request_id') });
+    }
+    if (!canWrite(role)) {
+      ctx.status(403);
+      return ctx.json({ error: 'charter is governed — owner/operator only', code: 'FORBIDDEN', request_id: ctx.get('request_id') });
+    }
+    const body = (await ctx.req.json().catch(() => ({}))) as Record<string, unknown>;
+    const textField = (v: unknown, name: string): string | null | undefined => {
+      if (v === undefined) return undefined;
+      if (v === null) return null;
+      if (typeof v !== 'string' || v.length > 8000) {
+        throw makeError('VALIDATION_ERROR', `${name} must be a string <= 8000 chars`, 400);
+      }
+      return v;
+    };
+    const input = {
+      mission: textField(body.mission, 'mission'),
+      background: textField(body.background, 'background'),
+      industry: textField(body.industry, 'industry'),
+      team_size: textField(body.team_size, 'team_size'),
+      objectives_summary: textField(body.objectives_summary, 'objectives_summary'),
+      constraints: Array.isArray(body.constraints) ? (body.constraints as unknown[]) : undefined,
+      metadata: (body.metadata && typeof body.metadata === 'object') ? (body.metadata as Record<string, unknown>) : undefined,
+    };
+    const dal = ctx.get('dal');
+    const charter = await dal.upsertCharter(id, input, user_id);
+    return ctx.json(withDataClass(withAuthority({ charter }, auth, 'workspace'), 'live'));
   } catch (err) {
     return errorEnvelope(ctx, err);
   }

@@ -561,6 +561,17 @@ export interface DalAdapter {
     workspaceId: WorkspaceId,
   ): Promise<{ domains: import('./roadmap-store').WorkspacePlanDomain[] }>;
 
+  /** Wave 1 · the workspace charter (mission/background/objectives-summary) — one row per workspace,
+   *  the context-precedence layer-3 home. Read via the RLS-subject connection; null when unset. */
+  getCharter(workspaceId: WorkspaceId): Promise<import('./charter-store').CharterRow | null>;
+
+  /** Wave 1 · UPSERT the workspace charter + audit row (governed — routes gate to owner/operator). */
+  upsertCharter(
+    workspaceId: WorkspaceId,
+    input: import('./charter-store').CharterInput,
+    actorUserId: string,
+  ): Promise<import('./charter-store').CharterRow>;
+
   /** OS-4 P3 · attach a stray event to an intent — an L1 intent_id re-point + APPENDED audit receipt
    *  (ia-001: pointer change + audit event, same flow; receipt threaded under the event). Operator-only;
    *  null when the intent or event isn't in the operator's workspaces. */

@@ -290,6 +290,7 @@ import {
   restoreRoadmapItemRow,
   reorderRoadmapItemsRow,
 } from './roadmap-store';
+import { getCharterRow, upsertCharterRow } from './charter-store';
 import {
   listUserSourcesRow,
   getUserSourceRow,
@@ -1104,6 +1105,18 @@ export class WorkersDalAdapter implements DalAdapter {
 
   // OS-4 P2 · the workspace Plan aggregate (roadmaps + goals per visible domain, 3 bounded
   // queries). Body + SQL live in ./roadmap-store (listWorkspacePlanRow); thin delegation.
+  async getCharter(workspaceId: WorkspaceId): Promise<import('./charter-store').CharterRow | null> {
+    return getCharterRow(this.rlsSql, workspaceId); // 089 · RLS-subject client (defaults to sql)
+  }
+
+  async upsertCharter(
+    workspaceId: WorkspaceId,
+    input: import('./charter-store').CharterInput,
+    actorUserId: string,
+  ): Promise<import('./charter-store').CharterRow> {
+    return upsertCharterRow(this.sql, workspaceId, input, actorUserId); // owner connection + audit
+  }
+
   async listWorkspacePlan(workspaceId: WorkspaceId): Promise<{ domains: WorkspacePlanDomain[] }> {
     return listWorkspacePlanRow(this.sql, workspaceId);
   }
