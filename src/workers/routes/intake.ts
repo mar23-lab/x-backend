@@ -17,7 +17,7 @@ interface IntakeEnv extends AuthEnv {
 
 export const intakeRoute = new Hono<{ Bindings: IntakeEnv; Variables: AuthVariables & { dal: DalAdapter } }>();
 
-function fail(ctx: any, status: 400 | 404 | 409, code: string, error: string) {
+function fail(ctx: any, status: 400 | 403 | 404 | 409, code: string, error: string) {
   ctx.status(status);
   return ctx.json({ error, code, request_id: ctx.get('request_id') });
 }
@@ -112,6 +112,14 @@ intakeRoute.post('/intake/:resolution_id/execute', async (ctx) => {
       return fail(ctx, 400, 'VALIDATION_ERROR', 'version, current_work_version, and client_request_id are required');
     }
     const { workspace_id, user_id, role } = ctx.get('auth');
+    // W.2 two-tier ruling (260720): executing a governed intake ADVANCES governed state -> owner/operator
+    // only (spine gate; flag-off path = canWrite; entitlement path arrives at the ENTITLEMENT_ENFORCEMENT
+    // flip). Closes the role-gap find: this handler previously had NO role check while SINGLE_INTAKE_ENABLED
+    // is live in prod, so a seeded viewer/client principal could execute a governed intake.
+    const execDecision = await authorizeSpineWrite(ctx as never, 'customer_data:execute');
+    if (!execDecision.allowed) {
+      return fail(ctx, 403, 'FORBIDDEN', 'role does not permit governed intake execution');
+    }
     const issuedAt = new Date().toISOString();
     const evidenceRefIds = [`intake-resolution:${ctx.req.param('resolution_id')}`];
     const closingPayload = closingAttestationSigningPayload({

@@ -87,4 +87,18 @@ describe('single intake route', () => {
     });
     expect((calls.at(-1) as any).closing.content_sha256).toMatch(/^[a-f0-9]{64}$/);
   });
+
+  // W.2 two-tier ruling (260720): execute ADVANCES governed state -> spine-gated (owner/operator).
+  // RED control for the role-gap find: viewer/client previously could execute with no role check.
+  it('denies viewer and client execution of a governed intake (403, no dal call)', async () => {
+    for (const role of ['viewer', 'client']) {
+      const { app, calls, env } = appFor({ enabled: true, auth: { ...AUTH, role } });
+      const res = await app.request('/api/v1/intake/inr_1/execute', {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ version: 1, current_work_version: 3, client_request_id: `exec_${role}` }),
+      }, env);
+      expect(res.status).toBe(403);
+      expect(calls.some((c: any) => c.method === 'executeIntakeResolution')).toBe(false);
+    }
+  });
 });

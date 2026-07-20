@@ -126,7 +126,7 @@ customer-facing language everywhere.
 | # | Decision | Status |
 |---|---|---|
 | 1 | Brand — product = **Xlooop** (canonical; "Exloop" is a documented audio mis-hearing per x-biz DR-16, NEVER to be used); XCP = internal platform name; MB-P = reference implementation | RULED (x-biz CONCEPT_TO_PROMOTION_DISPOSITION_260711) |
-| 2 | Tenant-vs-workspace ADR sign-off (ADR-XB-001) | proposed herein |
+| 2 | Tenant-vs-workspace ADR sign-off (ADR-XB-001) | RATIFIED 2026-07-20 (PR #22) |
 | 3 | First paid use case + ICP (recommendation on record: Governed AI Delivery Control Plane wedge, project-driven orgs 30–300) | open |
 | 4 | Autonomy matrix — which agent actions run without approval | open |
 | 5 | Retention / residency targets | open (P3 gate input) |
