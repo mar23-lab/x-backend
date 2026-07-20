@@ -1615,6 +1615,37 @@
         }
       ],
       "reconciliation_note": "Stage-4 UGEC flips: fence enforced (customer_token scope only; canary bypasses), customer read-token door on, service-principal exemption scoped to platform (canary kept, customer agents entitlement-gated). Reactive drift."
+    },
+    {
+      "delta_id": "w1-pr1b-charter-routes-20260721",
+      "generated_at": "2026-07-21T00:20:00Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "9ea9ad3609e277bb47928722a7ca465a51f61f1f",
+      "target_base_commit": "9ea9ad3609e277bb47928722a7ca465a51f61f1f",
+      "authority": "shadow_only_no_production_cutover",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/dal/DalAdapter.ts",
+          "target_blob": "5bb93db436418c98d73a9c513f9495b0f0a357ed",
+          "reason": "W1-PR1b charter: getCharter/upsertCharter interface signatures"
+        },
+        {
+          "path": "src/workers/dal/WorkersDalAdapter.ts",
+          "target_blob": "533e3dfebdec23e8cba141725180f3b25f1e5dce",
+          "reason": "W1-PR1b charter: getCharter (rlsSql) + upsertCharter (owner) methods + charter-store import"
+        },
+        {
+          "path": "src/workers/routes/workspaces.ts",
+          "target_blob": "2a7b32af744c36c77068a2c8bcaf1094449292a9",
+          "reason": "W1-PR1b charter: GET/PUT /workspaces/:id/charter routes (read member-scoped; PUT canWrite-gated) + canWrite/makeError imports"
+        },
+        {
+          "path": "docs/contracts/api-contract.v1.json",
+          "target_blob": "60bd3d6d00954746c649104abb6996858f4e6499",
+          "reason": "W1-PR1b charter: regenerated api-contract (211 routes) incl GET/PUT /workspaces/:id/charter"
+        }
+      ]
     }
   ]
 }
