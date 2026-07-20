@@ -8,6 +8,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { customerCensusCron } from '../crons/customer-census';
 import { listWorkspaceIdsForCensusRow } from '../dal/customer-census-store';
+import { DATA_GRAPH_FACTS_CAP } from '../dal/graph-store';
 import type { DataGraphFacts } from '../graph/data-graph';
 
 const WS = 'ws1';
@@ -72,6 +73,30 @@ describe('customerCensusCron · BORN-OFF safety', () => {
     expect(r.status).toBe('skipped');
     expect(r.metadata?.reason).toBe('census_gateway_unbound');
     expect(assembleDataGraphFacts).not.toHaveBeenCalled();
+  });
+});
+
+describe('customerCensusCron · AI-EXEC-1 truncation detector (silent→surfaced)', () => {
+  it('a workspace whose unified read hits the cap is flagged (never silent)', async () => {
+    const cappedFacts = (): DataGraphFacts => ({
+      ...facts(),
+      unified: Array.from({ length: DATA_GRAPH_FACTS_CAP }, (_, i) => ({
+        id: `ev${i}`, plane: 'event_sourcing' as const, workspace_id: WS, project_id: 'projA',
+      })),
+    });
+    const { ctx } = makeCtx({ CUSTOMER_CENSUS_ENABLED: 'true' }, { assembleImpl: async () => cappedFacts() });
+    const r = await customerCensusCron(ctx);
+    expect(r.status).toBe('completed');
+    expect(r.metadata?.workspaces_truncated).toBe(1);
+    expect(r.notes).toContain(`${DATA_GRAPH_FACTS_CAP}-row read cap`);
+    expect(r.notes).toContain('UNDER-REPORTED');
+  });
+
+  it('a below-cap workspace is NOT flagged (no false positive)', async () => {
+    const { ctx } = makeCtx({ CUSTOMER_CENSUS_ENABLED: 'true' });
+    const r = await customerCensusCron(ctx);
+    expect(r.metadata?.workspaces_truncated).toBe(0);
+    expect(r.notes).not.toContain('read cap');
   });
 });
 

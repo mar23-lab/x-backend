@@ -19,6 +19,14 @@ const str = (v: unknown): string => (v == null ? '' : String(v));
 const orNull = (v: unknown): string | null => (v == null || String(v) === '' ? null : String(v));
 const iso = (v: unknown): string | null => { try { return v ? new Date(v as string).toISOString() : null; } catch { return null; } };
 
+/** The per-query read cap for the facts assembly. SINGLE SOURCE of the bound so a consumer (the
+ *  customer-census cron) can DETECT truncation — a workspace whose read returns exactly this many rows
+ *  almost certainly hit the cap, so its population/orphan counts are UNDER-REPORTED. Our scale is
+ *  low-thousands of events today (largest tenant ~4.2k, internal); the DURABLE fix at 10^5+ is
+ *  pagination + a persisted `population_capped` flag (needs a mig column) — deferred to when a real
+ *  tenant approaches the cap. Until then the census surfaces the truncation instead of hiding it. */
+export const DATA_GRAPH_FACTS_CAP = 5000;
+
 /** Read the relational facts for ONE workspace into the shape buildDataGraph consumes. The facts-JOIN
  *  (operations_unified ⨝ operation_events for intent_id) happens here. Bounded by LIMITs (our scale is
  *  low-thousands of events; revisit pagination at 10^5+). */
@@ -68,7 +76,7 @@ export async function assembleDataGraphFactsRow(sql: Sql, workspaceId: string, o
       FROM operations_unified u WHERE u.workspace_id = ${ws} AND u.plane <> 'event_sourcing'
     ) t
     ORDER BY occurred_at DESC NULLS LAST
-    LIMIT 5000
+    LIMIT ${DATA_GRAPH_FACTS_CAP}
   `) as Array<Record<string, unknown>>;
 
   const bindingRows = (await sql/*sql*/`
@@ -84,7 +92,7 @@ export async function assembleDataGraphFactsRow(sql: Sql, workspaceId: string, o
     FROM task_packets
     WHERE workspace_id = ${ws} AND lifecycle_state <> 'archived'
     ORDER BY updated_at DESC NULLS LAST
-    LIMIT 5000
+    LIMIT ${DATA_GRAPH_FACTS_CAP}
   `) as Array<Record<string, unknown>>;
 
   // causation pairs from audit_logs.causation_id. We propose CANDIDATE node-id pairs; buildDataGraph
@@ -94,7 +102,7 @@ export async function assembleDataGraphFactsRow(sql: Sql, workspaceId: string, o
   const auditRows = (await sql/*sql*/`
     SELECT target_type, target_id, causation_id
     FROM audit_logs WHERE workspace_id = ${ws} AND causation_id IS NOT NULL
-    LIMIT 5000
+    LIMIT ${DATA_GRAPH_FACTS_CAP}
   `) as Array<Record<string, unknown>>;
 
   const causation: Array<{ effect: string; cause: string }> = [];
@@ -122,7 +130,7 @@ export async function assembleDataGraphFactsRow(sql: Sql, workspaceId: string, o
       evidenceRows = (await sql/*sql*/`
         SELECT content_hash, packet_id, event_id
         FROM evidence_items WHERE workspace_id = ${ws} AND content_hash IS NOT NULL
-        LIMIT 5000
+        LIMIT ${DATA_GRAPH_FACTS_CAP}
       `) as Array<Record<string, unknown>>;
     } catch { documentRows = []; evidenceRows = []; }
   }

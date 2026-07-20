@@ -24,6 +24,7 @@ import { nanoid } from 'nanoid';
 import type { CronHandler, CronHandlerContext, CronHandlerResult } from './types';
 import { envFlagTrue } from '../lib/env-flag';
 import { buildDataGraph } from '../graph/data-graph';
+import { DATA_GRAPH_FACTS_CAP } from '../dal/graph-store';
 import { computeWorkspaceCensus } from '../lib/customer-census';
 import type { CustomerCensusObservationInsert } from '../dal/customer-census-store';
 
@@ -71,18 +72,35 @@ export const customerCensusCron: CronHandler = async (ctx) => {
 
   let workspacesObserved = 0;
   let workspacesErrored = 0;
+  let workspacesTruncated = 0;
   let totalOrphans = 0;
   let totalPopulation = 0;
 
   try {
     const workspaceIds = await census.listWorkspaceIds(MAX_WORKSPACES);
     if (!Array.isArray(workspaceIds) || workspaceIds.length === 0) {
-      return done(ctx, startedAt, run_id, { workspacesObserved: 0, workspacesErrored: 0, totalOrphans: 0, totalPopulation: 0, workspacesSeen: 0, notes: 'no workspaces' });
+      return done(ctx, startedAt, run_id, { workspacesObserved: 0, workspacesErrored: 0, workspacesTruncated: 0, totalOrphans: 0, totalPopulation: 0, workspacesSeen: 0, notes: 'no workspaces' });
     }
 
     for (const ws of workspaceIds) {
       try {
         const facts = await ctx.dal.assembleDataGraphFacts(ws, { includeDocuments });
+
+        // AI-EXEC-1 (260721): DETECT the facts-read cap truncation instead of hiding it. A workspace whose
+        // unified event read returns exactly DATA_GRAPH_FACTS_CAP rows almost certainly had older rows
+        // dropped ⇒ its population/orphan counts are UNDER-REPORTED for this observation. We surface it
+        // (never silence it — the false-zero class this census exists to kill). The DURABLE fix at real
+        // scale is pagination + a persisted population_capped column (a mig); deferred until a real tenant
+        // approaches the cap (largest today ~4.2k, internal). Until then the run notes carry the warning.
+        const capped = facts.unified.length >= DATA_GRAPH_FACTS_CAP;
+        if (capped) {
+          workspacesTruncated += 1;
+          console.warn(JSON.stringify({
+            kind: 'customer_census_truncated', loop: LOOP_NAME, run_id, workspace_id: ws,
+            unified_rows: facts.unified.length, cap: DATA_GRAPH_FACTS_CAP,
+          }));
+        }
+
         const { nodes, edges, snapshot } = buildDataGraph(ws, facts);
 
         // intake_resolutions is a best-effort governed input: a missing table (mig 079 not applied) or a
@@ -134,12 +152,16 @@ export const customerCensusCron: CronHandler = async (ctx) => {
     return done(ctx, startedAt, run_id, {
       workspacesObserved,
       workspacesErrored,
+      workspacesTruncated,
       totalOrphans,
       totalPopulation,
       workspacesSeen: workspaceIds.length,
       notes:
         `observed ${workspacesObserved}/${workspaceIds.length} workspace(s); ` +
-        `${totalOrphans} orphan(s) across ${totalPopulation} population artefact(s); ${workspacesErrored} error(s)`,
+        `${totalOrphans} orphan(s) across ${totalPopulation} population artefact(s); ${workspacesErrored} error(s)` +
+        (workspacesTruncated > 0
+          ? ` · ⚠ ${workspacesTruncated} workspace(s) hit the ${DATA_GRAPH_FACTS_CAP}-row read cap — their population/orphan counts are UNDER-REPORTED; paginate the facts read before higher-volume tenants`
+          : ''),
     });
   } catch (err) {
     // Top-level failure (e.g. the workspace enumeration itself). Never throws — returns a failed result.
@@ -158,6 +180,7 @@ export const customerCensusCron: CronHandler = async (ctx) => {
 interface DoneArgs {
   workspacesObserved: number;
   workspacesErrored: number;
+  workspacesTruncated: number;
   totalOrphans: number;
   totalPopulation: number;
   workspacesSeen: number;
@@ -179,6 +202,7 @@ function done(ctx: CronHandlerContext, startedAt: Date, run_id: string, a: DoneA
       workspaces_seen: a.workspacesSeen,
       workspaces_observed: a.workspacesObserved,
       workspaces_errored: a.workspacesErrored,
+      workspaces_truncated: a.workspacesTruncated,
       orphan_total: a.totalOrphans,
       population_total: a.totalPopulation,
     },

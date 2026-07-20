@@ -1739,6 +1739,22 @@
           "reason": "ops-hardening: gate deploy:api on verify-rls-grant-parity (defense-in-depth \u2014 the static tenant-isolation invariant now checked at deploy, not only ci-local)"
         }
       ]
+    },
+    {
+      "delta_id": "ai-exec-1-census-truncation-detector-20260721",
+      "generated_at": "2026-07-21T09:40:00Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "3e3876ee2773dc667b4d0c90084cf203f2172882",
+      "target_base_commit": "3e3876ee2773dc667b4d0c90084cf203f2172882",
+      "authority": "shadow_only_no_production_cutover",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/dal/graph-store.ts",
+          "target_blob": "d3ce3cd29be441896a132cf7d46c3e64a6357cc8",
+          "reason": "AI-EXEC-1: export DATA_GRAPH_FACTS_CAP (single-source the 4 facts-assembly LIMITs) so the customer-census cron can DETECT read-cap truncation instead of silently under-counting"
+        }
+      ]
     }
   ]
 }
