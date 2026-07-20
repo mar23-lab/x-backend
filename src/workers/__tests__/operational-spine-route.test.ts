@@ -3,7 +3,7 @@
 // Route tests for the backend-first operational spine. DAL is mocked so these
 // tests assert route policy and payload contract without touching live Neon.
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { Hono } from 'hono';
 import { operationalSpineRoute } from '../routes/operational-spine';
 
@@ -16,14 +16,33 @@ const CANARY_LIFECYCLE = {
   workspace_id: 'tenant_a',
   service_principal: 'canary_lifecycle',
 };
+const CUSTOMER_TOKEN = {
+  user_id: 'svc_customer_operator',
+  role: 'operator',
+  workspace_id: 'tenant_a',
+  service_principal: 'customer_token',
+  packet_prefix: 'pkt_1',
+};
 
 type Call = { method: string; ws: string; actor?: string; input?: Record<string, unknown>; id?: string };
 
-function appFor(auth: Record<string, unknown>, calls: Call[], opts?: { missingApproval?: boolean; completionFlag?: string; missingPacket?: boolean }) {
+function appFor(auth: Record<string, unknown>, calls: Call[], opts?: {
+  missingApproval?: boolean;
+  completionFlag?: string;
+  missingPacket?: boolean;
+  fencePacket?: { allowed_tools?: string[]; forbidden_tools?: string[] };
+}) {
   const dal = {
-    listTaskPackets: async (ws: string) => {
+    listTaskPackets: async (ws: string, listOpts?: { packet_id?: string }) => {
       calls.push({ method: 'listTaskPackets', ws });
-      return [{ id: 'pkt_1', workspace_id: ws, title: 'Packet', summary: 'Scoped', allowed_tools: [], forbidden_tools: [] }];
+      return [{
+        id: listOpts?.packet_id ?? 'pkt_1',
+        workspace_id: ws,
+        title: 'Packet',
+        summary: 'Scoped',
+        allowed_tools: opts?.fencePacket?.allowed_tools ?? [],
+        forbidden_tools: opts?.fencePacket?.forbidden_tools ?? [],
+      }];
     },
     createTaskPacket: async (ws: string, actor: string, input: Record<string, unknown>) => {
       calls.push({ method: 'createTaskPacket', ws, actor, input });
@@ -100,7 +119,10 @@ function request(
   path: string,
   auth: Record<string, unknown>,
   body?: Record<string, unknown>,
-  opts?: { missingApproval?: boolean },
+  opts?: {
+    missingApproval?: boolean;
+    fencePacket?: { allowed_tools?: string[]; forbidden_tools?: string[] };
+  },
 ) {
   const calls: Call[] = [];
   const built = appFor(auth, calls, opts);
@@ -252,6 +274,93 @@ describe('operational spine routes', () => {
     });
     expect(res.status).toBe(400);
     expect(calls).toEqual([]);
+  });
+
+  describe('POST /tool-events UGEC gap-2 shadow fence (ADR-XB-008)', () => {
+    const originalWarn = console.warn;
+    let warnCalls: unknown[][];
+
+    beforeEach(() => {
+      warnCalls = [];
+      console.warn = (...args: unknown[]) => { warnCalls.push(args); };
+    });
+
+    afterEach(() => {
+      console.warn = originalWarn;
+    });
+
+    it('does not warn and still succeeds when the action is on the packet allow-list', async () => {
+      const { res, calls } = await request('POST', '/tool-events', CUSTOMER_TOKEN, {
+        packet_id: 'pkt_1',
+        tool_name: 'mcp',
+        action: 'report_tool_event',
+        status: 'completed',
+        summary: 'in-scope',
+      }, { fencePacket: { allowed_tools: ['report_tool_event'], forbidden_tools: [] } });
+      expect(res.status).toBe(201);
+      expect(warnCalls).toEqual([]);
+      expect(calls.some((c) => c.method === 'createToolEvent')).toBe(true);
+    });
+
+    it('warns but still succeeds (never denies) when the action is not on the packet allow-list', async () => {
+      const { res, calls } = await request('POST', '/tool-events', CUSTOMER_TOKEN, {
+        packet_id: 'pkt_1',
+        tool_name: 'mcp',
+        action: 'report_tool_event',
+        status: 'completed',
+        summary: 'out-of-scope',
+      }, { fencePacket: { allowed_tools: ['get_task_packet'], forbidden_tools: [] } });
+      expect(res.status).toBe(201); // shadow-only: no deny, ever
+      expect(warnCalls.length).toBe(1);
+      expect(warnCalls[0]?.[0]).toBe('[UGEC-FENCE]');
+      const payload = JSON.parse(warnCalls[0]?.[1] as string);
+      expect(payload).toMatchObject({
+        route: 'operational-spine',
+        packet_id: 'pkt_1',
+        action: 'report_tool_event',
+        violations: ['tool_not_in_allowed'],
+        shadow_only: true,
+      });
+      expect(calls.some((c) => c.method === 'createToolEvent')).toBe(true);
+    });
+
+    it('warns but still succeeds when the packet_id is outside the token packet_prefix scope', async () => {
+      const { res, calls } = await request('POST', '/tool-events', CUSTOMER_TOKEN, {
+        packet_id: 'pkt_other_tenant',
+        tool_name: 'mcp',
+        action: 'report_tool_event',
+        status: 'completed',
+        summary: 'wrong prefix',
+      }, { fencePacket: { allowed_tools: [], forbidden_tools: [] } });
+      expect(res.status).toBe(201);
+      expect(warnCalls.length).toBe(1);
+      const payload = JSON.parse(warnCalls[0]?.[1] as string);
+      expect(payload.violations).toEqual(['packet_prefix_scope']);
+      expect(calls.some((c) => c.method === 'createToolEvent')).toBe(true);
+    });
+
+    it('does not warn for non-customer-token principals even with an out-of-scope action', async () => {
+      const { res } = await request('POST', '/tool-events', OPERATOR, {
+        packet_id: 'pkt_1',
+        tool_name: 'mcp',
+        action: 'report_tool_event',
+        status: 'completed',
+        summary: 'human write',
+      }, { fencePacket: { allowed_tools: ['get_task_packet'], forbidden_tools: [] } });
+      expect(res.status).toBe(201);
+      expect(warnCalls).toEqual([]);
+    });
+
+    it('skips the fence silently when the event carries no packet_id', async () => {
+      const { res } = await request('POST', '/tool-events', CUSTOMER_TOKEN, {
+        tool_name: 'mcp',
+        action: 'report_tool_event',
+        status: 'completed',
+        summary: 'no packet',
+      }, { fencePacket: { allowed_tools: ['get_task_packet'], forbidden_tools: [] } });
+      expect(res.status).toBe(201);
+      expect(warnCalls).toEqual([]);
+    });
   });
 
   it('PATCH /approvals/:id decides an approval request once', async () => {
