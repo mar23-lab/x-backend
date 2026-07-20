@@ -90,7 +90,7 @@ describe('authorizeSpineWrite · flag ON == entitlement + mode + action', () => 
   });
 });
 
-// The third lockout vector (dev-team Ask 1): canary_lifecycle + customer_token service tokens have NO
+// The third lockout vector (dev-team Ask 1): canary_lifecycle (platform) service tokens have NO
 // customer_entitlements row and NO user_session_preferences mode, so the flag-ON enforcement path would 403
 // EVERY machine write at flip (the 055/056 human backfills can't touch svc_* ids). They are exempt: authority
 // stays the legacy role gate in BOTH flag states, narrowed by their downstream scope guard. This proves the
@@ -105,12 +105,16 @@ describe('authorizeSpineWrite · service principals exempt from enforcement (fla
     expect(dal.getOperatingMode).not.toHaveBeenCalled();
     expect(resolvePrincipal).not.toHaveBeenCalled(); // exempt → never reaches the entitlement read
   });
-  it('customer_token (operator) → allowed via legacy gate, NO DB touch even flag-on', async () => {
-    const dal = { getOperatingMode: vi.fn() };
+  it('customer_token → now goes THROUGH enforcement (260720: customer agents entitlement-gated, exemption scoped to platform)', async () => {
+    // The exemption was narrowed to PLATFORM service principals only. A customer_token now reaches
+    // canActOnSpine; without a customer_entitlements row it is DENIED (correct — the mandate: customer
+    // agents may not write without an entitlement). resolvePrincipal IS called (enforcement path).
+    (resolvePrincipal as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(principal([], [], []));
+    const dal = { getOperatingMode: vi.fn(async () => 'operator' as const) };
     const ctx = makeCtx({ role: 'operator', user_id: 'svc_customer_abc', workspace_id: 'w', service_principal: 'customer_token' }, ON, dal);
     const d = await authorizeSpineWrite(ctx, 'tool_event:report');
-    expect(d.allowed).toBe(true);
-    expect(resolvePrincipal).not.toHaveBeenCalled();
+    expect(d.allowed).toBe(false);
+    expect(resolvePrincipal).toHaveBeenCalled();
   });
   it('canary_read (viewer) → still DENIED (exemption keeps the role gate, does not widen authority)', async () => {
     const dal = { getOperatingMode: vi.fn() };

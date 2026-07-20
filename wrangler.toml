@@ -234,6 +234,12 @@ CUSTOMER_SELF_SERVICE_ENABLED = "true"
 # denied); the 8 active customer tokens are viewer/read-only (unaffected); the service-principal write
 # exemption is KEPT for now (its removal awaits agent entitlements). Reversible flag; deny-wins, fail-closed.
 ENTITLEMENT_ENFORCEMENT = "on"
+# UGEC fence + customer read-token door flipped ON 2026-07-20 (operator authorization, session 260720).
+# Fence (ensureCustomerWriteScope) gates ONLY customer_token writes -> canary bypasses it (safe).
+# CUSTOMER_API_TOKENS activates the 7 read-only viewer tokens (incl. evaluator read connectors);
+# CUSTOMER_OPERATIONAL_TOKENS (write door) stays OFF. Reversible flags.
+UGEC_FENCE_ENFORCEMENT = "true"
+CUSTOMER_API_TOKENS_ENABLED = "true"
 PLAN_ENTITIES_ENABLED = "true"
 MEMBER_REMOVAL_ENABLED = "true"
 FEEDBACK_PERSISTENCE_ENABLED = "true"

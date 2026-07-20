@@ -1588,6 +1588,33 @@
         }
       ],
       "reconciliation_note": "Receipt catch-up for this-session in-repo evolution (PRs #29/#30/#31/#32) plus the operator-authorized ENTITLEMENT_ENFORCEMENT flip. Every blob traced to its merged PR / this authorized change; corruption-vs-evolution checked (all match their producing change). Reactive drift; a merge-time auto-append remains the durable fix (Stage-2 hygiene item)."
+    },
+    {
+      "delta_id": "ugec-stage4-flips-reconcile-20260720",
+      "generated_at": "2026-07-20T20:40:00Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "09971674ad7db638978c326d4023f78cfb4d92f9",
+      "target_base_commit": "09971674ad7db638978c326d4023f78cfb4d92f9",
+      "authority": "shadow_only_no_production_cutover",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/lib/spine-authority.ts",
+          "target_blob": "06d7118349e1203d46c448e8989f19cc7b6cffc8",
+          "reason": "UGEC Stage-4 flips (operator auth 260720): fence+customer-token-door on; exemption scoped to platform-only"
+        },
+        {
+          "path": "src/workers/__tests__/spine-authority.test.ts",
+          "target_blob": "096ac7b69fa66f591382cca8f7304e5e6b5e5576",
+          "reason": "UGEC Stage-4 flips (operator auth 260720): fence+customer-token-door on; exemption scoped to platform-only"
+        },
+        {
+          "path": "wrangler.toml",
+          "target_blob": "df9fc958896799251e887ca19dfee671ec0be397",
+          "reason": "UGEC Stage-4 flips (operator auth 260720): fence+customer-token-door on; exemption scoped to platform-only"
+        }
+      ],
+      "reconciliation_note": "Stage-4 UGEC flips: fence enforced (customer_token scope only; canary bypasses), customer read-token door on, service-principal exemption scoped to platform (canary kept, customer agents entitlement-gated). Reactive drift."
     }
   ]
 }

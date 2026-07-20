@@ -72,7 +72,13 @@ export async function authorizeSpineWrite(ctx: Context, action: SpineAction): Pr
   // …carrying the effective mode for the shadow: the legacy path is mode-blind and grants like operator,
   // so 'operator' is the honest shadow label there; the enforce path uses the real resolved mode.
   let mode: 'watch' | 'test' | 'operator' = 'operator';
-  if (!entitlementEnforcementOn(ctx.env) || auth?.service_principal) {
+  // ENTITLEMENT flip (260720): CUSTOMER agent tokens (service_principal==='customer_token') now go
+  // through canActOnSpine (the mandate: customer agents are entitlement-gated). PLATFORM service
+  // principals (canary_lifecycle/canary_read — the deploy-verification system) KEEP the legacy path;
+  // they are trusted platform identities, not customer agents. Removing their exemption would deny the
+  // canary (0 entitlement) and blind deploy verification.
+  const isPlatformService = !!auth?.service_principal && auth.service_principal !== 'customer_token';
+  if (!entitlementEnforcementOn(ctx.env) || isPlatformService) {
     decision = legacyDecision(auth);
   } else {
     const resolved = await resolveEnforcement(ctx, auth ?? {});
