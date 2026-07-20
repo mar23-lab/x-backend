@@ -1541,6 +1541,53 @@
         }
       ],
       "reconciliation_note": "Receipt catch-up for legitimate in-repo evolution across the merged 260718-260720 governance waves (PRs #15/#16/#17/#21/#24/#26 + Wave M-B 6483a2d). Each file's drift is traced to its merged PR (git log -1 per path at 052a3b2) - graduated evolution, not corruption. This entry APPENDS per the repo contract (later synchronization requires a new receipt; originals immutable). verify:provenance had been RED since before PR #16, front-gating ci-local for every session. Full drift set = 19 files (the first pass recorded 7; the remainder surfaced on the untruncated verifier run - all traced to the same merged waves)."
+    },
+    {
+      "delta_id": "ugec-enforce-flip-reconcile-20260720",
+      "generated_at": "2026-07-20T19:20:00Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "0885e42f2bfbf17dd47c278ee11673d358475197",
+      "target_base_commit": "0885e42f2bfbf17dd47c278ee11673d358475197",
+      "authority": "shadow_only_no_production_cutover",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/routes/events.ts",
+          "target_blob": "60aa0e32c5bbbd8692ca023ac90beab403c88f82",
+          "reason": "Graduated via PR #30 (ingestion-principal lineage stamp)"
+        },
+        {
+          "path": "src/workers/routes/projects.ts",
+          "target_blob": "0cd5dbebcc5697d8e48b8bdcebe95cf71dfd2be1",
+          "reason": "Graduated via PR #31 (operator-action lineage stamps)"
+        },
+        {
+          "path": "src/workers/routes/workspaces.ts",
+          "target_blob": "2f24db02b317d3cf696e39a21d3076b88b482b7a",
+          "reason": "Graduated via PR #31 (operator-action lineage stamps)"
+        },
+        {
+          "path": "src/workers/routes/intake.ts",
+          "target_blob": "912b94f1f94206d5c2b15118977109f01dc45886",
+          "reason": "Graduated via PR #32 (intake-execute spine gate, two-tier viewer ruling)"
+        },
+        {
+          "path": "src/workers/__tests__/intake-route.test.ts",
+          "target_blob": "49cb28d7730e206e2ece0debc3dce3c41c4f9315",
+          "reason": "Graduated via PR #32 (viewer/client 403 RED control test)"
+        },
+        {
+          "path": "wrangler.toml",
+          "target_blob": "d7008e806e869202daffaa465b60b7af9760033c",
+          "reason": "ENTITLEMENT_ENFORCEMENT flipped on (operator authorization, session 260720; lockout-free verified on live prod)"
+        },
+        {
+          "path": "src/workers/__tests__/customer-safe-decision.test.ts",
+          "target_blob": "b1ccaade1d07abd7c2fd13c64489e2f25e5edfbf",
+          "reason": "Graduated via PR #29 (Stage-2 client-leak regression guards)"
+        }
+      ],
+      "reconciliation_note": "Receipt catch-up for this-session in-repo evolution (PRs #29/#30/#31/#32) plus the operator-authorized ENTITLEMENT_ENFORCEMENT flip. Every blob traced to its merged PR / this authorized change; corruption-vs-evolution checked (all match their producing change). Reactive drift; a merge-time auto-append remains the durable fix (Stage-2 hygiene item)."
     }
   ]
 }

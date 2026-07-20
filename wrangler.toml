@@ -229,7 +229,11 @@ CUSTOMER_SELF_SERVICE_ENABLED = "true"
 # New-UI activation (260712 - operator "flip everything to production" / "do all on my behalf").
 # Migrations 062 (workspace_members.removed_at) + 066 (plan_entities) + 067 (user_source_connections.
 # read_policy) APPLIED to prod Neon flat-truth-23350426 before this flip. Parsed via envFlagTrue.
-# ENTITLEMENT_ENFORCEMENT deliberately NOT flipped (no customer consent surface).
+# ENTITLEMENT_ENFORCEMENT flipped ON 2026-07-20 (operator authorization, session 260720). Lockout-free
+# verified on LIVE prod: all 11 workspace_members are operator-mode AND carry mig-055 entitlements (0
+# denied); the 8 active customer tokens are viewer/read-only (unaffected); the service-principal write
+# exemption is KEPT for now (its removal awaits agent entitlements). Reversible flag; deny-wins, fail-closed.
+ENTITLEMENT_ENFORCEMENT = "on"
 PLAN_ENTITIES_ENABLED = "true"
 MEMBER_REMOVAL_ENABLED = "true"
 FEEDBACK_PERSISTENCE_ENABLED = "true"
