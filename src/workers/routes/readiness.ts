@@ -186,7 +186,10 @@ readinessRoute.post('/readiness/submit', async (ctx) => {
         modelLineageFactory: modelLineage.factory,
         modelLineageRequired: modelLineage.required,
       },
-      { CONTEXT_RESOLVER_ENABLED: ctx.env.CONTEXT_RESOLVER_ENABLED },
+      {
+        CONTEXT_RESOLVER_ENABLED: ctx.env.CONTEXT_RESOLVER_ENABLED,
+        CHARTER_SEED_ENABLED: (ctx.env as { CHARTER_SEED_ENABLED?: string }).CHARTER_SEED_ENABLED,
+      },
     );
 
     return ctx.json({ ok: true, state: 'approved_workspace' });

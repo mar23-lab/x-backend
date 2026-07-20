@@ -165,8 +165,11 @@ adminRoute.post('/admin/access-requests/:id/provision', async (ctx) => {
         modelLineageFactory: modelLineage.factory,
         modelLineageRequired: modelLineage.required,
       },
-      // ctx_v1 resolver flag — default OFF (unset). Only 'true' enables it.
-      { CONTEXT_RESOLVER_ENABLED: (ctx.env as { CONTEXT_RESOLVER_ENABLED?: string }).CONTEXT_RESOLVER_ENABLED },
+      // ctx_v1 resolver flag — default OFF (unset). Only 'true' enables it. PR-3 · CHARTER_SEED_ENABLED (born-OFF).
+      {
+        CONTEXT_RESOLVER_ENABLED: (ctx.env as { CONTEXT_RESOLVER_ENABLED?: string }).CONTEXT_RESOLVER_ENABLED,
+        CHARTER_SEED_ENABLED: (ctx.env as { CHARTER_SEED_ENABLED?: string }).CHARTER_SEED_ENABLED,
+      },
     );
     ctx.status(201);
     return ctx.json({

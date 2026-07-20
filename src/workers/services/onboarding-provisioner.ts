@@ -28,6 +28,7 @@ import type { GovernedModelLineageFactory } from '../lib/model-execution-lineage
 import type {
   ProvisionCustomerInput,
   ProvisionCustomerResult,
+  ProvisionCharterSeed,
 } from '../dal/customer-provisioning-store';
 
 /** Narrow DAL surface the provisioner needs (the real DalAdapter satisfies it). */
@@ -88,6 +89,8 @@ export interface ProvisionerEnv {
   CONTEXT_RESOLVER_ENABLED?: string;
   /** ABS-P3 · ONLY 'true' scaffolds an archetype's honest-empty domain skeletons at provisioning. Default OFF. */
   DOMAIN_SCAFFOLD_ENABLED?: string;
+  /** PR-3 · ONLY 'true' seeds the workspace charter + one objective from the readiness answers. Default OFF. */
+  CHARTER_SEED_ENABLED?: string;
 }
 
 /**
@@ -127,6 +130,39 @@ export function slugifyCustomer(s: string): string {
       .replace(/^-+|-+$/g, '')
       .slice(0, 40) || 'customer'
   );
+}
+
+/**
+ * PR-3 (260721) · derive the charter seed from the readiness answers — the info->plan join.
+ * EVERYTHING here is a typed readiness field or the customer's OWN verbatim onboarding text; nothing
+ * is fabricated (the operator-signal-pollution guard). A missing focus (q1) → no objective is seeded
+ * (honest-empty); absent readiness → an all-null background/objective the store's COALESCE ignores.
+ * The objective is titled neutrally ("Initial focus (from onboarding)") so the label is accurate
+ * regardless of the exact q1 question wording; the customer's words are the body. Exported for tests.
+ */
+export function buildCharterSeed(input: {
+  answers: Record<string, unknown>;
+  accountType: string;
+  level: number | null;
+  companyName: string;
+}): ProvisionCharterSeed {
+  const trimStr = (v: unknown): string | null => {
+    const t = typeof v === 'string' ? v.trim() : '';
+    return t ? t.slice(0, 8000) : null;
+  };
+  const focus = trimStr(input.answers.q1); // the customer's own onboarding focus (verbatim)
+  const company = trimStr(input.companyName);
+  const background = company
+    ? `${company} · ${input.accountType}${input.level != null ? ` · readiness level ${input.level}` : ''}`
+    : null;
+  return {
+    mission: null, // no mission statement is captured at onboarding — never fabricate one
+    background,
+    industry: null, // industry is not a clean typed field today (Z-EXEC-3 adds structured intake)
+    team_size: null,
+    objectives_summary: focus,
+    objective: focus ? { title: 'Initial focus (from onboarding)', summary: focus } : null,
+  };
 }
 
 export async function provisionCustomerFromAccessRequest(
@@ -193,6 +229,13 @@ export async function provisionCustomerFromAccessRequest(
   // work lives), reusing the roadmap→operation_events channel. Applies to BOTH roadmap sources.
   roadmap = [...roadmap, ...buildConnectTasks(answers.integrations)];
 
+  // PR-3 · charter seed — the info->plan join, flag-gated (CHARTER_SEED_ENABLED, born-OFF ⇒ null ⇒
+  // no charter/objective row ⇒ byte-identical behaviour). Derived only from typed fields + the
+  // customer's verbatim q1 focus; the store COALESCE-preserves any later customer edit on re-provision.
+  const charter = envFlagTrue(env.CHARTER_SEED_ENABLED)
+    ? buildCharterSeed({ answers, accountType, level, companyName: customerName })
+    : null;
+
   const result = await dal.provisionCustomerWorkspace({
     accessRequestId: req.accessRequestId,
     clerkOrgId: req.clerkOrgId,
@@ -204,6 +247,7 @@ export async function provisionCustomerFromAccessRequest(
     projectId,
     approvedBy: req.approvedBy,
     roadmap,
+    charter,
   });
 
   // ABS-P3 · DOMAIN-SKELETON SCAFFOLD (flag-gated, default OFF ⇒ byte-identical). The instant the
