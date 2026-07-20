@@ -1646,6 +1646,52 @@
           "reason": "W1-PR1b charter: regenerated api-contract (211 routes) incl GET/PUT /workspaces/:id/charter"
         }
       ]
+    },
+    {
+      "delta_id": "w1-pr3-charter-seed-20260721",
+      "generated_at": "2026-07-21T00:45:00Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "d395a1de92321ab181555b777f47c522d1e7ce69",
+      "target_base_commit": "d395a1de92321ab181555b777f47c522d1e7ce69",
+      "authority": "shadow_only_no_production_cutover",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/dal/customer-provisioning-store.ts",
+          "target_blob": "477606bd26f70532789dd752c5fe3c16bf1b28cd",
+          "reason": "W1-PR3 charter seed: ProvisionCharterSeed type + charter?/objective seed statements (flag-gated, born-OFF)"
+        },
+        {
+          "path": "src/workers/services/onboarding-provisioner.ts",
+          "target_blob": "3119fb83b87371bee397cdba75f19c1dae891f8c",
+          "reason": "W1-PR3 charter seed: CHARTER_SEED_ENABLED flag + buildCharterSeed + pass charter to provision"
+        },
+        {
+          "path": "src/workers/routes/admin.ts",
+          "target_blob": "f1991eb77c61d848c3cd62bc14db813776551b95",
+          "reason": "W1-PR3 charter seed: forward CHARTER_SEED_ENABLED to the provisioner env"
+        },
+        {
+          "path": "src/workers/routes/readiness.ts",
+          "target_blob": "1325801792e0aea4302edd46716bfd44c01b64ac",
+          "reason": "W1-PR3 charter seed: forward CHARTER_SEED_ENABLED to the provisioner env"
+        },
+        {
+          "path": "src/workers/routes/session.ts",
+          "target_blob": "d28962518168cb09bc1713dcbb359239957fba9b",
+          "reason": "W1-PR3 charter seed: forward CHARTER_SEED_ENABLED to the provisioner env"
+        },
+        {
+          "path": "src/workers/__tests__/onboarding-provisioner.test.ts",
+          "target_blob": "08bd08c7c57e220c7387acf67c5f1ef5d6e3d92f",
+          "reason": "W1-PR3 charter seed: buildCharterSeed unit tests (3 cases, no fabrication)"
+        },
+        {
+          "path": "wrangler.toml",
+          "target_blob": "a02c86c152e6f60a5614bbbbb54559a9941b6fea",
+          "reason": "W1-PR3 charter seed: CHARTER_SEED_ENABLED='false' born-OFF flag documented"
+        }
+      ]
     }
   ]
 }

@@ -241,6 +241,10 @@ ENTITLEMENT_ENFORCEMENT = "on"
 UGEC_FENCE_ENFORCEMENT = "true"
 CUSTOMER_API_TOKENS_ENABLED = "true"
 PLAN_ENTITIES_ENABLED = "true"
+# PR-3 (260721) · seed the workspace charter + one objective from the readiness answers at provisioning.
+# BORN-OFF: 'false' ⇒ provisioning is byte-identical to today (no charter/objective row). Flip to 'true'
+# on a test workspace first, then broadly, once the plan->chat grounding (PR-4) reads it.
+CHARTER_SEED_ENABLED = "false"
 MEMBER_REMOVAL_ENABLED = "true"
 FEEDBACK_PERSISTENCE_ENABLED = "true"
 

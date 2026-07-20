@@ -10,6 +10,7 @@ import {
   provisionCustomerFromAccessRequest,
   slugifyCustomer,
   mapSetupToRoadmapSteps,
+  buildCharterSeed,
   type OnboardingProvisionerDal,
 } from '../services/onboarding-provisioner';
 import { buildDay1Roadmap } from '../services/onboarding-roadmap';
@@ -407,5 +408,40 @@ describe('ABS-P3 · DOMAIN_SCAFFOLD_ENABLED domain-skeleton scaffold', () => {
     expect(out.domains_scaffolded).toBe(5); // 6 attempted, 1 failed
     expect(out.warnings.join(' ')).toMatch(/domain scaffold: could not create/);
     expect(out.result).toBeTruthy(); // provisioning still succeeded
+  });
+});
+
+// PR-3 (260721) · charter seed — the info->plan join. buildCharterSeed is pure; assert it seeds only
+// typed fields + the customer's OWN verbatim q1 focus, fabricates nothing, and degrades honestly.
+describe('buildCharterSeed', () => {
+  it('seeds objectives_summary + a neutrally-titled objective from the verbatim q1 focus', () => {
+    const seed = buildCharterSeed({
+      answers: { q1: '  Cut month-end close from 10 days to 3  ' },
+      accountType: 'company',
+      level: 3,
+      companyName: 'Acme Co',
+    });
+    expect(seed.objectives_summary).toBe('Cut month-end close from 10 days to 3'); // trimmed, verbatim
+    expect(seed.objective).toEqual({
+      title: 'Initial focus (from onboarding)', // neutral label — accurate regardless of q1 wording
+      summary: 'Cut month-end close from 10 days to 3',
+    });
+    expect(seed.background).toBe('Acme Co · company · readiness level 3');
+    expect(seed.mission).toBeNull(); // never fabricated
+    expect(seed.industry).toBeNull();
+  });
+
+  it('seeds NO objective when q1 is absent/blank (honest-empty)', () => {
+    const seed = buildCharterSeed({ answers: { q1: '   ' }, accountType: 'personal', level: null, companyName: 'Solo' });
+    expect(seed.objective).toBeNull();
+    expect(seed.objectives_summary).toBeNull();
+    expect(seed.background).toBe('Solo · personal'); // no level suffix when level is null
+  });
+
+  it('degrades to all-null when readiness is empty (the store COALESCE then no-ops)', () => {
+    const seed = buildCharterSeed({ answers: {}, accountType: 'company', level: null, companyName: '' });
+    expect(seed.background).toBeNull();
+    expect(seed.objectives_summary).toBeNull();
+    expect(seed.objective).toBeNull();
   });
 });

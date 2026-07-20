@@ -257,7 +257,10 @@ sessionRoute.get('/session', async (ctx) => {
               modelLineageFactory: modelLineage.factory,
               modelLineageRequired: modelLineage.required,
             },
-            { CONTEXT_RESOLVER_ENABLED: (ctx.env as { CONTEXT_RESOLVER_ENABLED?: string }).CONTEXT_RESOLVER_ENABLED },
+            {
+              CONTEXT_RESOLVER_ENABLED: (ctx.env as { CONTEXT_RESOLVER_ENABLED?: string }).CONTEXT_RESOLVER_ENABLED,
+              CHARTER_SEED_ENABLED: (ctx.env as { CHARTER_SEED_ENABLED?: string }).CHARTER_SEED_ENABLED,
+            },
           );
           entitlement = await dal.getSessionEntitlement(userId, orgId, email);
           (entitlement as unknown as {

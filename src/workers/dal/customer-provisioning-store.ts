@@ -21,6 +21,22 @@ export interface ProvisionRoadmapStep {
   body: string;
 }
 
+/**
+ * PR-3 (260721) · charter seed — the info->plan join. Built by the provisioner ONLY when
+ * CHARTER_SEED_ENABLED='true' (born-OFF ⇒ absent ⇒ no charter/objective seeded ⇒ byte-identical
+ * behaviour). Every field is either a typed readiness column or the customer's OWN verbatim
+ * onboarding text — nothing is fabricated (the operator-signal-pollution guard).
+ */
+export interface ProvisionCharterSeed {
+  mission?: string | null;
+  background?: string | null;
+  industry?: string | null;
+  team_size?: string | null;
+  objectives_summary?: string | null;
+  /** Optional seeded 90-day objective (ONE plan_entities 'goal') from the customer's own focus. */
+  objective?: { title: string; summary?: string | null } | null;
+}
+
 export interface ProvisionCustomerInput {
   /** Access request that caused provisioning; linked after the workspace row exists. */
   accessRequestId?: string | null;
@@ -39,6 +55,8 @@ export interface ProvisionCustomerInput {
   approvedBy: string;
   /** Day-1 roadmap steps (built from the readiness Q&A); rendered as queued events. */
   roadmap: ProvisionRoadmapStep[];
+  /** PR-3 · optional charter seed (present only when CHARTER_SEED_ENABLED; absent ⇒ no-op). */
+  charter?: ProvisionCharterSeed | null;
 }
 
 export interface ProvisionCustomerResult {
@@ -207,6 +225,48 @@ export async function provisionCustomerWorkspaceRow(
       `,
     );
   });
+
+  // PR-3 (260721) · charter seed — the info->plan join (mig 088 workspace_charter + one plan_entities
+  // 'goal'). Present ONLY when the provisioner passed input.charter (CHARTER_SEED_ENABLED='true',
+  // born-OFF). SEED-ONLY / re-entry-safe: the charter ON CONFLICT keeps ANY value the customer already
+  // set (COALESCE(existing, new) — existing wins) so a re-provision never clobbers an edit; the seeded
+  // objective is DO NOTHING on its deterministic id. Owner connection (RLS-bypassing), same txn as
+  // provisioning → atomic: a charter is never half-seeded.
+  const charter = input.charter;
+  if (charter) {
+    stmts.push(
+      sql/*sql*/`
+        INSERT INTO workspace_charter (
+          workspace_id, mission, background, industry, team_size, objectives_summary, updated_by, updated_at
+        ) VALUES (
+          ${orgId}, ${charter.mission ?? null}, ${charter.background ?? null}, ${charter.industry ?? null},
+          ${charter.team_size ?? null}, ${charter.objectives_summary ?? null}, ${approvedBy}, now()
+        )
+        ON CONFLICT (workspace_id) DO UPDATE SET
+          mission            = COALESCE(workspace_charter.mission, EXCLUDED.mission),
+          background         = COALESCE(workspace_charter.background, EXCLUDED.background),
+          industry           = COALESCE(workspace_charter.industry, EXCLUDED.industry),
+          team_size          = COALESCE(workspace_charter.team_size, EXCLUDED.team_size),
+          objectives_summary = COALESCE(workspace_charter.objectives_summary, EXCLUDED.objectives_summary),
+          updated_at         = now()
+      `,
+    );
+    if (charter.objective && charter.objective.title) {
+      // Deterministic id → a re-provision never creates a second objective; DO NOTHING preserves edits.
+      const objId = `ple_${slug}_seed_objective`;
+      stmts.push(
+        sql/*sql*/`
+          INSERT INTO plan_entities (
+            id, workspace_id, scope_id, scope_type, kind, title, summary, status, position, created_by, updated_by
+          ) VALUES (
+            ${objId}, ${orgId}, ${orgId}, 'workspace', 'goal',
+            ${charter.objective.title}, ${charter.objective.summary ?? null}, 'open', 0, ${approvedBy}, ${approvedBy}
+          )
+          ON CONFLICT (id) DO NOTHING
+        `,
+      );
+    }
+  }
 
   await (sql as unknown as { transaction: (q: unknown[]) => Promise<unknown> }).transaction(stmts);
 
