@@ -18,27 +18,90 @@
         }
       ],
       "copied_files": [
-        { "path": "docs/contracts/api-contract.v1.json", "source_blob": "ffb252819af372c994a1d992d9c07ed4f160583f" },
-        { "path": "scripts/verify-action-intent-shadow.mjs", "source_blob": "1cbfce9492d5797dab0c22fd2e0065cdcf087064" },
-        { "path": "scripts/verify-packet-completion-contract.mjs", "source_blob": "2f3f8d0c13ccbb683f667da047935b1b53460895" },
-        { "path": "scripts/verify-typed-work-relationships.mjs", "source_blob": "c78360759e8c629c665e7c54ec33efbf5e1c828e" },
-        { "path": "src/workers/__fixtures__/action-intent-corpus.json", "source_blob": "90a5262353183cfb076e17099efd404e94dc15c6" },
-        { "path": "src/workers/__tests__/action-intent-shadow-route.test.ts", "source_blob": "333aa2d98faf423c4a2441ffa4308b6058e8a515" },
-        { "path": "src/workers/__tests__/action-intent.test.ts", "source_blob": "2161a7931c95ce7321c1fa32e1ff10dc4be0fd5a" },
-        { "path": "src/workers/__tests__/operational-spine-route.test.ts", "source_blob": "24af8dd8b3bd840a96eec297b55d26c07e08d930" },
-        { "path": "src/workers/__tests__/packet-completion-store.test.ts", "source_blob": "8a952d7ccf057de0f78e15bc925f3c6286daded6" },
-        { "path": "src/workers/__tests__/work-relationship.test.ts", "source_blob": "cc8f2f5cda44569d3c4674c22cacf23798633653" },
-        { "path": "src/workers/dal/DalAdapter.ts", "source_blob": "946aa520e75aa0bbabce115e959e51f817ec14ca" },
-        { "path": "src/workers/dal/operational-spine-methods.ts", "source_blob": "8b174be4b798b73e63073d478afdf51a3a65bbde" },
-        { "path": "src/workers/dal/operational-spine-store.ts", "source_blob": "ba02998fb213adcf00b44f2b736cf9357226ff21" },
-        { "path": "src/workers/dal/types/operational-spine.ts", "source_blob": "3a9dfc9c6de37d8036120c86e9d60809f7f6a18c" },
-        { "path": "src/workers/db/migrations/073_packet_completion_contract.sql", "source_blob": "bdc06273e76c69617b435b5e7fa82709ab6d3916" },
-        { "path": "src/workers/db/migrations/074_typed_work_relationships.sql", "source_blob": "f29a3cbd2b07cda11d80e46b6635dc4d6b4ca19b" },
-        { "path": "src/workers/index.ts", "source_blob": "41d544371b224b169f923afd618632543c5b351c" },
-        { "path": "src/workers/lib/action-intent.ts", "source_blob": "f48e47ffc129f04e76188c9c4730f357497410f2" },
-        { "path": "src/workers/lib/work-relationship.ts", "source_blob": "488fbb8e374bce746085547b71ac25fcf30b8472" },
-        { "path": "src/workers/routes/action-intent-shadow.ts", "source_blob": "a4b93b7a6d8f3fcf8c1571e5b81f24741f5d73e1" },
-        { "path": "src/workers/routes/operational-spine.ts", "source_blob": "c808ba8bf9851688f91677bf85843b36d44a440d" }
+        {
+          "path": "docs/contracts/api-contract.v1.json",
+          "source_blob": "ffb252819af372c994a1d992d9c07ed4f160583f"
+        },
+        {
+          "path": "scripts/verify-action-intent-shadow.mjs",
+          "source_blob": "1cbfce9492d5797dab0c22fd2e0065cdcf087064"
+        },
+        {
+          "path": "scripts/verify-packet-completion-contract.mjs",
+          "source_blob": "2f3f8d0c13ccbb683f667da047935b1b53460895"
+        },
+        {
+          "path": "scripts/verify-typed-work-relationships.mjs",
+          "source_blob": "c78360759e8c629c665e7c54ec33efbf5e1c828e"
+        },
+        {
+          "path": "src/workers/__fixtures__/action-intent-corpus.json",
+          "source_blob": "90a5262353183cfb076e17099efd404e94dc15c6"
+        },
+        {
+          "path": "src/workers/__tests__/action-intent-shadow-route.test.ts",
+          "source_blob": "333aa2d98faf423c4a2441ffa4308b6058e8a515"
+        },
+        {
+          "path": "src/workers/__tests__/action-intent.test.ts",
+          "source_blob": "2161a7931c95ce7321c1fa32e1ff10dc4be0fd5a"
+        },
+        {
+          "path": "src/workers/__tests__/operational-spine-route.test.ts",
+          "source_blob": "24af8dd8b3bd840a96eec297b55d26c07e08d930"
+        },
+        {
+          "path": "src/workers/__tests__/packet-completion-store.test.ts",
+          "source_blob": "8a952d7ccf057de0f78e15bc925f3c6286daded6"
+        },
+        {
+          "path": "src/workers/__tests__/work-relationship.test.ts",
+          "source_blob": "cc8f2f5cda44569d3c4674c22cacf23798633653"
+        },
+        {
+          "path": "src/workers/dal/DalAdapter.ts",
+          "source_blob": "946aa520e75aa0bbabce115e959e51f817ec14ca"
+        },
+        {
+          "path": "src/workers/dal/operational-spine-methods.ts",
+          "source_blob": "8b174be4b798b73e63073d478afdf51a3a65bbde"
+        },
+        {
+          "path": "src/workers/dal/operational-spine-store.ts",
+          "source_blob": "ba02998fb213adcf00b44f2b736cf9357226ff21"
+        },
+        {
+          "path": "src/workers/dal/types/operational-spine.ts",
+          "source_blob": "3a9dfc9c6de37d8036120c86e9d60809f7f6a18c"
+        },
+        {
+          "path": "src/workers/db/migrations/073_packet_completion_contract.sql",
+          "source_blob": "bdc06273e76c69617b435b5e7fa82709ab6d3916"
+        },
+        {
+          "path": "src/workers/db/migrations/074_typed_work_relationships.sql",
+          "source_blob": "f29a3cbd2b07cda11d80e46b6635dc4d6b4ca19b"
+        },
+        {
+          "path": "src/workers/index.ts",
+          "source_blob": "41d544371b224b169f923afd618632543c5b351c"
+        },
+        {
+          "path": "src/workers/lib/action-intent.ts",
+          "source_blob": "f48e47ffc129f04e76188c9c4730f357497410f2"
+        },
+        {
+          "path": "src/workers/lib/work-relationship.ts",
+          "source_blob": "488fbb8e374bce746085547b71ac25fcf30b8472"
+        },
+        {
+          "path": "src/workers/routes/action-intent-shadow.ts",
+          "source_blob": "a4b93b7a6d8f3fcf8c1571e5b81f24741f5d73e1"
+        },
+        {
+          "path": "src/workers/routes/operational-spine.ts",
+          "source_blob": "c808ba8bf9851688f91677bf85843b36d44a440d"
+        }
       ],
       "transformed_files": [
         {
@@ -72,37 +135,161 @@
       "authority": "shadow_only_no_production_cutover",
       "copied_files": [],
       "transformed_files": [
-        { "path": "docs/audits/OAR_W3_EVIDENCE_PACKET.md", "target_blob": "942032f62c827bd0c7276f12daf6f2db46543a57", "reason": "records the refreshed role and skill catalog evidence" },
-        { "path": "docs/contracts/api-contract.v1.json", "target_blob": "611a7bfd40d6a4c4cea37036040d40aac7ba8acf", "reason": "records the generated 208-tuple backend API contract" },
-        { "path": "docs/contracts/role-skill-catalog.json", "target_blob": "c4e851ddaeca9704a39820c1771bc291b585c000", "reason": "adds product-safe assistant role and skill bindings" },
-        { "path": "package-lock.json", "target_blob": "97b8d0276c67f16e03828eb01f06a563dd5d4de9", "reason": "locks the Workers test runtime upgrade and patched production Hono release" },
-        { "path": "package.json", "target_blob": "1ea4a8cff1063ba2843bc4a1ca129d8fef34b97a", "reason": "aligns Vitest and Cloudflare Workers test dependencies and pins the patched Hono runtime" },
-        { "path": "scripts/run-worker-test-batches.mjs", "target_blob": "6c9757151301ee202cf61926a518227aee49ac43", "reason": "preserves bounded serial test execution with the Vitest 4 CLI" },
-        { "path": "src/workers/__tests__/assistant-context-lineage.test.ts", "target_blob": "94a743f8cf89d72950309fa8fe950d67254f99da", "reason": "proves signed role, skill, and context lineage persistence" },
-        { "path": "src/workers/__tests__/current-work-route.test.ts", "target_blob": "ab7e4f3cc7d6a53bd81aad1ab247a83aca63049a", "reason": "proves shadow Current Work projection v2 behavior" },
-        { "path": "src/workers/__tests__/intake-resolution.test.ts", "target_blob": "da7203035171a9211ba21d4eb07c60429fd0f4a2", "reason": "proves deterministic intake classification and ambiguity handling" },
-        { "path": "src/workers/__tests__/intake-route.test.ts", "target_blob": "352b1df47196a9cf2305a39b148a2051f05c6269", "reason": "proves immutable and idempotent resolve and execute route contracts" },
-        { "path": "src/workers/__tests__/intake-store.test.ts", "target_blob": "069e4a94074cd31d5a9664418b82489e2ef69e3a", "reason": "proves transactional receipt replay and tenant-project enforcement" },
-        { "path": "src/workers/__tests__/role-skill-catalog-loader.test.ts", "target_blob": "34a13c2c73c956c282949a702911707704033ea1", "reason": "proves catalog loading after product-safe role additions" },
-        { "path": "src/workers/__tests__/role-skill-catalog-publisher.test.ts", "target_blob": "556ad41b906b0e762e223335ba24f202adebc370", "reason": "proves catalog publication remains deterministic" },
-        { "path": "src/workers/dal/DalAdapter.ts", "target_blob": "834bcd82e7a8de8aa77323b42b74c22036812d8b", "reason": "registers idempotent intake persistence methods in the DAL" },
-        { "path": "src/workers/dal/context-packet-store.ts", "target_blob": "5c5951011bf94d89afcce35142591035b1faae6e", "reason": "returns durable context receipt identifiers" },
-        { "path": "src/workers/dal/intake-store.ts", "target_blob": "c0da20b7b6807c51286f3011e204d8602d5cb877", "reason": "implements transactional intake execution, idempotent receipt replay, tenant-project validation, and outbox persistence" },
-        { "path": "src/workers/dal/operational-spine-methods.ts", "target_blob": "c6fa0996ea48cc4bea5fea6e86f185be2feda846", "reason": "installs the idempotent intake DAL methods" },
-        { "path": "src/workers/dal/role-skill-resolution-store.ts", "target_blob": "fe752e27397f7edfab41be83457a138e23cb83f1", "reason": "returns durable role and skill resolution identifiers" },
-        { "path": "src/workers/dal/types.ts", "target_blob": "f2ed0b16de243b28d2a71dff53c4c7b81c07841f", "reason": "exports the intake bounded-context DAL types" },
-        { "path": "src/workers/dal/types/intake.ts", "target_blob": "9e22cbdf88fc8d7e79c7370ecf98db2f8ea9bb04", "reason": "defines intake resolution, idempotent execution receipt, and outbox contracts" },
-        { "path": "src/workers/db/migrations/075_single_intake_and_execution_receipts.sql", "target_blob": "78dad23ff5b836026c4ac631ece2cd1341fab962", "reason": "stages tenant-scoped intake, idempotent execution receipt, and projection outbox schema without applying it" },
-        { "path": "src/workers/index.ts", "target_blob": "00f72fdd2b1d7be4eb2245ee02e66c6ec9065096", "reason": "mounts default-off single-intake and context-lineage routes" },
-        { "path": "src/workers/lib/assistant-context-lineage.ts", "target_blob": "5cc3441bd6dbc65d6ff8ba4f26adedc66f07c321", "reason": "assembles and persists governed assistant role, skill, and context lineage" },
-        { "path": "src/workers/lib/intake-resolution.ts", "target_blob": "a4c10b54e6e87db5df7dd2abe41b3c3ee79386e6", "reason": "implements product-native single-intake resolution semantics" },
-        { "path": "src/workers/lib/observability.ts", "target_blob": "6e5c513937b90a76d8262677c0c9fcea43422638", "reason": "adds intake and assistant lineage event kinds" },
-        { "path": "src/workers/lib/role-skill-catalog-loader.ts", "target_blob": "4fa122f7903c82090a98d9c551842c7474381014", "reason": "loads the expanded product-safe catalog" },
-        { "path": "src/workers/lib/role-skill-resolver.ts", "target_blob": "89e3e8975820b549c176c4b999496ed38f6c1625", "reason": "resolves assistant actions without widening write authority" },
-        { "path": "src/workers/routes/current-work.ts", "target_blob": "e14bb6039753458276cdb4c8b3099b4eded16775", "reason": "emits shadow-only server Current Work projection v2" },
-        { "path": "src/workers/routes/customer-chat.ts", "target_blob": "8c7fdf5c46f98d00427954c6c08e86613c350fdf", "reason": "persists role, skill, and context lineage around model execution" },
-        { "path": "src/workers/routes/intake.ts", "target_blob": "719af21f530ac989a2d4469058f9af32aba33aef", "reason": "exposes tenant-scoped resolve and idempotent immutable execute endpoints" },
-        { "path": "vitest.workers.config.ts", "target_blob": "3498585088f22e7ce7ab8340699592feeaf021c7", "reason": "uses the supported Cloudflare Vitest 4 configuration contract" }
+        {
+          "path": "docs/audits/OAR_W3_EVIDENCE_PACKET.md",
+          "target_blob": "942032f62c827bd0c7276f12daf6f2db46543a57",
+          "reason": "records the refreshed role and skill catalog evidence"
+        },
+        {
+          "path": "docs/contracts/api-contract.v1.json",
+          "target_blob": "611a7bfd40d6a4c4cea37036040d40aac7ba8acf",
+          "reason": "records the generated 208-tuple backend API contract"
+        },
+        {
+          "path": "docs/contracts/role-skill-catalog.json",
+          "target_blob": "c4e851ddaeca9704a39820c1771bc291b585c000",
+          "reason": "adds product-safe assistant role and skill bindings"
+        },
+        {
+          "path": "package-lock.json",
+          "target_blob": "97b8d0276c67f16e03828eb01f06a563dd5d4de9",
+          "reason": "locks the Workers test runtime upgrade and patched production Hono release"
+        },
+        {
+          "path": "package.json",
+          "target_blob": "1ea4a8cff1063ba2843bc4a1ca129d8fef34b97a",
+          "reason": "aligns Vitest and Cloudflare Workers test dependencies and pins the patched Hono runtime"
+        },
+        {
+          "path": "scripts/run-worker-test-batches.mjs",
+          "target_blob": "6c9757151301ee202cf61926a518227aee49ac43",
+          "reason": "preserves bounded serial test execution with the Vitest 4 CLI"
+        },
+        {
+          "path": "src/workers/__tests__/assistant-context-lineage.test.ts",
+          "target_blob": "94a743f8cf89d72950309fa8fe950d67254f99da",
+          "reason": "proves signed role, skill, and context lineage persistence"
+        },
+        {
+          "path": "src/workers/__tests__/current-work-route.test.ts",
+          "target_blob": "ab7e4f3cc7d6a53bd81aad1ab247a83aca63049a",
+          "reason": "proves shadow Current Work projection v2 behavior"
+        },
+        {
+          "path": "src/workers/__tests__/intake-resolution.test.ts",
+          "target_blob": "da7203035171a9211ba21d4eb07c60429fd0f4a2",
+          "reason": "proves deterministic intake classification and ambiguity handling"
+        },
+        {
+          "path": "src/workers/__tests__/intake-route.test.ts",
+          "target_blob": "352b1df47196a9cf2305a39b148a2051f05c6269",
+          "reason": "proves immutable and idempotent resolve and execute route contracts"
+        },
+        {
+          "path": "src/workers/__tests__/intake-store.test.ts",
+          "target_blob": "069e4a94074cd31d5a9664418b82489e2ef69e3a",
+          "reason": "proves transactional receipt replay and tenant-project enforcement"
+        },
+        {
+          "path": "src/workers/__tests__/role-skill-catalog-loader.test.ts",
+          "target_blob": "34a13c2c73c956c282949a702911707704033ea1",
+          "reason": "proves catalog loading after product-safe role additions"
+        },
+        {
+          "path": "src/workers/__tests__/role-skill-catalog-publisher.test.ts",
+          "target_blob": "556ad41b906b0e762e223335ba24f202adebc370",
+          "reason": "proves catalog publication remains deterministic"
+        },
+        {
+          "path": "src/workers/dal/DalAdapter.ts",
+          "target_blob": "834bcd82e7a8de8aa77323b42b74c22036812d8b",
+          "reason": "registers idempotent intake persistence methods in the DAL"
+        },
+        {
+          "path": "src/workers/dal/context-packet-store.ts",
+          "target_blob": "5c5951011bf94d89afcce35142591035b1faae6e",
+          "reason": "returns durable context receipt identifiers"
+        },
+        {
+          "path": "src/workers/dal/intake-store.ts",
+          "target_blob": "c0da20b7b6807c51286f3011e204d8602d5cb877",
+          "reason": "implements transactional intake execution, idempotent receipt replay, tenant-project validation, and outbox persistence"
+        },
+        {
+          "path": "src/workers/dal/operational-spine-methods.ts",
+          "target_blob": "c6fa0996ea48cc4bea5fea6e86f185be2feda846",
+          "reason": "installs the idempotent intake DAL methods"
+        },
+        {
+          "path": "src/workers/dal/role-skill-resolution-store.ts",
+          "target_blob": "fe752e27397f7edfab41be83457a138e23cb83f1",
+          "reason": "returns durable role and skill resolution identifiers"
+        },
+        {
+          "path": "src/workers/dal/types.ts",
+          "target_blob": "f2ed0b16de243b28d2a71dff53c4c7b81c07841f",
+          "reason": "exports the intake bounded-context DAL types"
+        },
+        {
+          "path": "src/workers/dal/types/intake.ts",
+          "target_blob": "9e22cbdf88fc8d7e79c7370ecf98db2f8ea9bb04",
+          "reason": "defines intake resolution, idempotent execution receipt, and outbox contracts"
+        },
+        {
+          "path": "src/workers/db/migrations/075_single_intake_and_execution_receipts.sql",
+          "target_blob": "78dad23ff5b836026c4ac631ece2cd1341fab962",
+          "reason": "stages tenant-scoped intake, idempotent execution receipt, and projection outbox schema without applying it"
+        },
+        {
+          "path": "src/workers/index.ts",
+          "target_blob": "00f72fdd2b1d7be4eb2245ee02e66c6ec9065096",
+          "reason": "mounts default-off single-intake and context-lineage routes"
+        },
+        {
+          "path": "src/workers/lib/assistant-context-lineage.ts",
+          "target_blob": "5cc3441bd6dbc65d6ff8ba4f26adedc66f07c321",
+          "reason": "assembles and persists governed assistant role, skill, and context lineage"
+        },
+        {
+          "path": "src/workers/lib/intake-resolution.ts",
+          "target_blob": "a4c10b54e6e87db5df7dd2abe41b3c3ee79386e6",
+          "reason": "implements product-native single-intake resolution semantics"
+        },
+        {
+          "path": "src/workers/lib/observability.ts",
+          "target_blob": "6e5c513937b90a76d8262677c0c9fcea43422638",
+          "reason": "adds intake and assistant lineage event kinds"
+        },
+        {
+          "path": "src/workers/lib/role-skill-catalog-loader.ts",
+          "target_blob": "4fa122f7903c82090a98d9c551842c7474381014",
+          "reason": "loads the expanded product-safe catalog"
+        },
+        {
+          "path": "src/workers/lib/role-skill-resolver.ts",
+          "target_blob": "89e3e8975820b549c176c4b999496ed38f6c1625",
+          "reason": "resolves assistant actions without widening write authority"
+        },
+        {
+          "path": "src/workers/routes/current-work.ts",
+          "target_blob": "e14bb6039753458276cdb4c8b3099b4eded16775",
+          "reason": "emits shadow-only server Current Work projection v2"
+        },
+        {
+          "path": "src/workers/routes/customer-chat.ts",
+          "target_blob": "8c7fdf5c46f98d00427954c6c08e86613c350fdf",
+          "reason": "persists role, skill, and context lineage around model execution"
+        },
+        {
+          "path": "src/workers/routes/intake.ts",
+          "target_blob": "719af21f530ac989a2d4469058f9af32aba33aef",
+          "reason": "exposes tenant-scoped resolve and idempotent immutable execute endpoints"
+        },
+        {
+          "path": "vitest.workers.config.ts",
+          "target_blob": "3498585088f22e7ce7ab8340699592feeaf021c7",
+          "reason": "uses the supported Cloudflare Vitest 4 configuration contract"
+        }
       ]
     },
     {
@@ -114,22 +301,86 @@
       "authority": "shadow_only_no_production_cutover",
       "copied_files": [],
       "transformed_files": [
-        { "path": "docs/architecture/backend/PRODUCTION_DEPENDENCIES.md", "target_blob": "1ff964bf99941fac14bad02af2c9305147b95b7b", "reason": "records the default-off Queue dependency and keeps activation explicitly unapproved" },
-        { "path": "docs/deployment/TENANT_PROJECTION_QUEUE_ACTIVATION.md", "target_blob": "87fd5ffdabcc545818a25a59d4aa9e0ecbc2c54a", "reason": "defines isolated canary, retry, DLQ, evidence and rollback requirements without authorizing activation" },
-        { "path": "docs/graph/GRAPH_SUBSTRATE_MANIFEST.yml", "target_blob": "bed7abdd87048dbca25430dec44e887c62b3e600", "reason": "declares canonical task packets and event-driven projection while preserving the stale census as unobserved" },
-        { "path": "scripts/verify-projection-substrate-evidence.mjs", "target_blob": "833b665938291f586644916cc5ebca7dc9803819", "reason": "allows explicit unobserved census states but forbids fed claims until every core source is measured" },
-        { "path": "src/workers/__tests__/data-graph.test.ts", "target_blob": "d941ae44a5158088a1cf7da91ca93cdf413a59da", "reason": "proves canonical intake packets and their source-event causation enter the derived graph" },
-        { "path": "src/workers/__tests__/projection-outbox-store.test.ts", "target_blob": "6f01bc0c0b534788757bb47fcc45a7b32055bf44", "reason": "proves bounded skip-locked dispatch and two-key tenant mutation scope" },
-        { "path": "src/workers/__tests__/tenant-projection-queue.test.ts", "target_blob": "83003a2bc0cfc9d024284e8ab8a4ea267a842fed", "reason": "proves dormant mode, opaque dispatch, tenant binding, idempotent replay, retry and DLQ behavior" },
-        { "path": "src/workers/crons/index.ts", "target_blob": "611d76b4e1e337b9d8d010c314bb6f25888d1b6d", "reason": "chains the default-off dispatcher into the existing five-minute schedule without adding a trigger" },
-        { "path": "src/workers/crons/tenant-projection-dispatch.ts", "target_blob": "861d25aea6f2cb9080d982527dbf443dc5851cb4", "reason": "adapts transactional outbox dispatch to the cron result and observability contract" },
-        { "path": "src/workers/crons/types.ts", "target_blob": "fd5f9e74a92027a3c6d8f39271f305defa6ae030", "reason": "adds optional default-off Queue and outbox gateways to the cron boundary" },
-        { "path": "src/workers/dal/graph-store.ts", "target_blob": "19c14d332970d59db9d70495d96cfea3eb725ce3", "reason": "feeds canonical task packets directly into tenant graph fact assembly" },
-        { "path": "src/workers/dal/projection-outbox-store.ts", "target_blob": "d46b6cdedb46fbd87b7ceba7ef6bfe8c5c9ec8c0", "reason": "implements bounded dispatch claims and tenant-bound process, retry and dead-letter transitions" },
-        { "path": "src/workers/db/migrations/076_tenant_projection_outbox_lifecycle.sql", "target_blob": "2a42bdb9b68c319ecbbc4b8e8b72acf153e904ee", "reason": "stages additive outbox lifecycle columns and indexes without applying or activating them" },
-        { "path": "src/workers/graph/data-graph.ts", "target_blob": "ddeec396111796e12b3bcbf10f5fa6159ef5f64f", "reason": "projects canonical task packets and source-event causation as derived tenant lineage" },
-        { "path": "src/workers/index.ts", "target_blob": "7ad494ac15b96a4c27237376fd75bd80facf672b", "reason": "binds the dormant outbox dispatcher and tenant-safe Queue consumer into the Worker runtime" },
-        { "path": "src/workers/services/tenant-projection-queue.ts", "target_blob": "de65c29a3cc686bd88a815d355fbbef31b4edfb1", "reason": "implements opaque Queue messages, at-least-once idempotency, backoff and durable DLQ recording" }
+        {
+          "path": "docs/architecture/backend/PRODUCTION_DEPENDENCIES.md",
+          "target_blob": "1ff964bf99941fac14bad02af2c9305147b95b7b",
+          "reason": "records the default-off Queue dependency and keeps activation explicitly unapproved"
+        },
+        {
+          "path": "docs/deployment/TENANT_PROJECTION_QUEUE_ACTIVATION.md",
+          "target_blob": "87fd5ffdabcc545818a25a59d4aa9e0ecbc2c54a",
+          "reason": "defines isolated canary, retry, DLQ, evidence and rollback requirements without authorizing activation"
+        },
+        {
+          "path": "docs/graph/GRAPH_SUBSTRATE_MANIFEST.yml",
+          "target_blob": "bed7abdd87048dbca25430dec44e887c62b3e600",
+          "reason": "declares canonical task packets and event-driven projection while preserving the stale census as unobserved"
+        },
+        {
+          "path": "scripts/verify-projection-substrate-evidence.mjs",
+          "target_blob": "833b665938291f586644916cc5ebca7dc9803819",
+          "reason": "allows explicit unobserved census states but forbids fed claims until every core source is measured"
+        },
+        {
+          "path": "src/workers/__tests__/data-graph.test.ts",
+          "target_blob": "d941ae44a5158088a1cf7da91ca93cdf413a59da",
+          "reason": "proves canonical intake packets and their source-event causation enter the derived graph"
+        },
+        {
+          "path": "src/workers/__tests__/projection-outbox-store.test.ts",
+          "target_blob": "6f01bc0c0b534788757bb47fcc45a7b32055bf44",
+          "reason": "proves bounded skip-locked dispatch and two-key tenant mutation scope"
+        },
+        {
+          "path": "src/workers/__tests__/tenant-projection-queue.test.ts",
+          "target_blob": "83003a2bc0cfc9d024284e8ab8a4ea267a842fed",
+          "reason": "proves dormant mode, opaque dispatch, tenant binding, idempotent replay, retry and DLQ behavior"
+        },
+        {
+          "path": "src/workers/crons/index.ts",
+          "target_blob": "611d76b4e1e337b9d8d010c314bb6f25888d1b6d",
+          "reason": "chains the default-off dispatcher into the existing five-minute schedule without adding a trigger"
+        },
+        {
+          "path": "src/workers/crons/tenant-projection-dispatch.ts",
+          "target_blob": "861d25aea6f2cb9080d982527dbf443dc5851cb4",
+          "reason": "adapts transactional outbox dispatch to the cron result and observability contract"
+        },
+        {
+          "path": "src/workers/crons/types.ts",
+          "target_blob": "fd5f9e74a92027a3c6d8f39271f305defa6ae030",
+          "reason": "adds optional default-off Queue and outbox gateways to the cron boundary"
+        },
+        {
+          "path": "src/workers/dal/graph-store.ts",
+          "target_blob": "19c14d332970d59db9d70495d96cfea3eb725ce3",
+          "reason": "feeds canonical task packets directly into tenant graph fact assembly"
+        },
+        {
+          "path": "src/workers/dal/projection-outbox-store.ts",
+          "target_blob": "d46b6cdedb46fbd87b7ceba7ef6bfe8c5c9ec8c0",
+          "reason": "implements bounded dispatch claims and tenant-bound process, retry and dead-letter transitions"
+        },
+        {
+          "path": "src/workers/db/migrations/076_tenant_projection_outbox_lifecycle.sql",
+          "target_blob": "2a42bdb9b68c319ecbbc4b8e8b72acf153e904ee",
+          "reason": "stages additive outbox lifecycle columns and indexes without applying or activating them"
+        },
+        {
+          "path": "src/workers/graph/data-graph.ts",
+          "target_blob": "ddeec396111796e12b3bcbf10f5fa6159ef5f64f",
+          "reason": "projects canonical task packets and source-event causation as derived tenant lineage"
+        },
+        {
+          "path": "src/workers/index.ts",
+          "target_blob": "7ad494ac15b96a4c27237376fd75bd80facf672b",
+          "reason": "binds the dormant outbox dispatcher and tenant-safe Queue consumer into the Worker runtime"
+        },
+        {
+          "path": "src/workers/services/tenant-projection-queue.ts",
+          "target_blob": "de65c29a3cc686bd88a815d355fbbef31b4edfb1",
+          "reason": "implements opaque Queue messages, at-least-once idempotency, backoff and durable DLQ recording"
+        }
       ]
     },
     {
@@ -141,63 +392,291 @@
       "authority": "shadow_only_no_production_cutover",
       "copied_files": [],
       "transformed_files": [
-        { "path": "docs/architecture/GOVERNED_LINEAGE_MAP_260711H.md", "target_blob": "458cd07983a55255e1838591a86a342c236e76fd", "reason": "documents the default-off context, model execution and Current Work receipt lineage without claiming activation" },
-        { "path": "docs/contracts/api-contract.v1.json", "target_blob": "bfd81da3e9ee105679c66833af68c4726ccbcbb7", "reason": "regenerates the 209-route contract including the shadow Current Work parity endpoint" },
-        { "path": "docs/contracts/role-skill-catalog.json", "target_blob": "2a4d6271eef279bdb9e39efc48234d183b1bd933", "reason": "extends customer-safe assistant actions while excluding internal service principals from publication" },
-        { "path": "docs/contracts/model-execution-callsite-manifest.json", "target_blob": "38ba0b554f299174e52218d32bffe5adbfc9783d", "reason": "enumerates every model execution call site and its governed observer contract" },
-        { "path": "package.json", "target_blob": "b15ea47d57bcc5823490d2d2e077cf3d012ee828", "reason": "registers deterministic verifiers and the first patched Wrangler release compatible with Workers Types v4" },
-        { "path": "package-lock.json", "target_blob": "64eeea3390fbf74e8be767576a50a4aa6608b0ab", "reason": "locks a valid zero-audit Cloudflare toolchain while preserving Sentry's Workers Types v4 peer contract" },
-        { "path": "scripts/ci-local.mjs", "target_blob": "ffc5fbe8085f66187c11d9db32273f15416f49f4", "reason": "adds callsite and storage safety checks to local release authority" },
-        { "path": "scripts/verify-model-execution-callsites.mjs", "target_blob": "eff4a7a46d22d53b38ceeb58f60a7b7cc4c985ad", "reason": "fails on unregistered or unobserved model call sites" },
-        { "path": "scripts/verify-role-skill-catalog-loader-fresh.mjs", "target_blob": "9f0cf039b6c01e3d58b60c0661e93175a1a8fa23", "reason": "prevents committed catalog and runtime loader hash drift" },
-        { "path": "scripts/verify-shadow-observability-storage.mjs", "target_blob": "497fd61b1afda724ab4ac32fc6a9f920132eef5d", "reason": "proves staged storage is RLS-bound, content-minimal and default-off" },
-        { "path": "src/workers/__tests__/agent-digest.test.ts", "target_blob": "fefd5b34d40727e5246dcd70e79c65a1beb698f8", "reason": "proves model execution completion and fallback receipts for digests" },
-        { "path": "src/workers/__tests__/cockpit-chat-route.test.ts", "target_blob": "bf1ae381a6e3cb6413e827fcc589555734fbd013", "reason": "proves operator chat tenant targeting and strict lineage behavior" },
-        { "path": "src/workers/__tests__/cockpit-chat.test.ts", "target_blob": "5693a0c21191cbb21a983e3aee4c602e739be7fd", "reason": "proves provider attempts close with honest terminal receipt status" },
-        { "path": "src/workers/__tests__/current-work-route.test.ts", "target_blob": "f0cda43155a7c0dcc7d84ac6e7287bbcb4fbfa2d", "reason": "proves receipt counts and unavailable-state honesty in Current Work" },
-        { "path": "src/workers/__tests__/current-work-parity-store.test.ts", "target_blob": "8093e99129ba08c5f4d194f50c9a81773434f2f1", "reason": "proves tenant-bound content-minimal Current Work parity persistence" },
-        { "path": "src/workers/__tests__/intake-store.test.ts", "target_blob": "07b37b0d32417e5e5af9fff94cfaf80d948962bf", "reason": "proves tenant-bound execution receipt aggregation" },
-        { "path": "src/workers/__tests__/intent-enrichment.test.ts", "target_blob": "d2065037b3bdf1280675fd2ad1f273941195c91c", "reason": "proves enrichment model attempts close with terminal receipts" },
-        { "path": "src/workers/__tests__/model-execution-receipt-store.test.ts", "target_blob": "9993cd092b2d1ad90dbb9d78acbc450aad1da729", "reason": "proves tenant/principal lineage, terminal updates and side-effect-free default-off policy" },
-        { "path": "src/workers/__tests__/onboarding-provisioner.test.ts", "target_blob": "e68ec76369558e7b049afbc41e730e0d2b7be992", "reason": "proves onboarding fails closed before unreceipted model execution" },
-        { "path": "src/workers/__tests__/onboarding-welcome.test.ts", "target_blob": "aad02e84ecc4121330285084bfc66383cdc61944", "reason": "proves onboarding model attempt terminal receipts" },
-        { "path": "src/workers/__tests__/operations-queue-consumer.test.ts", "target_blob": "6a46e4bd9d7ca8ed336220a3fc038ab9dcf62f7e", "reason": "proves queued automation requires and closes strict model lineage" },
-        { "path": "src/workers/__tests__/prompt-refine.test.ts", "target_blob": "10ae0f0212092604ff54eb4366e4bf28107babb7", "reason": "proves refine model attempt terminal receipts" },
-        { "path": "src/workers/__tests__/role-skill-catalog-loader.test.ts", "target_blob": "7a19bc04b04f830f36558b09f958884dea1eef10", "reason": "proves internal service bindings remain outside the published customer catalog" },
-        { "path": "src/workers/__tests__/scheduled-digest-sweep.test.ts", "target_blob": "d47054ce1dcb0d56ccf9fe4c8ea96ad6803d90fe", "reason": "proves scheduled automation requires and closes strict model lineage" },
-        { "path": "src/workers/crons/index.ts", "target_blob": "84bdae7924fbca0c6c8d92d1c2698834db6923f1", "reason": "passes default-off governed model lineage policy to background execution" },
-        { "path": "src/workers/crons/types.ts", "target_blob": "2f09c058efe3bab68b09741b36405c6665bcfa99", "reason": "types the optional background model lineage factory" },
-        { "path": "src/workers/crons/weight-retune.ts", "target_blob": "73974b1ff1c63034c9ab4804d67a90fdb76871f5", "reason": "propagates strict model lineage into scheduled digests" },
-        { "path": "src/workers/dal/DalAdapter.ts", "target_blob": "1897085f10933b58442574551ba20d7575ef871a", "reason": "exposes receipt counting and parity observation persistence through the DAL" },
-        { "path": "src/workers/dal/context-packet-store.ts", "target_blob": "015296eed7c715598f2a746ce49ebfcbeb2d6ed8", "reason": "corrects stale documentation after real context persistence wiring" },
-        { "path": "src/workers/dal/current-work-parity-store.ts", "target_blob": "19931f49425301cc892fd1d4e952de2a064112c8", "reason": "persists allowlisted tenant-bound dual-read observations" },
-        { "path": "src/workers/dal/intake-store.ts", "target_blob": "f0ecae069da301eb8a75f64062e8d242865d5ec8", "reason": "counts governed execution receipts under tenant RLS" },
-        { "path": "src/workers/dal/model-execution-receipt-store.ts", "target_blob": "a73b6646dd01a1f65b0942b2c9896ce8e6acf549", "reason": "writes content-minimal model attempt receipts linked to role and context" },
-        { "path": "src/workers/dal/operational-spine-methods.ts", "target_blob": "7f666f18838db56f52f9dffc8696fcf5a2102e35", "reason": "registers new tenant-scoped DAL methods" },
-        { "path": "src/workers/db/migrations/077_current_work_parity_observations.sql", "target_blob": "bf769f612c175bec144f3f8779ff1200f23ca18d", "reason": "stages RLS-protected parity observations without applying or switching authority" },
-        { "path": "src/workers/db/migrations/078_model_execution_receipts.sql", "target_blob": "4362f36a068982cefc96d39ef6c5446445190c41", "reason": "stages RLS-protected content-minimal model receipts without applying or activating them" },
-        { "path": "src/workers/index.ts", "target_blob": "531f1d3869d3e32ae3a4b9e7ed23ba81aafe7866", "reason": "constructs background lineage only when strict persistence is enabled" },
-        { "path": "src/workers/lib/assistant-context-lineage.ts", "target_blob": "03f4b90a706be6fb1e3b9fdf2b4afb90ff28be6f", "reason": "supports assistant action-specific role, skill and context receipts" },
-        { "path": "src/workers/lib/context-packet.ts", "target_blob": "578d6d3c6f700f9d561a31a3d061a64858fe3cc2", "reason": "corrects stale inert-status documentation after runtime integration" },
-        { "path": "src/workers/lib/model-execution-lineage.ts", "target_blob": "746087f6736b9e90121c08a65c9271ddb4c707fd", "reason": "provides explicit lazy policy, observer and governed lineage factory" },
-        { "path": "src/workers/lib/role-skill-catalog-loader.ts", "target_blob": "25cb2836dc878eabe30a7530df0dbc7777c8d0ec", "reason": "loads customer bindings plus a narrow non-publishable service binding" },
-        { "path": "src/workers/lib/role-skill-resolver.ts", "target_blob": "346ea2ace3965ef594581c210438b2b2a900cdc2", "reason": "records internal-service provenance without widening customer authority" },
-        { "path": "src/workers/routes/admin.ts", "target_blob": "8ec27a8880046d3b46faf865dda536dc5b37b9e6", "reason": "passes lazy strict lineage policy into operator provisioning" },
-        { "path": "src/workers/routes/current-work.ts", "target_blob": "4c1ee86973f78bc579a001bc6ea1ab6fbb5c583d", "reason": "serves honest receipt counts and default-off parity observation intake" },
-        { "path": "src/workers/routes/customer-chat.ts", "target_blob": "5d4e23d8f0c8dafc62fd0108d1b375d2f6153a44", "reason": "links customer model attempts to role and context receipts" },
-        { "path": "src/workers/routes/readiness.ts", "target_blob": "e03d040c88dd07f29bcf645ce214a0491a07ff8f", "reason": "passes lazy strict lineage policy into readiness provisioning" },
-        { "path": "src/workers/routes/session.ts", "target_blob": "f319c6529d10c5c1fa49e3fdb213c02724b7db39", "reason": "passes lazy strict lineage policy into session provisioning" },
-        { "path": "src/workers/routes/workspaces.ts", "target_blob": "d374a033381731b735a1dae2c18767ade173a6f4", "reason": "links operator chat, digest, refine and enrichment model attempts to tenant context receipts" },
-        { "path": "src/workers/services/agent-digest.ts", "target_blob": "004b54a9e171942f8b8c79204640e78b0a8cc17b", "reason": "emits terminal model receipts for digest and welcome generation" },
-        { "path": "src/workers/services/cockpit-chat.ts", "target_blob": "06005a7e45bb7462a0682c64ac73e10c837b8180", "reason": "emits one honest receipt per Claude or Workers AI provider attempt" },
-        { "path": "src/workers/services/onboarding-provisioner.ts", "target_blob": "e4152ff47b3397901d8ac3586341508840d45ce6", "reason": "binds welcome generation to the automation service principal and strict lineage" },
-        { "path": "src/workers/services/operations-queue-consumer.ts", "target_blob": "31d0e1ee53bb064819d4b7b6194ee0a2950557f4", "reason": "binds queued digest execution to automation role and context lineage" },
-        { "path": "src/workers/services/packet-enrichment.ts", "target_blob": "d8bc25431c120db285beca0f0217dc1365cc592c", "reason": "emits terminal receipts for each enrichment provider attempt" },
-        { "path": "src/workers/services/prompt-refine.ts", "target_blob": "7fd757775fe5f59d398f87f1b0c89d347c0b779a", "reason": "emits terminal receipts for prompt refinement attempts" },
-        { "path": "src/workers/services/scheduled-digest-sweep.ts", "target_blob": "167e26dac1898027303a56c65daf47f5b234721c", "reason": "binds scheduled digest execution to automation role and context lineage" },
-        { "path": "src/workers/__tests__/operator-workspace-scope.test.ts", "target_blob": "52bcd169dce81830c09f8017eb099ec36cd6f575", "reason": "updates the Current Work tenant-scope contract for the required execution receipt dependency" },
-        { "path": "src/workers/__tests__/llm-usage-metering.test.ts", "target_blob": "f4f9d99ec320794f028e5c73eab6c245dfe0c460", "reason": "keeps route metering tests network-free while store tests prove SQL behavior" },
-        { "path": "src/workers/__tests__/request-access.test.ts", "target_blob": "9f041b486709956f6dd3890ab22a79da5719dfd7", "reason": "keeps public access boundary tests network-free and deterministic" }
+        {
+          "path": "docs/architecture/GOVERNED_LINEAGE_MAP_260711H.md",
+          "target_blob": "458cd07983a55255e1838591a86a342c236e76fd",
+          "reason": "documents the default-off context, model execution and Current Work receipt lineage without claiming activation"
+        },
+        {
+          "path": "docs/contracts/api-contract.v1.json",
+          "target_blob": "bfd81da3e9ee105679c66833af68c4726ccbcbb7",
+          "reason": "regenerates the 209-route contract including the shadow Current Work parity endpoint"
+        },
+        {
+          "path": "docs/contracts/role-skill-catalog.json",
+          "target_blob": "2a4d6271eef279bdb9e39efc48234d183b1bd933",
+          "reason": "extends customer-safe assistant actions while excluding internal service principals from publication"
+        },
+        {
+          "path": "docs/contracts/model-execution-callsite-manifest.json",
+          "target_blob": "38ba0b554f299174e52218d32bffe5adbfc9783d",
+          "reason": "enumerates every model execution call site and its governed observer contract"
+        },
+        {
+          "path": "package.json",
+          "target_blob": "b15ea47d57bcc5823490d2d2e077cf3d012ee828",
+          "reason": "registers deterministic verifiers and the first patched Wrangler release compatible with Workers Types v4"
+        },
+        {
+          "path": "package-lock.json",
+          "target_blob": "64eeea3390fbf74e8be767576a50a4aa6608b0ab",
+          "reason": "locks a valid zero-audit Cloudflare toolchain while preserving Sentry's Workers Types v4 peer contract"
+        },
+        {
+          "path": "scripts/ci-local.mjs",
+          "target_blob": "ffc5fbe8085f66187c11d9db32273f15416f49f4",
+          "reason": "adds callsite and storage safety checks to local release authority"
+        },
+        {
+          "path": "scripts/verify-model-execution-callsites.mjs",
+          "target_blob": "eff4a7a46d22d53b38ceeb58f60a7b7cc4c985ad",
+          "reason": "fails on unregistered or unobserved model call sites"
+        },
+        {
+          "path": "scripts/verify-role-skill-catalog-loader-fresh.mjs",
+          "target_blob": "9f0cf039b6c01e3d58b60c0661e93175a1a8fa23",
+          "reason": "prevents committed catalog and runtime loader hash drift"
+        },
+        {
+          "path": "scripts/verify-shadow-observability-storage.mjs",
+          "target_blob": "497fd61b1afda724ab4ac32fc6a9f920132eef5d",
+          "reason": "proves staged storage is RLS-bound, content-minimal and default-off"
+        },
+        {
+          "path": "src/workers/__tests__/agent-digest.test.ts",
+          "target_blob": "fefd5b34d40727e5246dcd70e79c65a1beb698f8",
+          "reason": "proves model execution completion and fallback receipts for digests"
+        },
+        {
+          "path": "src/workers/__tests__/cockpit-chat-route.test.ts",
+          "target_blob": "bf1ae381a6e3cb6413e827fcc589555734fbd013",
+          "reason": "proves operator chat tenant targeting and strict lineage behavior"
+        },
+        {
+          "path": "src/workers/__tests__/cockpit-chat.test.ts",
+          "target_blob": "5693a0c21191cbb21a983e3aee4c602e739be7fd",
+          "reason": "proves provider attempts close with honest terminal receipt status"
+        },
+        {
+          "path": "src/workers/__tests__/current-work-route.test.ts",
+          "target_blob": "f0cda43155a7c0dcc7d84ac6e7287bbcb4fbfa2d",
+          "reason": "proves receipt counts and unavailable-state honesty in Current Work"
+        },
+        {
+          "path": "src/workers/__tests__/current-work-parity-store.test.ts",
+          "target_blob": "8093e99129ba08c5f4d194f50c9a81773434f2f1",
+          "reason": "proves tenant-bound content-minimal Current Work parity persistence"
+        },
+        {
+          "path": "src/workers/__tests__/intake-store.test.ts",
+          "target_blob": "07b37b0d32417e5e5af9fff94cfaf80d948962bf",
+          "reason": "proves tenant-bound execution receipt aggregation"
+        },
+        {
+          "path": "src/workers/__tests__/intent-enrichment.test.ts",
+          "target_blob": "d2065037b3bdf1280675fd2ad1f273941195c91c",
+          "reason": "proves enrichment model attempts close with terminal receipts"
+        },
+        {
+          "path": "src/workers/__tests__/model-execution-receipt-store.test.ts",
+          "target_blob": "9993cd092b2d1ad90dbb9d78acbc450aad1da729",
+          "reason": "proves tenant/principal lineage, terminal updates and side-effect-free default-off policy"
+        },
+        {
+          "path": "src/workers/__tests__/onboarding-provisioner.test.ts",
+          "target_blob": "e68ec76369558e7b049afbc41e730e0d2b7be992",
+          "reason": "proves onboarding fails closed before unreceipted model execution"
+        },
+        {
+          "path": "src/workers/__tests__/onboarding-welcome.test.ts",
+          "target_blob": "aad02e84ecc4121330285084bfc66383cdc61944",
+          "reason": "proves onboarding model attempt terminal receipts"
+        },
+        {
+          "path": "src/workers/__tests__/operations-queue-consumer.test.ts",
+          "target_blob": "6a46e4bd9d7ca8ed336220a3fc038ab9dcf62f7e",
+          "reason": "proves queued automation requires and closes strict model lineage"
+        },
+        {
+          "path": "src/workers/__tests__/prompt-refine.test.ts",
+          "target_blob": "10ae0f0212092604ff54eb4366e4bf28107babb7",
+          "reason": "proves refine model attempt terminal receipts"
+        },
+        {
+          "path": "src/workers/__tests__/role-skill-catalog-loader.test.ts",
+          "target_blob": "7a19bc04b04f830f36558b09f958884dea1eef10",
+          "reason": "proves internal service bindings remain outside the published customer catalog"
+        },
+        {
+          "path": "src/workers/__tests__/scheduled-digest-sweep.test.ts",
+          "target_blob": "d47054ce1dcb0d56ccf9fe4c8ea96ad6803d90fe",
+          "reason": "proves scheduled automation requires and closes strict model lineage"
+        },
+        {
+          "path": "src/workers/crons/index.ts",
+          "target_blob": "84bdae7924fbca0c6c8d92d1c2698834db6923f1",
+          "reason": "passes default-off governed model lineage policy to background execution"
+        },
+        {
+          "path": "src/workers/crons/types.ts",
+          "target_blob": "2f09c058efe3bab68b09741b36405c6665bcfa99",
+          "reason": "types the optional background model lineage factory"
+        },
+        {
+          "path": "src/workers/crons/weight-retune.ts",
+          "target_blob": "73974b1ff1c63034c9ab4804d67a90fdb76871f5",
+          "reason": "propagates strict model lineage into scheduled digests"
+        },
+        {
+          "path": "src/workers/dal/DalAdapter.ts",
+          "target_blob": "1897085f10933b58442574551ba20d7575ef871a",
+          "reason": "exposes receipt counting and parity observation persistence through the DAL"
+        },
+        {
+          "path": "src/workers/dal/context-packet-store.ts",
+          "target_blob": "015296eed7c715598f2a746ce49ebfcbeb2d6ed8",
+          "reason": "corrects stale documentation after real context persistence wiring"
+        },
+        {
+          "path": "src/workers/dal/current-work-parity-store.ts",
+          "target_blob": "19931f49425301cc892fd1d4e952de2a064112c8",
+          "reason": "persists allowlisted tenant-bound dual-read observations"
+        },
+        {
+          "path": "src/workers/dal/intake-store.ts",
+          "target_blob": "f0ecae069da301eb8a75f64062e8d242865d5ec8",
+          "reason": "counts governed execution receipts under tenant RLS"
+        },
+        {
+          "path": "src/workers/dal/model-execution-receipt-store.ts",
+          "target_blob": "a73b6646dd01a1f65b0942b2c9896ce8e6acf549",
+          "reason": "writes content-minimal model attempt receipts linked to role and context"
+        },
+        {
+          "path": "src/workers/dal/operational-spine-methods.ts",
+          "target_blob": "7f666f18838db56f52f9dffc8696fcf5a2102e35",
+          "reason": "registers new tenant-scoped DAL methods"
+        },
+        {
+          "path": "src/workers/db/migrations/077_current_work_parity_observations.sql",
+          "target_blob": "bf769f612c175bec144f3f8779ff1200f23ca18d",
+          "reason": "stages RLS-protected parity observations without applying or switching authority"
+        },
+        {
+          "path": "src/workers/db/migrations/078_model_execution_receipts.sql",
+          "target_blob": "4362f36a068982cefc96d39ef6c5446445190c41",
+          "reason": "stages RLS-protected content-minimal model receipts without applying or activating them"
+        },
+        {
+          "path": "src/workers/index.ts",
+          "target_blob": "531f1d3869d3e32ae3a4b9e7ed23ba81aafe7866",
+          "reason": "constructs background lineage only when strict persistence is enabled"
+        },
+        {
+          "path": "src/workers/lib/assistant-context-lineage.ts",
+          "target_blob": "03f4b90a706be6fb1e3b9fdf2b4afb90ff28be6f",
+          "reason": "supports assistant action-specific role, skill and context receipts"
+        },
+        {
+          "path": "src/workers/lib/context-packet.ts",
+          "target_blob": "578d6d3c6f700f9d561a31a3d061a64858fe3cc2",
+          "reason": "corrects stale inert-status documentation after runtime integration"
+        },
+        {
+          "path": "src/workers/lib/model-execution-lineage.ts",
+          "target_blob": "746087f6736b9e90121c08a65c9271ddb4c707fd",
+          "reason": "provides explicit lazy policy, observer and governed lineage factory"
+        },
+        {
+          "path": "src/workers/lib/role-skill-catalog-loader.ts",
+          "target_blob": "25cb2836dc878eabe30a7530df0dbc7777c8d0ec",
+          "reason": "loads customer bindings plus a narrow non-publishable service binding"
+        },
+        {
+          "path": "src/workers/lib/role-skill-resolver.ts",
+          "target_blob": "346ea2ace3965ef594581c210438b2b2a900cdc2",
+          "reason": "records internal-service provenance without widening customer authority"
+        },
+        {
+          "path": "src/workers/routes/admin.ts",
+          "target_blob": "8ec27a8880046d3b46faf865dda536dc5b37b9e6",
+          "reason": "passes lazy strict lineage policy into operator provisioning"
+        },
+        {
+          "path": "src/workers/routes/current-work.ts",
+          "target_blob": "4c1ee86973f78bc579a001bc6ea1ab6fbb5c583d",
+          "reason": "serves honest receipt counts and default-off parity observation intake"
+        },
+        {
+          "path": "src/workers/routes/customer-chat.ts",
+          "target_blob": "5d4e23d8f0c8dafc62fd0108d1b375d2f6153a44",
+          "reason": "links customer model attempts to role and context receipts"
+        },
+        {
+          "path": "src/workers/routes/readiness.ts",
+          "target_blob": "e03d040c88dd07f29bcf645ce214a0491a07ff8f",
+          "reason": "passes lazy strict lineage policy into readiness provisioning"
+        },
+        {
+          "path": "src/workers/routes/session.ts",
+          "target_blob": "f319c6529d10c5c1fa49e3fdb213c02724b7db39",
+          "reason": "passes lazy strict lineage policy into session provisioning"
+        },
+        {
+          "path": "src/workers/routes/workspaces.ts",
+          "target_blob": "d374a033381731b735a1dae2c18767ade173a6f4",
+          "reason": "links operator chat, digest, refine and enrichment model attempts to tenant context receipts"
+        },
+        {
+          "path": "src/workers/services/agent-digest.ts",
+          "target_blob": "004b54a9e171942f8b8c79204640e78b0a8cc17b",
+          "reason": "emits terminal model receipts for digest and welcome generation"
+        },
+        {
+          "path": "src/workers/services/cockpit-chat.ts",
+          "target_blob": "06005a7e45bb7462a0682c64ac73e10c837b8180",
+          "reason": "emits one honest receipt per Claude or Workers AI provider attempt"
+        },
+        {
+          "path": "src/workers/services/onboarding-provisioner.ts",
+          "target_blob": "e4152ff47b3397901d8ac3586341508840d45ce6",
+          "reason": "binds welcome generation to the automation service principal and strict lineage"
+        },
+        {
+          "path": "src/workers/services/operations-queue-consumer.ts",
+          "target_blob": "31d0e1ee53bb064819d4b7b6194ee0a2950557f4",
+          "reason": "binds queued digest execution to automation role and context lineage"
+        },
+        {
+          "path": "src/workers/services/packet-enrichment.ts",
+          "target_blob": "d8bc25431c120db285beca0f0217dc1365cc592c",
+          "reason": "emits terminal receipts for each enrichment provider attempt"
+        },
+        {
+          "path": "src/workers/services/prompt-refine.ts",
+          "target_blob": "7fd757775fe5f59d398f87f1b0c89d347c0b779a",
+          "reason": "emits terminal receipts for prompt refinement attempts"
+        },
+        {
+          "path": "src/workers/services/scheduled-digest-sweep.ts",
+          "target_blob": "167e26dac1898027303a56c65daf47f5b234721c",
+          "reason": "binds scheduled digest execution to automation role and context lineage"
+        },
+        {
+          "path": "src/workers/__tests__/operator-workspace-scope.test.ts",
+          "target_blob": "52bcd169dce81830c09f8017eb099ec36cd6f575",
+          "reason": "updates the Current Work tenant-scope contract for the required execution receipt dependency"
+        },
+        {
+          "path": "src/workers/__tests__/llm-usage-metering.test.ts",
+          "target_blob": "f4f9d99ec320794f028e5c73eab6c245dfe0c460",
+          "reason": "keeps route metering tests network-free while store tests prove SQL behavior"
+        },
+        {
+          "path": "src/workers/__tests__/request-access.test.ts",
+          "target_blob": "9f041b486709956f6dd3890ab22a79da5719dfd7",
+          "reason": "keeps public access boundary tests network-free and deterministic"
+        }
       ]
     },
     {
@@ -209,21 +688,81 @@
       "authority": "shadow_only_no_production_cutover",
       "copied_files": [],
       "transformed_files": [
-        { "path": "package.json", "target_blob": "b64a666ca4476989ed628361c1f01edd213c19a4", "reason": "adds installed-dependency parity and strict pilot graph evidence commands" },
-        { "path": "scripts/ci-local.mjs", "target_blob": "332a418f03135c7d1b77d16de4e20a9ebeae4802", "reason": "fails local authority before tests when Node or installed direct dependencies drift from the lockfile" },
-        { "path": "scripts/verify-installed-dependencies.mjs", "target_blob": "215c3bf892e39947cea04d09959d2c296de6074f", "reason": "verifies Node 22 and exact package, lockfile, and installed direct dependency parity" },
-        { "path": "scripts/verify-projection-substrate-evidence.mjs", "target_blob": "bea5fec1f61e75fff58e28070742c7b1736c4ecb", "reason": "adds a strict pilot gate for seven-day freshness and non-zero packet, intent, and causation evidence" },
-        { "path": "src/workers/routes/health.ts", "target_blob": "5bac89f4cd4ae68d5e0118c53d3444cb2b3d2122", "reason": "reports build, contract, schema, environment, feature, binding, and shadow-authority posture without activation" },
-        { "path": "src/workers/__tests__/health.test.ts", "target_blob": "b7981b299ff7d85f709143d16279ce2db8ad5542", "reason": "proves public-safe pilot-shadow health metadata and binding posture" },
-        { "path": "src/workers/dal/types/intake.ts", "target_blob": "f2de629042961c75de3e015c0b7cab9090c52497", "reason": "types customer-safe governance, prior-work, freshness, guardrails, and nullable historical closeout linkage" },
-        { "path": "docs/governance/GOVERNANCE_PILLARS.yml", "target_blob": "dcb6ada4ea0c3eabf0b2efa14805e1613d30e97c", "reason": "corrects the role-skill-context pillar to distinguish verified single-intake and LLM coverage from outstanding legacy and terminal-transition work" },
-        { "path": "src/workers/dal/intake-store.ts", "target_blob": "53c85aad80f06dfee0837e2a2b119221808e8b37", "reason": "persists preview governance and requires receipt, closeout, and projection outbox in the final authority result" },
-        { "path": "src/workers/dal/DalAdapter.ts", "target_blob": "b42a3b33e826b6912c30f0c16cc4d491184ff840", "reason": "requires governed closeout evidence at the intake execution boundary" },
-        { "path": "src/workers/dal/operational-spine-methods.ts", "target_blob": "77709e710f05eaea516f8661a56ae0fe1a741bec", "reason": "forwards immutable closeout evidence through the tenant-scoped adapter" },
-        { "path": "src/workers/routes/intake.ts", "target_blob": "68fcff13d0f4dddf7f28839aed428f1a22d7d78c", "reason": "emits prior-work discovery, safe guardrails, freshness, role labels, and signed-or-hashed execution closeout" },
-        { "path": "src/workers/__tests__/intake-route.test.ts", "target_blob": "026e124ea1047aca1892c7b3626edb655f6a8b30", "reason": "proves tenant-derived role, prior-work digest, guardrails, and closeout input" },
-        { "path": "src/workers/__tests__/intake-store.test.ts", "target_blob": "33c06cc50a7869381970286b85f43a9a287eb81d", "reason": "proves atomic closing-attestation insertion, receipt linkage, and mandatory projection outbox join" },
-        { "path": "src/workers/db/migrations/079_commercial_completion_lineage.sql", "target_blob": "c47d3765eadbfb47559be71723d8cb5d40ee2404", "reason": "stages additive preview-governance and execution-closeout persistence without applying or activating it" }
+        {
+          "path": "package.json",
+          "target_blob": "b64a666ca4476989ed628361c1f01edd213c19a4",
+          "reason": "adds installed-dependency parity and strict pilot graph evidence commands"
+        },
+        {
+          "path": "scripts/ci-local.mjs",
+          "target_blob": "332a418f03135c7d1b77d16de4e20a9ebeae4802",
+          "reason": "fails local authority before tests when Node or installed direct dependencies drift from the lockfile"
+        },
+        {
+          "path": "scripts/verify-installed-dependencies.mjs",
+          "target_blob": "215c3bf892e39947cea04d09959d2c296de6074f",
+          "reason": "verifies Node 22 and exact package, lockfile, and installed direct dependency parity"
+        },
+        {
+          "path": "scripts/verify-projection-substrate-evidence.mjs",
+          "target_blob": "bea5fec1f61e75fff58e28070742c7b1736c4ecb",
+          "reason": "adds a strict pilot gate for seven-day freshness and non-zero packet, intent, and causation evidence"
+        },
+        {
+          "path": "src/workers/routes/health.ts",
+          "target_blob": "5bac89f4cd4ae68d5e0118c53d3444cb2b3d2122",
+          "reason": "reports build, contract, schema, environment, feature, binding, and shadow-authority posture without activation"
+        },
+        {
+          "path": "src/workers/__tests__/health.test.ts",
+          "target_blob": "b7981b299ff7d85f709143d16279ce2db8ad5542",
+          "reason": "proves public-safe pilot-shadow health metadata and binding posture"
+        },
+        {
+          "path": "src/workers/dal/types/intake.ts",
+          "target_blob": "f2de629042961c75de3e015c0b7cab9090c52497",
+          "reason": "types customer-safe governance, prior-work, freshness, guardrails, and nullable historical closeout linkage"
+        },
+        {
+          "path": "docs/governance/GOVERNANCE_PILLARS.yml",
+          "target_blob": "dcb6ada4ea0c3eabf0b2efa14805e1613d30e97c",
+          "reason": "corrects the role-skill-context pillar to distinguish verified single-intake and LLM coverage from outstanding legacy and terminal-transition work"
+        },
+        {
+          "path": "src/workers/dal/intake-store.ts",
+          "target_blob": "53c85aad80f06dfee0837e2a2b119221808e8b37",
+          "reason": "persists preview governance and requires receipt, closeout, and projection outbox in the final authority result"
+        },
+        {
+          "path": "src/workers/dal/DalAdapter.ts",
+          "target_blob": "b42a3b33e826b6912c30f0c16cc4d491184ff840",
+          "reason": "requires governed closeout evidence at the intake execution boundary"
+        },
+        {
+          "path": "src/workers/dal/operational-spine-methods.ts",
+          "target_blob": "77709e710f05eaea516f8661a56ae0fe1a741bec",
+          "reason": "forwards immutable closeout evidence through the tenant-scoped adapter"
+        },
+        {
+          "path": "src/workers/routes/intake.ts",
+          "target_blob": "68fcff13d0f4dddf7f28839aed428f1a22d7d78c",
+          "reason": "emits prior-work discovery, safe guardrails, freshness, role labels, and signed-or-hashed execution closeout"
+        },
+        {
+          "path": "src/workers/__tests__/intake-route.test.ts",
+          "target_blob": "026e124ea1047aca1892c7b3626edb655f6a8b30",
+          "reason": "proves tenant-derived role, prior-work digest, guardrails, and closeout input"
+        },
+        {
+          "path": "src/workers/__tests__/intake-store.test.ts",
+          "target_blob": "33c06cc50a7869381970286b85f43a9a287eb81d",
+          "reason": "proves atomic closing-attestation insertion, receipt linkage, and mandatory projection outbox join"
+        },
+        {
+          "path": "src/workers/db/migrations/079_commercial_completion_lineage.sql",
+          "target_blob": "c47d3765eadbfb47559be71723d8cb5d40ee2404",
+          "reason": "stages additive preview-governance and execution-closeout persistence without applying or activating it"
+        }
       ]
     },
     {
@@ -235,11 +774,31 @@
       "authority": "shadow_only_no_production_cutover",
       "copied_files": [],
       "transformed_files": [
-        { "path": "src/workers/__tests__/action-recording.test.ts", "target_blob": "3a98591b83150a6fdf52050d74ba4baa52f7d71b", "reason": "proves receipt-bearing approval, rejection and request-changes behavior" },
-        { "path": "src/workers/__tests__/health.test.ts", "target_blob": "576e3a670acb3916c36a0a9ed7cba4ff3952e496", "reason": "proves the public-safe commercial capability handshake" },
-        { "path": "src/workers/dal/types/event.ts", "target_blob": "24de5a9c3daf40843b712a768754540b3a403b77", "reason": "types request-changes separately from approval and rejection without widening the persisted verdict enum" },
-        { "path": "src/workers/routes/health.ts", "target_blob": "ec878b1bbdb3f323bb638b791263a9fc50630cb5", "reason": "publishes mounted commercial route capabilities for fail-closed frontend startup" },
-        { "path": "src/workers/routes/sign-offs.ts", "target_blob": "5970a0afcd8aaf0d2061e8c438ea8c5334d6e36a", "reason": "returns durable sign-off receipts and preserves request-changes as needs-review" }
+        {
+          "path": "src/workers/__tests__/action-recording.test.ts",
+          "target_blob": "3a98591b83150a6fdf52050d74ba4baa52f7d71b",
+          "reason": "proves receipt-bearing approval, rejection and request-changes behavior"
+        },
+        {
+          "path": "src/workers/__tests__/health.test.ts",
+          "target_blob": "576e3a670acb3916c36a0a9ed7cba4ff3952e496",
+          "reason": "proves the public-safe commercial capability handshake"
+        },
+        {
+          "path": "src/workers/dal/types/event.ts",
+          "target_blob": "24de5a9c3daf40843b712a768754540b3a403b77",
+          "reason": "types request-changes separately from approval and rejection without widening the persisted verdict enum"
+        },
+        {
+          "path": "src/workers/routes/health.ts",
+          "target_blob": "ec878b1bbdb3f323bb638b791263a9fc50630cb5",
+          "reason": "publishes mounted commercial route capabilities for fail-closed frontend startup"
+        },
+        {
+          "path": "src/workers/routes/sign-offs.ts",
+          "target_blob": "5970a0afcd8aaf0d2061e8c438ea8c5334d6e36a",
+          "reason": "returns durable sign-off receipts and preserves request-changes as needs-review"
+        }
       ]
     },
     {
@@ -251,16 +810,56 @@
       "authority": "shadow_only_no_production_cutover",
       "copied_files": [],
       "transformed_files": [
-        { "path": "package.json", "target_blob": "e31f19052842cd0193a812b8f6dbbbbb99b51d90", "reason": "registers the fail-closed pilot-shadow deployment boundary verifier" },
-        { "path": "scripts/verify-pilot-shadow-config.mjs", "target_blob": "c60831735243ec5ebefce2b4e2b4c33a24df15e1", "reason": "forbids production routes, authority, destructive purge and autonomous loops in pilot-shadow" },
-        { "path": "src/workers/__tests__/action-recording.test.ts", "target_blob": "0fba25dc19a50fadcb1f6955eb3d0b7da9683a5b", "reason": "requires receipt-backed atomic sign-off lineage and fail-closed transaction errors" },
-        { "path": "src/workers/__tests__/sign-off-atomic-lineage.test.ts", "target_blob": "af5d11640f174c94e271b0b44fcb57c245db17cc", "reason": "proves sign-off, state, operation event and audit log share one SQL authority statement and fail closed when the target update returns zero rows" },
-        { "path": "src/workers/dal/DalAdapter.ts", "target_blob": "a11aaf68849457f878a8bbd829a43324ff850760", "reason": "carries request lineage into sign-off persistence" },
-        { "path": "src/workers/dal/WorkersDalAdapter.ts", "target_blob": "5d24d5e0db9cc38456c8cad2362b7453090386a5", "reason": "delegates request lineage to atomic sign-off persistence" },
-        { "path": "src/workers/dal/governance-store.ts", "target_blob": "457f687547bb2511cb22b9173ca29e3bdfffe8bc", "reason": "atomically gates sign-off, operation event and audit log on the target state update" },
-        { "path": "src/workers/dal/types/event.ts", "target_blob": "f9de67f36d30980fe9a7b3961de0e00896bbbb79", "reason": "requires the authoritative audit-event identifier on every persisted sign-off" },
-        { "path": "src/workers/routes/sign-offs.ts", "target_blob": "58cc9f8e040864bdc1253f924a2b9099620b0d82", "reason": "returns the atomic audit-event identifier and removes best-effort duplicate mirroring" },
-        { "path": "wrangler.pilot-shadow.toml", "target_blob": "a716f4ef5058228f443d3abe8cccc9de24aa8a9c", "reason": "defines isolated shadow Worker, queue, schema and non-authoritative feature posture" }
+        {
+          "path": "package.json",
+          "target_blob": "e31f19052842cd0193a812b8f6dbbbbb99b51d90",
+          "reason": "registers the fail-closed pilot-shadow deployment boundary verifier"
+        },
+        {
+          "path": "scripts/verify-pilot-shadow-config.mjs",
+          "target_blob": "c60831735243ec5ebefce2b4e2b4c33a24df15e1",
+          "reason": "forbids production routes, authority, destructive purge and autonomous loops in pilot-shadow"
+        },
+        {
+          "path": "src/workers/__tests__/action-recording.test.ts",
+          "target_blob": "0fba25dc19a50fadcb1f6955eb3d0b7da9683a5b",
+          "reason": "requires receipt-backed atomic sign-off lineage and fail-closed transaction errors"
+        },
+        {
+          "path": "src/workers/__tests__/sign-off-atomic-lineage.test.ts",
+          "target_blob": "af5d11640f174c94e271b0b44fcb57c245db17cc",
+          "reason": "proves sign-off, state, operation event and audit log share one SQL authority statement and fail closed when the target update returns zero rows"
+        },
+        {
+          "path": "src/workers/dal/DalAdapter.ts",
+          "target_blob": "a11aaf68849457f878a8bbd829a43324ff850760",
+          "reason": "carries request lineage into sign-off persistence"
+        },
+        {
+          "path": "src/workers/dal/WorkersDalAdapter.ts",
+          "target_blob": "5d24d5e0db9cc38456c8cad2362b7453090386a5",
+          "reason": "delegates request lineage to atomic sign-off persistence"
+        },
+        {
+          "path": "src/workers/dal/governance-store.ts",
+          "target_blob": "457f687547bb2511cb22b9173ca29e3bdfffe8bc",
+          "reason": "atomically gates sign-off, operation event and audit log on the target state update"
+        },
+        {
+          "path": "src/workers/dal/types/event.ts",
+          "target_blob": "f9de67f36d30980fe9a7b3961de0e00896bbbb79",
+          "reason": "requires the authoritative audit-event identifier on every persisted sign-off"
+        },
+        {
+          "path": "src/workers/routes/sign-offs.ts",
+          "target_blob": "58cc9f8e040864bdc1253f924a2b9099620b0d82",
+          "reason": "returns the atomic audit-event identifier and removes best-effort duplicate mirroring"
+        },
+        {
+          "path": "wrangler.pilot-shadow.toml",
+          "target_blob": "a716f4ef5058228f443d3abe8cccc9de24aa8a9c",
+          "reason": "defines isolated shadow Worker, queue, schema and non-authoritative feature posture"
+        }
       ]
     },
     {
@@ -835,6 +1434,113 @@
           "reason": "S3 tests: mock answers the packet-assert SELECT; 2 new tests pin server-side intent derivation (subquery text + parameterization, no body-carried intent) and packet-less NULL-collapse same-shape. 8/8 pass."
         }
       ]
+    },
+    {
+      "delta_id": "post-seed-evolution-reconcile-20260720",
+      "generated_at": "2026-07-20T04:23:41Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "052a3b2dbe55a7a8946a6a1787b9fa71542437ef",
+      "target_base_commit": "052a3b2dbe55a7a8946a6a1787b9fa71542437ef",
+      "authority": "shadow_only_no_production_cutover",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "docs/architecture/backend/API_CONTRACT_V1.md",
+          "target_blob": "caf329c7c1821bfb7b735f51fb4e0bd9b8b621b7",
+          "reason": "Graduated via PR #26 (b230052, mig 085 workspace typing): contract doc gained the workspace_type/census rows. Earlier waves' edits folded in."
+        },
+        {
+          "path": "docs/deployment/PRODUCTION_READINESS_STATE.md",
+          "target_blob": "1e827164812523dff70e03c70088a3eae0c1841f",
+          "reason": "Graduated via Wave M-B (6483a2d): readiness regenerated with rate-limit bindings, folder_snapshots RLS, RLS-DSN deploy gate, DR runbook."
+        },
+        {
+          "path": "docs/deployment/PRODUCTION_READINESS_STATE.yml",
+          "target_blob": "950b027994b723ef184b2b22a878b2ea7db08c23",
+          "reason": "Graduated via Wave M-B (6483a2d): same regeneration, machine-readable form."
+        },
+        {
+          "path": "scripts/verify-prod-migrations.mjs",
+          "target_blob": "3fc8c227203fbbe891df5226d9a6ef2a2e57209d",
+          "reason": "Graduated via PR #15 (c960ceb): to_regclass object-probe added (audit D2) - the verifier now probes actual object existence, not just the ledger."
+        },
+        {
+          "path": "src/workers/__tests__/entitlement.test.ts",
+          "target_blob": "602e2112f170b842c6bf1f5be10e23f0bad7237b",
+          "reason": "Graduated via PR #26 (b230052): entitlement tests extended for the mig 085 census tenant-filter."
+        },
+        {
+          "path": "src/workers/routes/mcp-gateway.ts",
+          "target_blob": "efd3c8e392d0c47db6177573f971c3f39b37a126",
+          "reason": "Graduated via UGEC bootstrap (fa2bf43, PR #21): gap-2 tool-fence SHADOW check on the MCP write path (ADR-XB-008)."
+        },
+        {
+          "path": "wrangler.toml",
+          "target_blob": "461d3829bd52add8fde1ce98dc151a81be0da07a",
+          "reason": "Graduated via PR #24 (1d281a4): CONTEXT_PACKET_PERSISTENCE_ENABLED=true + prior census/flag rows (PR #16/#17) - config evolution across the merged governance waves."
+        },
+        {
+          "path": "src/workers/__tests__/operational-spine-route.test.ts",
+          "target_blob": "14143f93f48ab9ec57b2ef2277cbbaf41e8b8d7c",
+          "reason": "Graduated via PR #25 (57a1eed): gap-2 tool-fence SHADOW tests on the operational-spine route (ADR-XB-008)."
+        },
+        {
+          "path": "src/workers/routes/operational-spine.ts",
+          "target_blob": "cd69d5519fab526d017d2e5843c6dddd3584bc1c",
+          "reason": "Graduated via PR #25 (57a1eed): gap-2 fence coverage on spine tool-events (shadow-only)."
+        },
+        {
+          "path": "src/workers/index.ts",
+          "target_blob": "1d249babf7f4569c33b2fae625adb311dcfc3d84",
+          "reason": "Graduated via J-E wave (33eef06, PR #16): dead-registered crons chained into daily slots + census route wiring."
+        },
+        {
+          "path": "src/workers/crons/index.ts",
+          "target_blob": "1551fed43d3654a93fca476b90f12d61e7531c56",
+          "reason": "Graduated via J-E wave (33eef06, PR #16) + census chain (calibrationRetrainThenReviewThenShadowEvalThenCensus)."
+        },
+        {
+          "path": "src/workers/crons/types.ts",
+          "target_blob": "a786dd79d729cb1be83fb009326ee0da616e5d8d",
+          "reason": "Graduated via J-E wave (33eef06, PR #16): cron registry types for the chained composites."
+        },
+        {
+          "path": "scripts/run-worker-test-batches.mjs",
+          "target_blob": "b3083fd7cccaa2240250c13051f060914a994ac9",
+          "reason": "Graduated via J-E wave (33eef06, PR #16): test-batch runner extended for the cron suites."
+        },
+        {
+          "path": "package.json",
+          "target_blob": "1b89f50f66a3bfb3543a904d3d1f11ef863984ad",
+          "reason": "Graduated via Wave M-B (6483a2d): scripts for readiness/DR + rate-limit hardening waves."
+        },
+        {
+          "path": "scripts/ci-local.mjs",
+          "target_blob": "89120915c40aaafd2c217905dbe34c61625fa02b",
+          "reason": "Graduated via PR #15 (c960ceb): ci-local battery extended with the prod-migration object-probe stage."
+        },
+        {
+          "path": "src/workers/routes/workspaces.ts",
+          "target_blob": "8e4c2c68c2541976b55c596f0ed4c12cf94328c2",
+          "reason": "Graduated via PR #27 (052a3b2): lineageFor on the intent companion event (UGEC Stage-3 PR-1) atop the prior waves' intent/census edits."
+        },
+        {
+          "path": "src/workers/dal/types/event.ts",
+          "target_blob": "7f1d34ea8e658fad9178c2d476b61284ef574782",
+          "reason": "Graduated via PR #26 (b230052): event types for the mig 085 workspace-typing census."
+        },
+        {
+          "path": "src/workers/dal/WorkersDalAdapter.ts",
+          "target_blob": "4ff4934c24f578c71aad7ca0e2728b5b0a3608f5",
+          "reason": "Graduated via PR #26 (b230052): DAL additions for workspace typing + census tenant-filter."
+        },
+        {
+          "path": "scripts/build-production-readiness-state.mjs",
+          "target_blob": "7a4eb86f338a433a1839904de12da7ba3a99bb29",
+          "reason": "Graduated via Wave M-B (6483a2d): readiness generator widened (census/executor/RLS-DSN/entitlement flags)."
+        }
+      ],
+      "reconciliation_note": "Receipt catch-up for legitimate in-repo evolution across the merged 260718-260720 governance waves (PRs #15/#16/#17/#21/#24/#26 + Wave M-B 6483a2d). Each file's drift is traced to its merged PR (git log -1 per path at 052a3b2) - graduated evolution, not corruption. This entry APPENDS per the repo contract (later synchronization requires a new receipt; originals immutable). verify:provenance had been RED since before PR #16, front-gating ci-local for every session. Full drift set = 19 files (the first pass recorded 7; the remainder surfaced on the untruncated verifier run - all traced to the same merged waves)."
     }
   ]
 }
