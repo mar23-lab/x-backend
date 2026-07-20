@@ -465,6 +465,16 @@ export interface DalAdapter {
   ): Promise<EntitlementResult>;
 
   /**
+   * AI-EXEC-2 · Materialize an invited teammate's workspace membership at session time, at the
+   * Clerk-mapped role (viewer/operator only — never owner/client). Safe by construction: only when the
+   * workspace exists and the user has NO member row; never resurrects/demotes; never un-bans. The call
+   * site is flag-gated born-OFF. See invite-membership-store.ts.
+   */
+  materializeInvitedMembership(
+    input: import('./invite-membership-store').MaterializeInvitedMembershipInput
+  ): Promise<import('./invite-membership-store').MaterializeInvitedMembershipResult>;
+
+  /**
    * R43.18 · Operator self-bootstrap. Idempotently ensures the configured
    * platform operator (MBP_OWNER_USER_ID) is approved with an active workspace
    * member row, so they can land in the workspace on first sign-in WITHOUT a

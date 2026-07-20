@@ -824,6 +824,14 @@ export class WorkersDalAdapter implements DalAdapter {
     };
   }
 
+  // AI-EXEC-2 · materialize an invited teammate's membership (owner connection — a governed member write).
+  async materializeInvitedMembership(
+    input: import('./invite-membership-store').MaterializeInvitedMembershipInput,
+  ): Promise<import('./invite-membership-store').MaterializeInvitedMembershipResult> {
+    const { materializeInvitedMembershipRow } = await import('./invite-membership-store');
+    return materializeInvitedMembershipRow(this.sql, input);
+  }
+
   // ============================================================
   // R43.18 · Operator self-bootstrap
   // ============================================================
