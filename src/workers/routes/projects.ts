@@ -478,6 +478,8 @@ projectsRoute.post('/projects/:id/sources', async (ctx) => {
         summary: `[source connected] ${input.source_kind}${refLabel ? ' · ' + refLabel : ''}`.slice(0, 512),
         visibility: 'internal_workspace',
         occurred_at: new Date().toISOString(),
+        // A-W4/P6 · operator-action lineage (UGEC I1): server-derived principal + instrument.
+        ...lineageFor(ctx.get('auth')),
       });
     } catch (err) {
       // best-effort operator-action mirror — never block the bind, but LOG it (audit loss must be visible, not silent).
@@ -555,6 +557,8 @@ projectsRoute.delete('/projects/:id/sources/:bindingId', async (ctx) => {
         body: 'Soft-archive (reversible): restore with PATCH status=connected.',
         visibility: 'internal_workspace',
         occurred_at: new Date().toISOString(),
+        // A-W4/P6 · operator-action lineage (UGEC I1): server-derived principal + instrument.
+        ...lineageFor(ctx.get('auth')),
       });
     } catch (err) {
       console.warn('[projects] source-archive event mirror failed (best-effort)', { workspace_id, error: (err as Error)?.message });

@@ -1197,6 +1197,8 @@ workspacesRoute.post('/decisions', async (ctx) => {
         body: decision.rollback ?? context,
         visibility: 'internal_workspace',
         occurred_at: new Date().toISOString(),
+        // A-W4/P6 · operator-action lineage (UGEC I1): server-derived principal + instrument.
+        ...lineageFor(ctx.get('auth')),
       });
       event_recorded = true;
     } catch (_) { /* best-effort activity mirror — never block the decision */ }
@@ -1543,6 +1545,8 @@ workspacesRoute.post('/folder-sources/register', async (ctx) => {
         summary: `[folder connected] ${path}`.slice(0, 512),
         visibility: 'internal_workspace',
         occurred_at: new Date().toISOString(),
+        // A-W4/P6 · operator-action lineage (UGEC I1): server-derived principal + instrument.
+        ...lineageFor(ctx.get('auth')),
       });
     } catch (_) { /* best-effort operator-action mirror — never block the register */ }
     // R1 parity (2026-06-10 audit fix): the github bind route returns a propose-then-confirm
@@ -1905,6 +1909,8 @@ workspacesRoute.delete('/workspaces/:id', async (ctx) => {
         body: 'Soft-archive (reversible): config.archived=true; restore by clearing config.archived via PATCH.',
         visibility: 'internal_workspace',
         occurred_at: new Date().toISOString(),
+        // A-W4/P6 · operator-action lineage (UGEC I1): server-derived principal + instrument.
+        ...lineageFor(ctx.get('auth')),
       });
     } catch (err) {
       console.warn('[workspaces] workspace-archive event mirror failed (best-effort)', { workspace_id: wsId, error: (err as Error)?.message });
