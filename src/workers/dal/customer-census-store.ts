@@ -44,13 +44,32 @@ export interface CustomerCensusObservationInsert {
  * Bounded, deterministic enumeration of workspace ids the census observes. Ordered by id so a run always
  * covers the same prefix when the count exceeds the cap (our scale is low tens of workspaces; the cap is a
  * safety ceiling, not paging). Returns [] on an empty estate.
+ *
+ * Q-A (260720): TENANTS ONLY. workspaces carries non-tenant rows — the five MB-P projection mirrors
+ * (seed-legitimate-mbp-catalog.mjs) and the bootstrap org — and counting them as customers is a live
+ * telemetry defect. Once migration 085 (STAGED) is applied, workspace_type classifies every row and the
+ * census excludes 'mirror' + 'bootstrap'. FAIL-OPEN pre-migration: 085 is operator-applied, so on a DB
+ * without the column the typed query errors (42703) and we fall back to today's unfiltered enumeration —
+ * the cron must never break on a staged migration (same degrade ethos as countIntakeResolutions in
+ * crons/customer-census.ts).
  */
 export async function listWorkspaceIdsForCensusRow(sql: Sql, limit: number): Promise<string[]> {
   const cappedLimit = Math.max(1, Math.min(Number.isFinite(limit) ? limit : 0, 1000));
-  const rows = (await sql/*sql*/`
-    SELECT id FROM workspaces ORDER BY id LIMIT ${cappedLimit}
-  `) as Array<{ id: string }>;
-  return rows.map((r) => String(r.id)).filter(Boolean);
+  try {
+    const rows = (await sql/*sql*/`
+      SELECT id FROM workspaces
+      WHERE workspace_type IS NULL OR workspace_type NOT IN ('mirror', 'bootstrap')
+      ORDER BY id LIMIT ${cappedLimit}
+    `) as Array<{ id: string }>;
+    return rows.map((r) => String(r.id)).filter(Boolean);
+  } catch {
+    // Column absent (pre-085) or any typed-query failure → today's behaviour. A genuine DB outage
+    // fails here too and re-throws below, reaching the cron's top-level catch → status 'failed'.
+    const rows = (await sql/*sql*/`
+      SELECT id FROM workspaces ORDER BY id LIMIT ${cappedLimit}
+    `) as Array<{ id: string }>;
+    return rows.map((r) => String(r.id)).filter(Boolean);
+  }
 }
 
 /**

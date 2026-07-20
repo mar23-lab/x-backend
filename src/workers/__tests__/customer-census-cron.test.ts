@@ -2,9 +2,12 @@
 // Pins: BORN-OFF (flag unset ⇒ ZERO reads/writes), gateway-unbound ⇒ skip, flag-on aggregation + persistence,
 // per-workspace error isolation ⇒ 'degraded', and the never-remediates contract (no write beyond the
 // observation row). The census MATH itself is proven in lib/__tests__/customer-census.test.ts.
+// Q-A (260720) adds the store-level enumeration pins: typed DBs exclude mirror/bootstrap workspaces;
+// pre-085 DBs (column absent) fall back to the unfiltered enumeration — never break the cron.
 
 import { describe, it, expect, vi } from 'vitest';
 import { customerCensusCron } from '../crons/customer-census';
+import { listWorkspaceIdsForCensusRow } from '../dal/customer-census-store';
 import type { DataGraphFacts } from '../graph/data-graph';
 
 const WS = 'ws1';
@@ -125,5 +128,67 @@ describe('customerCensusCron · flag-on observation', () => {
     expect(r.status).toBe('completed');
     expect(recordObservation).toHaveBeenCalledTimes(1);
     expect(recordObservation.mock.calls[0][0].governed_intake_resolutions).toBe(0);
+  });
+});
+
+// ── Q-A (260720) · store-level enumeration: workspace typing filter + pre-085 fallback ──────────
+//
+// listWorkspaceIdsForCensusRow is the ONLY place the census picks its population. Mirrors/bootstrap
+// rows are MB-P projections, not tenants — a typed DB (mig 085 applied) must exclude them. The
+// migration is STAGED, so a pre-085 DB (workspace_type absent → 42703 on the typed query) MUST fall
+// back to today's unfiltered enumeration, never fail the cron.
+
+/** Tagged-template sql mock: typed query behaviour is injectable; records every query text. */
+function mockCensusSql(opts: {
+  typedRows?: Array<{ id: string }>;
+  typedError?: Error;
+  fallbackRows?: Array<{ id: string }>;
+}) {
+  const queries: string[] = [];
+  const sql = ((strings: TemplateStringsArray, ..._values: unknown[]) => {
+    const q = (strings as unknown as string[]).join('?');
+    queries.push(q);
+    if (/workspace_type/i.test(q)) {
+      if (opts.typedError) return Promise.reject(opts.typedError);
+      return Promise.resolve(opts.typedRows ?? []);
+    }
+    return Promise.resolve(opts.fallbackRows ?? []);
+  }) as never;
+  return { sql, queries };
+}
+
+describe('listWorkspaceIdsForCensusRow · Q-A workspace typing filter', () => {
+  it('typed DB → mirror/bootstrap workspaces are EXCLUDED by the SQL filter', async () => {
+    // The DB applies the WHERE clause; the store must issue it. Assert the query carries the
+    // exclusion and the typed result is returned as-is (tenants only).
+    const { sql, queries } = mockCensusSql({
+      typedRows: [{ id: 'mbp-private' }, { id: 'org_customerA' }],
+    });
+    const ids = await listWorkspaceIdsForCensusRow(sql, 500);
+    expect(ids).toEqual(['mbp-private', 'org_customerA']);
+    expect(queries).toHaveLength(1);
+    expect(queries[0]).toMatch(/workspace_type NOT IN \('mirror', 'bootstrap'\)/);
+    // fail-open guard for rows predating the backfill (defensive; column is NOT NULL post-085)
+    expect(queries[0]).toMatch(/workspace_type IS NULL/);
+  });
+
+  it('pre-085 DB (column absent) → falls back to the UNFILTERED enumeration (fail-open)', async () => {
+    const err = Object.assign(new Error('column "workspace_type" does not exist'), { code: '42703' });
+    const { sql, queries } = mockCensusSql({
+      typedError: err,
+      fallbackRows: [{ id: 'mbp-private' }, { id: 'x-docs' }, { id: 'xcp-platform' }],
+    });
+    const ids = await listWorkspaceIdsForCensusRow(sql, 500);
+    // today's behaviour exactly: every workspace, mirrors included — the cron never breaks
+    expect(ids).toEqual(['mbp-private', 'x-docs', 'xcp-platform']);
+    expect(queries).toHaveLength(2);
+    expect(queries[0]).toMatch(/workspace_type/);
+    expect(queries[1]).not.toMatch(/workspace_type/);
+  });
+
+  it('genuine DB outage → BOTH queries fail and the error propagates (cron top-level catch owns it)', async () => {
+    const boom = new Error('db down');
+    const sql = ((_s: TemplateStringsArray, ..._v: unknown[]) => Promise.reject(boom)) as never;
+    await expect(listWorkspaceIdsForCensusRow(sql, 500)).rejects.toThrow('db down');
   });
 });

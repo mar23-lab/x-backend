@@ -113,7 +113,9 @@ No DB call. Worker startup check only.
   "workspace": {
     "id": "org_xyz456",
     "name": "Acme Corp",
-    "slug": "acme-corp"
+    "slug": "acme-corp",
+    "workspace_type": "company",
+    "relationship_status": "customer_active"
   },
   "projects": [
     {
@@ -127,6 +129,12 @@ No DB call. Worker startup check only.
 
 **DAL call:** `DalAdapter.getSession(userId, workspaceId)`  
 **DB query scope:** `WHERE workspace_id = $1 AND status != 'archived'`
+
+`workspace.workspace_type` (`personal|company|mirror|bootstrap|external`) and
+`workspace.relationship_status` (`internal_dogfood|customer_zero|external_evaluation|pilot_candidate|pilot_contracted|customer_active|customer_inactive|commercial_partner|technology_partner|vendor|archived`)
+are OPTIONAL — present only once migration 085 (STAGED, operator-applied) adds the typing columns.
+Pre-085 the workspace object is exactly `{id, name, slug}`; consumers must not hard-depend on the
+typing fields (Q-A, 260720).
 
 ---
 
