@@ -89,6 +89,45 @@ describe('stripInternalProvisioning', () => {
   });
 });
 
+// Stage-2 leak-boundary regression guard (260720): the two serializers exist to stop internal fields
+// reaching a customer payload. The named-key tests above prove TODAY's leaks are closed; these prove the
+// deny-by-default posture holds when a NEW internal field is added upstream — the actual failure class
+// (a field added to ChatDecisionLike / an entitlement without anyone updating the serializer).
+describe('leak-boundary regression guard · novel internal fields', () => {
+  it('customerSafeChat ON drops an unrecognised internal field by allow-list construction', () => {
+    const withNovelLeak = {
+      answer: 'a',
+      generated_by: 'claude',
+      mode: 'ask',
+      grounded_on: { event_ids: ['evt_x'] },
+      // a field a future change might add — the serializer must never emit it
+      internal_prompt_trace: 'SYSTEM: you are mbp-secret-engine-v9 <internal chain>',
+      tenant_debug_scope: { rls_bypass: true, owner_uuid: 'usr_internal_777' },
+    };
+    const out = customerSafeChat(withNovelLeak, true) as Record<string, unknown>;
+    expect(out).not.toHaveProperty('internal_prompt_trace');
+    expect(out).not.toHaveProperty('tenant_debug_scope');
+    const blob = JSON.stringify(out);
+    expect(blob).not.toContain('mbp-secret-engine-v9');
+    expect(blob).not.toContain('usr_internal_777');
+    expect(blob).not.toContain('rls_bypass');
+    // exactly the allow-listed keys survive
+    expect(Object.keys(out).sort()).toEqual(['answer', 'generated_by', 'grounded_on', 'mode']);
+  });
+
+  it('stripInternalProvisioning ON keeps the deny-list current: every declared internal key is actually removed', () => {
+    // build an entitlement carrying every INTERNAL_ENTITLEMENT_KEY plus a customer-legit field
+    const ent: Record<string, unknown> = { state: 'approved_workspace' };
+    for (const k of INTERNAL_ENTITLEMENT_KEYS) ent[k] = `INTERNAL_${k}`;
+    const out = stripInternalProvisioning(ent, true) as Record<string, unknown>;
+    for (const k of INTERNAL_ENTITLEMENT_KEYS) {
+      expect(out).not.toHaveProperty(k);
+      expect(JSON.stringify(out)).not.toContain(`INTERNAL_${k}`);
+    }
+    expect(out.state).toBe('approved_workspace'); // customer-legit field preserved
+  });
+});
+
 describe('customerSafeSerializerEnabled (E7 fail-CLOSED gate, 260713)', () => {
   it('strips by DEFAULT — absent/empty/unknown flag returns true (fail-closed, never leaks)', () => {
     expect(customerSafeSerializerEnabled(undefined)).toBe(true);
