@@ -1692,6 +1692,37 @@
           "reason": "W1-PR3 charter seed: CHARTER_SEED_ENABLED='false' born-OFF flag documented"
         }
       ]
+    },
+    {
+      "delta_id": "w1-pr4-charter-grounding-20260721",
+      "generated_at": "2026-07-21T01:10:00Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "5f92f04b95726db7ce6070866e890e82019318f5",
+      "target_base_commit": "5f92f04b95726db7ce6070866e890e82019318f5",
+      "authority": "shadow_only_no_production_cutover",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/services/cockpit-chat.ts",
+          "target_blob": "62c07ed530f81ead17948e7b03522e44e86cab6b",
+          "reason": "W1-PR4 charter grounding: CockpitChatFacts.charter + charter factLine (flag-gated, born-OFF byte-identical)"
+        },
+        {
+          "path": "src/workers/routes/customer-chat.ts",
+          "target_blob": "f3e49c31d71c78668da308d87cc18ab77ae62764",
+          "reason": "W1-PR4 charter grounding: read dal.getCharter behind CHARTER_GROUNDING_ENABLED + pass into facts"
+        },
+        {
+          "path": "src/workers/__tests__/cockpit-chat.test.ts",
+          "target_blob": "2b11849b32b664fc507422a68b26eb96600bfa41",
+          "reason": "W1-PR4 charter grounding: 2 tests (present grounds prompt; absent/null/all-null byte-identical)"
+        },
+        {
+          "path": "wrangler.toml",
+          "target_blob": "b0ee71a3093749cf9014b47b50dc0cab6c8e5864",
+          "reason": "W1-PR4 charter grounding: CHARTER_GROUNDING_ENABLED='false' born-OFF flag documented"
+        }
+      ]
     }
   ]
 }

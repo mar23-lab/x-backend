@@ -560,3 +560,39 @@ describe('cockpit chat with pinned-card lineage (OS-4 P4)', () => {
     expect(absent).not.toMatch(/lineage/i);
   });
 });
+
+describe('cockpit chat CHARTER grounding (PR-4 · the info->plan->context join)', () => {
+  const grab = async (facts: Record<string, unknown>) => {
+    let user = '';
+    const ai: AiRunner = { run: async (_m, opts) => { user = opts.messages[1].content; return { response: 'You are on track against your stated goal; recent activity supports it and nothing is blocked here.' }; } };
+    await answerCockpitChat('how am I doing against my goals?', facts as never, ai);
+    return user;
+  };
+  const base = { events: COCKPIT_EVENTS, total: 269, scope: FACTS().scope };
+
+  it('grounds the prompt in the workspace charter when facts.charter is present', async () => {
+    const user = await grab({
+      ...base,
+      charter: {
+        mission: null,
+        background: 'Acme Co - company - readiness level 3',
+        industry: null,
+        objectives_summary: 'Cut month-end close from 10 days to 3',
+      },
+    });
+    expect(user).toMatch(/Company charter/);
+    expect(user).toMatch(/how am I doing against my goals/); // the grounding hint is in the line
+    expect(user).toMatch(/Background: Acme Co - company - readiness level 3/);
+    expect(user).toMatch(/Stated goals: Cut month-end close from 10 days to 3/);
+    expect(user).not.toMatch(/Mission:/); // null fields are omitted, never rendered as "Mission: null"
+  });
+
+  it('ADDITIVE: absent, null, and all-null charter each produce the identical prompt (born-OFF byte-identical)', async () => {
+    const absent = await grab(base);
+    const nul = await grab({ ...base, charter: null });
+    const allNull = await grab({ ...base, charter: { mission: null, background: null, industry: null, objectives_summary: null } });
+    expect(nul).toBe(absent);
+    expect(allNull).toBe(absent); // no non-null parts ⇒ no line
+    expect(absent).not.toMatch(/Company charter/);
+  });
+});

@@ -142,6 +142,14 @@ export interface CockpitChatFacts {
   /** Total Plane-A count for the scope (may exceed events.length when capped). */
   total: number;
   scope: CockpitChatScope;
+  /** PR-4 (260721) · the workspace CHARTER (mission/background/industry/goals) — the operator's OWN
+   *  captured context, so every turn can answer "how am I doing against my goals" instead of being
+   *  amnesic beyond the event snapshot. Flag-gated by the caller (CHARTER_GROUNDING_ENABLED); absent/null
+   *  ⇒ the prompt is byte-identical to before. Seeded at provisioning by PR-3, read here. */
+  charter?: Pick<
+    import('../dal/charter-store').CharterRow,
+    'mission' | 'background' | 'industry' | 'objectives_summary'
+  > | null;
 }
 
 export interface CockpitChatResult {
@@ -898,6 +906,25 @@ export async function answerCockpitChat(
     `Total items on record: ${grounded.events_total} (${grounded.planes.events} activity events + ${grounded.planes.governance} governance packets/decisions; I am giving you the ${grounded.events_considered} most recent).`,
     `Status counts (both planes) — completed: ${grounded.completed}; in progress: ${grounded.in_progress}; awaiting the operator's sign-off: ${grounded.needs_review}; blocked: ${grounded.blocked}.`,
   ];
+  // PR-4 (260721) · the workspace CHARTER — the operator's OWN captured mission/background/goals reaches
+  // this LLM turn (the info->plan->context join: PR-3 seeds it at provisioning, this grounds on it). Absent
+  // (CHARTER_GROUNDING_ENABLED off / no charter) ⇒ no line ⇒ prompt byte-identical. Grounds "how am I doing
+  // against my goals" in the customer's stated goals, not a guess.
+  if (facts.charter) {
+    const c = facts.charter;
+    const parts = [
+      c.mission ? `Mission: ${c.mission}` : null,
+      c.background ? `Background: ${c.background}` : null,
+      c.industry ? `Industry: ${c.industry}` : null,
+      c.objectives_summary ? `Stated goals: ${c.objectives_summary}` : null,
+    ].filter(Boolean);
+    if (parts.length > 0) {
+      factLines.push(
+        `Company charter (the operator's OWN captured context — ground your answer in this, especially for `
+        + `"how am I doing against my goals"): ${parts.join(' · ')}`,
+      );
+    }
+  }
   // Wave 3b · pinned cards FIRST — these are exactly what the operator attached; address them up front.
   if (grounded.pinned_total > 0) {
     factLines.unshift(

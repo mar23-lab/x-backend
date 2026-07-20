@@ -246,6 +246,13 @@ customerChatRoute.post('/customer-chat', async (ctx) => {
     // S1 · the customer's captured company context → the chief-of-staff is company-aware, not generic.
     const companyContext = await dal.getCustomerContextProfile(workspaceId).catch(() => null);
 
+    // PR-4 (260721) · the workspace CHARTER (mission/background/goals) → the info->plan->context join.
+    // Flag-gated (CHARTER_GROUNDING_ENABLED, born-OFF ⇒ null ⇒ answerCockpitChat prompt byte-identical).
+    // Degrade-safe: any read error → null → grounding unchanged. Seeded by PR-3, read here.
+    const charter = envFlagTrue((ctx.env as { CHARTER_GROUNDING_ENABLED?: string }).CHARTER_GROUNDING_ENABLED)
+      ? await dal.getCharter(workspaceId).catch(() => null)
+      : null;
+
     const scope: CockpitChatScope = { workspace_id: workspaceId, project_id: null, domain_id: null };
     const ai = ctx.env.AI;
     const claudeKey = ctx.env.ANTHROPIC_API_KEY;
@@ -282,7 +289,7 @@ customerChatRoute.post('/customer-chat', async (ctx) => {
       : undefined;
     const result = await answerCockpitChat(
       message,
-      { companyContext, events, sources, total: events.length, scope },
+      { companyContext, events, sources, total: events.length, scope, charter },
       ai,
       mode,
       claudeKey,
