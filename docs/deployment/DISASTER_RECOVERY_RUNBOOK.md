@@ -78,7 +78,18 @@ Via Neon MCP (preferred) or the Neon console, on project `flat-truth-23350426`:
 4. **Post-incident:** record the RPO actually achieved, whether retention was the binding
    constraint, and re-raise the P1 retention bump if 6h was insufficient.
 
-## 7. Related
+## 7. Drill log (evidence the RTO path is rehearsed, not just documented)
+
+| Date | Branch id | Schema head | Core-table readback | Verdict |
+| --- | --- | --- | --- | --- |
+| 2026-07-21 | `br-quiet-river-a7ilyti3` (auto-expiring) | 89 (matches deployed head) | workspaces 10 · operation_events 5557 · intents 1 · documents 1; `operation_events` RLS preserved (relrowsecurity=true) | **PASS** — branch provisioned in seconds; full, RLS-coherent copy at head; discarded via TTL, zero prod contact |
+
+> Note on drill fidelity: the branch above was forked from the current head via the Neon MCP
+> `create_branch` (no timestamp parameter). A true **from-timestamp** PITR drill (§4 step 1, "30
+> minutes ago") is a Neon **console / API** action — run it on the same cadence to exercise the
+> point-in-time path, not just the branch-provision path. Both share the same repoint + verify steps.
+
+## 8. Related
 
 - `docs/architecture/CUSTOMER_CONTEXT_BACKUP_ROLLBACK_DESIGN.md` — the design this operationalizes.
 - `scripts/preflight-rls-dsn.mjs` — the deploy hard-gate that keeps the RLS DSN bound (closes the

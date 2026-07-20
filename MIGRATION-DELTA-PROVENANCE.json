@@ -1723,6 +1723,22 @@
           "reason": "W1-PR4 charter grounding: CHARTER_GROUNDING_ENABLED='false' born-OFF flag documented"
         }
       ]
+    },
+    {
+      "delta_id": "ops-hardening-deploy-parity-20260721",
+      "generated_at": "2026-07-21T09:10:00Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "4f59fb47632ce34be427de502f14f9c3010368ac",
+      "target_base_commit": "4f59fb47632ce34be427de502f14f9c3010368ac",
+      "authority": "shadow_only_no_production_cutover",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "package.json",
+          "target_blob": "4123456ee6d9bfc0120a514ce58d249ef1cb72b9",
+          "reason": "ops-hardening: gate deploy:api on verify-rls-grant-parity (defense-in-depth \u2014 the static tenant-isolation invariant now checked at deploy, not only ci-local)"
+        }
+      ]
     }
   ]
 }
