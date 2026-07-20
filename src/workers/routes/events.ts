@@ -10,6 +10,7 @@ import { withAuthority } from '../lib/allowed-actions';
 import { envFlagTrue } from '../lib/env-flag';
 import { ROLLBACK_WINDOW_DAYS } from '../lib/self-service';
 import { VALID_STATUSES, VALID_SOURCE_TOOLS } from '../lib/event-validation';
+import { lineageFor } from '../lib/actor-lineage';
 import type { AuthEnv, AuthVariables } from '../middleware/auth';
 import type { DalAdapter } from '../dal/DalAdapter';
 import type {
@@ -283,7 +284,11 @@ eventsRoute.post('/events', async (ctx) => {
     if (typeof body.body === 'string' && body.body.length > 8000) body.body = body.body.slice(0, 8000);
     if (typeof body.evidence_link === 'string' && body.evidence_link.length > 2048) body.evidence_link = body.evidence_link.slice(0, 2048);
 
-    const result = await dal.upsertEvent(targetWorkspaceId, body);
+    // A-W4/P6 · ingestion lineage (UGEC I1): stamp WHO authorized this event ingestion
+    // (principal + instrument), server-derived from auth — a caller-supplied lineage on the
+    // body never overrides the authenticated ingester. Mirrors projects.ts / workspaces.ts.
+    const persisted = { ...body, ...lineageFor(ctx.get('auth')) };
+    const result = await dal.upsertEvent(targetWorkspaceId, persisted);
     ctx.status(result.created ? 201 : 200);
     return ctx.json(result);
   } catch (err) {
