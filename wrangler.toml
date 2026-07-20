@@ -128,6 +128,11 @@ SINGLE_INTAKE_ENABLED = "true"
 CLERK_JWKS_CACHE_TTL_SECONDS = "300"
 ALLOWED_ORIGIN_PATTERN = "https://*.xlooop.com"
 LOG_LEVEL = "info"
+# UGEC 260720: context-receipt persistence. Prerequisite RESOLUTION_RECEIPT_SIGNING_SECRET is now
+# bound in prod (operator set it via wrangler secret put). Turning this on makes the assistant
+# chat/digest/enrich paths WRITE context_packets + skill_invocation_receipts (mig 070/071, applied)
+# - the "what the agent knew per governed run" audit rows. Additive, shadow-observability only.
+CONTEXT_PACKET_PERSISTENCE_ENABLED = "true"
 # W4/G2 · operator-owned org ids — connectors auto-approve the operator-approval side for these
 # (the operator IS the authority for their own workspaces). Customer orgs are NOT listed → they
 # require explicit operator approval (POST /admin/customer/:id/approve). Non-secret identifiers.
