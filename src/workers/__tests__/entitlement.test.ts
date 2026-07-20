@@ -169,3 +169,72 @@ describe('Session route shape', () => {
     expect(app).toBeDefined();
   });
 });
+
+// ---- Q-A (260720) · workspace typing exposure on the REAL adapter (SQL layer) ----
+//
+// Migration 085 (STAGED) adds workspace_type + relationship_status to workspaces. When the columns
+// exist, the approved_workspace payload carries them on `workspace`; on a pre-085 DB the typed read
+// errors and the R40 shape MUST stay byte-identical to today (optional fields simply absent). These
+// tests drive WorkersDalAdapter.getSessionEntitlement with a tagged-template sql mock (same pattern
+// as access-request-dedup-update.test.ts) so the resilience lives where the SQL lives.
+
+import { WorkersDalAdapter } from '../dal/WorkersDalAdapter';
+
+function sessionSql(opts: { typing?: { workspace_type: string; relationship_status: string }; typingError?: Error }) {
+  const queries: string[] = [];
+  const sql = ((strings: TemplateStringsArray, ..._values: unknown[]) => {
+    const q = (strings as unknown as string[]).join('?');
+    queries.push(q);
+    if (/INSERT INTO users/i.test(q)) {
+      return Promise.resolve([{
+        id: 'user_approved', email: 'op@acme.com', status: 'approved', is_admin: false,
+        approved_at: '2026-07-01T00:00:00Z', approved_by: 'admin_1', rejection_reason: null,
+        suspended_at: null, metadata: {}, created_at: '2026-06-01T00:00:00Z', updated_at: '2026-07-01T00:00:00Z',
+      }]);
+    }
+    if (/FROM access_requests/i.test(q)) return Promise.resolve([]);
+    if (/FROM workspace_members/i.test(q)) {
+      return Promise.resolve([{ role: 'operator', member_status: 'active', ws_id: 'org_acme', ws_name: 'Acme Corp', ws_slug: 'acme-corp' }]);
+    }
+    if (/FROM projects/i.test(q)) return Promise.resolve([]);
+    if (/SELECT workspace_type, relationship_status FROM workspaces/i.test(q)) {
+      if (opts.typingError) return Promise.reject(opts.typingError);
+      return Promise.resolve(opts.typing ? [opts.typing] : []);
+    }
+    return Promise.resolve([]);
+  }) as never;
+  return { sql, queries };
+}
+
+describe('getSessionEntitlement · Q-A workspace typing exposure', () => {
+  it('typed DB (post-085) → workspace carries workspace_type + relationship_status', async () => {
+    const { sql } = sessionSql({ typing: { workspace_type: 'external', relationship_status: 'external_evaluation' } });
+    const dal = new WorkersDalAdapter(sql);
+    const result = await dal.getSessionEntitlement('user_approved', 'org_acme', 'op@acme.com');
+    expect(result.state).toBe('approved_workspace');
+    expect(result.workspace).toEqual({
+      id: 'org_acme', name: 'Acme Corp', slug: 'acme-corp',
+      workspace_type: 'external', relationship_status: 'external_evaluation',
+    });
+  });
+
+  it('pre-085 DB (columns absent → typed read throws) → R40 shape unchanged, fields OMITTED', async () => {
+    const err = Object.assign(new Error('column "workspace_type" does not exist'), { code: '42703' });
+    const { sql } = sessionSql({ typingError: err });
+    const dal = new WorkersDalAdapter(sql);
+    const result = await dal.getSessionEntitlement('user_approved', 'org_acme', 'op@acme.com');
+    expect(result.state).toBe('approved_workspace');
+    // byte-identical to today: no workspace_type / relationship_status keys at all
+    expect(result.workspace).toEqual({ id: 'org_acme', name: 'Acme Corp', slug: 'acme-corp' });
+    expect(Object.keys(result.workspace ?? {})).not.toContain('workspace_type');
+    expect(Object.keys(result.workspace ?? {})).not.toContain('relationship_status');
+  });
+
+  it('typing row empty/nullable → fields omitted (never null-exposed)', async () => {
+    const { sql } = sessionSql({ typing: undefined });
+    const dal = new WorkersDalAdapter(sql);
+    const result = await dal.getSessionEntitlement('user_approved', 'org_acme', 'op@acme.com');
+    expect(result.state).toBe('approved_workspace');
+    expect(result.workspace).toEqual({ id: 'org_acme', name: 'Acme Corp', slug: 'acme-corp' });
+  });
+});

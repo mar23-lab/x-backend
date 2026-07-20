@@ -798,10 +798,26 @@ export class WorkersDalAdapter implements DalAdapter {
       LIMIT 200
     `) as Array<{ id: string; name: string; status: Project['status'] }>;
 
+    // Q-A (260720) · workspace typing exposure — BEST-EFFORT. Migration 085 is STAGED
+    // (operator-applied), so a pre-085 DB lacks workspace_type / relationship_status; the typed read
+    // errors (42703) and the catch leaves the R40 workspace shape byte-identical to today. Separate
+    // PK lookup (not folded into the membership JOINs above) so those hot queries never change shape
+    // and a failure here can never break /session.
+    let typing: { workspace_type: string; relationship_status: string } | undefined;
+    try {
+      const typingRows = (await this.sql/*sql*/`
+        SELECT workspace_type, relationship_status FROM workspaces WHERE id = ${member.ws_id} LIMIT 1
+      `) as Array<{ workspace_type: string | null; relationship_status: string | null }>;
+      const t = typingRows[0];
+      if (t && t.workspace_type && t.relationship_status) {
+        typing = { workspace_type: String(t.workspace_type), relationship_status: String(t.relationship_status) };
+      }
+    } catch { /* pre-085 DB — omit the fields (fail-open to today's shape) */ }
+
     return {
       state: 'approved_workspace',
       user: { id: user.id, email: user.email ?? '', role: member.role },
-      workspace: { id: member.ws_id, name: member.ws_name, slug: member.ws_slug },
+      workspace: { id: member.ws_id, name: member.ws_name, slug: member.ws_slug, ...(typing ?? {}) },
       projects: projectRows.map(p => ({ id: p.id, name: p.name, status: p.status })),
       message: 'Active workspace.',
     };

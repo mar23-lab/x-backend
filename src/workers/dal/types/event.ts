@@ -77,6 +77,13 @@ export interface SessionWorkspace {
   id: WorkspaceId;
   name: string;
   slug: string | null;
+  /**
+   * Q-A (260720) · workspace typing (migration 085, STAGED). Present ONLY when the typing columns
+   * exist — a pre-085 DB omits both fields and the R40 shape is byte-identical to today. Optional so
+   * no consumer can hard-depend on them before the operator applies 085.
+   */
+  workspace_type?: string;
+  relationship_status?: string;
 }
 
 export interface SessionProject {
