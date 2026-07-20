@@ -287,10 +287,9 @@ PACKET_INTENT_QUALITY_ENABLED = "true"  # F4 260714 (operator-approved) — POST
 #   CLERK_JWKS_URL          — explicit JWKS URL (overrides derivation)
 #   DATABASE_URL            — Neon Postgres connection URL (HTTPS-compatible)
 #   TURNSTILE_SECRET        — R56 Stage 1 · Cloudflare Turnstile secret (funnel bot-protection).
-#                             Server verify in routes/request-access.ts is GATED on this: until set,
-#                             the funnel accepts submissions (wire-now). Set AFTER the x-web Turnstile
-#                             widget is live, else the funnel 403s tokenless posts. The matching SITE
-#                             key goes in x-web. `wrangler secret put TURNSTILE_SECRET`
+#                             BOUND in prod 2026-07-20 (operator `wrangler secret put`); the x-web widget
+#                             (site key, host-gated fallback) deployed the same day — the funnel now
+#                             verifies tokens end-to-end. Server verify: routes/request-access.ts.
 #   HIBP_API_KEY            — Wave B (OPTIONAL) · HaveIBeenPwned API key. Absent → the breach source
 #                             reports 'not_configured' (honest), never a fake result. `wrangler secret put HIBP_API_KEY`
 #   BUILTWITH_API_KEY       — Wave B (OPTIONAL) · BuiltWith API key for tech-stack detection. Absent →
