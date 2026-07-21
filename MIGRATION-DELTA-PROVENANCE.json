@@ -1854,6 +1854,37 @@
           "reason": "Y-wave SEED: born-OFF / flag-ON / non-fatal-failure tests"
         }
       ]
+    },
+    {
+      "delta_id": "ywave-apply-personalization-20260721",
+      "generated_at": "2026-07-21T02:38:17.110Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "b21b888e5e644efd79025be2ab5cb21f3c13e0cb",
+      "target_base_commit": "b21b888e5e644efd79025be2ab5cb21f3c13e0cb",
+      "authority": "shadow_only_no_production_cutover",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/services/cockpit-chat.ts",
+          "target_blob": "e599929c918e2d24e13efbfaaacd9e4f07084cb8",
+          "reason": "Y-wave APPLY (ADR-XB-012): inject the effective personalization profile into the customer-chat LLM prompt behind PERSONALIZATION_APPLY_ENABLED (born-OFF)"
+        },
+        {
+          "path": "src/workers/routes/customer-chat.ts",
+          "target_blob": "0929a3db1193ab7f4ac27210560722c85f938ef5",
+          "reason": "Y-wave APPLY (ADR-XB-012): inject the effective personalization profile into the customer-chat LLM prompt behind PERSONALIZATION_APPLY_ENABLED (born-OFF)"
+        },
+        {
+          "path": "src/workers/index.ts",
+          "target_blob": "1a170a675fa9c0e9468b53ba628587035a209ead",
+          "reason": "Y-wave APPLY (ADR-XB-012): inject the effective personalization profile into the customer-chat LLM prompt behind PERSONALIZATION_APPLY_ENABLED (born-OFF)"
+        },
+        {
+          "path": "src/workers/__tests__/cockpit-chat.test.ts",
+          "target_blob": "19fc8225a22ea5065f9b7d8b97f051344ddb1371",
+          "reason": "Y-wave APPLY (ADR-XB-012): inject the effective personalization profile into the customer-chat LLM prompt behind PERSONALIZATION_APPLY_ENABLED (born-OFF)"
+        }
+      ]
     }
   ]
 }

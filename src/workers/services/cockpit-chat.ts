@@ -150,6 +150,14 @@ export interface CockpitChatFacts {
     import('../dal/charter-store').CharterRow,
     'mission' | 'background' | 'industry' | 'objectives_summary'
   > | null;
+  /** Y-wave (ADR-XB-012) · the effective personalization PROFILE — the workspace's learned rules/skills/
+   *  defaults + the user's own preferences, forbidden-override keys already stripped by the resolver.
+   *  Flag-gated by the caller (PERSONALIZATION_APPLY_ENABLED); absent/null/empty ⇒ the prompt is
+   *  byte-identical to before. Empty until the materialize stage writes profiles, so inert until then. */
+  personalizationProfile?: Pick<
+    import('../dal/types/template-policy').EffectivePersonalizationProfile,
+    'effective_profile'
+  > | null;
 }
 
 export interface CockpitChatResult {
@@ -922,6 +930,20 @@ export async function answerCockpitChat(
       factLines.push(
         `Company charter (the operator's OWN captured context — ground your answer in this, especially for `
         + `"how am I doing against my goals"): ${parts.join(' · ')}`,
+      );
+    }
+  }
+  // Y-wave APPLY (ADR-XB-012) · the effective personalization PROFILE — the workspace's learned rules/
+  // skills/defaults + the user's own preferences (forbidden-override keys already stripped by the
+  // resolver). Absent/empty (PERSONALIZATION_APPLY_ENABLED off / no materialized profile) ⇒ no line ⇒
+  // prompt byte-identical. Shapes HOW the assistant answers (tone/defaults/governed skills), NEVER what
+  // is permitted (authority stays server-enforced).
+  if (facts.personalizationProfile) {
+    const eff = facts.personalizationProfile.effective_profile;
+    if (eff && typeof eff === 'object' && Object.keys(eff).length > 0) {
+      factLines.push(
+        `Learned preferences for this workspace (apply these to HOW you answer — tone, defaults, and `
+        + `governed skills — never to WHAT is permitted): ${JSON.stringify(eff).slice(0, 800)}`,
       );
     }
   }
