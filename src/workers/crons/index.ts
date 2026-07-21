@@ -8,14 +8,16 @@
 // Cron expressions chosen to balance Cloudflare free-tier latency
 // (5min minimum) with §16.4.2 operating defaults:
 //
-//   Loop 0 (propagation_tick)      · existing R49' PR-5+6     · @5min  · "*/5 * * * *"
+// (DIALED 260721 for pilot infra cost: propagation 5min→daily, permanent_suppress/graph_rebuild + reclassify
+//  hourly→daily, so Neon autosuspends between the few daily wakes. Restore */5 + hourly at scale.)
+//   Loop 0 (propagation_tick)      · existing R49' PR-5+6     · @daily  · "0 6 * * *"   (Daily 06:00 UTC · was */5)
 //   Loop 1 (weight_retune)         · §16.5 row 1 · weekly      · @weekly · "0 3 * * 1"   (Mon 03:00 UTC)
 //   Loop 2 (threshold_retune)      · §16.5 row 2 · daily       · @daily  · "0 4 * * *"   (Daily 04:00 UTC)
 //   Loop 3 (pattern_suspend)       · §16.5 row 3 · daily       · CHAINED into the 04:00 slot (J-E; see below)
-//   Loop 4 (permanent_suppress)    · §16.5 row 4 · hourly      · @hourly · "0 * * * *"
+//   Loop 4 (permanent_suppress)    · §16.5 row 4 · daily       · @daily  · "0 2 * * *"   (Daily 02:00 UTC · was hourly · before the 05:00 census)
 //   Loop 5 (calibration_retrain)   · §16.5 row 5 · daily       · @daily  · "0 5 * * *"   (Daily 05:00 UTC)
 //   Loop 6 (shadow_eval)           · §16.5 row 6 · daily       · CHAINED into the 05:00 slot (J-E; see below)
-//   Backstop (reclassify_unattributed) · PR #517 self-heal     · @hourly · "45 * * * *"  (hourly :45 · flag-gated, default OFF)
+//   Backstop (reclassify_unattributed) · PR #517 self-heal     · @daily  · "0 1 * * *"   (Daily 01:00 UTC · was hourly :45 · flag-gated, default OFF)
 //
 // J-E TASK 1 (260719) · pattern_suspend + shadow_eval were DEAD-REGISTERED: they carried their OWN registry
 // expressions ("30 4 * * *" / "15 5 * * *") that were NEVER declared in wrangler.toml [triggers]. The
@@ -98,7 +100,7 @@ const propagationThenTenantProjection: CronHandler = async (ctx) => {
 
 // ARCH-004 Phase A: the 5-cron wrangler limit + single-handler-per-expression dispatch means new loops
 // CHAIN into an existing slot (the established pattern — "chaining pairs of daily loops"). The hourly
-// `0 * * * *` slot runs permanent_suppress THEN the graph rebuild (best-effort; the rebuild never aborts
+// `0 2 * * *` slot runs permanent_suppress THEN the graph rebuild (best-effort; the rebuild never aborts
 // the suppress loop). Both handlers stay pure + independently unit-testable; they compose here.
 const permanentSuppressThenGraphRebuild: CronHandler = async (ctx) => {
   // Run BOTH loops INDEPENDENTLY — neither aborts the other (ARCH-005 X.6 fix: previously a throw in
@@ -127,7 +129,7 @@ const permanentSuppressThenGraphRebuild: CronHandler = async (ctx) => {
 };
 
 // OS-3 UX Wave-2.1: the execution-pipeline executor (operations-queue-consumer) CHAINS into the
-// hourly reclassify_unattributed slot (45 * * * *) — both are hourly, flag-gated, default-OFF
+// daily reclassify_unattributed slot (0 1 * * *) — flag-gated, default-OFF
 // self-heal/queue backstops, so they are natural siblings. Same independent-composite shape as
 // permanentSuppressThenGraphRebuild: reclassify runs first, the queue-drain second, and NEITHER
 // aborts the other (a throw in reclassify still lets the executor drain, and vice-versa). The
@@ -285,16 +287,16 @@ const calibrationRetrainThenReviewThenShadowEvalThenCensus: CronHandler = async 
  */
 export const CRON_REGISTRY: ReadonlyArray<CronRegistryEntry> = Object.freeze([
   {
-    cron: '*/5 * * * *',
+    cron: '0 6 * * *',
     loop_name: 'propagation_tick+tenant_projection_dispatch',
     handler: propagationThenTenantProjection,
-    description: 'R49 propagation worker + default-off tenant projection outbox dispatcher · 5-minute tick',
+    description: 'R49 propagation worker + default-off tenant projection outbox dispatcher · daily 06:00 UTC (DIALED 5min→daily 260721 for pilot cost — lets Neon autosuspend; restore */5 at scale)',
   },
   {
-    cron: '0 * * * *',
+    cron: '0 2 * * *',
     loop_name: 'permanent_suppress+graph_rebuild',
     handler: permanentSuppressThenGraphRebuild,
-    description: '§16.5 loop 4 (permanent_suppress) + ARCH-004 Phase A graph_rebuild chained · hourly · rebuilds the operator data-graph (drift-aware, idempotent)',
+    description: '§16.5 loop 4 (permanent_suppress) + ARCH-004 Phase A graph_rebuild chained · daily 02:00 UTC (DIALED hourly→daily 260721 for pilot cost; runs BEFORE the 05:00 census that reads the graph) · rebuilds the operator data-graph (drift-aware, idempotent)',
   },
   {
     cron: '0 4 * * *',
@@ -315,7 +317,7 @@ export const CRON_REGISTRY: ReadonlyArray<CronRegistryEntry> = Object.freeze([
     description: '§16.5 loop 1 · weekly weight retune fallback',
   },
   {
-    cron: '45 * * * *',
+    cron: '0 1 * * *',
     loop_name: 'reclassify_unattributed',
     handler: reclassifyThenDrainQueue,
     description:

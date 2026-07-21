@@ -1911,6 +1911,37 @@
           "reason": "Y-wave MATERIALIZE (ADR-XB-012): personalization-materialize cron chained into the daily composite + gateway wiring (born-OFF)"
         }
       ]
+    },
+    {
+      "delta_id": "cron-cadence-pilot-cost-20260721",
+      "generated_at": "2026-07-21T03:53:04.442Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "f9e341f467a2710dfdf94cb93f0017acf64fff5c",
+      "target_base_commit": "f9e341f467a2710dfdf94cb93f0017acf64fff5c",
+      "authority": "shadow_only_no_production_cutover",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "wrangler.toml",
+          "target_blob": "6a31d5d57db28c1ad64429751a0348440ec00fd5",
+          "reason": "Dial crons to daily for pilot infra cost (5min/hourly propagation+graph_rebuild+reclassify → daily; lets Neon autosuspend)"
+        },
+        {
+          "path": "src/workers/crons/index.ts",
+          "target_blob": "8e023c4580f34a5fa07628eda7c731dccfb0998c",
+          "reason": "Dial crons to daily for pilot infra cost (5min/hourly propagation+graph_rebuild+reclassify → daily; lets Neon autosuspend)"
+        },
+        {
+          "path": "src/workers/__tests__/operations-queue-consumer.test.ts",
+          "target_blob": "2f571922579f59d3ba3bf23665b05f19da3b5136",
+          "reason": "Dial crons to daily for pilot infra cost (5min/hourly propagation+graph_rebuild+reclassify → daily; lets Neon autosuspend)"
+        },
+        {
+          "path": "src/workers/__tests__/reclassify-unattributed.test.ts",
+          "target_blob": "bae0b8bbe96b1471caa61e6711a622300c6b3445",
+          "reason": "cron cadence dial-down: 45* -> 0 1 daily in the reclassify test"
+        }
+      ]
     }
   ]
 }

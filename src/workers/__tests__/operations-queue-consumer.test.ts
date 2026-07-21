@@ -288,7 +288,7 @@ describe('runOperationsQueueConsumer · service', () => {
 });
 
 describe('reclassifyThenDrainQueue · cron composite (45 * * * *)', () => {
-  const entry = CRON_BY_EXPRESSION['45 * * * *'];
+  const entry = CRON_BY_EXPRESSION['0 1 * * *'];
 
   it('both flags OFF → reclassify skipped + executor inert, both reported, never throws', async () => {
     // DAL never touched: reclassify short-circuits on RECLASSIFY_CRON_ENABLED off, executor on
@@ -297,7 +297,7 @@ describe('reclassifyThenDrainQueue · cron composite (45 * * * *)', () => {
     const result = await entry.handler({
       dal,
       now: () => new Date('2026-06-12T00:45:00.000Z'),
-      cronExpression: '45 * * * *',
+      cronExpression: '0 1 * * *',
       env: {}, // no flags → both OFF
     });
     // Base comes from the reclassify skipped result; the drain is folded into metadata.
@@ -314,7 +314,7 @@ describe('reclassifyThenDrainQueue · cron composite (45 * * * *)', () => {
     const result = await entry.handler({
       dal,
       now: () => new Date('2026-06-12T00:45:00.000Z'),
-      cronExpression: '45 * * * *',
+      cronExpression: '0 1 * * *',
       env: { EXECUTOR_MODE: 'enabled', MBP_OWNER_USER_ID: 'user_op' },
     });
     const drain = (result.metadata as any)?.ops_queue_drain;
