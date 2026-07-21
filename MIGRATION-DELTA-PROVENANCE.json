@@ -1736,7 +1736,7 @@
         {
           "path": "package.json",
           "target_blob": "4123456ee6d9bfc0120a514ce58d249ef1cb72b9",
-          "reason": "ops-hardening: gate deploy:api on verify-rls-grant-parity (defense-in-depth \u2014 the static tenant-isolation invariant now checked at deploy, not only ci-local)"
+          "reason": "ops-hardening: gate deploy:api on verify-rls-grant-parity (defense-in-depth — the static tenant-isolation invariant now checked at deploy, not only ci-local)"
         }
       ]
     },
@@ -1779,6 +1779,22 @@
           "path": "src/workers/routes/session.ts",
           "target_blob": "7cf22071cf955c2fd9a975ec7a864414839e9ffb",
           "reason": "AI-EXEC-2: invite-accept membership-materialization orchestration (flag-gated born-OFF, after auto-provision)"
+        }
+      ]
+    },
+    {
+      "delta_id": "ai-provtool-package-json-20260721",
+      "generated_at": "2026-07-21T00:39:11.134Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "94db09efe5b24378056ba0324b6dcd62855d5eb0",
+      "target_base_commit": "94db09efe5b24378056ba0324b6dcd62855d5eb0",
+      "authority": "shadow_only_no_production_cutover",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "package.json",
+          "target_blob": "4f3b16f83b9a558fc41879d2f92020daa47d3faa",
+          "reason": "AI: add reconcile:provenance script entry"
         }
       ]
     }

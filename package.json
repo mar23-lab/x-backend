@@ -21,6 +21,7 @@
     "contract:emit": "node scripts/emit-api-contract.mjs",
     "verify:contract": "node scripts/verify-api-contract-artifact.mjs",
     "verify:provenance": "node scripts/verify-shadow-seed-provenance.mjs && node scripts/verify-backend-delta-provenance.mjs",
+    "reconcile:provenance": "node scripts/reconcile-delta-provenance.mjs",
     "verify:packet-completion-contract": "node scripts/verify-packet-completion-contract.mjs",
     "verify:typed-work-relationships": "node scripts/verify-typed-work-relationships.mjs",
     "verify:action-intent-shadow": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/verify-action-intent-shadow.mjs",
