@@ -30,6 +30,7 @@ function mockDal(over: Record<string, unknown> = {}) {
   const upsertCalls: Array<{ wsId: string; event: Record<string, unknown> }> = [];
   const attachCalls: Array<{ email: string; wsId: string; userId: string | null }> = [];
   const scaffoldCalls: Array<{ input: Record<string, unknown>; actor: string }> = [];
+  const seedCalls: Array<{ workspaceId: string; ownerUserId: string }> = [];
   const base = {
     getAccessRequest: async () => ({
       id: 'ar1', email: 'ops@hy.example', company_name: 'Honest & Young', invited_to_workspace_id: null,
@@ -62,9 +63,13 @@ function mockDal(over: Record<string, unknown> = {}) {
       scaffoldCalls.push({ input, actor });
       return { id: `sd_${input.slug}`, ...input } as unknown;
     },
+    seedStarterTemplateBindings: async (workspaceId: string, ownerUserId: string) => {
+      seedCalls.push({ workspaceId, ownerUserId });
+      return { seeded: 3, skipped: false };
+    },
   };
   const dal = { ...base, ...over } as unknown as OnboardingProvisionerDal;
-  return { dal, provisionCalls, upsertCalls, attachCalls, scaffoldCalls };
+  return { dal, provisionCalls, upsertCalls, attachCalls, scaffoldCalls, seedCalls };
 }
 
 const REQ = {
@@ -407,6 +412,33 @@ describe('ABS-P3 · DOMAIN_SCAFFOLD_ENABLED domain-skeleton scaffold', () => {
     const out = await provisionCustomerFromAccessRequest(dal, REQ, { DOMAIN_SCAFFOLD_ENABLED: 'true' });
     expect(out.domains_scaffolded).toBe(5); // 6 attempted, 1 failed
     expect(out.warnings.join(' ')).toMatch(/domain scaffold: could not create/);
+    expect(out.result).toBeTruthy(); // provisioning still succeeded
+  });
+});
+
+describe('Y-wave · PERSONALIZATION_SEED_ENABLED starter template bindings (ADR-XB-012)', () => {
+  it('flag OFF (default) ⇒ NO seed call, byte-identical', async () => {
+    const { dal, seedCalls } = mockDal();
+    const out = await provisionCustomerFromAccessRequest(dal, REQ); // no env ⇒ flag off
+    expect(seedCalls).toHaveLength(0);
+    expect(out.warnings).toHaveLength(0);
+  });
+
+  it('flag ON ⇒ binds the workspace once, scoped to the owner', async () => {
+    const { dal, seedCalls } = mockDal();
+    const out = await provisionCustomerFromAccessRequest(dal, REQ, { PERSONALIZATION_SEED_ENABLED: 'true' });
+    expect(seedCalls).toHaveLength(1);
+    expect(seedCalls[0].workspaceId).toBe('org_abc123');
+    expect(seedCalls[0].ownerUserId).toBe('user_owner123');
+    expect(out.result).toBeTruthy();
+  });
+
+  it('flag ON · a seed failure is NON-FATAL (warning, provisioning continues)', async () => {
+    const { dal } = mockDal({
+      seedStarterTemplateBindings: async () => { throw new Error('catalog unpublished'); },
+    });
+    const out = await provisionCustomerFromAccessRequest(dal, REQ, { PERSONALIZATION_SEED_ENABLED: 'true' });
+    expect(out.warnings.join(' ')).toMatch(/personalization seed: could not bind/);
     expect(out.result).toBeTruthy(); // provisioning still succeeded
   });
 });

@@ -747,6 +747,9 @@ export interface DalAdapter {
    * On create, also computes initial membership and writes synthetic_domain_membership rows.
    */
   createSyntheticDomain(input: SyntheticDomainCreateInput, actorUserId: UserId): Promise<SyntheticDomain>;
+  // Y-wave SEED (ADR-XB-012) · idempotent, owner-connected bind of the workspace to the published
+  // platform template catalog (only invoked on the flag-gated PERSONALIZATION_SEED_ENABLED path).
+  seedStarterTemplateBindings(workspaceId: string, ownerUserId: string): Promise<{ seeded: number; skipped: boolean }>;
 
   /**
    * GET /api/v1/synthetic-domains · lists active synthetic domains visible to the caller.
