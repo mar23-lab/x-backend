@@ -244,11 +244,15 @@ PLAN_ENTITIES_ENABLED = "true"
 # PR-3 (260721) · seed the workspace charter + one objective from the readiness answers at provisioning.
 # BORN-OFF: 'false' ⇒ provisioning is byte-identical to today (no charter/objective row). Flip to 'true'
 # on a test workspace first, then broadly, once the plan->chat grounding (PR-4) reads it.
-CHARTER_SEED_ENABLED = "false"
+CHARTER_SEED_ENABLED = "true"
 # PR-4 (260721) · ground the customer-chat answer in the workspace charter (mission/background/goals).
 # BORN-OFF: 'false' ⇒ the chat prompt is byte-identical to today (no charter line). Flip to 'true' once
 # charters are seeded (PR-3 flag on) so "how am I doing against my goals" answers from the customer's own goals.
-CHARTER_GROUNDING_ENABLED = "false"
+CHARTER_GROUNDING_ENABLED = "true"
+# AI-EXEC-2 (260721) · materialize an invited teammate's membership at session time from their Clerk org
+# claims (org:member→viewer, org:admin→operator; never owner/client). Only affects invited users who
+# currently dead-end in authenticated_no_access; existing members unchanged.
+INVITE_MEMBERSHIP_MATERIALIZATION_ENABLED = "true"
 MEMBER_REMOVAL_ENABLED = "true"
 FEEDBACK_PERSISTENCE_ENABLED = "true"
 
