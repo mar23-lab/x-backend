@@ -45,6 +45,7 @@ import { reclassifyUnattributedCron } from './reclassify-unattributed';
 import { graphRebuildCron } from './graph-rebuild';
 import { tenantProjectionDispatchCron } from './tenant-projection-dispatch';
 import { customerCensusCron } from './customer-census';
+import { personalizationMaterializeCron } from './personalization-materialize';
 import { runOperationsQueueConsumer, type QueueConsumerResult } from '../services/operations-queue-consumer';
 import type { CronHandler, CronHandlerResult, CronRegistryEntry } from './types';
 
@@ -60,6 +61,7 @@ export { reclassifyUnattributedCron } from './reclassify-unattributed';
 export { graphRebuildCron } from './graph-rebuild';
 export { tenantProjectionDispatchCron } from './tenant-projection-dispatch';
 export { customerCensusCron } from './customer-census';
+export { personalizationMaterializeCron } from './personalization-materialize';
 
 // Commercial single-intake projection dispatch shares the existing five-minute trigger. Both loops
 // execute independently; the projection lane is default-off and cannot degrade propagation while inert.
@@ -261,13 +263,19 @@ const calibrationRetrainThenReviewThenShadowEvalThenCensus: CronHandler = async 
   let censusFailed = false;
   try { const c = await customerCensusCron(ctx); censusMeta = { status: c.status, actions_taken: c.actions_taken, ...(c.metadata ?? {}) }; censusFailed = c.status === 'failed' || c.status === 'degraded'; }
   catch (e) { censusErr = e instanceof Error ? e.message : String(e); censusFailed = true; }
+  // Y-wave MATERIALIZE arm (independent best-effort; BORN-OFF, byte-inert when the flag is unset).
+  let materializeMeta: Record<string, unknown> | null = null;
+  let materializeErr: string | null = null;
+  let materializeFailed = false;
+  try { const m = await personalizationMaterializeCron(ctx); materializeMeta = { status: m.status, actions_taken: m.actions_taken, ...(m.metadata ?? {}) }; materializeFailed = m.status === 'failed' || m.status === 'degraded'; }
+  catch (e) { materializeErr = e instanceof Error ? e.message : String(e); materializeFailed = true; }
   const base: CronHandlerResult = primary ?? {
     loop_name: 'calibration_retrain+review_schedule+shadow_eval+customer_census', run_id: `composite_${ctx.now().toISOString()}`,
     actions_taken: 0, cost_ms: 0, status: 'failed', error: calibErr ?? undefined,
   };
   // OBS-1 (J-W3): a failed secondary arm (review-scheduler, shadow_eval, or census) escalates to 'degraded'.
-  const status = base.status === 'failed' ? 'failed' : ((reviewFailed || shadowFailed || censusFailed) ? 'degraded' : base.status);
-  return { ...base, status, metadata: { ...(base.metadata ?? {}), calibration_retrain_error: calibErr, review_schedule: reviewMeta, review_schedule_error: reviewErr, shadow_eval: shadowMeta, shadow_eval_error: shadowErr, customer_census: censusMeta, customer_census_error: censusErr } };
+  const status = base.status === 'failed' ? 'failed' : ((reviewFailed || shadowFailed || censusFailed || materializeFailed) ? 'degraded' : base.status);
+  return { ...base, status, metadata: { ...(base.metadata ?? {}), calibration_retrain_error: calibErr, review_schedule: reviewMeta, review_schedule_error: reviewErr, shadow_eval: shadowMeta, shadow_eval_error: shadowErr, customer_census: censusMeta, customer_census_error: censusErr, personalization_materialize: materializeMeta, personalization_materialize_error: materializeErr } };
 };
 
 /**

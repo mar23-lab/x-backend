@@ -11,6 +11,21 @@ import type { GoalReviewDueRow } from '../dal/propagation-store';
 import type { ProjectionOutboxGateway, ProjectionQueueBinding } from '../services/tenant-projection-queue';
 import type { GovernedModelLineageFactory } from '../lib/model-execution-lineage';
 import type { CustomerCensusObservationInsert } from '../dal/customer-census-store';
+import type {
+  LearningSignalForMaterialization,
+  UserPersonalizationProfileUpsert,
+} from '../dal/personalization-materialize-store';
+
+/**
+ * Y-wave MATERIALIZE (ADR-XB-012) · personalization materializer data gateway. Injected into the cron
+ * context (like `census`). Owner-connected reads/writes bound from personalization-materialize-store.ts.
+ */
+export interface PersonalizationMaterializeGateway {
+  /** Bounded read of active learning signals across workspaces (limit+1 for truncation detection). */
+  listActiveSignals(limit: number): Promise<LearningSignalForMaterialization[]>;
+  /** Owner-connected UPSERT of one user's folded profile (full-rebuild-from-signals). */
+  upsertProfile(row: UserPersonalizationProfileUpsert): Promise<void>;
+}
 
 /**
  * A10 review-scheduler data gateway. Injected into the cron context (like `env.AI`) rather than added to
@@ -79,6 +94,10 @@ export interface CronHandlerContext {
     // queue resource exists; enabled-without-binding fails visibly rather than dropping work.
     TENANT_PROJECTION_QUEUE_ENABLED?: string;
     TENANT_PROJECTION_QUEUE?: ProjectionQueueBinding;
+    // Y-wave MATERIALIZE (ADR-XB-012) · personalization materializer (crons/personalization-materialize.ts),
+    // chained into the daily calibration_retrain slot. Default OFF (inert): only the exact string "true"
+    // (case-insensitive) enables it — flag-off performs ZERO DB reads/writes.
+    PERSONALIZATION_MATERIALIZE_ENABLED?: string;
     // J-E TASK 2 (260719) · customer sterility census (crons/customer-census.ts), chained into the daily
     // 05:00 slot. BORN-OFF: only the exact string "true" (case-insensitive) enables it — flag-off performs
     // ZERO DB reads/writes (byte-inert). OBSERVE-only; it never remediates.
@@ -98,6 +117,10 @@ export interface CronHandlerContext {
   // J-E TASK 2 (260719) · customer census data gateway (bound from store functions in the dispatcher).
   // Optional + additive: only customerCensusCron reads it, and only when CUSTOMER_CENSUS_ENABLED is on.
   readonly census?: CustomerCensusGateway;
+  // Y-wave MATERIALIZE (ADR-XB-012) · personalization materializer gateway (bound from store functions in
+  // the dispatcher). Optional + additive: only personalizationMaterializeCron reads it, and only when
+  // PERSONALIZATION_MATERIALIZE_ENABLED is on.
+  readonly personalization?: PersonalizationMaterializeGateway;
   /** Cross-tenant dispatcher control plane. Messages contain only opaque outbox/workspace ids; the
    * consumer re-binds every read/write to both values before projecting one tenant. */
   readonly projectionOutbox?: ProjectionOutboxGateway;
