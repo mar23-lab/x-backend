@@ -62,7 +62,7 @@ describe('reclassifyUnattributedCron · self-healing backstop', () => {
   // (1) SAFE-BY-DEFAULT
   it('flag OFF (default) → status skipped, reason flag_disabled, ZERO DB calls', async () => {
     const { dal, spies } = makeDal({ splitWorkspaceIds: [WS], events: [], existingProjectIds: ALL_EIGHT });
-    const res = await reclassifyUnattributedCron({ dal, now: NOW, cronExpression: '45 * * * *' });
+    const res = await reclassifyUnattributedCron({ dal, now: NOW, cronExpression: '0 1 * * *' });
     expect(res.status).toBe('skipped');
     expect(res.actions_taken).toBe(0);
     expect((res.metadata as { reason?: string }).reason).toBe('flag_disabled');
@@ -81,7 +81,7 @@ describe('reclassifyUnattributedCron · self-healing backstop', () => {
     for (const val of ['1', 'yes', 'on', 'enabled', 'false', '']) {
       spies.listSplitEnabledWorkspaceIds.mockClear();
       const res = await reclassifyUnattributedCron({
-        dal, now: NOW, cronExpression: '45 * * * *', env: { RECLASSIFY_CRON_ENABLED: val },
+        dal, now: NOW, cronExpression: '0 1 * * *', env: { RECLASSIFY_CRON_ENABLED: val },
       });
       expect(res.status).toBe('skipped');
       expect(spies.listSplitEnabledWorkspaceIds).not.toHaveBeenCalled();
@@ -90,7 +90,7 @@ describe('reclassifyUnattributedCron · self-healing backstop', () => {
     for (const val of ['TRUE', 'TRUE ', '"true"', "'true'", ' true ']) {
       spies.listSplitEnabledWorkspaceIds.mockClear();
       const res = await reclassifyUnattributedCron({
-        dal, now: NOW, cronExpression: '45 * * * *', env: { RECLASSIFY_CRON_ENABLED: val },
+        dal, now: NOW, cronExpression: '0 1 * * *', env: { RECLASSIFY_CRON_ENABLED: val },
       });
       expect(res.status).toBe('completed');
       expect(spies.listSplitEnabledWorkspaceIds).toHaveBeenCalledTimes(1);
@@ -109,7 +109,7 @@ describe('reclassifyUnattributedCron · self-healing backstop', () => {
       existingProjectIds: ALL_EIGHT,
     });
     const res = await reclassifyUnattributedCron({
-      dal, now: NOW, cronExpression: '45 * * * *', env: { RECLASSIFY_CRON_ENABLED: 'true' },
+      dal, now: NOW, cronExpression: '0 1 * * *', env: { RECLASSIFY_CRON_ENABLED: 'true' },
     });
 
     expect(res.status).toBe('completed');
@@ -137,7 +137,7 @@ describe('reclassifyUnattributedCron · self-healing backstop', () => {
     // is listSplitEnabledWorkspaceIds. Here NO workspace opted in → empty set.
     const { dal, spies } = makeDal({ splitWorkspaceIds: [], events: [], existingProjectIds: [] });
     const res = await reclassifyUnattributedCron({
-      dal, now: NOW, cronExpression: '45 * * * *', env: { RECLASSIFY_CRON_ENABLED: 'true' },
+      dal, now: NOW, cronExpression: '0 1 * * *', env: { RECLASSIFY_CRON_ENABLED: 'true' },
     });
     expect(res.status).toBe('completed');
     expect(res.actions_taken).toBe(0);
@@ -154,7 +154,7 @@ describe('reclassifyUnattributedCron · self-healing backstop', () => {
     // therefore yields an empty backlog → zero re-files, zero UPDATEs.
     const { dal, spies } = makeDal({ splitWorkspaceIds: [WS], events: [], existingProjectIds: ALL_EIGHT });
     const res = await reclassifyUnattributedCron({
-      dal, now: NOW, cronExpression: '45 * * * *', env: { RECLASSIFY_CRON_ENABLED: 'true' },
+      dal, now: NOW, cronExpression: '0 1 * * *', env: { RECLASSIFY_CRON_ENABLED: 'true' },
     });
     expect(res.status).toBe('completed');
     expect(res.actions_taken).toBe(0);
@@ -176,7 +176,7 @@ describe('reclassifyUnattributedCron · self-healing backstop', () => {
       existingProjectIds: [`${WS}-cockpit-ux`],
     });
     const res = await reclassifyUnattributedCron({
-      dal, now: NOW, cronExpression: '45 * * * *', env: { RECLASSIFY_CRON_ENABLED: 'true' },
+      dal, now: NOW, cronExpression: '0 1 * * *', env: { RECLASSIFY_CRON_ENABLED: 'true' },
     });
     expect(res.status).toBe('completed');
     const meta = res.metadata as { reclassified: number; skipped_missing_project: number };
@@ -204,7 +204,7 @@ describe('reclassifyUnattributedCron · self-healing backstop', () => {
       },
     });
     const res = await reclassifyUnattributedCron({
-      dal, now: NOW, cronExpression: '45 * * * *', env: { RECLASSIFY_CRON_ENABLED: 'true' },
+      dal, now: NOW, cronExpression: '0 1 * * *', env: { RECLASSIFY_CRON_ENABLED: 'true' },
     });
     // OBS-2 (J-W3): never throws at the batch level, but errors>0 → 'degraded' (reported to Sentry),
     // no longer a silent 'completed'. The batch still completes and re-files the healthy events.
@@ -218,7 +218,7 @@ describe('reclassifyUnattributedCron · self-healing backstop', () => {
   it('passes MAX_BATCH as the bound to the unattributed-backlog read', async () => {
     const { dal, spies } = makeDal({ splitWorkspaceIds: [WS], events: [], existingProjectIds: ALL_EIGHT });
     await reclassifyUnattributedCron({
-      dal, now: NOW, cronExpression: '45 * * * *', env: { RECLASSIFY_CRON_ENABLED: 'true' },
+      dal, now: NOW, cronExpression: '0 1 * * *', env: { RECLASSIFY_CRON_ENABLED: 'true' },
     });
     expect(spies.listUnattributedEvents).toHaveBeenCalledWith([WS], MAX_BATCH);
     expect(MAX_BATCH).toBe(500);
@@ -233,7 +233,7 @@ describe('reclassifyUnattributedCron · self-healing backstop', () => {
       reassignEventProject: vi.fn(),
     } as any;
     const res = await reclassifyUnattributedCron({
-      dal, now: NOW, cronExpression: '45 * * * *', env: { RECLASSIFY_CRON_ENABLED: 'true' },
+      dal, now: NOW, cronExpression: '0 1 * * *', env: { RECLASSIFY_CRON_ENABLED: 'true' },
     });
     expect(res.status).toBe('failed');
     expect(res.error).toMatch(/db down/);
