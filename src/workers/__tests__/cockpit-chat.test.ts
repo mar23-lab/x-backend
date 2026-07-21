@@ -238,6 +238,33 @@ describe('cockpit chat Plane C — documents grounding (P1 · the "how do I add 
   });
 });
 
+describe('answerCockpitChat — Y-wave APPLY (personalization profile injection, ADR-XB-012)', () => {
+  const captureUser = () => {
+    let user = '';
+    const ai: AiRunner = {
+      run: async (_m, opts) => { user = opts.messages[1].content; return { response: 'A grounded answer long enough to clear the usable-output length floor for this test.' }; },
+    };
+    return { ai, get: () => user };
+  };
+
+  it('a non-empty effective_profile is injected into the LLM prompt', async () => {
+    const cap = captureUser();
+    await answerCockpitChat('how should you answer me?', FACTS({ personalizationProfile: { effective_profile: { tone: 'concise', preferred_skills: ['governed-shipping'] } } }), cap.ai);
+    expect(cap.get()).toMatch(/Learned preferences for this workspace/);
+    expect(cap.get()).toMatch(/concise/);
+  });
+
+  it('absent OR empty profile ⇒ NO line ⇒ prompt byte-identical (born-OFF safe)', async () => {
+    const capNull = captureUser();
+    await answerCockpitChat('x', FACTS(), capNull.ai); // absent (flag OFF path)
+    const capEmpty = captureUser();
+    await answerCockpitChat('x', FACTS({ personalizationProfile: { effective_profile: {} } }), capEmpty.ai); // present but empty (no materialized profile)
+    expect(capNull.get()).not.toMatch(/Learned preferences for this workspace/);
+    expect(capEmpty.get()).not.toMatch(/Learned preferences for this workspace/);
+    expect(capNull.get()).toBe(capEmpty.get()); // empty profile === absent ⇒ byte-identical
+  });
+});
+
 describe('answerCockpitChat — P6 Claude premium tier (deep-research)', () => {
   const realFetch = globalThis.fetch;
   afterEach(() => { globalThis.fetch = realFetch; });

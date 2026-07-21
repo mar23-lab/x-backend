@@ -253,6 +253,14 @@ customerChatRoute.post('/customer-chat', async (ctx) => {
       ? await dal.getCharter(workspaceId).catch(() => null)
       : null;
 
+    // Y-wave APPLY (ADR-XB-012) · the effective personalization PROFILE (learned prefs/rules/skills,
+    // forbidden-keys stripped by the resolver) → the APPLY stage. Flag-gated (PERSONALIZATION_APPLY_ENABLED,
+    // born-OFF ⇒ null ⇒ answerCockpitChat prompt byte-identical). Degrade-safe: any read error → null.
+    // Inert until the materialize stage writes profiles (they are empty today).
+    const personalizationProfile = envFlagTrue((ctx.env as { PERSONALIZATION_APPLY_ENABLED?: string }).PERSONALIZATION_APPLY_ENABLED)
+      ? await dal.getEffectivePersonalizationProfile(workspaceId, auth.user_id, String(auth.role || 'member')).catch(() => null)
+      : null;
+
     const scope: CockpitChatScope = { workspace_id: workspaceId, project_id: null, domain_id: null };
     const ai = ctx.env.AI;
     const claudeKey = ctx.env.ANTHROPIC_API_KEY;
@@ -289,7 +297,7 @@ customerChatRoute.post('/customer-chat', async (ctx) => {
       : undefined;
     const result = await answerCockpitChat(
       message,
-      { companyContext, events, sources, total: events.length, scope, charter },
+      { companyContext, events, sources, total: events.length, scope, charter, personalizationProfile },
       ai,
       mode,
       claudeKey,
