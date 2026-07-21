@@ -336,6 +336,59 @@ export async function resolveEffectiveTemplatesRow(
   });
 }
 
+export interface StarterTemplateBindingSeedResult {
+  seeded: number;
+  skipped: boolean;
+}
+
+// Y-wave SEED · ADR-XB-012 · bind a newly-provisioned workspace to the PUBLISHED platform template
+// catalog so resolveEffectiveTemplates returns a non-empty starter set for that workspace. Runs
+// OWNER-CONNECTED at provisioning: mig-070 gives the runtime app role NO write grant on the template
+// registry (writes are owner-connected; RLS governs app-role READS), so this must use the raw owner
+// `sql`, never withWorkspaceRlsContext. Idempotent — a workspace already holding any active binding is
+// skipped (re-provision never double-seeds). Binds ONLY approved/active, safe-tier
+// (public/customer_visible) definitions — the exact tier resolveEffectiveTemplatesRow enforces — so a
+// mis-published internal_sensitive row can never be bound. approval_ref honestly marks a PLATFORM
+// DEFAULT (never a promoted-learning approval — cf. tenant_learning_profiles). If the catalog is
+// unpublished this binds nothing (honest-empty); the caller treats any throw as non-fatal so
+// provisioning is never affected.
+export async function seedStarterTemplateBindingsRow(
+  sql: Sql,
+  workspaceId: WorkspaceId,
+  ownerUserId: UserId,
+): Promise<StarterTemplateBindingSeedResult> {
+  assertWorkspaceScope(workspaceId);
+  const rows = (await sql/*sql*/`
+    WITH existing AS (
+      SELECT 1 FROM tenant_template_bindings
+      WHERE workspace_id = ${workspaceId} AND lifecycle_state = 'active'
+      LIMIT 1
+    ),
+    publishable AS (
+      SELECT td.id AS template_id, tv.id AS version_id,
+             row_number() OVER (PARTITION BY td.id ORDER BY tv.created_at DESC, tv.id) AS rn
+      FROM template_definitions td
+      JOIN template_versions tv ON tv.template_id = td.id
+      WHERE tv.lifecycle_state IN ('approved', 'active')
+        AND COALESCE(to_jsonb(td)->>'classification', 'customer_visible') IN ('public', 'customer_visible')
+    ),
+    inserted AS (
+      INSERT INTO tenant_template_bindings
+        (id, workspace_id, template_id, version_id, binding_scope, lifecycle_state, approved_by, approval_ref)
+      SELECT 'ttb_' || substr(md5(${workspaceId}::text || ':' || p.template_id), 1, 24),
+             ${workspaceId}, p.template_id, p.version_id, 'workspace', 'active',
+             ${ownerUserId}, 'platform-default-seed'
+      FROM publishable p
+      WHERE p.rn = 1 AND NOT EXISTS (SELECT 1 FROM existing)
+      RETURNING 1
+    )
+    SELECT COALESCE((SELECT count(*) FROM inserted), 0)::int AS seeded,
+           EXISTS (SELECT 1 FROM existing) AS skipped
+  `) as unknown as Array<{ seeded: number; skipped: boolean }>;
+  const row = rows[0] ?? { seeded: 0, skipped: false };
+  return { seeded: Number(row.seeded) || 0, skipped: Boolean(row.skipped) };
+}
+
 export async function createTemplateAdminApprovalRow(
   sql: Sql,
   workspaceId: WorkspaceId,

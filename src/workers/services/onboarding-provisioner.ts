@@ -46,6 +46,9 @@ export interface OnboardingProvisionerDal {
   // ABS-P3 · idempotent synthetic-domain create (already implemented by the real DalAdapter). Only
   // called on the flag-gated scaffold path; the interface widens so the provisioner can bind an archetype.
   createSyntheticDomain(input: SyntheticDomainCreateInput, actorUserId: string): Promise<SyntheticDomain>;
+  // Y-wave SEED (ADR-XB-012) · idempotent, owner-connected bind of the workspace to the published
+  // platform template catalog. Only called on the flag-gated PERSONALIZATION_SEED_ENABLED path.
+  seedStarterTemplateBindings(workspaceId: string, ownerUserId: string): Promise<{ seeded: number; skipped: boolean }>;
 }
 
 export interface ProvisionRequest {
@@ -91,6 +94,8 @@ export interface ProvisionerEnv {
   DOMAIN_SCAFFOLD_ENABLED?: string;
   /** PR-3 · ONLY 'true' seeds the workspace charter + one objective from the readiness answers. Default OFF. */
   CHARTER_SEED_ENABLED?: string;
+  /** Y-wave SEED (ADR-XB-012) · ONLY 'true' binds the workspace to the published platform template catalog at provisioning. Default OFF. */
+  PERSONALIZATION_SEED_ENABLED?: string;
 }
 
 /**
@@ -270,6 +275,19 @@ export async function provisionCustomerFromAccessRequest(
           warnings.push(`domain scaffold: could not create '${skeleton.slug}' (non-fatal)`);
         }
       }
+    }
+  }
+
+  // Y-wave SEED (ADR-XB-012) · bind the workspace to the PUBLISHED platform template catalog so
+  // resolveEffectiveTemplates returns a non-empty starter set. Flag-gated (PERSONALIZATION_SEED_ENABLED,
+  // born-OFF ⇒ no binding ⇒ byte-identical provisioning). BEST-EFFORT: any failure is a warning and
+  // never fails provisioning (same non-fatal contract as the domain scaffold above). The DAL call is
+  // idempotent and honest-empty when the catalog is unpublished.
+  if (envFlagTrue(env.PERSONALIZATION_SEED_ENABLED) && result.workspace_id && req.ownerClerkId) {
+    try {
+      await dal.seedStarterTemplateBindings(result.workspace_id, req.ownerClerkId);
+    } catch (_) {
+      warnings.push('personalization seed: could not bind the platform template catalog (non-fatal)');
     }
   }
 

@@ -122,6 +122,7 @@ import { getWorkspaceActivitySummaryRow } from './workspace-activity-store';
 import { recordPmfResponseRow, getPmfSummaryRow } from './pmf-store';
 import { appendChatExchangeRow, listChatHistoryRow } from './chat-store';
 import { getEngagementRollupRow } from './engagement-store';
+import { seedStarterTemplateBindingsRow } from './template-policy-store';
 import {
   createSyntheticDomainRow,
   listSyntheticDomainsRow,
@@ -1061,6 +1062,10 @@ export class WorkersDalAdapter implements DalAdapter {
 
   async createSyntheticDomain(input: SyntheticDomainCreateInput, actorUserId: UserId): Promise<SyntheticDomain> {
     return createSyntheticDomainRow(this.sql, input, actorUserId);
+  }
+
+  async seedStarterTemplateBindings(workspaceId: string, ownerUserId: string): Promise<{ seeded: number; skipped: boolean }> {
+    return seedStarterTemplateBindingsRow(this.sql, workspaceId as WorkspaceId, ownerUserId as UserId);
   }
 
   async listSyntheticDomains(

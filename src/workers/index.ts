@@ -125,6 +125,7 @@ export interface AppEnv extends CorsEnv, AuthEnv, AdminEnv, NotifierEnv, MbpProj
   REVIEW_SCHEDULER_ENABLED?: string;       // A10 (260713) · review-cadence cron (crons/review-schedule.ts, chained into 05:00 slot) — default OFF (only 'true' enables)
   POLICY_ENGINE_ENABLED?: string;          // A7 (260713) · policy-engine SHADOW at goal writes (lib/policy-shadow.ts) — default OFF (only 'true' enables)
   DOMAIN_SCAFFOLD_ENABLED?: string;        // ABS-P3 (260713) · scaffold archetype honest-empty domain skeletons at provisioning (services/domain-archetypes.ts) — default OFF (only 'true' enables)
+  PERSONALIZATION_SEED_ENABLED?: string;   // Y-wave (ADR-XB-012) · bind the workspace to the published platform template catalog at provisioning — default OFF (only 'true' enables)
   ROLE_SKILL_RESOLVER_ENABLED?: string;    // OAR-W2 (260713) · role/skill resolver SHADOW at authorizeSpineWrite (lib/role-skill-shadow.ts, mig 070) — default OFF (only 'true' enables)
   RESOLUTION_RECEIPT_SIGNING_SECRET?: string; // OAR-W2 · HS256 secret for resolution/denial receipts (wrangler secret put) — unset ⇒ receipts written UNSIGNED (shadow never 503s)
   RESOLUTION_RECEIPT_SIGNING_KEY_ID?: string; // Track A (260713) · rotation label persisted on signed receipts — unset ⇒ 'default'

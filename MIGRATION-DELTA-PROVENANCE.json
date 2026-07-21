@@ -1813,6 +1813,47 @@
           "reason": "go-live: flip CHARTER_SEED + CHARTER_GROUNDING + add INVITE_MEMBERSHIP"
         }
       ]
+    },
+    {
+      "delta_id": "ywave-personalization-seed-20260721",
+      "generated_at": "2026-07-21T12:26:00Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "72afbafd9afd285a74c51ab170b5df05a6481469",
+      "target_base_commit": "72afbafd9afd285a74c51ab170b5df05a6481469",
+      "authority": "shadow_only_no_production_cutover",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/dal/template-policy-store.ts",
+          "target_blob": "53dc68bdab36ce51c481298ee9cd6511fcad4b2e",
+          "reason": "Y-wave SEED (ADR-XB-012): add seedStarterTemplateBindingsRow (owner-connected, safe-tier-only, idempotent)"
+        },
+        {
+          "path": "src/workers/dal/WorkersDalAdapter.ts",
+          "target_blob": "2fb40d1dcdd2e223f3ff14e2ca0be0b27798ee2f",
+          "reason": "Y-wave SEED: expose seedStarterTemplateBindings on the adapter"
+        },
+        {
+          "path": "src/workers/dal/DalAdapter.ts",
+          "target_blob": "599d26c2f98c6c987126a9cf9ccea90e2530dee6",
+          "reason": "Y-wave SEED: declare seedStarterTemplateBindings on the DalAdapter interface"
+        },
+        {
+          "path": "src/workers/services/onboarding-provisioner.ts",
+          "target_blob": "cae037f6373b4684b74babeda25396f220443516",
+          "reason": "Y-wave SEED: flag-gated (PERSONALIZATION_SEED_ENABLED) post-provision bind, best-effort"
+        },
+        {
+          "path": "src/workers/index.ts",
+          "target_blob": "da8cc7e096afd1abd93e0cac531de4e28d2a715c",
+          "reason": "Y-wave SEED: declare PERSONALIZATION_SEED_ENABLED on AppEnv"
+        },
+        {
+          "path": "src/workers/__tests__/onboarding-provisioner.test.ts",
+          "target_blob": "7b7bceaa8d00f5cf3c724484790389af5e88c877",
+          "reason": "Y-wave SEED: born-OFF / flag-ON / non-fatal-failure tests"
+        }
+      ]
     }
   ]
 }
