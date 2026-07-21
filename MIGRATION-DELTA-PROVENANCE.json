@@ -1885,6 +1885,32 @@
           "reason": "Y-wave APPLY (ADR-XB-012): inject the effective personalization profile into the customer-chat LLM prompt behind PERSONALIZATION_APPLY_ENABLED (born-OFF)"
         }
       ]
+    },
+    {
+      "delta_id": "ywave-materialize-20260721",
+      "generated_at": "2026-07-21T02:54:45.362Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "e63cb3d457a2db064effe7a2364d3a54b1874d5c",
+      "target_base_commit": "e63cb3d457a2db064effe7a2364d3a54b1874d5c",
+      "authority": "shadow_only_no_production_cutover",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/index.ts",
+          "target_blob": "875e4f7e6b6d933f8b923deeec54f109b1131fb6",
+          "reason": "Y-wave MATERIALIZE (ADR-XB-012): personalization-materialize cron chained into the daily composite + gateway wiring (born-OFF)"
+        },
+        {
+          "path": "src/workers/crons/index.ts",
+          "target_blob": "b75fa9f2bce4a15f9e8d365a97dfc635cc20a7b1",
+          "reason": "Y-wave MATERIALIZE (ADR-XB-012): personalization-materialize cron chained into the daily composite + gateway wiring (born-OFF)"
+        },
+        {
+          "path": "src/workers/crons/types.ts",
+          "target_blob": "47c7c548fd809b678f4e9902d2bfb9567494bd29",
+          "reason": "Y-wave MATERIALIZE (ADR-XB-012): personalization-materialize cron chained into the daily composite + gateway wiring (born-OFF)"
+        }
+      ]
     }
   ]
 }

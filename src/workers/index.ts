@@ -36,6 +36,7 @@ import { WorkersDalAdapter } from './dal/WorkersDalAdapter';
 import type { DalAdapter } from './dal/DalAdapter';
 import { listGoalsWithReviewDueRow, updateGoalReviewDueRow } from './dal/propagation-store';
 import { listWorkspaceIdsForCensusRow, countIntakeResolutionsRow, recordCustomerCensusObservationRow } from './dal/customer-census-store';
+import { listActiveLearningSignalsForMaterializationRow, upsertUserPersonalizationProfileRow } from './dal/personalization-materialize-store';
 import { healthRoute } from './routes/health';
 import { sessionRoute } from './routes/session';
 import { eventsRoute } from './routes/events';
@@ -127,6 +128,7 @@ export interface AppEnv extends CorsEnv, AuthEnv, AdminEnv, NotifierEnv, MbpProj
   DOMAIN_SCAFFOLD_ENABLED?: string;        // ABS-P3 (260713) · scaffold archetype honest-empty domain skeletons at provisioning (services/domain-archetypes.ts) — default OFF (only 'true' enables)
   PERSONALIZATION_SEED_ENABLED?: string;   // Y-wave (ADR-XB-012) · bind the workspace to the published platform template catalog at provisioning — default OFF (only 'true' enables)
   PERSONALIZATION_APPLY_ENABLED?: string;  // Y-wave (ADR-XB-012) · inject the effective personalization profile into the customer-chat LLM prompt — default OFF (only 'true' enables)
+  PERSONALIZATION_MATERIALIZE_ENABLED?: string; // Y-wave (ADR-XB-012) · the signals→profile materializer cron (chained daily 05:00) — default OFF (only 'true' enables)
   ROLE_SKILL_RESOLVER_ENABLED?: string;    // OAR-W2 (260713) · role/skill resolver SHADOW at authorizeSpineWrite (lib/role-skill-shadow.ts, mig 070) — default OFF (only 'true' enables)
   RESOLUTION_RECEIPT_SIGNING_SECRET?: string; // OAR-W2 · HS256 secret for resolution/denial receipts (wrangler secret put) — unset ⇒ receipts written UNSIGNED (shadow never 503s)
   RESOLUTION_RECEIPT_SIGNING_KEY_ID?: string; // Track A (260713) · rotation label persisted on signed receipts — unset ⇒ 'default'
@@ -384,6 +386,13 @@ const scheduledHandler = async (
         listWorkspaceIds: (limit: number) => listWorkspaceIdsForCensusRow(sql, limit),
         countIntakeResolutions: (workspaceId: string) => countIntakeResolutionsRow(sql, workspaceId),
         recordObservation: (row) => recordCustomerCensusObservationRow(sql, row),
+      },
+      // Y-wave MATERIALIZE (ADR-XB-012) · personalization materializer gateway, bound from store functions
+      // here (owner-connected `sql`, not the FROZEN WorkersDalAdapter). Only personalizationMaterializeCron
+      // (chained into 05:00) reads it, and only when PERSONALIZATION_MATERIALIZE_ENABLED is on.
+      personalization: {
+        listActiveSignals: (limit: number) => listActiveLearningSignalsForMaterializationRow(sql, limit),
+        upsertProfile: (row) => upsertUserPersonalizationProfileRow(sql, row),
       },
       projectionOutbox: {
         claim: (limit, nowIso, staleBeforeIso) => claimProjectionOutboxRows(sql, limit, nowIso, staleBeforeIso),
