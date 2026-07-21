@@ -1797,6 +1797,22 @@
           "reason": "AI: add reconcile:provenance script entry"
         }
       ]
+    },
+    {
+      "delta_id": "golive-flags-20260721",
+      "generated_at": "2026-07-21T01:20:38.067Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "b1ef23e1bfdf72c5d07b6f6b205a31f790cb1621",
+      "target_base_commit": "b1ef23e1bfdf72c5d07b6f6b205a31f790cb1621",
+      "authority": "shadow_only_no_production_cutover",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "wrangler.toml",
+          "target_blob": "64d0e8475e97c42d3f654c19599e96abb5e0030f",
+          "reason": "go-live: flip CHARTER_SEED + CHARTER_GROUNDING + add INVITE_MEMBERSHIP"
+        }
+      ]
     }
   ]
 }
