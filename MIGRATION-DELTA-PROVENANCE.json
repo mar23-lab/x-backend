@@ -1755,6 +1755,32 @@
           "reason": "AI-EXEC-1: export DATA_GRAPH_FACTS_CAP (single-source the 4 facts-assembly LIMITs) so the customer-census cron can DETECT read-cap truncation instead of silently under-counting"
         }
       ]
+    },
+    {
+      "delta_id": "ai-exec-2-invite-membership-seam-20260721",
+      "generated_at": "2026-07-21T10:05:00Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "a773654f02728b02952ca90f01dd9f2f2f507e1d",
+      "target_base_commit": "a773654f02728b02952ca90f01dd9f2f2f507e1d",
+      "authority": "shadow_only_no_production_cutover",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/dal/DalAdapter.ts",
+          "target_blob": "e6078a181eb4ea0b5b1033667f8a3c297a255459",
+          "reason": "AI-EXEC-2: materializeInvitedMembership interface method"
+        },
+        {
+          "path": "src/workers/dal/WorkersDalAdapter.ts",
+          "target_blob": "75b3a6abbf0610deb135a57892304b62008902af",
+          "reason": "AI-EXEC-2: materializeInvitedMembership delegates to invite-membership-store (owner connection)"
+        },
+        {
+          "path": "src/workers/routes/session.ts",
+          "target_blob": "7cf22071cf955c2fd9a975ec7a864414839e9ffb",
+          "reason": "AI-EXEC-2: invite-accept membership-materialization orchestration (flag-gated born-OFF, after auto-provision)"
+        }
+      ]
     }
   ]
 }

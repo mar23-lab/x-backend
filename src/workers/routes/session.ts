@@ -48,6 +48,7 @@ export interface SessionEnv extends AuthEnv {
   MBP_OPERATOR_WORKSPACE_NAME?: string;  // optional display name; falls back to 'Xlooop Internal'
   MBP_OPERATOR_WORKSPACE_SLUG?: string;  // optional URL slug; falls back to 'xlooop-internal'
   CUSTOMER_AUTO_PROVISION_ON_SESSION?: string; // 'true' enables idempotent Clerk-org first-session provisioning fallback
+  INVITE_MEMBERSHIP_MATERIALIZATION_ENABLED?: string; // AI-EXEC-2 · 'true' materializes an invited teammate's membership at session time (born-OFF)
   CUSTOMER_AUTO_PROVISION_FROM_CLERK_ORG?: string; // 'true' allows operator-created Clerk org membership to create the access request + workspace on first session
   CUSTOMER_AUTO_PROVISION_APPROVER_USER_ID?: string; // audited operator/system user id for Clerk-org auto-provision
   CUSTOMER_INAPP_READINESS_GATE?: string; // M.7 · 'true' defers the Clerk-org first-session auto-provision to an in-app readiness journey: the session returns state:'needs_readiness' instead of provisioning a generic (readiness=null) workspace. POST /api/v1/readiness/submit then captures the Q&A + provisions a roadmap SCALED to the answers. Default OFF → existing flow unchanged.
@@ -288,6 +289,35 @@ sessionRoute.get('/session', async (ctx) => {
     // R43.18 · attach bootstrap signal so the frontend can observe what happened
     if (bootstrapped) {
       (entitlement as unknown as { operator_bootstrapped?: typeof bootstrapped }).operator_bootstrapped = bootstrapped;
+    }
+
+    // AI-EXEC-2 · invite-accept → membership seam (flag-gated born-OFF). An invited teammate (a Clerk org
+    // member/admin) who accepts + signs in otherwise DEAD-ENDS in authenticated_no_access — the session
+    // flow only ever writes `owner` rows. When the workspace already EXISTS and the invitee has no member
+    // row, materialize their membership at the Clerk-mapped role. The org_id/org_role claims are Clerk's
+    // SIGNED proof of an accepted invitation, so no webhook is needed. Owner/client are never materialized
+    // this way (the store refuses any role but viewer/operator). Runs AFTER auto-provision (which handles
+    // the create-a-new-workspace/owner case); this handles the join-an-existing-workspace/member case.
+    const canTryInviteMaterialization =
+      (entitlement.state === 'authenticated_no_access' || entitlement.state === 'pending_access') &&
+      !!orgId && !!orgRole;
+    if (canTryInviteMaterialization && envFlagTrue(ctx.env.INVITE_MEMBERSHIP_MATERIALIZATION_ENABLED)) {
+      try {
+        const outcome = await dal.materializeInvitedMembership({
+          workspaceId: orgId, userId, role: clerkRoleToWorkspaceRole(orgRole),
+        });
+        if (outcome.materialized) {
+          entitlement = await dal.getSessionEntitlement(userId, orgId, email);
+          (entitlement as unknown as { invite_materialized_role?: string }).invite_materialized_role = outcome.role ?? undefined;
+        } else {
+          (entitlement as unknown as { invite_materialization_skipped_reason?: string }).invite_materialization_skipped_reason = outcome.reason;
+        }
+      } catch (inviteErr) {
+        if (typeof console !== 'undefined' && console.warn) {
+          const m = inviteErr instanceof Error ? inviteErr.message : String(inviteErr);
+          console.warn('[session] invite-membership materialization skipped:', m);
+        }
+      }
     }
 
     // If approved_workspace, treat the DB membership role as the authorization source of truth.
