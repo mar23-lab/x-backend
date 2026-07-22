@@ -1942,6 +1942,153 @@
           "reason": "cron cadence dial-down: 45* -> 0 1 daily in the reclassify test"
         }
       ]
+    },
+    {
+      "delta_id": "codex-backend-ci-main-merge-20260722",
+      "generated_at": "2026-07-22T00:39:19.246Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "7dba92cdb9d87dfb1aaf2e103f6c34984d9faa34",
+      "target_base_commit": "7dba92cdb9d87dfb1aaf2e103f6c34984d9faa34",
+      "authority": "shadow_only_no_production_cutover",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "package.json",
+          "target_blob": "bac1da63bae515413ed2d7e4be0cc7b3502d7124",
+          "reason": "merge current main deploy provenance gate into PR 52"
+        },
+        {
+          "path": "scripts/ci-local.mjs",
+          "target_blob": "89f14c6a1b2b9c4c91edc80f88c23aa99a3c8a5c",
+          "reason": "merge current main deploy provenance gate into PR 52"
+        }
+      ]
+    },
+    {
+      "delta_id": "pilot-shadow-evidence-producer-hardening-20260722",
+      "generated_at": "2026-07-22T03:21:21.610Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "a4774ea6ac3182394f0e028b23bbff54b82d9c28",
+      "target_base_commit": "a4774ea6ac3182394f0e028b23bbff54b82d9c28",
+      "authority": "shadow_only_no_production_cutover",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "package.json",
+          "target_blob": "223816a18515f7f7c8aff829c5c6c489183348d4",
+          "reason": "Pilot-shadow evidence hardening: projection freshness remediation, signed-chain live-capture producer and input hash, soak sampler provenance"
+        },
+        {
+          "path": "scripts/verify-projection-substrate-evidence.mjs",
+          "target_blob": "a7d691050d1aa31586ae3995c8c0d952520a4b37",
+          "reason": "Pilot-shadow evidence hardening: projection freshness remediation, signed-chain live-capture producer and input hash, soak sampler provenance"
+        },
+        {
+          "path": "scripts/verify-pilot-shadow-signed-chain-evidence.mjs",
+          "target_blob": "53406c1eeaa739a8da141db89f1d4f726f3be10f",
+          "reason": "Pilot-shadow evidence hardening: projection freshness remediation, signed-chain live-capture producer and input hash, soak sampler provenance"
+        },
+        {
+          "path": "scripts/verify-pilot-shadow-soak-rollback-evidence.mjs",
+          "target_blob": "29fdd7a238dbdd884bdd097747294cff0dfe0492",
+          "reason": "Pilot-shadow evidence hardening: projection freshness remediation, signed-chain live-capture producer and input hash, soak sampler provenance"
+        },
+        {
+          "path": "scripts/pilot-shadow-soak-sampler.mjs",
+          "target_blob": "3e4e557db05684916ee83b21712b848551dfb108",
+          "reason": "Pilot-shadow evidence hardening: projection freshness remediation, signed-chain live-capture producer and input hash, soak sampler provenance"
+        }
+      ]
+    },
+    {
+      "delta_id": "pilot-shadow-graph-evidence-producer-20260722",
+      "generated_at": "2026-07-22T03:29:33.589Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "8296fe108b493e9fa124498b4c86e52c0b2b95a7",
+      "target_base_commit": "8296fe108b493e9fa124498b4c86e52c0b2b95a7",
+      "authority": "shadow_only_no_production_cutover",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "package.json",
+          "target_blob": "37a28f9b99bc0fd139f4dd50c189fddfc38355c7",
+          "reason": "Pilot-shadow graph evidence producer and readiness wiring"
+        }
+      ]
+    },
+    {
+      "delta_id": "pilot-shadow-live-rls-evidence-producer-20260722",
+      "generated_at": "2026-07-22T03:43:46.755Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "a530ad233a9287b651da8bfde1f191f69746a483",
+      "target_base_commit": "a530ad233a9287b651da8bfde1f191f69746a483",
+      "authority": "shadow_only_no_production_cutover",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "package.json",
+          "target_blob": "a675cba4695ba04ae8256674d21ada674810841a",
+          "reason": "Pilot-shadow live RLS evidence producer and readiness wiring"
+        }
+      ]
+    },
+    {
+      "delta_id": "pilot-shadow-soak-sampler-env-alias-20260722",
+      "generated_at": "2026-07-22T03:49:13.538Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "922e969293b3bf382d25c2ad3561ad4c41e84bef",
+      "target_base_commit": "922e969293b3bf382d25c2ad3561ad4c41e84bef",
+      "authority": "shadow_only_no_production_cutover",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "package.json",
+          "target_blob": "926b36fbe8a94174e5912fb548e2e2640424969b",
+          "reason": "Align soak sampler evidence env with completion readiness gate"
+        }
+      ]
+    },
+    {
+      "delta_id": "pilot-shadow-soak-sampler-env-alias-script-20260722",
+      "generated_at": "2026-07-22T03:49:36.716Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "922e969293b3bf382d25c2ad3561ad4c41e84bef",
+      "target_base_commit": "922e969293b3bf382d25c2ad3561ad4c41e84bef",
+      "authority": "shadow_only_no_production_cutover",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "scripts/pilot-shadow-soak-sampler.mjs",
+          "target_blob": "95b7b918a5bf5c1c757a63a4c5cdf01baee27979",
+          "reason": "Accept readiness evidence env alias in soak sampler and add self-test"
+        }
+      ]
+    },
+    {
+      "delta_id": "github-actions-disabled-local-gate-20260722",
+      "generated_at": "2026-07-22T04:11:51.165Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "7ecfc44e2344e520b7a1455bd574231482df4b58",
+      "target_base_commit": "7ecfc44e2344e520b7a1455bd574231482df4b58",
+      "authority": "shadow_only_no_production_cutover",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "package.json",
+          "target_blob": "842db9763305fb679d47ad89b9e05998754b16ba",
+          "reason": "Move backend GitHub Actions workflow out of active path and enforce disabled-actions local gate"
+        },
+        {
+          "path": "scripts/ci-local.mjs",
+          "target_blob": "3e8d9ea7b4d392f16a2bb1d6f019289477b8e19c",
+          "reason": "Move backend GitHub Actions workflow out of active path and enforce disabled-actions local gate"
+        },
+        {
+          "path": "scripts/verify-github-actions-disabled.mjs",
+          "target_blob": "a7e1b3eddcec52c69a00a638df576bc2c6a565c9",
+          "reason": "Move backend GitHub Actions workflow out of active path and enforce disabled-actions local gate"
+        }
+      ]
     }
   ]
 }

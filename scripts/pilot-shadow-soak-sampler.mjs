@@ -7,7 +7,8 @@
 // window closes. It never fabricates: each sample is a real HTTP readback of pilot-shadow /health
 // plus (optionally) a real projection-queue query, and the file is append-only per sample.
 //
-//   XLOOOP_PILOT_SHADOW_SOAK_EVIDENCE_FILE=<path> node scripts/pilot-shadow-soak-sampler.mjs
+//   XLOOOP_PILOT_SHADOW_SOAK_ROLLBACK_EVIDENCE_FILE=<path> node scripts/pilot-shadow-soak-sampler.mjs
+//   # legacy alias also accepted: XLOOOP_PILOT_SHADOW_SOAK_EVIDENCE_FILE=<path>
 //   ... --finalize            # stamp soak.ended_at/duration_hours + queue metrics and stop sampling
 //   ... --rollback-json=<f>   # merge a recorded rollback rehearsal block (see --help)
 //
@@ -18,23 +19,37 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 const API_BASE = process.env.XLOOOP_PILOT_SHADOW_API_BASE || 'https://xlooop-api-pilot-shadow.xlooop23.workers.dev';
-const EVIDENCE_FILE = process.env.XLOOOP_PILOT_SHADOW_SOAK_EVIDENCE_FILE;
+const EVIDENCE_FILE = chooseEvidenceFile(process.env);
 const OPERATOR = process.env.XLOOOP_SOAK_OPERATOR || 'marat';
+const RUN_ID = process.env.XLOOOP_SOAK_RUN_ID || `soak-${new Date().toISOString().replace(/[^0-9TZ]/g, '')}`;
 const FINALIZE = process.argv.includes('--finalize');
+const SELF_TEST = process.argv.includes('--self-test');
 const rollbackArg = process.argv.find((a) => a.startsWith('--rollback-json='));
 
 if (process.argv.includes('--help')) {
-  console.log('Usage: XLOOOP_PILOT_SHADOW_SOAK_EVIDENCE_FILE=<path> node scripts/pilot-shadow-soak-sampler.mjs [--finalize] [--rollback-json=<file>]');
+  console.log('Usage: XLOOOP_PILOT_SHADOW_SOAK_ROLLBACK_EVIDENCE_FILE=<path> node scripts/pilot-shadow-soak-sampler.mjs [--finalize] [--rollback-json=<file>]');
+  process.exit(0);
+}
+if (SELF_TEST) {
+  runSelfTest();
   process.exit(0);
 }
 if (!EVIDENCE_FILE) {
-  console.error('soak-sampler · OPERATOR-INPUT-REQUIRED — set XLOOOP_PILOT_SHADOW_SOAK_EVIDENCE_FILE to the accumulating evidence path.');
+  console.error('soak-sampler · OPERATOR-INPUT-REQUIRED — set XLOOOP_PILOT_SHADOW_SOAK_ROLLBACK_EVIDENCE_FILE to the accumulating evidence path.');
   process.exit(2);
 }
 // Fail closed on a production target: this sampler exists only to evidence pilot-shadow.
-if (/api\.xlooop\.com/.test(API_BASE) || !/workers\.dev|pilot-shadow/.test(API_BASE)) {
+if (!isPilotShadowApiBase(API_BASE)) {
   console.error(`soak-sampler · REFUSED — ${API_BASE} is not a pilot-shadow API base.`);
   process.exit(2);
+}
+
+function chooseEvidenceFile(env) {
+  return env.XLOOOP_PILOT_SHADOW_SOAK_ROLLBACK_EVIDENCE_FILE || env.XLOOOP_PILOT_SHADOW_SOAK_EVIDENCE_FILE;
+}
+
+function isPilotShadowApiBase(apiBase) {
+  return !/api\.xlooop\.com/.test(apiBase) && /workers\.dev|pilot-shadow/.test(apiBase);
 }
 
 function readEvidence() {
@@ -50,6 +65,19 @@ function readEvidence() {
       schema_head: null,
       contract_hash: null,
       generated_at: new Date().toISOString(),
+      producer: {
+        name: 'x-backend.pilot-shadow-soak-sampler',
+        version: 'v1',
+        kind: 'accumulated_live_capture',
+        run_id: RUN_ID,
+        started_at: new Date().toISOString(),
+        last_sample_at: null,
+        finalized_at: null,
+        nonproduction_origin_verified: true,
+        pilot_shadow_api_verified: true,
+        manual: false,
+        synthetic: false,
+      },
       soak: { started_at: null, ended_at: null, duration_hours: null, production_untouched: true, operator: OPERATOR },
       health_samples: [],
       // metrics/queue stay null until --finalize supplies REAL measured values; the strict verifier
@@ -76,6 +104,21 @@ async function readHealth() {
 }
 
 const evidence = readEvidence();
+if (!evidence.producer || typeof evidence.producer !== 'object') {
+  evidence.producer = {
+    name: 'x-backend.pilot-shadow-soak-sampler',
+    version: 'v1',
+    kind: 'accumulated_live_capture',
+    run_id: RUN_ID,
+    started_at: new Date().toISOString(),
+    last_sample_at: null,
+    finalized_at: null,
+    nonproduction_origin_verified: true,
+    pilot_shadow_api_verified: true,
+    manual: false,
+    synthetic: false,
+  };
+}
 const { status, body } = await readHealth();
 
 // Pin identity on the first sample; a drifting build/schema mid-soak is a real finding, so record
@@ -104,12 +147,14 @@ if (rollbackArg) {
 }
 
 evidence.generated_at = new Date().toISOString();
+evidence.producer.last_sample_at = evidence.generated_at;
 
 if (FINALIZE) {
   const startedMs = Date.parse(evidence.soak.started_at);
   const endedAt = new Date().toISOString();
   evidence.soak.ended_at = endedAt;
   evidence.soak.duration_hours = Number(((Date.parse(endedAt) - startedMs) / 3.6e6).toFixed(4));
+  evidence.producer.finalized_at = endedAt;
   // metrics/queue come from the operator's read-only DB + queue query at finalize time
   // (XLOOOP_SOAK_METRICS_JSON / XLOOOP_SOAK_QUEUE_JSON). The sampler will NOT invent them:
   // without those files the strict verifier fails on the missing fields, which is correct.
@@ -128,4 +173,21 @@ console.log(`soak-sampler · sample ${n} recorded · status=${last.status} build
 if (last.status !== 200 || last.environment !== 'pilot-shadow' || last.authority !== 'shadow') {
   console.error('soak-sampler · sample is NOT clean — the strict verifier will fail this window.');
   process.exit(1);
+}
+
+function runSelfTest() {
+  const canonical = chooseEvidenceFile({
+    XLOOOP_PILOT_SHADOW_SOAK_ROLLBACK_EVIDENCE_FILE: '/tmp/canonical.json',
+    XLOOOP_PILOT_SHADOW_SOAK_EVIDENCE_FILE: '/tmp/legacy.json',
+  }) === '/tmp/canonical.json';
+  const legacy = chooseEvidenceFile({
+    XLOOOP_PILOT_SHADOW_SOAK_EVIDENCE_FILE: '/tmp/legacy.json',
+  }) === '/tmp/legacy.json';
+  const prodRejected = !isPilotShadowApiBase('https://api.xlooop.com');
+  const pilotAccepted = isPilotShadowApiBase('https://xlooop-api-pilot-shadow.xlooop23.workers.dev');
+  if (!canonical || !legacy || !prodRejected || !pilotAccepted) {
+    console.error(JSON.stringify({ canonical, legacy, prodRejected, pilotAccepted }, null, 2));
+    throw new Error('self-test failed');
+  }
+  console.log('PASS pilot-shadow soak sampler self-test');
 }

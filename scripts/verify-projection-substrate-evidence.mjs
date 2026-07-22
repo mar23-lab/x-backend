@@ -5,7 +5,7 @@
 // claimed "fed/live/done" without EVIDENCE that its source tables contain data. Rectifies defect S1:
 // the data-graph was shipped + governed + deployed while every lineage source table was empty in prod
 // ("wired but unfed"). Offline checks (the live census is recorded in the manifest, refreshed by a
-// read-only prod query):
+// read-only pilot-shadow/test/staging query):
 //   (1) the substrate manifest exists + declares the projection's source tables.
 //   (2) MANIFEST ⊇ CODE: every table the persistence module READS (FROM <t>) is declared in the manifest
 //       (a new uncensused source read is a defect — you cannot census what you did not declare).
@@ -29,6 +29,24 @@ const P = (...a) => path.join(repoRoot, ...a);
 const read = (rel) => { try { return fs.readFileSync(P(rel), 'utf8'); } catch { return null; } };
 
 const MANIFEST = 'docs/graph/GRAPH_SUBSTRATE_MANIFEST.yml';
+const STRICT_PILOT_MAX_CENSUS_AGE_DAYS = 2;
+const CENSUS_REFRESH_SQL = `
+SELECT
+  (SELECT count(*) FROM graph_nodes) AS persisted_graph_nodes,
+  (SELECT count(*) FROM graph_edges) AS persisted_graph_edges,
+  (SELECT count(*) FROM operation_events) AS operation_events,
+  (SELECT count(*) FROM operations_unified) AS operations_unified,
+  (SELECT count(*) FROM task_packets) AS task_packets,
+  (SELECT count(*) FROM projects) AS projects,
+  (SELECT count(*) FROM workspaces) AS workspaces,
+  (SELECT count(*) FROM synthetic_domains) AS synthetic_domains,
+  (SELECT count(*) FROM synthetic_domain_membership) AS synthetic_domain_membership,
+  (SELECT count(*) FROM intents) AS intents,
+  (SELECT count(*) FROM project_source_bindings) AS project_source_bindings,
+  (SELECT count(*) FROM audit_logs WHERE causation_id IS NOT NULL) AS audit_logs_with_causation_id,
+  (SELECT count(*) FROM graph_edges WHERE from_workspace_id <> to_workspace_id) AS cross_tenant_edge_refs,
+  (SELECT max(created_at) FROM graph_nodes) AS latest_graph_node_at;
+`.trim();
 
 // Minimal YAML probes (no dep): we only need declared tables, the census row-count keys, status,
 // and persisted_graph_nodes. The manifest is hand-maintained + small, so line-scan is sufficient.
@@ -64,7 +82,9 @@ function censusAgeDays(dated, now = new Date()) {
 function pilotViolations(m, now = new Date()) {
   const v = [];
   const age = censusAgeDays(m.dated, now);
-  if (age > 7) v.push(`census age ${age.toFixed(2)}d exceeds 7d`);
+  if (age > STRICT_PILOT_MAX_CENSUS_AGE_DAYS) {
+    v.push(`census age ${age.toFixed(2)}d exceeds ${STRICT_PILOT_MAX_CENSUS_AGE_DAYS}d`);
+  }
   if (m.intentCount <= 0) v.push('intent_count must be > 0');
   if (m.causationCount <= 0) v.push('caused_by source count must be > 0');
   if (m.packetCount <= 0) v.push('task_packet_count must be > 0');
@@ -90,8 +110,9 @@ if (process.argv.includes('--self-test')) {
   const passOk = honestyViolations(passManifest).length === 0;
   const failBites = honestyViolations(failManifest).length > 0;
   const pilotBites = pilotViolations({ dated: '2026-01-01T00:00:00Z', intentCount: 0, causationCount: 0, packetCount: 0, persistedNodes: 1, persistedEdges: 1, unobservedKeys: [] }, new Date('2026-07-15T00:00:00Z')).length >= 3;
-  if (passOk && failBites && pilotBites) { console.log('☑ self-test: honesty and strict-pilot gates BITE'); process.exit(0); }
-  console.error(`✗ self-test: gate did not bite (passOk=${passOk}, failBites=${failBites})`); process.exit(1);
+  const freshnessBites = pilotViolations({ dated: '2026-07-14T23:00:00Z', intentCount: 1, causationCount: 1, packetCount: 1, persistedNodes: 1, persistedEdges: 1, unobservedKeys: [] }, new Date('2026-07-17T00:00:00Z')).some((v) => v.includes('census age'));
+  if (passOk && failBites && pilotBites && freshnessBites) { console.log('☑ self-test: honesty and strict-pilot gates BITE'); process.exit(0); }
+  console.error(`✗ self-test: gate did not bite (passOk=${passOk}, failBites=${failBites}, pilotBites=${pilotBites}, freshnessBites=${freshnessBites})`); process.exit(1);
 }
 
 const fails = [];
@@ -142,8 +163,10 @@ if (fails.length) {
   console.error('─'.repeat(70));
   console.error(`✗ substrate-evidence BROKEN · ${fails.length} violation(s):`);
   console.error(fails.join('\n'));
-  console.error('\n  Refresh the census (read-only prod):');
-  console.error("    SELECT (SELECT count(*) FROM graph_nodes) AS persisted_graph_nodes, (SELECT count(*) FROM operation_events) AS operation_events, ...;");
+  console.error('\n  Refresh the census on the approved pilot-shadow/test/staging database branch only.');
+  console.error('  Do not use production data to satisfy the pilot-shadow freshness gate.');
+  console.error('  Suggested read-only census query:');
+  for (const line of CENSUS_REFRESH_SQL.split('\n')) console.error(`    ${line}`);
   process.exit(1);
 }
 console.log('─'.repeat(70));
