@@ -42,6 +42,8 @@
     "verify:rls-shadow-soak": "node scripts/rls-shadow-soak.mjs --strict",
     "verify:trust-proofs": "node scripts/run-trust-proofs.mjs",
     "verify:trust-proofs:live": "node scripts/run-trust-proofs.mjs --live",
+    "produce:pilot-shadow-signed-chain-evidence": "node scripts/produce-pilot-shadow-signed-chain-evidence.mjs",
+    "produce:pilot-shadow-signed-chain-evidence:self-test": "node scripts/produce-pilot-shadow-signed-chain-evidence.mjs --self-test",
     "verify:pilot-shadow-signed-chain-evidence": "node scripts/verify-pilot-shadow-signed-chain-evidence.mjs --strict",
     "verify:pilot-shadow-signed-chain-evidence:self-test": "node scripts/verify-pilot-shadow-signed-chain-evidence.mjs --self-test",
     "soak:sample": "node scripts/pilot-shadow-soak-sampler.mjs",

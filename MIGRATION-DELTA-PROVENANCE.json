@@ -1963,6 +1963,42 @@
           "reason": "merge current main deploy provenance gate into PR 52"
         }
       ]
+    },
+    {
+      "delta_id": "pilot-shadow-evidence-producer-hardening-20260722",
+      "generated_at": "2026-07-22T03:21:21.610Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "a4774ea6ac3182394f0e028b23bbff54b82d9c28",
+      "target_base_commit": "a4774ea6ac3182394f0e028b23bbff54b82d9c28",
+      "authority": "shadow_only_no_production_cutover",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "package.json",
+          "target_blob": "223816a18515f7f7c8aff829c5c6c489183348d4",
+          "reason": "Pilot-shadow evidence hardening: projection freshness remediation, signed-chain live-capture producer and input hash, soak sampler provenance"
+        },
+        {
+          "path": "scripts/verify-projection-substrate-evidence.mjs",
+          "target_blob": "a7d691050d1aa31586ae3995c8c0d952520a4b37",
+          "reason": "Pilot-shadow evidence hardening: projection freshness remediation, signed-chain live-capture producer and input hash, soak sampler provenance"
+        },
+        {
+          "path": "scripts/verify-pilot-shadow-signed-chain-evidence.mjs",
+          "target_blob": "53406c1eeaa739a8da141db89f1d4f726f3be10f",
+          "reason": "Pilot-shadow evidence hardening: projection freshness remediation, signed-chain live-capture producer and input hash, soak sampler provenance"
+        },
+        {
+          "path": "scripts/verify-pilot-shadow-soak-rollback-evidence.mjs",
+          "target_blob": "29fdd7a238dbdd884bdd097747294cff0dfe0492",
+          "reason": "Pilot-shadow evidence hardening: projection freshness remediation, signed-chain live-capture producer and input hash, soak sampler provenance"
+        },
+        {
+          "path": "scripts/pilot-shadow-soak-sampler.mjs",
+          "target_blob": "3e4e557db05684916ee83b21712b848551dfb108",
+          "reason": "Pilot-shadow evidence hardening: projection freshness remediation, signed-chain live-capture producer and input hash, soak sampler provenance"
+        }
+      ]
     }
   ]
 }
