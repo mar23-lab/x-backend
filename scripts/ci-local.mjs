@@ -7,6 +7,7 @@ const gates = [
   ['boundary', 'npm', ['run', 'verify:boundary']],
   ['runtime independence', 'npm', ['run', 'verify:no-mbp-runtime-dependency']],
   ['API contract', 'npm', ['run', 'verify:contract']],
+  ['deploy provenance wiring', 'npm', ['run', 'verify:deploy-provenance']],
   ['packet completion contract', 'npm', ['run', 'verify:packet-completion-contract']],
   ['typed work relationships', 'npm', ['run', 'verify:typed-work-relationships']],
   ['action intent shadow', 'npm', ['run', 'verify:action-intent-shadow']],
