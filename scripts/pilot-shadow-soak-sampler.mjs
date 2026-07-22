@@ -20,6 +20,7 @@ import path from 'node:path';
 const API_BASE = process.env.XLOOOP_PILOT_SHADOW_API_BASE || 'https://xlooop-api-pilot-shadow.xlooop23.workers.dev';
 const EVIDENCE_FILE = process.env.XLOOOP_PILOT_SHADOW_SOAK_EVIDENCE_FILE;
 const OPERATOR = process.env.XLOOOP_SOAK_OPERATOR || 'marat';
+const RUN_ID = process.env.XLOOOP_SOAK_RUN_ID || `soak-${new Date().toISOString().replace(/[^0-9TZ]/g, '')}`;
 const FINALIZE = process.argv.includes('--finalize');
 const rollbackArg = process.argv.find((a) => a.startsWith('--rollback-json='));
 
@@ -50,6 +51,19 @@ function readEvidence() {
       schema_head: null,
       contract_hash: null,
       generated_at: new Date().toISOString(),
+      producer: {
+        name: 'x-backend.pilot-shadow-soak-sampler',
+        version: 'v1',
+        kind: 'accumulated_live_capture',
+        run_id: RUN_ID,
+        started_at: new Date().toISOString(),
+        last_sample_at: null,
+        finalized_at: null,
+        nonproduction_origin_verified: true,
+        pilot_shadow_api_verified: true,
+        manual: false,
+        synthetic: false,
+      },
       soak: { started_at: null, ended_at: null, duration_hours: null, production_untouched: true, operator: OPERATOR },
       health_samples: [],
       // metrics/queue stay null until --finalize supplies REAL measured values; the strict verifier
@@ -76,6 +90,21 @@ async function readHealth() {
 }
 
 const evidence = readEvidence();
+if (!evidence.producer || typeof evidence.producer !== 'object') {
+  evidence.producer = {
+    name: 'x-backend.pilot-shadow-soak-sampler',
+    version: 'v1',
+    kind: 'accumulated_live_capture',
+    run_id: RUN_ID,
+    started_at: new Date().toISOString(),
+    last_sample_at: null,
+    finalized_at: null,
+    nonproduction_origin_verified: true,
+    pilot_shadow_api_verified: true,
+    manual: false,
+    synthetic: false,
+  };
+}
 const { status, body } = await readHealth();
 
 // Pin identity on the first sample; a drifting build/schema mid-soak is a real finding, so record
@@ -104,12 +133,14 @@ if (rollbackArg) {
 }
 
 evidence.generated_at = new Date().toISOString();
+evidence.producer.last_sample_at = evidence.generated_at;
 
 if (FINALIZE) {
   const startedMs = Date.parse(evidence.soak.started_at);
   const endedAt = new Date().toISOString();
   evidence.soak.ended_at = endedAt;
   evidence.soak.duration_hours = Number(((Date.parse(endedAt) - startedMs) / 3.6e6).toFixed(4));
+  evidence.producer.finalized_at = endedAt;
   // metrics/queue come from the operator's read-only DB + queue query at finalize time
   // (XLOOOP_SOAK_METRICS_JSON / XLOOOP_SOAK_QUEUE_JSON). The sampler will NOT invent them:
   // without those files the strict verifier fails on the missing fields, which is correct.
