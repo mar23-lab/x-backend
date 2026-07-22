@@ -13,7 +13,7 @@ const activeWorkflows = listYamlFiles(activeWorkflowDir);
 const disabledTemplates = listYamlFiles(disabledWorkflowDir);
 
 check(activeWorkflows.length === 0, 'no_active_github_actions_workflows', 'No active .github/workflows/*.yml files are allowed while GitHub Actions is unpaid/unavailable');
-for (const expected of ['cloudflare-feedback-d1.yml', 'cloudflare-pages.yml', 'smoke.yml']) {
+for (const expected of ['cloudflare-feedback-d1.yml', 'cloudflare-pages.yml', 'smoke.yml', 'verify.yml']) {
   check(disabledTemplates.includes(expected), `disabled_template_${expected}`, `Disabled workflow template must be preserved at deployment/github-actions-disabled/${expected}`);
 }
 
