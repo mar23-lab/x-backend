@@ -1942,6 +1942,27 @@
           "reason": "cron cadence dial-down: 45* -> 0 1 daily in the reclassify test"
         }
       ]
+    },
+    {
+      "delta_id": "codex-backend-ci-main-merge-20260722",
+      "generated_at": "2026-07-22T00:39:19.246Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "7dba92cdb9d87dfb1aaf2e103f6c34984d9faa34",
+      "target_base_commit": "7dba92cdb9d87dfb1aaf2e103f6c34984d9faa34",
+      "authority": "shadow_only_no_production_cutover",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "package.json",
+          "target_blob": "bac1da63bae515413ed2d7e4be0cc7b3502d7124",
+          "reason": "merge current main deploy provenance gate into PR 52"
+        },
+        {
+          "path": "scripts/ci-local.mjs",
+          "target_blob": "89f14c6a1b2b9c4c91edc80f88c23aa99a3c8a5c",
+          "reason": "merge current main deploy provenance gate into PR 52"
+        }
+      ]
     }
   ]
 }
