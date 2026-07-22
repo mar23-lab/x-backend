@@ -2015,6 +2015,22 @@
           "reason": "Pilot-shadow graph evidence producer and readiness wiring"
         }
       ]
+    },
+    {
+      "delta_id": "pilot-shadow-live-rls-evidence-producer-20260722",
+      "generated_at": "2026-07-22T03:43:46.755Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "a530ad233a9287b651da8bfde1f191f69746a483",
+      "target_base_commit": "a530ad233a9287b651da8bfde1f191f69746a483",
+      "authority": "shadow_only_no_production_cutover",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "package.json",
+          "target_blob": "a675cba4695ba04ae8256674d21ada674810841a",
+          "reason": "Pilot-shadow live RLS evidence producer and readiness wiring"
+        }
+      ]
     }
   ]
 }
