@@ -119,6 +119,12 @@ binding = "AI"
 # Non-secret build/runtime config (secrets set via `wrangler secret put`)
 [vars]
 ENVIRONMENT = "production"
+# W9-H1 (260722, operator-ratified): declare the authority this worker has de-facto held since
+# the ~260719 cutover. XLOOOP_AUTHORITY_MODE has exactly ONE runtime consumer (routes/health.ts,
+# reporting only — no behavioral branch), so this is a truthful-attestation change, not a
+# behavior change. Previously UNSET, so /health fell back to "shadow". The pilot-shadow worker's
+# gate (verify-pilot-shadow-config.mjs) reads wrangler.pilot-shadow.toml and is unaffected.
+XLOOOP_AUTHORITY_MODE = "production"
 # F9 (260719): single-intake production activation. GATED — DO NOT DEPLOY until migration
 # 075_single_intake_and_execution_receipts.sql is applied to prod Neon (it creates
 # intake_resolutions / governed_execution_receipts / projection_outbox; the endpoints 500 without
