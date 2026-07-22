@@ -85,6 +85,7 @@ function verifyEvidence(e, evidencePath) {
     'api_base',
     'backend_build_sha',
     'generated_at',
+    'producer',
     'chains',
   ]) {
     if (e[field] === undefined || e[field] === '') missing.push(field);
@@ -126,6 +127,10 @@ function verifyEvidence(e, evidencePath) {
   addCheck('no_raw_mail_or_document_body_keys', rawBodyKeys(e).length === 0, {
     raw_body_keys: rawBodyKeys(e),
   }, { block: true });
+  const producerProblems = problemsForProducer(e.producer);
+  addCheck('producer_provenance_complete', producerProblems.length === 0, {
+    producer_problems: producerProblems,
+  }, { block: true });
 
   const chains = Array.isArray(e.chains) ? e.chains : [];
   const kinds = new Set(chains.map((chain) => chain?.kind));
@@ -144,6 +149,7 @@ function verifyEvidence(e, evidencePath) {
     e.environment === 'pilot-shadow' &&
     e.authority === 'shadow' &&
     isPilotShadowApi(e.api_base) &&
+    producerProblems.length === 0 &&
     kinds.has('gmail') &&
     kinds.has('document') &&
     !/(^|[/\\])[^/\\]*(?:schema\.)?example\.json$/i.test(evidencePath);
@@ -151,6 +157,25 @@ function verifyEvidence(e, evidencePath) {
   addCheck('pilot_shadow_signed_chain_authority', authority, {
     evidence_file: evidencePath,
   }, { block: strict, warnOnly: !strict });
+}
+
+function problemsForProducer(producer) {
+  const problems = [];
+  if (!producer || typeof producer !== 'object') return ['producer'];
+  const requiredStrings = ['name', 'version', 'run_id', 'captured_at'];
+  for (const field of requiredStrings) {
+    if (typeof producer[field] !== 'string' || producer[field].trim() === '') problems.push(`producer.${field}`);
+  }
+  if (producer.name !== 'x-backend.pilot-shadow-signed-chain-producer') problems.push('producer.name');
+  if (producer.kind !== 'live_capture') problems.push('producer.kind');
+  if (producer.manual === true || producer.hand_authored === true || producer.synthetic === true) {
+    problems.push('producer.manual_or_synthetic');
+  }
+  if (producer.nonproduction_origin_verified !== true) problems.push('producer.nonproduction_origin_verified');
+  if (producer.authenticated_session_verified !== true) problems.push('producer.authenticated_session_verified');
+  if (Number.isNaN(Date.parse(producer.captured_at || ''))) problems.push('producer.captured_at');
+  if (!/^[a-zA-Z0-9_.:-]{8,120}$/.test(producer.run_id || '')) problems.push('producer.run_id');
+  return [...new Set(problems)];
 }
 
 function problemsForChain(chain, index) {
@@ -233,6 +258,17 @@ function runSelfTest() {
     api_base: 'https://xlooop-api-pilot-shadow.xlooop23.workers.dev',
     backend_build_sha: 'a'.repeat(40),
     generated_at: now,
+    producer: {
+      name: 'x-backend.pilot-shadow-signed-chain-producer',
+      version: 'self-test',
+      kind: 'live_capture',
+      run_id: 'signed-chain-self-test-1',
+      captured_at: now,
+      nonproduction_origin_verified: true,
+      authenticated_session_verified: true,
+      manual: false,
+      synthetic: false,
+    },
     chains: [
       {
         kind: 'gmail',
@@ -276,8 +312,9 @@ function runSelfTest() {
   const validOk = failures.length === previousFailures && authority === true;
   const bodyProblem = rawBodyKeys({ chains: [{ kind: 'gmail', message_body: 'forbidden' }] }).length === 1;
   const prodRejected = !isPilotShadowApi('https://api.xlooop.com');
-  if (!validOk || !bodyProblem || !prodRejected) {
-    console.error(JSON.stringify({ validOk, bodyProblem, prodRejected, checks, failures }, null, 2));
+  const producerProblem = problemsForProducer({ ...valid.producer, manual: true }).includes('producer.manual_or_synthetic');
+  if (!validOk || !bodyProblem || !prodRejected || !producerProblem) {
+    console.error(JSON.stringify({ validOk, bodyProblem, prodRejected, producerProblem, checks, failures }, null, 2));
     throw new Error('self-test failed');
   }
   console.log('PASS pilot-shadow signed chain evidence self-test');
