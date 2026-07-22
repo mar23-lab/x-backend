@@ -29,6 +29,8 @@
     "verify:role-skill-catalog-loader-fresh": "node scripts/verify-role-skill-catalog-loader-fresh.mjs",
     "verify:model-execution-callsites": "node scripts/verify-model-execution-callsites.mjs",
     "verify:shadow-observability-storage": "node scripts/verify-shadow-observability-storage.mjs",
+    "produce:pilot-shadow-graph-evidence": "node scripts/produce-pilot-shadow-graph-evidence.mjs",
+    "produce:pilot-shadow-graph-evidence:self-test": "node scripts/produce-pilot-shadow-graph-evidence.mjs --self-test",
     "verify:projection-substrate-pilot": "node scripts/verify-projection-substrate-evidence.mjs --strict-pilot",
     "verify:tenant-source-isolation": "node scripts/verify-tenant-source-isolation.mjs",
     "verify:customer-revocation-end-to-end": "node scripts/verify-customer-revocation-end-to-end.mjs",

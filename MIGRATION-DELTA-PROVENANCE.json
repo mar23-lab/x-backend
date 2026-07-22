@@ -1999,6 +1999,22 @@
           "reason": "Pilot-shadow evidence hardening: projection freshness remediation, signed-chain live-capture producer and input hash, soak sampler provenance"
         }
       ]
+    },
+    {
+      "delta_id": "pilot-shadow-graph-evidence-producer-20260722",
+      "generated_at": "2026-07-22T03:29:33.589Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "8296fe108b493e9fa124498b4c86e52c0b2b95a7",
+      "target_base_commit": "8296fe108b493e9fa124498b4c86e52c0b2b95a7",
+      "authority": "shadow_only_no_production_cutover",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "package.json",
+          "target_blob": "37a28f9b99bc0fd139f4dd50c189fddfc38355c7",
+          "reason": "Pilot-shadow graph evidence producer and readiness wiring"
+        }
+      ]
     }
   ]
 }
