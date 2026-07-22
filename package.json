@@ -51,6 +51,7 @@
     "verify:pilot-shadow-signed-chain-evidence": "node scripts/verify-pilot-shadow-signed-chain-evidence.mjs --strict",
     "verify:pilot-shadow-signed-chain-evidence:self-test": "node scripts/verify-pilot-shadow-signed-chain-evidence.mjs --self-test",
     "soak:sample": "node scripts/pilot-shadow-soak-sampler.mjs",
+    "soak:sample:self-test": "node scripts/pilot-shadow-soak-sampler.mjs --self-test",
     "soak:arm": "bash scripts/pilot-shadow-soak-arm.sh install",
     "soak:status": "bash scripts/pilot-shadow-soak-arm.sh status",
     "soak:disarm": "bash scripts/pilot-shadow-soak-arm.sh remove",

@@ -2031,6 +2031,38 @@
           "reason": "Pilot-shadow live RLS evidence producer and readiness wiring"
         }
       ]
+    },
+    {
+      "delta_id": "pilot-shadow-soak-sampler-env-alias-20260722",
+      "generated_at": "2026-07-22T03:49:13.538Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "922e969293b3bf382d25c2ad3561ad4c41e84bef",
+      "target_base_commit": "922e969293b3bf382d25c2ad3561ad4c41e84bef",
+      "authority": "shadow_only_no_production_cutover",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "package.json",
+          "target_blob": "926b36fbe8a94174e5912fb548e2e2640424969b",
+          "reason": "Align soak sampler evidence env with completion readiness gate"
+        }
+      ]
+    },
+    {
+      "delta_id": "pilot-shadow-soak-sampler-env-alias-script-20260722",
+      "generated_at": "2026-07-22T03:49:36.716Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "922e969293b3bf382d25c2ad3561ad4c41e84bef",
+      "target_base_commit": "922e969293b3bf382d25c2ad3561ad4c41e84bef",
+      "authority": "shadow_only_no_production_cutover",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "scripts/pilot-shadow-soak-sampler.mjs",
+          "target_blob": "95b7b918a5bf5c1c757a63a4c5cdf01baee27979",
+          "reason": "Accept readiness evidence env alias in soak sampler and add self-test"
+        }
+      ]
     }
   ]
 }
