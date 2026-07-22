@@ -162,7 +162,7 @@ function verifyEvidence(e, evidencePath) {
 function problemsForProducer(producer) {
   const problems = [];
   if (!producer || typeof producer !== 'object') return ['producer'];
-  const requiredStrings = ['name', 'version', 'run_id', 'captured_at'];
+  const requiredStrings = ['name', 'version', 'run_id', 'captured_at', 'input_capture_sha256'];
   for (const field of requiredStrings) {
     if (typeof producer[field] !== 'string' || producer[field].trim() === '') problems.push(`producer.${field}`);
   }
@@ -175,6 +175,7 @@ function problemsForProducer(producer) {
   if (producer.authenticated_session_verified !== true) problems.push('producer.authenticated_session_verified');
   if (Number.isNaN(Date.parse(producer.captured_at || ''))) problems.push('producer.captured_at');
   if (!/^[a-zA-Z0-9_.:-]{8,120}$/.test(producer.run_id || '')) problems.push('producer.run_id');
+  if (!/^[0-9a-f]{64}$/.test(producer.input_capture_sha256 || '')) problems.push('producer.input_capture_sha256');
   return [...new Set(problems)];
 }
 
@@ -264,6 +265,7 @@ function runSelfTest() {
       kind: 'live_capture',
       run_id: 'signed-chain-self-test-1',
       captured_at: now,
+      input_capture_sha256: '0'.repeat(64),
       nonproduction_origin_verified: true,
       authenticated_session_verified: true,
       manual: false,
