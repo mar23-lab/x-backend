@@ -7,7 +7,8 @@
     "node": ">=22 <23"
   },
   "scripts": {
-    "deploy:api": "node scripts/preflight-rls-dsn.mjs && node scripts/verify-rls-grant-parity.mjs && wrangler deploy --config wrangler.toml",
+    "deploy:api": "node scripts/preflight-rls-dsn.mjs && node scripts/verify-rls-grant-parity.mjs && node scripts/verify-deploy-sha-current.mjs && wrangler deploy --config wrangler.toml --var BUILD_SHA:$(git rev-parse --short HEAD) --var BUILD_TIME:$(date -u +%Y%m%dT%H%M%SZ)",
+    "verify:deploy-provenance": "node scripts/verify-deploy-provenance-wiring.mjs",
     "preflight:rls-dsn": "node scripts/preflight-rls-dsn.mjs",
     "preflight:rls-dsn:self-test": "node scripts/preflight-rls-dsn.mjs --self-test",
     "dev:api": "wrangler dev --config wrangler.toml",

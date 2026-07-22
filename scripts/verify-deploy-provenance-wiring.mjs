@@ -1,0 +1,45 @@
+#!/usr/bin/env node
+// verify-deploy-provenance-wiring.mjs · ADR-ABS-004 · the deploy-provenance wiring gate.
+//
+// FAILURE CLASS: routes/health.ts emits `build` / `built_at` from env.BUILD_SHA / env.BUILD_TIME,
+// documenting that they are "injected at `npm run deploy:api` (--var BUILD_SHA / BUILD_TIME)".
+// If that injection is ever dropped from the deploy:api script (as it was, producing a live
+// /health of build:"dev" / built_at:null on the customer plane), production carries NO attestable
+// provenance — you cannot prove which commit is live. That regression is silent: the handler
+// simply falls back to its dev defaults and every check still looks green.
+//
+// This static gate makes that class mechanically impossible: it asserts the deploy:api script
+// still injects both vars, so a future edit that drops them fails ci-local instead of shipping a
+// provenance hole. Fail-CLOSED on any parse error — provenance wiring must never be unverifiable.
+//
+// Authority: ADR-ABS-004 (deploy provenance) · HR-CONFIG-REALITY-MATCH-1 (no inference from constants).
+
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
+
+const root = join(dirname(fileURLToPath(import.meta.url)), '..');
+
+try {
+  const pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
+  const deploy = pkg.scripts?.['deploy:api'];
+  if (typeof deploy !== 'string') throw new Error('scripts["deploy:api"] missing or not a string');
+
+  const missing = [];
+  if (!/--var\s+BUILD_SHA:/.test(deploy)) missing.push('--var BUILD_SHA:<sha>');
+  if (!/--var\s+BUILD_TIME:/.test(deploy)) missing.push('--var BUILD_TIME:<iso>');
+
+  if (missing.length) {
+    console.error('✗ deploy-provenance-wiring · FAIL — deploy:api no longer injects deploy provenance.');
+    console.error(`    missing injection(s): ${missing.join(', ')}`);
+    console.error('    Consequence: live /health would emit build:"dev" / built_at:null — production is unattestable.');
+    console.error('    Fix: restore the wrangler `--var BUILD_SHA:$(git rev-parse --short HEAD) --var BUILD_TIME:$(date -u +%Y%m%dT%H%M%SZ)` injection in scripts["deploy:api"].');
+    process.exit(1);
+  }
+
+  console.log('☑ deploy-provenance-wiring · PASS · deploy:api injects BUILD_SHA + BUILD_TIME');
+  process.exit(0);
+} catch (err) {
+  console.error(`✗ deploy-provenance-wiring · FAIL-CLOSED — could not verify deploy:api wiring: ${err.message}`);
+  process.exit(1);
+}
