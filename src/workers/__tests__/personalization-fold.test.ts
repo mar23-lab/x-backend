@@ -1,7 +1,5 @@
-import { readFileSync } from 'node:fs';
-import { resolve, dirname } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { describe, it, expect } from 'vitest';
+import { TEMPLATE_POLICY_FORBIDDEN_OVERRIDE_KEYS } from '../dal/template-policy-store';
 import {
   foldSignalsIntoProfile,
   PERSONALIZATION_FORBIDDEN_KEYS,
@@ -62,11 +60,8 @@ describe('foldSignalsIntoProfile — Y-wave MATERIALIZE (ADR-XB-012)', () => {
   });
 
   it('the local forbidden-key list mirrors the store-side FORBIDDEN_OVERRIDE_KEYS (parity)', () => {
-    const store = readFileSync(
-      resolve(dirname(fileURLToPath(import.meta.url)), '../dal/template-policy-store.ts'), 'utf8');
-    const block = store.slice(store.indexOf('FORBIDDEN_OVERRIDE_KEYS'));
     for (const k of PERSONALIZATION_FORBIDDEN_KEYS) {
-      expect(block).toContain(`'${k}'`); // every fold-side key exists on the store side
+      expect(TEMPLATE_POLICY_FORBIDDEN_OVERRIDE_KEYS).toContain(k); // every fold-side key exists on the store side
     }
   });
 });
