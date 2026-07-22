@@ -2,6 +2,7 @@
 import { spawnSync } from 'node:child_process';
 
 const gates = [
+  ['github actions disabled', 'npm', ['run', 'verify:github-actions-disabled']],
   ['installed dependency parity', 'npm', ['run', 'verify:installed-dependencies']],
   ['provenance', 'npm', ['run', 'verify:provenance']],
   ['boundary', 'npm', ['run', 'verify:boundary']],

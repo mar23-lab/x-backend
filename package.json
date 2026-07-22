@@ -15,6 +15,7 @@
     "verify:prod-migrations": "node scripts/verify-prod-migrations.mjs",
     "verify:prod-migrations:self-test": "node scripts/verify-prod-migrations.mjs --self-test",
     "ci-local": "node scripts/ci-local.mjs",
+    "verify:github-actions-disabled": "node scripts/verify-github-actions-disabled.mjs",
     "verify:installed-dependencies": "node scripts/verify-installed-dependencies.mjs",
     "typecheck": "tsc --noEmit -p tsconfig.workers.json",
     "test": "node scripts/run-worker-test-batches.mjs",
