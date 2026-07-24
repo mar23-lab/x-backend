@@ -124,6 +124,7 @@ function mwApp(script: { insertReturns?: unknown[]; selectRow?: Record<string, u
   a.use('*', async (ctx, next) => { ctx.set('auth', { workspace_id: 'org_x' } as never); ctx.set('sql', makeSql(script) as never); await next(); });
   a.use('*', idempotencyMiddleware());
   a.post('/w', (ctx) => { ctx.status(201); return ctx.json({ packet: { id: 'p1' } }); });
+  a.delete('/w', (ctx) => ctx.json({ source_disconnect_receipt_id: 'sdr_1' }));
   a.get('/w', (ctx) => ctx.json({ read: true }));
   return a;
 }
@@ -162,5 +163,13 @@ describe('idempotencyMiddleware — group applicator', () => {
     const script = { insertReturns: [], selectRow: { response_status: null, response_body: null }, log: [] as string[] };
     const res = await mwReq(mwApp(script), 'POST', { IDEMPOTENCY_ENABLED: 'true' }, { 'Idempotency-Key': 'k1' });
     expect(res.status).toBe(409);
+  });
+  it('DELETE replay ⇒ destructive handler is not re-executed', async () => {
+    const stored = { source_disconnect_receipt_id: 'sdr_STORED' };
+    const script = { insertReturns: [], selectRow: { response_status: 200, response_body: stored }, log: [] as string[] };
+    const res = await mwReq(mwApp(script), 'DELETE', { IDEMPOTENCY_ENABLED: 'true' }, { 'Idempotency-Key': 'k1' });
+    expect(res.status).toBe(200);
+    expect(res.headers.get('Idempotency-Replayed')).toBe('true');
+    expect(await res.json()).toEqual(stored);
   });
 });

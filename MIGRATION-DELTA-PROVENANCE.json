@@ -2270,6 +2270,62 @@
           "reason": "Keep explicit read-only status requests on the answer-now path even when they name prohibited create, approve, edit, or delete effects"
         }
       ]
+    },
+    {
+      "delta_id": "codex-release-parity-20260724",
+      "generated_at": "2026-07-24T10:00:38.755Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "012cd7cd8bd5480f22822d4b561077602439dd30",
+      "target_base_commit": "012cd7cd8bd5480f22822d4b561077602439dd30",
+      "authority": "shadow_only_no_production_cutover",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "docs/contracts/api-contract.v1.json",
+          "target_blob": "b89165da1a1b9783d11b5e4035c02354188f1d65",
+          "reason": "customer chat persistence, fail-closed deploy verification, exact contract parity, and destructive-write retry protection"
+        },
+        {
+          "path": "package.json",
+          "target_blob": "78dd22ae952e33f5b3884a87b021144e044aa21b",
+          "reason": "customer chat persistence, fail-closed deploy verification, exact contract parity, and destructive-write retry protection"
+        },
+        {
+          "path": "scripts/ci-local.mjs",
+          "target_blob": "ab855876074f51710d0e1b755bbc6f48a09be71d",
+          "reason": "customer chat persistence, fail-closed deploy verification, exact contract parity, and destructive-write retry protection"
+        },
+        {
+          "path": "src/workers/routes/customer-chat.ts",
+          "target_blob": "7233ad38e5802f0ca9223fa37c29786374dc0c56",
+          "reason": "customer chat persistence, fail-closed deploy verification, exact contract parity, and destructive-write retry protection"
+        },
+        {
+          "path": "wrangler.pilot-shadow.toml",
+          "target_blob": "c773e01253ffdb1e4ea4696bb435773f8ae9760f",
+          "reason": "customer chat persistence, fail-closed deploy verification, exact contract parity, and destructive-write retry protection"
+        },
+        {
+          "path": "src/workers/__tests__/customer-chat-route.test.ts",
+          "target_blob": "753ac4e491d57e62784570eac16df77bea04dcac",
+          "reason": "customer chat persistence, fail-closed deploy verification, exact contract parity, and destructive-write retry protection"
+        },
+        {
+          "path": "wrangler.toml",
+          "target_blob": "afae26eaef90d248291223e3d98fb707995b1baf",
+          "reason": "customer chat persistence, fail-closed deploy verification, exact contract parity, and destructive-write retry protection"
+        },
+        {
+          "path": "src/workers/lib/idempotency.ts",
+          "target_blob": "a465ad9a1b6cbd9142252997427078087add4c38",
+          "reason": "customer chat persistence, fail-closed deploy verification, exact contract parity, and destructive-write retry protection"
+        },
+        {
+          "path": "src/workers/__tests__/idempotency.test.ts",
+          "target_blob": "3f9f6d9e8b7f42b83a01cdc6ef6638744495d29b",
+          "reason": "customer chat persistence, fail-closed deploy verification, exact contract parity, and destructive-write retry protection"
+        }
+      ]
     }
   ]
 }

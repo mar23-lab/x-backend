@@ -126,6 +126,65 @@ export function buildSourceFacts(
   return facts;
 }
 
+customerChatRoute.get('/customer-chat/history', async (ctx) => {
+  try {
+    const auth = ctx.get('auth');
+    const gate = await gateCustomerWorkspace(ctx as never);
+    if (!gate.ok) return gate.res;
+
+    const requestedWorkspace = String(ctx.req.query('workspace_id') || '').trim() || null;
+    const scoped = await resolveScopedWorkspace(
+      ctx as never,
+      ctx.env.OPERATOR_WORKSPACE_SCOPE_ENABLED,
+      gate.ws,
+      auth.user_id,
+      requestedWorkspace,
+      gate.dal,
+    );
+    if (!scoped.ok) return scoped.res;
+
+    const strict = envFlagTrue(ctx.env.CHAT_HISTORY_PERSISTENCE_REQUIRED);
+    const lister = (gate.dal as unknown as {
+      listChatHistory?: (userId: string, scope: CockpitChatScope, limit?: number) => Promise<unknown[]>;
+    }).listChatHistory;
+    if (typeof lister !== 'function') {
+      if (strict) {
+        emitEvent('chat_history_persistence_unavailable', { workspace_id: scoped.ws, required: true });
+        ctx.status(503);
+        return ctx.json({
+          error: 'chat history persistence is required for this deployment',
+          code: 'CHAT_HISTORY_PERSISTENCE_UNAVAILABLE',
+          request_id: ctx.get('request_id'),
+        });
+      }
+      return ctx.json({ messages: [], scope: { workspace_id: scoped.ws, project_id: null, domain_id: null } });
+    }
+
+    const scope: CockpitChatScope = { workspace_id: scoped.ws, project_id: null, domain_id: null };
+    try {
+      const messages = await lister.call(gate.dal, auth.user_id, scope, 100);
+      return ctx.json({ messages: Array.isArray(messages) ? messages : [], scope });
+    } catch (err) {
+      emitEvent('chat_history_persistence_failed', {
+        workspace_id: scoped.ws,
+        required: strict,
+        error: err instanceof Error ? err.message.slice(0, 200) : String(err).slice(0, 200),
+      });
+      if (strict) {
+        ctx.status(503);
+        return ctx.json({
+          error: 'chat history could not be loaded',
+          code: 'CHAT_HISTORY_PERSISTENCE_FAILED',
+          request_id: ctx.get('request_id'),
+        });
+      }
+      return ctx.json({ messages: [], scope });
+    }
+  } catch (err) {
+    return errorEnvelope(ctx, err);
+  }
+});
+
 async function messageIntentRef(message: string): Promise<string> {
   const hash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(message));
   return `sha256:${Array.from(new Uint8Array(hash), (b) => b.toString(16).padStart(2, '0')).join('')}`;
