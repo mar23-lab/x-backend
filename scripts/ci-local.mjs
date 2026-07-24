@@ -4,6 +4,10 @@ import { spawnSync } from 'node:child_process';
 const gates = [
   ['github actions disabled', 'npm', ['run', 'verify:github-actions-disabled']],
   ['installed dependency parity', 'npm', ['run', 'verify:installed-dependencies']],
+  ['known dependency advisory floors', 'npm', ['run', 'verify:known-dependency-advisories']],
+  ['MCP server typecheck', 'npm', ['--prefix', 'packages/xlooop-mcp-server', 'run', 'typecheck']],
+  ['MCP server build', 'npm', ['--prefix', 'packages/xlooop-mcp-server', 'run', 'build']],
+  ['MCP server tests', 'npm', ['--prefix', 'packages/xlooop-mcp-server', 'test']],
   ['provenance', 'npm', ['run', 'verify:provenance']],
   ['boundary', 'npm', ['run', 'verify:boundary']],
   ['runtime independence', 'npm', ['run', 'verify:no-mbp-runtime-dependency']],

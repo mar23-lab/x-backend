@@ -2182,6 +2182,42 @@
           "reason": "server-first durable onboarding readiness persistence with idempotent receipt and fail-closed atomic tests"
         }
       ]
+    },
+    {
+      "delta_id": "backend-dependency-security-20260724",
+      "generated_at": "2026-07-24T08:07:41.119Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "8832783bd704eebd2421e6500f31729b60aea3b3",
+      "target_base_commit": "8832783bd704eebd2421e6500f31729b60aea3b3",
+      "authority": "shadow_only_no_production_cutover",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "package.json",
+          "target_blob": "de24287495525a58f4c409348da8509773413517",
+          "reason": "Patch all 13 open GitHub dependency advisories, prove the MCP node-server override, and enforce known advisory floors in the local authority stack"
+        },
+        {
+          "path": "package-lock.json",
+          "target_blob": "368630ee44f9a6851c591fb9936b892c06a82507",
+          "reason": "Patch all 13 open GitHub dependency advisories, prove the MCP node-server override, and enforce known advisory floors in the local authority stack"
+        },
+        {
+          "path": "packages/xlooop-mcp-server/package.json",
+          "target_blob": "77aff4013a127d6a11bd72de1c235e2e51befb8f",
+          "reason": "Patch all 13 open GitHub dependency advisories, prove the MCP node-server override, and enforce known advisory floors in the local authority stack"
+        },
+        {
+          "path": "packages/xlooop-mcp-server/package-lock.json",
+          "target_blob": "a29b7dd4f78193c10ad5f47f5b6375caa5a7ef1f",
+          "reason": "Patch all 13 open GitHub dependency advisories, prove the MCP node-server override, and enforce known advisory floors in the local authority stack"
+        },
+        {
+          "path": "scripts/ci-local.mjs",
+          "target_blob": "4fce7e1e2b4c81e6772cfe901807aee8c0ca7813",
+          "reason": "Patch all 13 open GitHub dependency advisories, prove the MCP node-server override, and enforce known advisory floors in the local authority stack"
+        }
+      ]
     }
   ]
 }

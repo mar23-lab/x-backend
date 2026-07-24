@@ -22,6 +22,7 @@
     "ci-local": "node scripts/ci-local.mjs",
     "verify:github-actions-disabled": "node scripts/verify-github-actions-disabled.mjs",
     "verify:installed-dependencies": "node scripts/verify-installed-dependencies.mjs",
+    "verify:known-dependency-advisories": "node scripts/verify-known-dependency-advisories.mjs",
     "typecheck": "tsc --noEmit -p tsconfig.workers.json",
     "test": "node scripts/run-worker-test-batches.mjs",
     "test:watch": "vitest --config vitest.workers.config.ts",
@@ -70,17 +71,17 @@
   "dependencies": {
     "@clerk/backend": "1.34.0",
     "@neondatabase/serverless": "0.10.4",
-    "@sentry/cloudflare": "10.63.0",
+    "@sentry/cloudflare": "10.67.0",
     "hono": "4.12.30",
     "nanoid": "5.1.11",
     "unpdf": "1.6.2"
   },
   "devDependencies": {
     "@babel/parser": "7.29.2",
-    "@cloudflare/vitest-pool-workers": "0.18.4",
-    "@cloudflare/workers-types": "4.20260617.1",
+    "@cloudflare/vitest-pool-workers": "0.18.8",
+    "@cloudflare/workers-types": "5.20260724.1",
     "typescript": "5.9.3",
     "vitest": "4.1.0",
-    "wrangler": "4.102.0"
+    "wrangler": "4.114.0"
   }
 }
