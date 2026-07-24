@@ -20,4 +20,12 @@ describe('action-intent shadow classifier', () => {
     expect(classifyActionIntent('').action_intent).toBe('unresolved');
     expect(classifyActionIntent('banana').action_intent).toBe('unresolved');
   });
+
+  it('does not reinterpret a read-only guardrail as a write request', () => {
+    const prompt = 'What is currently in this workspace? Summarize the active projects, connected sources, and recorded events. State what is grounded, include freshness, and do not create or change anything.';
+    expect(classifyActionIntent(prompt)).toMatchObject({ action_intent: 'answer', matched_rule: 'answer' });
+    expect(classifyActionIntent('Inspect the current state without creating anything.')).toMatchObject({ action_intent: 'inspect' });
+    expect(classifyActionIntent('Create a task and do not duplicate existing work.')).toMatchObject({ action_intent: 'create_work' });
+    expect(classifyActionIntent('Do not wait; create a task now.')).toMatchObject({ action_intent: 'create_work' });
+  });
 });

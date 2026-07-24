@@ -2125,6 +2125,37 @@
           "reason": "Reconcile current production authority config plus full deploy SHA, numeric schema-head health, and local authority gates without deploying"
         }
       ]
+    },
+    {
+      "delta_id": "commercial-intake-negation-20260724",
+      "generated_at": "2026-07-24T05:20:39.844Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "e4d07388ae30efc3957cc47e87d8f45b9bb1db7a",
+      "target_base_commit": "e4d07388ae30efc3957cc47e87d8f45b9bb1db7a",
+      "authority": "shadow_only_no_production_cutover",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/lib/action-intent.ts",
+          "target_blob": "282ed043292037460df7fc036e452f0e78893a5b",
+          "reason": "Prevent negated no-change language from authorizing governed work"
+        },
+        {
+          "path": "src/workers/__tests__/action-intent.test.ts",
+          "target_blob": "e8e0b75fa2c4fec48d81aaf42817770f8e3fcfef",
+          "reason": "Prevent negated no-change language from authorizing governed work"
+        },
+        {
+          "path": "src/workers/__tests__/intake-resolution.test.ts",
+          "target_blob": "703e44312847545a3841a24f96e8c145dbd4f1e0",
+          "reason": "Prevent negated no-change language from authorizing governed work"
+        },
+        {
+          "path": "src/workers/__fixtures__/action-intent-corpus.json",
+          "target_blob": "b6a38b386ec23fa8adab4f5727829418b61588b1",
+          "reason": "Prevent negated no-change language from authorizing governed work"
+        }
+      ]
     }
   ]
 }
