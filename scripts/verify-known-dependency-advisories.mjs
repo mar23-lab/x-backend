@@ -40,8 +40,8 @@ const requirements = [
   {
     lock: mcpLock,
     path: 'node_modules/@hono/node-server',
-    minimum: '2.0.5',
-    advisories: ['GHSA-frvp-7c67-39w9'],
+    minimum: '2.0.10',
+    advisories: ['GHSA-frvp-7c67-39w9', 'GHSA-9mqv-5hh9-4cgg'],
   },
   {
     lock: mcpLock,
@@ -87,8 +87,8 @@ for (const requirement of requirements) {
   }
 }
 
-if (mcpPackage.overrides?.['@hono/node-server'] !== '2.0.5') {
-  failures.push('packages/xlooop-mcp-server must pin @hono/node-server override to 2.0.5');
+if (mcpPackage.overrides?.['@hono/node-server'] !== '2.0.11') {
+  failures.push('packages/xlooop-mcp-server must pin @hono/node-server override to 2.0.11');
 }
 
 if (failures.length) {

@@ -2218,6 +2218,27 @@
           "reason": "Patch all 13 open GitHub dependency advisories, prove the MCP node-server override, and enforce known advisory floors in the local authority stack"
         }
       ]
+    },
+    {
+      "delta_id": "backend-dependency-security-followup-20260724",
+      "generated_at": "2026-07-24T08:20:28.937Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "e753deec88cab9a6e046f3b65ddc08c16f8bf378",
+      "target_base_commit": "e753deec88cab9a6e046f3b65ddc08c16f8bf378",
+      "authority": "shadow_only_no_production_cutover",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "packages/xlooop-mcp-server/package.json",
+          "target_blob": "aab762cf835e699842bae1b3c46a6cb741576698",
+          "reason": "Raise the MCP node-server override above GHSA-9mqv-5hh9-4cgg and extend the local advisory regression floor"
+        },
+        {
+          "path": "packages/xlooop-mcp-server/package-lock.json",
+          "target_blob": "e27fa2e0f0a95e15b46c01b51d9b8c1e80a0f50c",
+          "reason": "Raise the MCP node-server override above GHSA-9mqv-5hh9-4cgg and extend the local advisory regression floor"
+        }
+      ]
     }
   ]
 }
