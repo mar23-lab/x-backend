@@ -31,8 +31,14 @@ function git(args) {
 function managedPaths(delta, seed) {
   const s = new Set();
   const collect = (obj) => {
+    for (const f of obj?.files ?? []) {
+      if (f?.path) s.add(f.path);
+    }
     for (const key of ['transformed_files', 'copied_files']) {
-      for (const f of obj?.[key] ?? []) if (f?.path) s.add(f.path);
+      for (const f of obj?.[key] ?? []) {
+        const path = typeof f === 'string' ? f : f?.path;
+        if (path) s.add(path);
+      }
     }
   };
   collect(seed);
@@ -69,13 +75,18 @@ function reconcile(deltaJson, seedJson, { id, reason, files, sourceCommit, nowIs
 
 function selfTest() {
   // Idempotency: applying the same reconcile twice yields ONE delta, not two; blobs are 40-char.
-  const seed = { transformed_files: [{ path: 'a.ts' }] };
+  const seed = {
+    files: [{ path: 'seed.ts' }],
+    transformed_files: ['transformed.ts'],
+  };
   const dj = { deltas: [{ delta_id: 'x', transformed_files: [{ path: 'a.ts', target_blob: 'old', reason: 'r' }] }] };
   const nowIso = new Date().toISOString();
-  const r1 = reconcileWith(dj, seed, { id: 'x', reason: 'r2', files: ['a.ts'], sourceCommit: 'c'.repeat(40), nowIso, hash: () => 'b'.repeat(40) });
-  const r2 = reconcileWith(dj, seed, { id: 'x', reason: 'r2', files: ['a.ts'], sourceCommit: 'c'.repeat(40), nowIso, hash: () => 'b'.repeat(40) });
+  const files = ['a.ts', 'seed.ts', 'transformed.ts'];
+  const r1 = reconcileWith(dj, seed, { id: 'x', reason: 'r2', files, sourceCommit: 'c'.repeat(40), nowIso, hash: () => 'b'.repeat(40) });
+  const r2 = reconcileWith(dj, seed, { id: 'x', reason: 'r2', files, sourceCommit: 'c'.repeat(40), nowIso, hash: () => 'b'.repeat(40) });
   const okOne = dj.deltas.filter((d) => d.delta_id === 'x').length === 1;
-  const okBlob = dj.deltas.find((d) => d.delta_id === 'x').transformed_files[0].target_blob === 'b'.repeat(40);
+  const reconciled = dj.deltas.find((d) => d.delta_id === 'x').transformed_files;
+  const okBlob = reconciled.length === files.length && reconciled.every((entry) => entry.target_blob === 'b'.repeat(40));
   const okSkip = reconcileWith(dj, seed, { id: 'y', reason: 'r', files: ['new.ts'], sourceCommit: 'c'.repeat(40), nowIso, hash: () => 'z' }).skipped.includes('new.ts');
   const ok = okOne && okBlob && okSkip && r1.changed && r2.changed;
   console.log(`  self-test: single-delta=${okOne} blob-updated=${okBlob} unmanaged-skipped=${okSkip}`);

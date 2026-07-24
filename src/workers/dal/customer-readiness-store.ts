@@ -6,6 +6,20 @@ import { makeError, randomNanoid } from './shared-helpers';
 import type { Sql, SqlTx } from '../db/client';
 import type { ReadinessAssessment, ReadinessAssessmentInput } from './types';
 
+export interface WorkspaceReadinessWriteInput extends Omit<ReadinessAssessmentInput, 'access_request_id'> {
+  workspace_id: string;
+  user_id: string;
+  client_request_id: string;
+  request_digest: string;
+}
+
+export interface WorkspaceReadinessWriteResult extends ReadinessAssessment {
+  readiness_revision_id: string;
+  audit_event_id: string;
+  replayed: boolean;
+  request_digest: string;
+}
+
 export async function createReadinessAssessmentRow(
   sql: Sql,
   input: ReadinessAssessmentInput
@@ -59,6 +73,202 @@ export async function createReadinessAssessmentRow(
   ])) as [ReadinessAssessment[], unknown];
   if (!rows[0]) throw makeError('INTERNAL_ERROR', 'failed to persist readiness assessment', 500);
   return rows[0];
+}
+
+/**
+ * Persist an authenticated customer's onboarding baseline and its audit receipt atomically.
+ *
+ * The table still requires an access_request_id, so an already-provisioned workspace without a
+ * historical request receives one approved, workspace-bound provenance row. The readiness profile
+ * remains the single source of truth. A transaction advisory lock plus the audit metadata makes a
+ * client_request_id replay-safe without requiring a schema migration.
+ */
+export async function saveWorkspaceReadinessAssessmentRow(
+  sql: Sql,
+  input: WorkspaceReadinessWriteInput,
+): Promise<WorkspaceReadinessWriteResult> {
+  if (!input?.workspace_id || !input.user_id || !input.email) {
+    throw makeError('VALIDATION_ERROR', 'workspace_id, user_id and email are required', 400);
+  }
+  if (!input.client_request_id || input.client_request_id.length > 200) {
+    throw makeError('VALIDATION_ERROR', 'a client_request_id of at most 200 characters is required', 400);
+  }
+  if (!/^[a-f0-9]{64}$/.test(input.request_digest)) {
+    throw makeError('VALIDATION_ERROR', 'request_digest must be a lower-case SHA-256 value', 400);
+  }
+
+  const accessRequestId = `req_${randomNanoid()}`;
+  const readinessId = `rdy_${randomNanoid()}`;
+  const accountType = input.account_type ?? 'company';
+  const lockKey = `${input.workspace_id}:${input.client_request_id}`;
+
+  const rows = (await sql/*sql*/`
+    WITH lock_held AS MATERIALIZED (
+      SELECT pg_advisory_xact_lock(hashtextextended(${lockKey}, 0)) AS held
+    ), prior_receipt AS MATERIALIZED (
+      SELECT
+        a.id::text AS audit_event_id,
+        a.metadata->>'readiness_assessment_id' AS readiness_assessment_id,
+        a.metadata->>'request_digest' AS request_digest
+      FROM lock_held
+      JOIN audit_logs a
+        ON a.workspace_id = ${input.workspace_id}
+       AND a.actor_user_id = ${input.user_id}
+       AND a.action = 'readiness_update'
+       AND a.metadata->>'client_request_id' = ${input.client_request_id}
+      ORDER BY a.id DESC
+      LIMIT 1
+    ), existing_readiness AS MATERIALIZED (
+      SELECT r.id, r.access_request_id
+      FROM lock_held
+      JOIN LATERAL (
+        SELECT id, access_request_id
+        FROM readiness_assessments
+        WHERE workspace_id = ${input.workspace_id}
+        ORDER BY updated_at DESC
+        LIMIT 1
+      ) r ON TRUE
+      WHERE NOT EXISTS (SELECT 1 FROM prior_receipt)
+    ), existing_request AS MATERIALIZED (
+      SELECT r.id
+      FROM lock_held
+      JOIN LATERAL (
+        SELECT ar.id
+        FROM access_requests ar
+        WHERE (
+          ar.id = (SELECT access_request_id FROM existing_readiness)
+          OR (
+            NOT EXISTS (SELECT 1 FROM existing_readiness)
+            AND ar.invited_to_workspace_id = ${input.workspace_id}
+            AND lower(ar.email) = lower(${input.email})
+            AND ar.status IN ('approved', 'invited')
+          )
+        )
+        ORDER BY
+          (ar.id = (SELECT access_request_id FROM existing_readiness)) DESC,
+          ar.updated_at DESC
+        LIMIT 1
+      ) r ON TRUE
+      WHERE NOT EXISTS (SELECT 1 FROM prior_receipt)
+    ), request_created AS (
+      INSERT INTO access_requests (
+        id, email, company_name, reason, source, status, user_id,
+        reviewed_at, reviewed_by, invited_to_workspace_id, metadata
+      )
+      SELECT
+        ${accessRequestId}, ${input.email}, ${input.company_name ?? null},
+        'Authenticated workspace onboarding baseline persistence',
+        'inapp-readiness-profile', 'approved', ${input.user_id},
+        now(), ${input.user_id}, ${input.workspace_id},
+        jsonb_build_object('purpose', 'workspace_readiness_profile')
+      FROM lock_held
+      WHERE NOT EXISTS (SELECT 1 FROM prior_receipt)
+        AND NOT EXISTS (SELECT 1 FROM existing_request)
+      RETURNING id
+    ), request_target AS MATERIALIZED (
+      SELECT access_request_id AS id FROM existing_readiness
+      UNION ALL
+      SELECT id FROM existing_request
+        WHERE NOT EXISTS (SELECT 1 FROM existing_readiness)
+      UNION ALL
+      SELECT id FROM request_created
+        WHERE NOT EXISTS (SELECT 1 FROM existing_readiness)
+          AND NOT EXISTS (SELECT 1 FROM existing_request)
+      LIMIT 1
+    ), readiness_written AS (
+      INSERT INTO readiness_assessments (
+        id, access_request_id, user_id, workspace_id, email, account_type,
+        also_personal_space, company_name, domain, country, deep_level,
+        readiness_answers, deep_check, enrichment, consent, source
+      )
+      SELECT
+        ${readinessId}, request_target.id, ${input.user_id}, ${input.workspace_id},
+        ${input.email}, ${accountType}, ${!!input.also_personal_space},
+        ${input.company_name ?? null}, ${input.domain ?? null}, ${input.country ?? null},
+        ${input.deep_level ?? null}, ${JSON.stringify(input.readiness_answers ?? {})}::jsonb,
+        ${input.deep_check ? JSON.stringify(input.deep_check) : null}::jsonb,
+        ${input.enrichment ? JSON.stringify(input.enrichment) : null}::jsonb,
+        ${JSON.stringify(input.consent ?? {})}::jsonb, ${input.source ?? 'inapp-readiness-profile'}
+      FROM request_target
+      ON CONFLICT (access_request_id) DO UPDATE SET
+        user_id             = COALESCE(readiness_assessments.user_id, EXCLUDED.user_id),
+        workspace_id        = EXCLUDED.workspace_id,
+        email               = EXCLUDED.email,
+        account_type        = EXCLUDED.account_type,
+        also_personal_space = EXCLUDED.also_personal_space,
+        company_name        = EXCLUDED.company_name,
+        domain              = EXCLUDED.domain,
+        country             = EXCLUDED.country,
+        deep_level          = EXCLUDED.deep_level,
+        readiness_answers   = EXCLUDED.readiness_answers,
+        deep_check          = EXCLUDED.deep_check,
+        enrichment          = EXCLUDED.enrichment,
+        consent             = EXCLUDED.consent,
+        source              = EXCLUDED.source,
+        updated_at          = now()
+      RETURNING id, access_request_id, user_id, workspace_id, email, account_type,
+                also_personal_space, company_name, domain, country, deep_level,
+                readiness_answers, deep_check, enrichment, consent, source, metadata,
+                created_at, updated_at
+    ), request_linked AS (
+      UPDATE access_requests a
+      SET user_id = COALESCE(a.user_id, ${input.user_id}),
+          invited_to_workspace_id = COALESCE(a.invited_to_workspace_id, ${input.workspace_id}),
+          updated_at = now()
+      FROM readiness_written r
+      WHERE a.id = r.access_request_id
+      RETURNING a.id
+    ), audit_written AS (
+      INSERT INTO audit_logs (
+        actor_user_id, action, target_type, target_id, workspace_id, reason, metadata
+      )
+      SELECT
+        ${input.user_id}, 'readiness_update', 'workspace', ${input.workspace_id},
+        ${input.workspace_id}, 'Authenticated customer saved onboarding baseline',
+        jsonb_build_object(
+          'schema_id', 'xlooop.readiness_write_receipt.v1',
+          'client_request_id', ${input.client_request_id},
+          'request_digest', ${input.request_digest},
+          'readiness_assessment_id', r.id
+        )
+      FROM readiness_written r
+      JOIN request_linked q ON q.id = r.access_request_id
+      RETURNING id::text AS audit_event_id
+    ), written_receipt AS (
+      SELECT
+        r.*,
+        'readiness:' || r.id || ':' || a.audit_event_id AS readiness_revision_id,
+        a.audit_event_id,
+        false AS replayed,
+        ${input.request_digest}::text AS request_digest
+      FROM readiness_written r
+      JOIN audit_written a ON TRUE
+    ), replayed_receipt AS (
+      SELECT
+        r.*,
+        'readiness:' || r.id || ':' || p.audit_event_id AS readiness_revision_id,
+        p.audit_event_id,
+        true AS replayed,
+        p.request_digest
+      FROM prior_receipt p
+      JOIN readiness_assessments r
+        ON r.id = p.readiness_assessment_id
+       AND r.workspace_id = ${input.workspace_id}
+    )
+    SELECT * FROM written_receipt
+    UNION ALL
+    SELECT * FROM replayed_receipt
+    LIMIT 1
+  `) as WorkspaceReadinessWriteResult[];
+
+  const row = rows[0];
+  if (!row?.readiness_revision_id || !row.audit_event_id || !row.id || !row.workspace_id) {
+    throw makeError('INTERNAL_ERROR', 'readiness write did not produce an audit receipt', 500);
+  }
+  if (row.replayed && row.request_digest !== input.request_digest) {
+    throw makeError('CONFLICT', 'client_request_id was already used for different onboarding answers', 409);
+  }
+  return row;
 }
 
 export async function getReadinessAssessmentRow(
