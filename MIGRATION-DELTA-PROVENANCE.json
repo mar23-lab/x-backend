@@ -2089,6 +2089,42 @@
           "reason": "Move backend GitHub Actions workflow out of active path and enforce disabled-actions local gate"
         }
       ]
+    },
+    {
+      "delta_id": "commercial-recovery-20260724-health-authority",
+      "generated_at": "2026-07-24T04:07:15.994Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "394fe0e904bcbe2d9643354e37b3757e34fce582",
+      "target_base_commit": "394fe0e904bcbe2d9643354e37b3757e34fce582",
+      "authority": "shadow_only_no_production_cutover",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "package.json",
+          "target_blob": "2d5feae664bf267c70ce9a8693d719d8bd4c5b9d",
+          "reason": "Reconcile current production authority config plus full deploy SHA, numeric schema-head health, and local authority gates without deploying"
+        },
+        {
+          "path": "scripts/ci-local.mjs",
+          "target_blob": "96e255b5b3b4644d2c79d191d6682114d74c731b",
+          "reason": "Reconcile current production authority config plus full deploy SHA, numeric schema-head health, and local authority gates without deploying"
+        },
+        {
+          "path": "src/workers/routes/health.ts",
+          "target_blob": "e94a68bf8a7fdf49420dd1dbacc254e823d9564c",
+          "reason": "Reconcile current production authority config plus full deploy SHA, numeric schema-head health, and local authority gates without deploying"
+        },
+        {
+          "path": "src/workers/__tests__/health.test.ts",
+          "target_blob": "9872628abb97e2cb6c60551c47b7444fd463ef37",
+          "reason": "Reconcile current production authority config plus full deploy SHA, numeric schema-head health, and local authority gates without deploying"
+        },
+        {
+          "path": "wrangler.toml",
+          "target_blob": "2c086efb5dfff44bd557b07c504352accc1b08ef",
+          "reason": "Reconcile current production authority config plus full deploy SHA, numeric schema-head health, and local authority gates without deploying"
+        }
+      ]
     }
   ]
 }

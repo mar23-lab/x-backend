@@ -7,8 +7,13 @@
     "node": ">=22 <23"
   },
   "scripts": {
-    "deploy:api": "node scripts/preflight-rls-dsn.mjs && node scripts/verify-rls-grant-parity.mjs && node scripts/verify-deploy-sha-current.mjs && wrangler deploy --config wrangler.toml --var BUILD_SHA:$(git rev-parse --short HEAD) --var BUILD_TIME:$(date -u +%Y%m%dT%H%M%SZ)",
+    "deploy:api": "node scripts/preflight-rls-dsn.mjs && node scripts/verify-rls-grant-parity.mjs && node scripts/verify-prod-migrations.mjs && node scripts/verify-deploy-schema-head.mjs && node scripts/verify-deploy-sha-current.mjs && wrangler deploy --config wrangler.toml --var BUILD_SHA:$(git rev-parse HEAD) --var BUILD_TIME:$(date -u +%Y%m%dT%H%M%SZ) --var XLOOOP_SCHEMA_HEAD:$XLOOOP_SCHEMA_HEAD",
     "verify:deploy-provenance": "node scripts/verify-deploy-provenance-wiring.mjs",
+    "verify:deploy-schema-head": "node scripts/verify-deploy-schema-head.mjs",
+    "verify:deploy-schema-head:self-test": "node scripts/verify-deploy-schema-head.mjs --self-test",
+    "verify:authority-decision": "node scripts/verify-authority-decision-packet.mjs",
+    "verify:authority-decision:self-test": "node scripts/verify-authority-decision-packet.mjs --self-test",
+    "verify:authority-decision:release": "node scripts/verify-authority-decision-packet.mjs --require-ratified",
     "preflight:rls-dsn": "node scripts/preflight-rls-dsn.mjs",
     "preflight:rls-dsn:self-test": "node scripts/preflight-rls-dsn.mjs --self-test",
     "dev:api": "wrangler dev --config wrangler.toml",

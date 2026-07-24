@@ -54,7 +54,7 @@ describe('GET /api/v1/health', () => {
     const body = (await res.json()) as any;
     expect(body.environment).toBe('pilot-shadow');
     expect(body.authority).toBe('shadow');
-    expect(body.schema_head).toBe('079');
+    expect(body.schema_head).toBe(79);
     expect(body.feature_posture).toEqual({
       single_intake: true,
       role_skill_catalog: true,
@@ -76,15 +76,25 @@ describe('GET /api/v1/health', () => {
   it('exposes a REAL deploy signal: build / built_at injected at deploy (HR-CONFIG-REALITY-MATCH-1)', async () => {
     const env = {
       ...(stubEnv() as unknown as Record<string, unknown>),
-      BUILD_SHA: 'abc1234',
+      BUILD_SHA: 'a'.repeat(40),
       BUILD_TIME: '20260607T160244Z',
     } as never;
     const req = new Request('http://localhost/api/v1/health');
     const res = await app.fetch(req, env);
     const body = (await res.json()) as Record<string, unknown>;
-    expect(body.build).toBe('abc1234'); // CHANGES per deploy — the reliable deploy signal
+    expect(body.build).toBe('a'.repeat(40)); // CHANGES per deploy — the reliable deploy signal
     expect(body.built_at).toBe('20260607T160244Z');
     expect(body.version).toBe('1.0.0'); // contract semver stays constant (NOT a deploy signal)
+  });
+
+  it('fails honest when schema head configuration is malformed', async () => {
+    const env = {
+      ...(stubEnv() as unknown as Record<string, unknown>),
+      XLOOOP_SCHEMA_HEAD: 'not-a-version',
+    } as never;
+    const res = await app.fetch(new Request('http://localhost/api/v1/health'), env);
+    const body = (await res.json()) as Record<string, unknown>;
+    expect(body.schema_head).toBeNull();
   });
 
   it('falls back to build=dev / built_at=null when not injected (local/dev)', async () => {
