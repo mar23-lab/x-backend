@@ -17,6 +17,9 @@ const RULES: Array<{ intent: Exclude<ActionIntent, 'unresolved'>; id: string; pa
   { intent: 'answer', id: 'answer', pattern: /(^|\b)(what|why|how|when|where|who|explain|summari[sz]e|tell me|describe|do i|is there|are there)\b/i },
 ];
 
+const EXPLICIT_READ_ONLY = /\bread[- ]only\s*(?=[:;,.!?]|$)|(?:\bdo\s+not\b|\bdon't\b|\bnever\b|\bwithout\b)\s+(?:\w+\s+){0,2}(?:creat(?:e|ing)|open(?:ing)?|start(?:ing)?|add(?:ing)?|implement(?:ing)?|build(?:ing)?|fix(?:ing)?|repair(?:ing)?|writ(?:e|ing)|generat(?:e|ing)|set(?:ting)?\s+up|approv(?:e|ing)|reject(?:ing)?|delet(?:e|ing)|edit(?:ing)?|modif(?:y|ying)|chang(?:e|ing))\b/i;
+const READ_ONLY_INTENTS = new Set<ActionIntent>(['inspect', 'answer']);
+
 function hasAffirmativeWriteCue(text: string): boolean {
   const writeCues = text.matchAll(/\b(create|open|start|add|implement|build|fix|repair|write|generate|set up|setup)\b/gi);
   for (const cue of writeCues) {
@@ -32,6 +35,13 @@ function hasAffirmativeWriteCue(text: string): boolean {
 export function classifyActionIntent(raw: unknown): ActionIntentClassification {
   const text = typeof raw === 'string' ? raw.trim().replace(/\s+/g, ' ') : '';
   if (!text) return { action_intent: 'unresolved', confidence: 0, matched_rule: 'empty' };
+  if (EXPLICIT_READ_ONLY.test(text)) {
+    for (const rule of RULES) {
+      if (READ_ONLY_INTENTS.has(rule.intent) && rule.pattern.test(text)) {
+        return { action_intent: rule.intent, confidence: 0.98, matched_rule: rule.id };
+      }
+    }
+  }
   for (const rule of RULES) {
     if (rule.intent === 'create_work' && !hasAffirmativeWriteCue(text)) continue;
     if (rule.pattern.test(text)) return { action_intent: rule.intent, confidence: 0.9, matched_rule: rule.id };

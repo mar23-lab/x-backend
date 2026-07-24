@@ -2239,6 +2239,37 @@
           "reason": "Raise the MCP node-server override above GHSA-9mqv-5hh9-4cgg and extend the local advisory regression floor"
         }
       ]
+    },
+    {
+      "delta_id": "commercial-intake-negation-live-followup-20260724",
+      "generated_at": "2026-07-24T08:47:30.000Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "708987190a6e59d8fb7b99e10863cc47a81cf7ea",
+      "target_base_commit": "708987190a6e59d8fb7b99e10863cc47a81cf7ea",
+      "authority": "shadow_only_no_production_cutover",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/lib/action-intent.ts",
+          "target_blob": "bda38dc059900b5eb6b4bd0ccd9bcd906a076432",
+          "reason": "Keep explicit read-only status requests on the answer-now path even when they name prohibited create, approve, edit, or delete effects"
+        },
+        {
+          "path": "src/workers/__tests__/action-intent.test.ts",
+          "target_blob": "4d516b7aa346a3210040e1bf5a7c75982df7a498",
+          "reason": "Keep explicit read-only status requests on the answer-now path even when they name prohibited create, approve, edit, or delete effects"
+        },
+        {
+          "path": "src/workers/__tests__/intake-resolution.test.ts",
+          "target_blob": "bd54ea058db3647dd65c6963434dc94a576372a2",
+          "reason": "Keep explicit read-only status requests on the answer-now path even when they name prohibited create, approve, edit, or delete effects"
+        },
+        {
+          "path": "src/workers/__fixtures__/action-intent-corpus.json",
+          "target_blob": "70fcb0a782ffe59a795ba4193c19d60f582e9ba5",
+          "reason": "Keep explicit read-only status requests on the answer-now path even when they name prohibited create, approve, edit, or delete effects"
+        }
+      ]
     }
   ]
 }
