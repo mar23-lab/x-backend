@@ -8,17 +8,20 @@ action. `CLAUDE.md` carries the same rules; this file is the agent-neutral SSOT.
 
 ## What this repo is
 
-A **SHADOW backend** — a provenance-verified, buildable, test-green backend that is **NOT the live
-runtime** until an explicitly operator-approved cutover. Xlooop-XCP-demo is the current deployed
-authority. This distinction is invisible from code/PR state, and getting it wrong is dangerous — see
-rule 1.
+`x-backend` is the production API source authority for Workers routes, DAL, migrations, contracts,
+tenant isolation, graph/lineage, receipts, and deployment provenance. A commit in this repository is
+not automatically deployed: live `/api/v1/health` is the deployed-runtime truth, and `merged`,
+`locally_verified`, `deployed`, and `authoritative` are separate states. `Xlooop-XCP-demo` is
+donor-only and must not receive new backend authority.
 
 ## Non-negotiable rules (harm-first — read this section even if you read nothing else)
 
-1. **SHADOW REPO — never deploy, apply a migration to a live DB, mutate production data, alter secrets,
-   or flip feature flags.** A non-Claude agent sees a fully buildable backend with wrangler + Neon
-   config and could "just deploy" or "run the migration" — which would act on production before the
-   sanctioned cutover. All of that is operator-gated.
+1. **PRODUCTION OPERATIONS ARE OPERATOR-GATED.** Never deploy, apply a live migration, mutate production
+   data, alter secrets, flip feature flags, or transfer authority without explicit current approval
+   naming the operation and target. A deployment must use the committed candidate, the repository
+   preflight, a ratified authority packet, a numeric `schema_head`, an exact 40-character build SHA,
+   rollback evidence, and post-deploy health equality. Never bypass `npm run deploy:api` with a raw
+   `wrangler deploy`.
 2. **RLS GRANT-PARITY INVARIANT — the most dangerous silent defect a DB-writing agent can introduce.**
    Any table `GRANT`ed to the `xlooop_app` role MUST also have `ENABLE ROW LEVEL SECURITY` **and** at
    least one row-level policy. A single missing `ENABLE ROW LEVEL SECURITY` on a granted table = silent
@@ -26,7 +29,7 @@ rule 1.
    grant-parity. (`folder_snapshots` is the one reasoned exemption — direct reads use the OWNER
    connection.) Keep tenant/workspace binding, RBAC, RLS, audit events, receipts, and idempotency
    **fail-closed**.
-3. **Migrations live in `src/workers/db/migrations/` as numbered `NNN_*.sql`** (082+). An agent asked
+3. **Migrations live in `src/workers/db/migrations/` as numbered `NNN_*.sql`.** An agent asked
    to "add a migration" will plausibly drop a `.sql` in a repo-root `migrations/` — wrong location,
    silently unapplied.
 4. **`MIGRATION-PROVENANCE.json` is IMMUTABLE seed evidence.** Never rewrite the original source commit;
@@ -39,11 +42,16 @@ rule 1.
    cross-repo source import collapses the repo boundary.
 7. **Keep MB-P as governance SSOT, never as a runtime filesystem dependency.** Update the API contract
    whenever a mounted route or envelope changes.
+8. **Use an isolated `codex/*` or `claude/*` worktree and a reviewed PR.** Do not direct-push agent
+   changes to `main`, and do not merge or mutate Ilmir-owned work.
 
 ## Local checks
 
-- Run `npm run ci-local` before every commit; `npm run verify:bundle` for bundle-affecting changes.
-  (No cloud CI until commercial launch — all checks run locally.)
+- Run `npm run ci-local` before every commit; run `npm run verify:bundle` for bundle-affecting
+  changes. No GitHub Actions are required while the operator keeps cloud CI disabled.
+- Before an approved production deployment, additionally run the migration, RLS grant-parity,
+  schema-head, current-SHA, ratified-authority, and rollback checks required by the deployment
+  runbook. After deployment, compare the complete health handshake with the committed candidate.
 
 ---
 _`CLAUDE.md` holds the same rule set in brief. This AGENTS.md is the agent-neutral SSOT; when the two

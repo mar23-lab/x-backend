@@ -5,9 +5,14 @@
 > (a table GRANTed to `xlooop_app` without `ENABLE ROW LEVEL SECURITY` = silent cross-tenant read).
 > The rules below are the brief form.
 
-This repository is a shadow backend until an explicitly approved cutover.
+This repository is the production API source authority. Deployed provenance remains independent:
+code is not live until the operator-approved release preflight succeeds and `/api/v1/health` reports
+the exact committed SHA, numeric schema head, contract, environment, authority, and capability
+posture.
 
-- Do not deploy, mutate production data, apply migrations, alter secrets, or flip feature flags.
+- Production deploys, data changes, migrations, secrets, flags, and authority transitions require
+  explicit current operator approval for the exact operation and target.
+- Never bypass `npm run deploy:api` with raw Wrangler or report merged code as deployed.
 - Do not add frontend implementation or import from `x-ai-front` or legacy frontend roots.
 - Keep tenant/workspace binding, RBAC, RLS, audit events, receipts, and idempotency fail-closed.
 - Keep MB-P as governance SSOT, never as a runtime filesystem dependency.
@@ -15,3 +20,4 @@ This repository is a shadow backend until an explicitly approved cutover.
 - Run `npm run ci-local` before commit and `npm run verify:bundle` for bundle-affecting changes.
 - Treat `MIGRATION-PROVENANCE.json` as immutable seed evidence. Later synchronization requires a new
   receipt; do not rewrite the original source commit.
+- Treat `Xlooop-XCP-demo` as donor-only; new backend behavior belongs here.
