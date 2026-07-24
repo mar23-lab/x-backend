@@ -22,7 +22,11 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 
 try {
   const pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
+  const wrangler = readFileSync(join(root, 'wrangler.toml'), 'utf8');
+  const pilotShadow = readFileSync(join(root, 'wrangler.pilot-shadow.toml'), 'utf8');
   const deploy = pkg.scripts?.['deploy:api'];
+  const dev = pkg.scripts?.['dev:api'];
+  const bundle = pkg.scripts?.['verify:bundle'];
   if (typeof deploy !== 'string') throw new Error('scripts["deploy:api"] missing or not a string');
 
   const missing = [];
@@ -37,6 +41,31 @@ try {
   if (!/verify-deploy-schema-head\.mjs/.test(deploy)) {
     missing.push('verify-deploy-schema-head.mjs preflight');
   }
+  if (/DEPLOY_MIGRATION_GATE_NONPROD=1/.test(deploy)) {
+    missing.push('deploy:api must not opt out as non-production');
+  }
+  if (typeof dev !== 'string' || !/DEPLOY_MIGRATION_GATE_NONPROD=1/.test(dev)) {
+    missing.push('dev:api explicit non-production migration-gate marker');
+  }
+  if (typeof bundle !== 'string' || !/DEPLOY_MIGRATION_GATE_NONPROD=1/.test(bundle)) {
+    missing.push('verify:bundle explicit non-production migration-gate marker');
+  }
+  const keepVarsIndex = wrangler.search(/^keep_vars\s*=\s*true\s*$/m);
+  const firstTableIndex = wrangler.search(/^\[/m);
+  if (keepVarsIndex < 0 || (firstTableIndex >= 0 && keepVarsIndex > firstTableIndex)) {
+    missing.push('top-level keep_vars = true before the first TOML table');
+  }
+  for (const [name, source] of [
+    ['production', wrangler],
+    ['pilot-shadow', pilotShadow],
+  ]) {
+    if (!/^CHAT_HISTORY_PERSISTENCE_REQUIRED\s*=\s*"true"\s*$/m.test(source)) {
+      missing.push(`${name} CHAT_HISTORY_PERSISTENCE_REQUIRED = "true"`);
+    }
+    if (!/^IDEMPOTENCY_ENABLED\s*=\s*"true"\s*$/m.test(source)) {
+      missing.push(`${name} IDEMPOTENCY_ENABLED = "true"`);
+    }
+  }
 
   if (missing.length) {
     console.error('✗ deploy-provenance-wiring · FAIL — deploy:api no longer injects deploy provenance.');
@@ -46,7 +75,7 @@ try {
     process.exit(1);
   }
 
-  console.log('☑ deploy-provenance-wiring · PASS · deploy:api injects full BUILD_SHA + BUILD_TIME + verified schema head');
+  console.log('☑ deploy-provenance-wiring · PASS · exact provenance, top-level keep_vars, strict chat persistence, and best-effort idempotency retry protection are configured');
   process.exit(0);
 } catch (err) {
   console.error(`✗ deploy-provenance-wiring · FAIL-CLOSED — could not verify deploy:api wiring: ${err.message}`);

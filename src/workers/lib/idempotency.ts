@@ -53,7 +53,8 @@ export async function withIdempotency(
     );
   }
 
-  // status === 'owned' → we execute exactly once.
+  // status === 'owned' → this request owns the reservation. The store intentionally
+  // fails open, so this is retry protection rather than a transactional exactly-once guarantee.
   let res: Response;
   try {
     res = await handler();
@@ -76,12 +77,12 @@ export async function withIdempotency(
   return res;
 }
 
-const IDEMPOTENT_METHODS = new Set(['POST', 'PATCH', 'PUT']);
+const IDEMPOTENT_METHODS = new Set(['POST', 'PATCH', 'PUT', 'DELETE']);
 
 /**
  * Group-level applicator: `route.use('*', idempotencyMiddleware())` covers every mutating write in a
  * route group with the same reserve-first semantics as withIdempotency, uniformly and for future routes.
- * GET/DELETE and the byte-identical fast path (flag off / no key / no tenant / auth not yet set) pass
+ * GET and the byte-identical fast path (flag off / no key / no tenant / auth not yet set) pass
  * straight through — the guards make it ordering-robust: if auth isn't populated it degrades to no-dedupe,
  * never a break.
  */

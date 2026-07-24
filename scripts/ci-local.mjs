@@ -26,6 +26,7 @@ const gates = [
   ['data schemas', 'npm', ['run', 'verify:data-schemas']],
   ['orphan tests', 'npm', ['run', 'verify:no-orphan-worker-tests']],
   ['prod-migration object-probe classifier', 'npm', ['run', 'verify:prod-migrations:self-test']],
+  ['predeploy migration fail-closed classifier', 'npm', ['run', 'verify:predeploy-migration-gate:self-test']],
   ['typecheck', 'npm', ['run', 'typecheck']],
   ['worker suite', 'npm', ['test']],
 ];

@@ -58,6 +58,10 @@ function ask(app: Hono, body: Record<string, unknown>) {
   );
 }
 
+function history(app: Hono, query = '', env: Record<string, unknown> = {}) {
+  return app.request(`/api/v1/customer-chat/history${query}`, { method: 'GET' }, env);
+}
+
 const AUTH = { user_id: 'u1', workspace_id: 'org_hy', email: 'a@honestyoung.example', role: 'member' };
 
 describe('POST /api/v1/customer-chat', () => {
@@ -229,6 +233,52 @@ describe('POST /api/v1/customer-chat', () => {
   it('403 when there is no signed-in workspace', async () => {
     const res = await ask(appFor({ ...AUTH, workspace_id: '' }, dalStub()), { message: 'hi' });
     expect(res.status).toBe(403);
+  });
+});
+
+describe('GET /api/v1/customer-chat/history', () => {
+  it('returns the signed-in customer thread from the same workspace-only scope used by POST', async () => {
+    const stored = [
+      { role: 'you', body: 'What is blocking us?', created_at: '2026-07-24T01:00:00.000Z' },
+      { role: 'assistant', body: 'One approval is waiting.', created_at: '2026-07-24T01:00:01.000Z' },
+    ];
+    const captured: { userId?: string; scope?: Record<string, unknown>; limit?: number } = {};
+    const dal = dalStub({
+      listChatHistory: async (userId: string, scope: Record<string, unknown>, limit: number) => {
+        captured.userId = userId;
+        captured.scope = scope;
+        captured.limit = limit;
+        return stored;
+      },
+    });
+    const res = await history(appFor(AUTH, dal), '?workspace_id=org_ATTACKER');
+    expect(res.status).toBe(200);
+    const body = await res.json() as { messages: unknown[]; scope: Record<string, unknown> };
+    expect(body.messages).toEqual(stored);
+    expect(body.scope).toEqual({ workspace_id: 'org_hy', project_id: null, domain_id: null });
+    expect(captured).toEqual({
+      userId: 'u1',
+      scope: { workspace_id: 'org_hy', project_id: null, domain_id: null },
+      limit: 100,
+    });
+  });
+
+  it('fails closed instead of returning a false empty thread when strict persistence is unavailable', async () => {
+    const res = await history(
+      appFor(AUTH, dalStub({ listChatHistory: async () => { throw new Error('database unavailable'); } })),
+      '',
+      { CHAT_HISTORY_PERSISTENCE_REQUIRED: 'true' },
+    );
+    expect(res.status).toBe(503);
+    const body = await res.json() as { code: string };
+    expect(body.code).toBe('CHAT_HISTORY_PERSISTENCE_FAILED');
+  });
+
+  it('legacy mode degrades to an empty thread when the DAL history contract is absent', async () => {
+    const res = await history(appFor(AUTH, dalStub()));
+    expect(res.status).toBe(200);
+    const body = await res.json() as { messages: unknown[] };
+    expect(body.messages).toEqual([]);
   });
 });
 

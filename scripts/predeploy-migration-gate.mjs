@@ -16,9 +16,9 @@
 //   This gate binds it. It is wired via wrangler.toml `[build].command`, so it
 //   runs before EVERY `wrangler deploy` — including a raw one.
 //
-// BEHAVIOUR (fail-closed where it matters, non-disruptive for dev)
-//   * DATABASE_URL unset            -> ADVISORY skip, exit 0 (so `wrangler dev`
-//                                       and CI without a DB are not broken).
+// BEHAVIOUR (fail-closed where it matters, explicit opt-out for non-production)
+//   * DATABASE_URL unset            -> ABORT unless DEPLOY_MIGRATION_GATE_NONPROD=1.
+//   * explicit dev/dry-run          -> ADVISORY skip only with DEPLOY_MIGRATION_GATE_NONPROD=1.
 //   * DATABASE_URL is a placeholder -> ABORT, exit 1 (catches the 260719 paste).
 //   * DATABASE_URL set, DB behind   -> ABORT, exit 1 (the core prevention).
 //   * DATABASE_URL set, unreachable -> ABORT, exit 1 (a URL you gave MUST work).
@@ -35,11 +35,34 @@ import { fileURLToPath } from 'node:url';
 const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO = resolve(HERE, '..');
 const url = process.env.DATABASE_URL || '';
+const selfTest = process.argv.includes('--self-test');
+
+export function missingDatabaseDisposition({ databaseUrl, bypass, nonProduction }) {
+  if (bypass) return 'bypass';
+  if (databaseUrl) return 'verify';
+  return nonProduction ? 'skip_nonproduction' : 'abort';
+}
 
 function line(s = '') { process.stderr.write(s + '\n'); }
 function banner(title) {
   line('');
   line('  ┌─ predeploy-migration-gate ' + '─'.repeat(Math.max(2, 44 - title.length)) + ' ' + title);
+}
+
+if (selfTest) {
+  const cases = [
+    [missingDatabaseDisposition({ databaseUrl: '', bypass: false, nonProduction: false }), 'abort', 'raw deploy without DB'],
+    [missingDatabaseDisposition({ databaseUrl: '', bypass: false, nonProduction: true }), 'skip_nonproduction', 'explicit dev/dry-run'],
+    [missingDatabaseDisposition({ databaseUrl: 'postgres://configured', bypass: false, nonProduction: false }), 'verify', 'configured production DB'],
+    [missingDatabaseDisposition({ databaseUrl: '', bypass: true, nonProduction: false }), 'bypass', 'audited bypass'],
+  ];
+  const failed = cases.filter(([actual, expected]) => actual !== expected);
+  if (failed.length) {
+    console.error(`predeploy-migration-gate self-test FAIL: ${failed.map((row) => row[2]).join(', ')}`);
+    process.exit(1);
+  }
+  console.log('predeploy-migration-gate self-test PASS · raw deploy fails closed; only explicit non-production skips');
+  process.exit(0);
 }
 
 // 0) explicit, audited bypass
@@ -51,14 +74,21 @@ if (process.env.DEPLOY_MIGRATION_GATE_BYPASS === '1') {
   process.exit(0);
 }
 
-// 1) no DB configured -> advisory skip (dev / CI without a DB)
+// 1) no DB configured -> only an explicit non-production invocation may skip.
 if (!url) {
-  banner('SKIPPED (advisory)');
-  line('  DATABASE_URL is unset — cannot verify prod migration state.');
-  line('  For a PRODUCTION deploy, set DATABASE_URL to the prod RW string so this');
-  line('  gate can confirm the DB is caught up, or run `npm run deploy:prod`.');
+  if (process.env.DEPLOY_MIGRATION_GATE_NONPROD === '1') {
+    banner('SKIPPED (explicit non-production)');
+    line('  DEPLOY_MIGRATION_GATE_NONPROD=1 and DATABASE_URL is unset.');
+    line('  This invocation may build/dev locally but is not production deployment evidence.');
+    line('');
+    process.exit(0);
+  }
+  banner('ABORT — production database evidence missing');
+  line('  DATABASE_URL is unset. A raw `wrangler deploy` may not bypass migration');
+  line('  and schema-head verification. Use `npm run deploy:api` with the production');
+  line('  database inputs, or set DEPLOY_MIGRATION_GATE_NONPROD=1 only for dev/dry-run.');
   line('');
-  process.exit(0);
+  process.exit(1);
 }
 
 // 2) placeholder detection (the 260719 footgun: DATABASE_URL='…PROD-RW…')
@@ -90,8 +120,26 @@ if (r.status === 3) {
   process.exit(1);
 }
 let missing = [];
-try { missing = [...new Set((JSON.parse(r.stdout || '{}').missing || []).map((m) => m.version))]; }
-catch { line('  (could not parse verifier output; treating as no reported gaps)'); }
+let migrationReport;
+try {
+  migrationReport = JSON.parse(r.stdout || '');
+  if (!Array.isArray(migrationReport.missing) || typeof migrationReport.ok !== 'boolean') {
+    throw new Error('required fields missing');
+  }
+  missing = [...new Set(migrationReport.missing.map((m) => m.version))];
+} catch {
+  banner('ABORT — migration verifier evidence invalid');
+  line('  verify-prod-migrations did not return its required machine-readable result.');
+  line('  An absent or malformed result is not proof that production is current.');
+  line('');
+  process.exit(1);
+}
+if (r.status !== 0 && r.status !== 2) {
+  banner('ABORT — migration verifier failed');
+  line(`  verify-prod-migrations exited ${String(r.status)}; deployment evidence is incomplete.`);
+  line('');
+  process.exit(1);
+}
 
 // load audited baseline of known-pending migrations
 let baseline = new Set();
@@ -104,12 +152,23 @@ const unexpected = missing.filter((v) => !baseline.has(v));
 const pendingHit = missing.filter((v) => baseline.has(v));
 
 if (unexpected.length === 0) {
-  line('  ✓ no unexpected schema drift — deploy may proceed.');
+  line('  ✓ no unexpected migration drift.');
   if (pendingHit.length) {
     line('  (ledger reports ' + pendingHit.length + ' known-pending migration(s) not applied: ' +
          pendingHit.map((v) => String(v).padStart(3, '0')).join(', ') +
          ' — accepted per scripts/prod-migration-accepted-pending.json)');
   }
+  const schema = spawnSync('node', [resolve(REPO, 'scripts', 'verify-deploy-schema-head.mjs')], {
+    cwd: REPO, encoding: 'utf8', env: process.env,
+  });
+  if (schema.status !== 0) {
+    banner('ABORT — exact schema-head proof failed');
+    line((schema.stderr || schema.stdout || '  verify-deploy-schema-head failed').trimEnd());
+    line('');
+    process.exit(1);
+  }
+  line((schema.stdout || '').trimEnd());
+  line('  ✓ migration objects and configured/database/local schema heads agree — deploy may proceed.');
   line('');
   process.exit(0);
 }

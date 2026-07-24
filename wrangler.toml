@@ -13,6 +13,10 @@ main = "src/workers/index.ts"
 compatibility_date = "2026-05-26"
 compatibility_flags = ["nodejs_compat"]
 
+# Preserve dashboard-set vars/secrets across `wrangler deploy`. This is a
+# top-level Wrangler field; nesting it under [build] makes Wrangler ignore it.
+keep_vars = true
+
 # Pre-deploy safety gate (260719): refuse to ship code that is ahead of the prod
 # DB schema. Runs before EVERY `wrangler deploy` (even a raw one), so it cannot be
 # skipped the way a bare `wrangler deploy` skipped `npm run deploy:api`. It binds
@@ -21,12 +25,6 @@ compatibility_flags = ["nodejs_compat"]
 # DEPLOY_MIGRATION_GATE_BYPASS=1.
 [build]
 command = "node scripts/predeploy-migration-gate.mjs"
-
-# Preserve dashboard-set vars/secrets across `wrangler deploy`. Without this (default false),
-# a deploy DELETES any variable set only in the dashboard and not in this file — e.g. the
-# operator-flipped CUSTOMER_INAPP_READINESS_GATE / CUSTOMER_AUTO_PROVISION_* (Parts M/O). keep_vars
-# makes deploys additive: this file's [vars] win for keys it declares; dashboard-only keys survive.
-keep_vars = true
 
 # Production route binding · api.xlooop.com → xlooop-api
 # Custom domain provisioned via Cloudflare Dashboard 2026-05-26.
@@ -139,6 +137,11 @@ LOG_LEVEL = "info"
 # chat/digest/enrich paths WRITE context_packets + skill_invocation_receipts (mig 070/071, applied)
 # - the "what the agent knew per governed run" audit rows. Additive, shadow-observability only.
 CONTEXT_PACKET_PERSISTENCE_ENABLED = "true"
+# Customer chat must not report success unless the exchange is durable. Eligible
+# retries request best-effort deduplication; governed exactly-once behavior still
+# requires route-level transaction/receipt evidence.
+CHAT_HISTORY_PERSISTENCE_REQUIRED = "true"
+IDEMPOTENCY_ENABLED = "true"
 # W4/G2 · operator-owned org ids — connectors auto-approve the operator-approval side for these
 # (the operator IS the authority for their own workspaces). Customer orgs are NOT listed → they
 # require explicit operator approval (POST /admin/customer/:id/approve). Non-secret identifiers.
