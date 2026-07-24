@@ -2156,6 +2156,32 @@
           "reason": "Prevent negated no-change language from authorizing governed work"
         }
       ]
+    },
+    {
+      "delta_id": "onboarding-durable-persistence-20260724",
+      "generated_at": "2026-07-24T07:28:48.098Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "b269f958557daca0a146fc88125904379e475e9d",
+      "target_base_commit": "b269f958557daca0a146fc88125904379e475e9d",
+      "authority": "shadow_only_no_production_cutover",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/__tests__/readiness-route.test.ts",
+          "target_blob": "681997d5fe8660140e59cdb6174d3b4980d02513",
+          "reason": "server-first durable onboarding readiness persistence with idempotent receipt and fail-closed atomic tests"
+        },
+        {
+          "path": "src/workers/dal/customer-readiness-store.ts",
+          "target_blob": "7456eba9327176c0e5970defb1f03724d57b1593",
+          "reason": "server-first durable onboarding readiness persistence with idempotent receipt and fail-closed atomic tests"
+        },
+        {
+          "path": "src/workers/routes/readiness.ts",
+          "target_blob": "82e7f5002ae4853e3d308ba3bf5fe4b06180ad1b",
+          "reason": "server-first durable onboarding readiness persistence with idempotent receipt and fail-closed atomic tests"
+        }
+      ]
     }
   ]
 }
