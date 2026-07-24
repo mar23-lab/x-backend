@@ -24,6 +24,18 @@ describe('canonical intake resolution', () => {
     expect(row).toMatchObject({ operation: 'answer', next_step: 'answer_now', requires_confirmation: false });
   });
 
+  it('honours explicit no-change language in a workspace summary request', () => {
+    const text = 'What is currently in this workspace? Summarize the active projects, connected sources, and recorded events. State what is grounded, include freshness, and do not create or change anything.';
+    const row = buildIntakeResolution({ text, client_request_id: 'c-readonly-account' }, '1'.repeat(64), inventory());
+    expect(row).toMatchObject({
+      operation: 'answer',
+      next_step: 'answer_now',
+      requires_confirmation: false,
+      target: { type: 'read_model' },
+      effect_summary: 'Answer from governed workspace facts without creating work.',
+    });
+  });
+
   it('returns a draft plan without creating governed work', () => {
     const row = buildIntakeResolution({ text: 'Plan the next release', client_request_id: 'c2' }, 'b'.repeat(64), inventory());
     expect(row).toMatchObject({ operation: 'plan', next_step: 'draft_plan', requires_confirmation: false });

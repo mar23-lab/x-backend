@@ -89,6 +89,7 @@ function verifyEvidence(e, evidencePath) {
     'backend_build_sha',
     'schema_head',
     'generated_at',
+    'producer',
     'soak',
     'health_samples',
     'metrics',
@@ -143,6 +144,10 @@ function verifyEvidence(e, evidencePath) {
   addCheck('no_production_runtime_urls', productionUrlPaths(e).length === 0, {
     production_url_paths: productionUrlPaths(e),
   }, { block: true });
+  const producerProblems = problemsForProducer(e.producer);
+  addCheck('producer_provenance_complete', producerProblems.length === 0, {
+    producer_problems: producerProblems,
+  }, { block: true });
 
   const soakProblems = problemsForSoak(e.soak);
   addCheck('soak_window_complete', soakProblems.length === 0, {
@@ -176,11 +181,34 @@ function verifyEvidence(e, evidencePath) {
     e.authority === 'shadow' &&
     isPilotShadowApi(e.api_base) &&
     isNonProductionFrontend(e.frontend_origin) &&
+    producerProblems.length === 0 &&
     !/(^|[/\\])[^/\\]*(?:schema\.)?example\.json$/i.test(evidencePath);
 
   addCheck('pilot_shadow_soak_rollback_authority', authority, {
     evidence_file: evidencePath,
   }, { block: strict, warnOnly: !strict });
+}
+
+function problemsForProducer(producer) {
+  const problems = [];
+  if (!producer || typeof producer !== 'object') return ['producer'];
+  for (const field of ['name', 'version', 'kind', 'run_id', 'started_at', 'last_sample_at']) {
+    if (typeof producer[field] !== 'string' || producer[field].trim() === '') problems.push(`producer.${field}`);
+  }
+  if (producer.name !== 'x-backend.pilot-shadow-soak-sampler') problems.push('producer.name');
+  if (producer.kind !== 'accumulated_live_capture') problems.push('producer.kind');
+  if (!/^[a-zA-Z0-9_.:-]{8,160}$/.test(producer.run_id || '')) problems.push('producer.run_id');
+  if (Number.isNaN(Date.parse(producer.started_at || ''))) problems.push('producer.started_at');
+  if (Number.isNaN(Date.parse(producer.last_sample_at || ''))) problems.push('producer.last_sample_at');
+  if (producer.finalized_at !== null && producer.finalized_at !== undefined && Number.isNaN(Date.parse(producer.finalized_at))) {
+    problems.push('producer.finalized_at');
+  }
+  if (producer.nonproduction_origin_verified !== true) problems.push('producer.nonproduction_origin_verified');
+  if (producer.pilot_shadow_api_verified !== true) problems.push('producer.pilot_shadow_api_verified');
+  if (producer.manual === true || producer.hand_authored === true || producer.synthetic === true) {
+    problems.push('producer.manual_or_synthetic');
+  }
+  return [...new Set(problems)];
 }
 
 function problemsForSoak(soak) {
@@ -372,6 +400,19 @@ function runSelfTest() {
     backend_build_sha: build,
     schema_head: 79,
     generated_at: new Date(now).toISOString(),
+    producer: {
+      name: 'x-backend.pilot-shadow-soak-sampler',
+      version: 'self-test',
+      kind: 'accumulated_live_capture',
+      run_id: 'soak-self-test-1',
+      started_at: start,
+      last_sample_at: end,
+      finalized_at: end,
+      nonproduction_origin_verified: true,
+      pilot_shadow_api_verified: true,
+      manual: false,
+      synthetic: false,
+    },
     soak: {
       started_at: start,
       ended_at: end,
@@ -422,8 +463,9 @@ function runSelfTest() {
     productionUrlPaths({ api_base: 'https://api.xlooop.com' }).length === 1;
   const secretRejected = secretPaths({ database_url: 'redacted' }).length > 0;
   const placeholderRejected = placeholderPaths({ note: 'todo' }).length === 1;
-  if (!validOk || !prodRejected || !secretRejected || !placeholderRejected) {
-    console.error(JSON.stringify({ validOk, prodRejected, secretRejected, placeholderRejected, checks, failures }, null, 2));
+  const producerRejected = problemsForProducer({ ...valid.producer, synthetic: true }).includes('producer.manual_or_synthetic');
+  if (!validOk || !prodRejected || !secretRejected || !placeholderRejected || !producerRejected) {
+    console.error(JSON.stringify({ validOk, prodRejected, secretRejected, placeholderRejected, producerRejected, checks, failures }, null, 2));
     throw new Error('self-test failed');
   }
   console.log('PASS pilot-shadow soak rollback evidence self-test');

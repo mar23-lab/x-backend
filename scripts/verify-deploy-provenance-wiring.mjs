@@ -28,16 +28,25 @@ try {
   const missing = [];
   if (!/--var\s+BUILD_SHA:/.test(deploy)) missing.push('--var BUILD_SHA:<sha>');
   if (!/--var\s+BUILD_TIME:/.test(deploy)) missing.push('--var BUILD_TIME:<iso>');
+  if (!/--var\s+XLOOOP_SCHEMA_HEAD:\$XLOOOP_SCHEMA_HEAD/.test(deploy)) {
+    missing.push('--var XLOOOP_SCHEMA_HEAD:$XLOOOP_SCHEMA_HEAD');
+  }
+  if (!/git\s+rev-parse\s+HEAD/.test(deploy) || /git\s+rev-parse\s+--short\s+HEAD/.test(deploy)) {
+    missing.push('full 40-character git rev-parse HEAD');
+  }
+  if (!/verify-deploy-schema-head\.mjs/.test(deploy)) {
+    missing.push('verify-deploy-schema-head.mjs preflight');
+  }
 
   if (missing.length) {
     console.error('✗ deploy-provenance-wiring · FAIL — deploy:api no longer injects deploy provenance.');
     console.error(`    missing injection(s): ${missing.join(', ')}`);
     console.error('    Consequence: live /health would emit build:"dev" / built_at:null — production is unattestable.');
-    console.error('    Fix: restore the wrangler `--var BUILD_SHA:$(git rev-parse --short HEAD) --var BUILD_TIME:$(date -u +%Y%m%dT%H%M%SZ)` injection in scripts["deploy:api"].');
+    console.error('    Fix: restore full-SHA, build-time, and live-verified schema-head injection in scripts["deploy:api"].');
     process.exit(1);
   }
 
-  console.log('☑ deploy-provenance-wiring · PASS · deploy:api injects BUILD_SHA + BUILD_TIME');
+  console.log('☑ deploy-provenance-wiring · PASS · deploy:api injects full BUILD_SHA + BUILD_TIME + verified schema head');
   process.exit(0);
 } catch (err) {
   console.error(`✗ deploy-provenance-wiring · FAIL-CLOSED — could not verify deploy:api wiring: ${err.message}`);

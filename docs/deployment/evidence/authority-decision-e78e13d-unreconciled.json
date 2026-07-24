@@ -1,0 +1,82 @@
+{
+  "schema_id": "xlooop.authority_decision_packet.v1",
+  "status": "observed_unreconciled",
+  "recorded_at": "2026-07-24T04:04:40.342Z",
+  "production_changes_frozen": true,
+  "commercial_release_allowed": false,
+  "candidate_commit_sha": "e78e13d4914b7439423a81e218c644d3316cc8ef",
+  "exact_deployed_sha_verified": false,
+  "decision": {
+    "approver": null,
+    "approval_reference": null,
+    "decision_at": "2026-07-22T05:41:47Z",
+    "rationale": "PR #54 states that the worker had already served production de facto and changed XLOOOP_AUTHORITY_MODE from an unset shadow fallback to production reporting.",
+    "source_refs": [
+      "git:commit:e78e13d4914b7439423a81e218c644d3316cc8ef",
+      "github:pull:54",
+      "wrangler.toml:[vars].XLOOOP_AUTHORITY_MODE"
+    ]
+  },
+  "previous_authority": {
+    "status": "unresolved",
+    "authority": null,
+    "evidence_reference": null
+  },
+  "rollback": {
+    "status": "unresolved",
+    "target_sha": null,
+    "rehearsal_reference": null
+  },
+  "deployment": {
+    "reported_build": "e78e13d",
+    "reported_built_at": "20260722T055854Z",
+    "contract_hash": "018bf690beace59469be78df9da4e64de1faef0fcd8053221609f85bf506b90b",
+    "schema_head": null,
+    "environment": "production",
+    "authority": "production"
+  },
+  "health_observation": {
+    "url": "https://api.xlooop.com/api/v1/health",
+    "method": "GET",
+    "observed_at": "2026-07-24T04:04:40.342Z",
+    "response": {
+      "status": "ok",
+      "version": "1.0.0",
+      "build": "e78e13d",
+      "built_at": "20260722T055854Z",
+      "environment": "production",
+      "authority": "production",
+      "contract_hash": "018bf690beace59469be78df9da4e64de1faef0fcd8053221609f85bf506b90b",
+      "schema_head": null,
+      "feature_posture": {
+        "single_intake": true,
+        "role_skill_catalog": true,
+        "context_packet_persistence": true,
+        "chat_history_persistence_required": false,
+        "tenant_projection_queue": false,
+        "current_work_projection": false
+      },
+      "bindings": {
+        "tenant_projection_queue": false
+      },
+      "capabilities": {
+        "sign_offs": true,
+        "single_intake": true,
+        "customer_chat": true,
+        "source_connections": true,
+        "document_uploads": true
+      },
+      "sentry_active": true,
+      "timestamp": "2026-07-24T04:04:40.342Z"
+    }
+  },
+  "blocking_gaps": [
+    "No separate operator approval reference was found for the authority transfer.",
+    "The health build is a seven-character prefix, not an exact deployed commit SHA.",
+    "The health schema_head is null.",
+    "The previous authority and rollback target are unresolved.",
+    "No rollback rehearsal reference is attached.",
+    "Governed chat-history persistence is not required.",
+    "Tenant projection queue and current-work projection are disabled."
+  ]
+}

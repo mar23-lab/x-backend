@@ -2,12 +2,15 @@
 import { spawnSync } from 'node:child_process';
 
 const gates = [
+  ['github actions disabled', 'npm', ['run', 'verify:github-actions-disabled']],
   ['installed dependency parity', 'npm', ['run', 'verify:installed-dependencies']],
   ['provenance', 'npm', ['run', 'verify:provenance']],
   ['boundary', 'npm', ['run', 'verify:boundary']],
   ['runtime independence', 'npm', ['run', 'verify:no-mbp-runtime-dependency']],
   ['API contract', 'npm', ['run', 'verify:contract']],
   ['deploy provenance wiring', 'npm', ['run', 'verify:deploy-provenance']],
+  ['deploy schema-head contract', 'npm', ['run', 'verify:deploy-schema-head:self-test']],
+  ['authority decision truth', 'npm', ['run', 'verify:authority-decision']],
   ['packet completion contract', 'npm', ['run', 'verify:packet-completion-contract']],
   ['typed work relationships', 'npm', ['run', 'verify:typed-work-relationships']],
   ['action intent shadow', 'npm', ['run', 'verify:action-intent-shadow']],

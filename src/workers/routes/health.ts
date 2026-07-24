@@ -31,6 +31,10 @@ healthRoute.get('/health', (ctx) => {
   };
   const enabled = (value?: string) => value?.trim().toLowerCase() === 'true';
   const authority = env.XLOOOP_AUTHORITY_MODE === 'production' ? 'production' : 'shadow';
+  const configuredSchemaHead = Number(env.XLOOOP_SCHEMA_HEAD);
+  const schemaHead = Number.isSafeInteger(configuredSchemaHead) && configuredSchemaHead > 0
+    ? configuredSchemaHead
+    : null;
   return ctx.json({
     status: 'ok',
     version: '1.0.0',
@@ -39,7 +43,7 @@ healthRoute.get('/health', (ctx) => {
     environment: env.ENVIRONMENT || 'development',
     authority,
     contract_hash: apiContract.contract_hash,
-    schema_head: env.XLOOOP_SCHEMA_HEAD || null,
+    schema_head: schemaHead,
     feature_posture: {
       single_intake: enabled(env.SINGLE_INTAKE_ENABLED),
       role_skill_catalog: enabled(env.ROLE_SKILL_CATALOG_ENABLED),
