@@ -36,6 +36,19 @@ describe('canonical intake resolution', () => {
     });
   });
 
+  it.each([
+    'Live verification 2026-07-24: summarize the current workspace status and identify any blocked work. Do not create, approve, edit, or delete governed work.',
+    'What is the current status of Honest & Young Operations? Summarize active work and blockers using workspace records. Read only: do not create or modify work.',
+  ])('keeps live read-only reproduction text on the answer-now path: %s', (text) => {
+    const row = buildIntakeResolution({ text, client_request_id: 'c-live-readonly' }, '2'.repeat(64), inventory());
+    expect(row).toMatchObject({
+      operation: 'inspect',
+      next_step: 'answer_now',
+      requires_confirmation: false,
+      target: { type: 'read_model' },
+    });
+  });
+
   it('returns a draft plan without creating governed work', () => {
     const row = buildIntakeResolution({ text: 'Plan the next release', client_request_id: 'c2' }, 'b'.repeat(64), inventory());
     expect(row).toMatchObject({ operation: 'plan', next_step: 'draft_plan', requires_confirmation: false });

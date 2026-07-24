@@ -25,7 +25,10 @@ describe('action-intent shadow classifier', () => {
     const prompt = 'What is currently in this workspace? Summarize the active projects, connected sources, and recorded events. State what is grounded, include freshness, and do not create or change anything.';
     expect(classifyActionIntent(prompt)).toMatchObject({ action_intent: 'answer', matched_rule: 'answer' });
     expect(classifyActionIntent('Inspect the current state without creating anything.')).toMatchObject({ action_intent: 'inspect' });
+    expect(classifyActionIntent('Live verification 2026-07-24: summarize the current workspace status and identify any blocked work. Do not create, approve, edit, or delete governed work.')).toMatchObject({ action_intent: 'inspect', matched_rule: 'inspect' });
+    expect(classifyActionIntent('What is the current status of Honest & Young Operations? Summarize active work and blockers using workspace records. Read only: do not create or modify work.')).toMatchObject({ action_intent: 'inspect', matched_rule: 'inspect' });
     expect(classifyActionIntent('Create a task and do not duplicate existing work.')).toMatchObject({ action_intent: 'create_work' });
+    expect(classifyActionIntent('Create a read-only report showing current status.')).toMatchObject({ action_intent: 'create_work' });
     expect(classifyActionIntent('Do not wait; create a task now.')).toMatchObject({ action_intent: 'create_work' });
   });
 });
