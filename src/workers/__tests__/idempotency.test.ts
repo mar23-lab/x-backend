@@ -21,6 +21,33 @@ function makeSql(script: { insertReturns?: unknown[]; selectRow?: Record<string,
     return Promise.resolve([]);
   }) as never;
 }
+
+function makeStatefulReservationSql(log: string[]) {
+  let reserved = false;
+  return ((strings: TemplateStringsArray) => {
+    const q = strings.join(' ');
+    if (q.includes('INSERT INTO idempotency_keys')) {
+      log.push('insert');
+      if (reserved) return Promise.resolve([]);
+      reserved = true;
+      return Promise.resolve([{ id: 1 }]);
+    }
+    if (q.includes('SELECT response_status')) {
+      log.push('select');
+      return Promise.resolve([{ response_status: null, response_body: null }]);
+    }
+    if (q.includes('UPDATE idempotency_keys')) {
+      log.push('update');
+      return Promise.resolve([]);
+    }
+    if (q.includes('DELETE FROM idempotency_keys')) {
+      log.push('delete');
+      reserved = false;
+      return Promise.resolve([]);
+    }
+    return Promise.resolve([]);
+  }) as never;
+}
 const throwingSql = (() => Promise.reject(new Error('relation "idempotency_keys" does not exist'))) as never;
 
 describe('idempotency-store — reserve-first semantics', () => {
@@ -131,6 +158,27 @@ function mwApp(script: { insertReturns?: unknown[]; selectRow?: Record<string, u
 const mwReq = (a: Hono, method: string, env: Record<string, unknown>, headers: Record<string, string> = {}) =>
   a.request('/w', { method, headers }, env as never);
 
+function siblingGroupApp(log: string[]) {
+  const parent = new Hono();
+  parent.use('*', async (ctx, next) => {
+    ctx.set('auth', { workspace_id: 'org_x' } as never);
+    ctx.set('sql', makeStatefulReservationSql(log) as never);
+    await next();
+  });
+  const operational = new Hono();
+  operational.use('*', idempotencyMiddleware());
+  operational.post('/packets', (ctx) => ctx.json({ packet: { id: 'p1' } }, 201));
+  const chat = new Hono();
+  chat.use('*', idempotencyMiddleware());
+  chat.post('/customer-chat', (ctx) => ctx.json({ answer: 'ok' }, 201));
+  const intake = new Hono();
+  intake.post('/intake/resolve', (ctx) => ctx.json({ resolution: { id: 'inr_1' } }, 201));
+  parent.route('/', operational);
+  parent.route('/', chat);
+  parent.route('/', intake);
+  return parent;
+}
+
 describe('idempotencyMiddleware — group applicator', () => {
   it('GET ⇒ passthrough (non-mutating, sql untouched)', async () => {
     const script = { log: [] as string[] };
@@ -171,5 +219,17 @@ describe('idempotencyMiddleware — group applicator', () => {
     expect(res.status).toBe(200);
     expect(res.headers.get('Idempotency-Replayed')).toBe('true');
     expect(await res.json()).toEqual(stored);
+  });
+
+  it('coalesces overlapping wildcard middleware into one request reservation', async () => {
+    const log: string[] = [];
+    const res = await siblingGroupApp(log).request(
+      '/intake/resolve',
+      { method: 'POST', headers: { 'Idempotency-Key': 'intake-key' } },
+      { IDEMPOTENCY_ENABLED: 'true' } as never,
+    );
+    expect(res.status).toBe(201);
+    expect(await res.json()).toEqual({ resolution: { id: 'inr_1' } });
+    expect(log).toEqual(['insert', 'update']);
   });
 });
