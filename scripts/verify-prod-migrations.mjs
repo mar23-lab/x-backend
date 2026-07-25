@@ -82,11 +82,96 @@ function parseFileVersions() {
 // we probe TABLES only — a table is the object deployed code selects/inserts on and
 // whose absence 500s; indexes/constraints degrade but rarely hard-500.
 export function parseKeyTable(sqlText) {
+  const executableSql = stripCommentsAndStrings(sqlText);
   // CREATE TABLE [IF NOT EXISTS] [schema.]"?name"? — first match wins.
-  const m = sqlText.match(
+  const m = executableSql.match(
     /CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?(?:"?[a-zA-Z_][\w]*"?\.)?"?([a-zA-Z_][\w]*)"?/i,
   );
   return m ? m[1].toLowerCase() : null;
+}
+
+// Ignore DDL-looking prose and string data before extracting an object name.
+// PostgreSQL DO $$ ... $$ bodies remain visible because they contain executable
+// migration statements; ordinary quoted strings are masked because dynamic SQL
+// cannot be proven safely by this static object probe.
+function stripCommentsAndStrings(sqlText) {
+  let output = '';
+  let state = 'code';
+  let blockDepth = 0;
+
+  for (let i = 0; i < sqlText.length; i += 1) {
+    const char = sqlText[i];
+    const next = sqlText[i + 1] || '';
+
+    if (state === 'line-comment') {
+      if (char === '\n') {
+        output += char;
+        state = 'code';
+      } else {
+        output += ' ';
+      }
+      continue;
+    }
+
+    if (state === 'block-comment') {
+      if (char === '/' && next === '*') {
+        blockDepth += 1;
+        output += '  ';
+        i += 1;
+      } else if (char === '*' && next === '/') {
+        blockDepth -= 1;
+        output += '  ';
+        i += 1;
+        if (blockDepth === 0) state = 'code';
+      } else {
+        output += char === '\n' ? '\n' : ' ';
+      }
+      continue;
+    }
+
+    if (state === 'single-quote') {
+      if (char === "'" && next === "'") {
+        output += '  ';
+        i += 1;
+      } else if (char === "'" && sqlText[i - 1] !== '\\') {
+        output += ' ';
+        state = 'code';
+      } else {
+        output += char === '\n' ? '\n' : ' ';
+      }
+      continue;
+    }
+
+    if (state === 'double-quote') {
+      output += char;
+      if (char === '"' && next === '"') {
+        output += next;
+        i += 1;
+      } else if (char === '"') {
+        state = 'code';
+      }
+      continue;
+    }
+
+    if (char === '-' && next === '-') {
+      output += '  ';
+      i += 1;
+      state = 'line-comment';
+    } else if (char === '/' && next === '*') {
+      output += '  ';
+      i += 1;
+      state = 'block-comment';
+      blockDepth = 1;
+    } else if (char === "'") {
+      output += ' ';
+      state = 'single-quote';
+    } else {
+      output += char;
+      if (char === '"') state = 'double-quote';
+    }
+  }
+
+  return output;
 }
 
 // PURE classifier — no DB, no fs. Given the migration list, the applied-version
@@ -142,11 +227,43 @@ function runSelfTest() {
   // RED control: the dangerous case MUST be a hard fail, the benign case MUST NOT.
   if (!HARD_FAIL.has(byV[99])) fails.push('v99 (ledger-present/object-absent) must be HARD FAIL');
   if (HARD_FAIL.has(byV[37])) fails.push('v37 (table-present/ledger-absent) must NOT be a hard fail');
+
+  const parserCases = [
+    {
+      label: 'line-comment IF NOT EXISTS decoy',
+      sql: `-- CREATE TABLE IF NOT EXISTS guard text only
+DO $$ BEGIN
+  CREATE TABLE user_source_connections (id text);
+END $$;`,
+      expected: 'user_source_connections',
+    },
+    {
+      label: 'block-comment decoy and quoted schema',
+      sql: '/* CREATE TABLE ghost_table */ CREATE TABLE IF NOT EXISTS "app"."Actual_Table" (id text);',
+      expected: 'actual_table',
+    },
+    {
+      label: 'string-literal decoy',
+      sql: "SELECT 'CREATE TABLE string_decoy'; CREATE TABLE real_table (id text);",
+      expected: 'real_table',
+    },
+    {
+      label: 'ALTER-only migration',
+      sql: '-- CREATE TABLE comment_only\nALTER TABLE existing_table ADD COLUMN note text;',
+      expected: null,
+    },
+  ];
+  for (const parserCase of parserCases) {
+    const actual = parseKeyTable(parserCase.sql);
+    if (actual !== parserCase.expected) {
+      fails.push(`${parserCase.label}: expected ${String(parserCase.expected)}, got ${String(actual)}`);
+    }
+  }
   if (fails.length) {
     console.error('SELF-TEST FAIL:\n  ' + fails.join('\n  '));
     process.exit(4);
   }
-  console.log('SELF-TEST PASS · classifier separates object-missing (FAIL) from ledger-missing (WARN)');
+  console.log('SELF-TEST PASS · classifier and executable CREATE TABLE parser controls');
   console.log('  verdicts: ' + JSON.stringify(byV));
   process.exit(0);
 }

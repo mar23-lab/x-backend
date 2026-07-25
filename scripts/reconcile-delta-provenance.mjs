@@ -22,6 +22,7 @@ import { fileURLToPath } from 'node:url';
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const DELTA_FILE = join(ROOT, 'MIGRATION-DELTA-PROVENANCE.json');
 const SEED_FILE = join(ROOT, 'MIGRATION-PROVENANCE.json');
+const CURRENT_AUTHORITY = 'source_authority_no_automatic_deploy';
 
 function git(args) {
   return execFileSync('git', args, { cwd: ROOT, encoding: 'utf8' }).trim();
@@ -64,7 +65,7 @@ function reconcile(deltaJson, seedJson, { id, reason, files, sourceCommit, nowIs
     source_repo: 'mar23-lab/x-backend',
     source_commit: sourceCommit,
     target_base_commit: sourceCommit,
-    authority: 'shadow_only_no_production_cutover',
+    authority: CURRENT_AUTHORITY,
     copied_files: [],
     transformed_files: transformed,
   };
@@ -87,9 +88,10 @@ function selfTest() {
   const okOne = dj.deltas.filter((d) => d.delta_id === 'x').length === 1;
   const reconciled = dj.deltas.find((d) => d.delta_id === 'x').transformed_files;
   const okBlob = reconciled.length === files.length && reconciled.every((entry) => entry.target_blob === 'b'.repeat(40));
+  const okAuthority = dj.deltas.find((d) => d.delta_id === 'x').authority === CURRENT_AUTHORITY;
   const okSkip = reconcileWith(dj, seed, { id: 'y', reason: 'r', files: ['new.ts'], sourceCommit: 'c'.repeat(40), nowIso, hash: () => 'z' }).skipped.includes('new.ts');
-  const ok = okOne && okBlob && okSkip && r1.changed && r2.changed;
-  console.log(`  self-test: single-delta=${okOne} blob-updated=${okBlob} unmanaged-skipped=${okSkip}`);
+  const ok = okOne && okBlob && okAuthority && okSkip && r1.changed && r2.changed;
+  console.log(`  self-test: single-delta=${okOne} blob-updated=${okBlob} current-authority=${okAuthority} unmanaged-skipped=${okSkip}`);
   console.log(ok ? 'PASS reconcile-delta-provenance self-test' : 'FAIL reconcile-delta-provenance self-test');
   return ok ? 0 : 1;
 }
@@ -104,7 +106,7 @@ function reconcileWith(deltaJson, seedJson, { id, reason, files, sourceCommit, n
     transformed.push({ path, target_blob: hash(path), reason: reason || `reconcile ${id}` });
   }
   if (transformed.length) {
-    const delta = { delta_id: id, generated_at: nowIso, source_repo: 'mar23-lab/x-backend', source_commit: sourceCommit, target_base_commit: sourceCommit, authority: 'shadow_only_no_production_cutover', copied_files: [], transformed_files: transformed };
+    const delta = { delta_id: id, generated_at: nowIso, source_repo: 'mar23-lab/x-backend', source_commit: sourceCommit, target_base_commit: sourceCommit, authority: CURRENT_AUTHORITY, copied_files: [], transformed_files: transformed };
     deltaJson.deltas = (deltaJson.deltas ?? []).filter((d) => d.delta_id !== id);
     deltaJson.deltas.push(delta);
   }

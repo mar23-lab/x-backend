@@ -2326,6 +2326,27 @@
           "reason": "customer chat persistence, fail-closed deploy verification, exact contract parity, and destructive-write retry protection"
         }
       ]
+    },
+    {
+      "delta_id": "prod-db-authority-verifier-20260725",
+      "generated_at": "2026-07-25T02:43:16.966Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "80be6242c1ce06ba0191e4e3b9c00f1627604fcd",
+      "target_base_commit": "80be6242c1ce06ba0191e4e3b9c00f1627604fcd",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "package.json",
+          "target_blob": "70843f9c260e537d1633f153ac9ee8854876e5d9",
+          "reason": "Make production migration and live RLS verification executable; fix SQL comment parsing and current source-authority provenance semantics"
+        },
+        {
+          "path": "scripts/verify-prod-migrations.mjs",
+          "target_blob": "a456119f42c7b4443d89d3026df88e497bfae614",
+          "reason": "Make production migration and live RLS verification executable; fix SQL comment parsing and current source-authority provenance semantics"
+        }
+      ]
     }
   ]
 }
