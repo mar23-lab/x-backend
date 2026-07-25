@@ -2425,6 +2425,27 @@
           "reason": "proves intake failure telemetry identifies the persistence stage while excluding customer prompt and database error detail"
         }
       ]
+    },
+    {
+      "delta_id": "request-idempotency-reentrancy-20260725",
+      "generated_at": "2026-07-25T10:09:00.000Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "9ce88ba854f9b7bce87708a9aba7eb642e5b4d19",
+      "target_base_commit": "9ce88ba854f9b7bce87708a9aba7eb642e5b4d19",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/lib/idempotency.ts",
+          "target_blob": "55d643de79a781ef5fde03e374fff789150588dc",
+          "reason": "coalesces overlapping Hono wildcard idempotency wrappers so one HTTP request owns one reservation and cannot deadlock against its own pending key"
+        },
+        {
+          "path": "src/workers/__tests__/idempotency.test.ts",
+          "target_blob": "fe97818b59b8920a92fc7eb3284dc0a784dfbad5",
+          "reason": "reproduces sibling route-group middleware overlap with a stateful reservation store and proves one reserve plus one completion"
+        }
+      ]
     }
   ]
 }

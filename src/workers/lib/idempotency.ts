@@ -19,8 +19,18 @@ import { neonClient, type Sql } from '../db/client';
 import { envFlagTrue } from './env-flag';
 import { reserveIdempotencyKey, completeIdempotencyKey, releaseIdempotencyKey } from '../dal/idempotency-store';
 
+const REQUEST_IDEMPOTENCY_MARKER = 'xlooop_idempotency_key';
+
 export function idempotencyEnabled(env: unknown): boolean {
   return envFlagTrue((env as { IDEMPOTENCY_ENABLED?: string } | undefined)?.IDEMPOTENCY_ENABLED);
+}
+
+function requestAlreadyReserved(ctx: Context, key: string): boolean {
+  return ctx.get(REQUEST_IDEMPOTENCY_MARKER as never) === key;
+}
+
+function markRequestReserved(ctx: Context, key: string): void {
+  ctx.set(REQUEST_IDEMPOTENCY_MARKER as never, key as never);
 }
 
 /** Injectable Sql seam (mirrors spine-authority sqlFor): a test may pre-set ctx.get('sql'); else build from env. */
@@ -39,6 +49,8 @@ export async function withIdempotency(
 
   // Byte-identical fast path: flag off, or no key, or no tenant scope.
   if (!idempotencyEnabled(ctx.env) || !key || !workspaceId) return handler();
+  if (requestAlreadyReserved(ctx, key)) return handler();
+  markRequestReserved(ctx, key);
 
   const sql = sqlFor(ctx);
   const reserved = await reserveIdempotencyKey(sql, workspaceId, key, route);
@@ -95,6 +107,12 @@ export function idempotencyMiddleware() {
     const auth = (ctx.get('auth') as { workspace_id?: string } | undefined) || {};
     const workspaceId = String(auth.workspace_id || '').trim();
     if (!idempotencyEnabled(ctx.env) || !key || !workspaceId) return next();
+
+    // Hono flattens mounted child routes. A child `use('*')` can therefore match a later sibling
+    // route mounted at the same prefix. Coalesce those overlapping wrappers so one HTTP request
+    // owns one reservation instead of deadlocking against its own still-pending key.
+    if (requestAlreadyReserved(ctx, key)) return next();
+    markRequestReserved(ctx, key);
 
     const sql = sqlFor(ctx);
     let route = method;
