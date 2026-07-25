@@ -2347,6 +2347,22 @@
           "reason": "Make production migration and live RLS verification executable; fix SQL comment parsing and current source-authority provenance semantics"
         }
       ]
+    },
+    {
+      "delta_id": "two-phase-production-authority-gate-20260725",
+      "generated_at": "2026-07-25T03:20:20.427Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "0d53155943efcdf678fa3c2f5f0652b375eeaacf",
+      "target_base_commit": "0d53155943efcdf678fa3c2f5f0652b375eeaacf",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "package.json",
+          "target_blob": "6ab62c19b4487c34e4ac327cd0016846effa2d88",
+          "reason": "Bind exact operator-approved deployment packet before deploy and separate post-deploy health ratification from commercial readiness"
+        }
+      ]
     }
   ]
 }

@@ -27,6 +27,7 @@ try {
   const deploy = pkg.scripts?.['deploy:api'];
   const dev = pkg.scripts?.['dev:api'];
   const bundle = pkg.scripts?.['verify:bundle'];
+  const authorityDeploy = pkg.scripts?.['verify:authority-decision:deploy'];
   if (typeof deploy !== 'string') throw new Error('scripts["deploy:api"] missing or not a string');
 
   const missing = [];
@@ -40,6 +41,15 @@ try {
   }
   if (!/verify-deploy-schema-head\.mjs/.test(deploy)) {
     missing.push('verify-deploy-schema-head.mjs preflight');
+  }
+  if (!/npm\s+run\s+verify:authority-decision:deploy/.test(deploy)) {
+    missing.push('verify:authority-decision:deploy preflight');
+  }
+  if (
+    typeof authorityDeploy !== 'string'
+    || !/verify-authority-decision-packet\.mjs\s+--require-approved-to-deploy/.test(authorityDeploy)
+  ) {
+    missing.push('exact operator-approved authority packet verifier');
   }
   if (/DEPLOY_MIGRATION_GATE_NONPROD=1/.test(deploy)) {
     missing.push('deploy:api must not opt out as non-production');
@@ -75,7 +85,7 @@ try {
     process.exit(1);
   }
 
-  console.log('☑ deploy-provenance-wiring · PASS · exact provenance, top-level keep_vars, strict chat persistence, and best-effort idempotency retry protection are configured');
+  console.log('☑ deploy-provenance-wiring · PASS · exact approval, provenance, schema, strict chat persistence, and idempotency retry protection are configured');
   process.exit(0);
 } catch (err) {
   console.error(`✗ deploy-provenance-wiring · FAIL-CLOSED — could not verify deploy:api wiring: ${err.message}`);

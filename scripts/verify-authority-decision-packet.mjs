@@ -1,113 +1,314 @@
 #!/usr/bin/env node
 
+import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
+import { dirname, isAbsolute, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const packetPath = resolve(
+const defaultPacketPath = resolve(
   root,
   'docs/deployment/evidence/authority-decision-e78e13d-unreconciled.json',
 );
+const requireApproved = process.argv.includes('--require-approved-to-deploy');
 const requireRatified = process.argv.includes('--require-ratified');
 const selfTest = process.argv.includes('--self-test');
 const shaPattern = /^[0-9a-f]{40}$/;
 const hashPattern = /^[0-9a-f]{64}$/;
+const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const postureKeys = [
+  'single_intake',
+  'role_skill_catalog',
+  'context_packet_persistence',
+  'chat_history_persistence_required',
+  'tenant_projection_queue',
+  'current_work_projection',
+];
 
-export function assessAuthorityPacket(packet, releaseRequired = false) {
+function exactPostureProblems(posture, prefix) {
   const problems = [];
-  if (packet?.schema_id !== 'xlooop.authority_decision_packet.v1') problems.push('schema_id');
-  if (!['observed_unreconciled', 'ratified'].includes(packet?.status)) problems.push('status');
-  if (!shaPattern.test(packet?.candidate_commit_sha || '')) problems.push('candidate_commit_sha');
+  if (!posture || typeof posture !== 'object' || Array.isArray(posture)) {
+    return [`${prefix}`];
+  }
+  const unknown = Object.keys(posture).filter((key) => !postureKeys.includes(key));
+  for (const key of postureKeys) {
+    if (typeof posture[key] !== 'boolean') problems.push(`${prefix}.${key}`);
+  }
+  if (unknown.length) problems.push(`${prefix}.unknown:${unknown.join(',')}`);
+  return problems;
+}
+
+function posturesEqual(left, right) {
+  return (
+    exactPostureProblems(left, 'left').length === 0
+    && exactPostureProblems(right, 'right').length === 0
+    && postureKeys.every((key) => left[key] === right[key])
+  );
+}
+
+function assessObservedLegacy(packet, problems) {
+  if (packet?.production_changes_frozen !== true) problems.push('unreconciled_not_frozen');
+  if (packet?.commercial_release_allowed !== false) problems.push('unreconciled_release_allowed');
+  if (!Array.isArray(packet?.blocking_gaps) || packet.blocking_gaps.length === 0) {
+    problems.push('unreconciled_gaps_missing');
+  }
   if (!hashPattern.test(packet?.deployment?.contract_hash || '')) problems.push('contract_hash');
   if (packet?.deployment?.environment !== 'production') problems.push('environment');
   if (packet?.deployment?.authority !== 'production') problems.push('authority');
   if (packet?.health_observation?.response?.status !== 'ok') problems.push('health_status');
+}
 
-  if (packet?.status === 'observed_unreconciled') {
-    if (packet?.production_changes_frozen !== true) problems.push('unreconciled_not_frozen');
-    if (packet?.commercial_release_allowed !== false) problems.push('unreconciled_release_allowed');
-    if (!Array.isArray(packet?.blocking_gaps) || packet.blocking_gaps.length === 0) {
-      problems.push('unreconciled_gaps_missing');
-    }
+function assessApprovedShape(packet, problems, currentHead) {
+  const expected = packet?.expected_deployment || {};
+  const decision = packet?.decision || {};
+  const rollback = packet?.rollback || {};
+  const target = packet?.target || {};
+
+  if (packet?.schema_id !== 'xlooop.authority_decision_packet.v2') problems.push('approved_schema_id');
+  if (!decision.approver) problems.push('approver');
+  if (!decision.approval_reference) problems.push('approval_reference');
+  if (Number.isNaN(Date.parse(decision.approved_at || ''))) problems.push('approved_at');
+  if (target.operation !== 'deploy_worker') problems.push('target_operation');
+  if (target.worker_name !== 'xlooop-api') problems.push('target_worker_name');
+  if (target.environment !== 'production') problems.push('target_environment');
+  if (packet?.status === 'approved_to_deploy' && packet?.deployment_allowed !== true) {
+    problems.push('deployment_not_allowed');
+  }
+  if (packet?.status === 'ratified' && packet?.deployment_allowed !== false) {
+    problems.push('ratified_deployment_must_be_consumed');
+  }
+  if (packet?.commercial_release_allowed !== false) {
+    problems.push('commercial_release_must_remain_blocked');
+  }
+  if (!shaPattern.test(rollback.target_sha || '')) problems.push('rollback_target_sha');
+  if (rollback.target_sha === packet?.candidate_commit_sha) problems.push('rollback_target_not_distinct');
+  if (!uuidPattern.test(rollback.cloudflare_version_id || '')) problems.push('rollback_cloudflare_version_id');
+  if (!rollback.evidence_reference) problems.push('rollback_evidence_reference');
+  if (expected.worker_name !== target.worker_name) problems.push('expected_worker_name');
+  if (expected.build_sha !== packet?.candidate_commit_sha) problems.push('expected_build_sha');
+  if (!hashPattern.test(expected.contract_hash || '')) problems.push('expected_contract_hash');
+  if (!Number.isSafeInteger(expected.schema_head) || expected.schema_head < 1) {
+    problems.push('expected_schema_head');
+  }
+  if (expected.environment !== 'production') problems.push('expected_environment');
+  if (expected.authority !== 'production') problems.push('expected_authority');
+  problems.push(...exactPostureProblems(expected.feature_posture, 'expected_feature_posture'));
+  if (currentHead && packet?.candidate_commit_sha !== currentHead) problems.push('candidate_not_current_head');
+}
+
+function assessRatifiedObservation(packet, problems) {
+  const expected = packet?.expected_deployment || {};
+  const deployment = packet?.deployment || {};
+  const health = packet?.health_observation?.response || {};
+
+  if (packet?.exact_deployed_sha_verified !== true) problems.push('deployed_sha_not_verified');
+  if (deployment.reported_build !== expected.build_sha) problems.push('deployment_build');
+  if (deployment.contract_hash !== expected.contract_hash) problems.push('deployment_contract_hash');
+  if (deployment.schema_head !== expected.schema_head) problems.push('deployment_schema_head');
+  if (deployment.environment !== expected.environment) problems.push('deployment_environment');
+  if (deployment.authority !== expected.authority) problems.push('deployment_authority');
+  if (!posturesEqual(deployment.feature_posture, expected.feature_posture)) {
+    problems.push('deployment_feature_posture');
+  }
+  if (health.status !== 'ok') problems.push('health_status');
+  if (health.build !== expected.build_sha) problems.push('health_build');
+  if (health.contract_hash !== expected.contract_hash) problems.push('health_contract_hash');
+  if (health.schema_head !== expected.schema_head) problems.push('health_schema_head');
+  if (health.environment !== expected.environment) problems.push('health_environment');
+  if (health.authority !== expected.authority) problems.push('health_authority');
+  if (!posturesEqual(health.feature_posture, expected.feature_posture)) {
+    problems.push('health_feature_posture');
+  }
+}
+
+export function assessAuthorityPacket(packet, requiredPhase = 'observe', currentHead = null) {
+  const problems = [];
+  const status = packet?.status;
+  if (!['xlooop.authority_decision_packet.v1', 'xlooop.authority_decision_packet.v2'].includes(packet?.schema_id)) {
+    problems.push('schema_id');
+  }
+  if (!['observed_unreconciled', 'approved_to_deploy', 'ratified'].includes(status)) {
+    problems.push('status');
+  }
+  if (!shaPattern.test(packet?.candidate_commit_sha || '')) problems.push('candidate_commit_sha');
+
+  if (status === 'observed_unreconciled') {
+    assessObservedLegacy(packet, problems);
+  } else if (status === 'approved_to_deploy' || status === 'ratified') {
+    assessApprovedShape(packet, problems, currentHead);
   }
 
-  if (releaseRequired || packet?.status === 'ratified') {
-    if (packet?.status !== 'ratified') problems.push('authority_not_ratified');
-    if (!packet?.decision?.approver) problems.push('approver');
-    if (!packet?.decision?.approval_reference) problems.push('approval_reference');
-    if (!shaPattern.test(packet?.rollback?.target_sha || '')) problems.push('rollback_target_sha');
-    if (!packet?.rollback?.rehearsal_reference) problems.push('rollback_rehearsal_reference');
-    if (packet?.deployment?.reported_build !== packet?.candidate_commit_sha) {
-      problems.push('exact_deployed_sha');
-    }
-    if (!Number.isSafeInteger(packet?.deployment?.schema_head) || packet.deployment.schema_head < 1) {
-      problems.push('numeric_schema_head');
-    }
-    if (packet?.exact_deployed_sha_verified !== true) problems.push('deployed_sha_not_verified');
-    if (packet?.commercial_release_allowed !== true) problems.push('commercial_release_not_allowed');
-    const posture = packet?.health_observation?.response?.feature_posture || {};
-    for (const required of [
-      'single_intake',
-      'role_skill_catalog',
-      'context_packet_persistence',
-      'chat_history_persistence_required',
-      'tenant_projection_queue',
-      'current_work_projection',
-    ]) {
-      if (posture[required] !== true) problems.push(`feature_posture.${required}`);
-    }
+  if (requiredPhase === 'deploy' && status !== 'approved_to_deploy') {
+    problems.push('authority_not_approved_to_deploy');
   }
+  if (requiredPhase === 'ratified' && status !== 'ratified') {
+    problems.push('authority_not_ratified');
+  }
+  if (status === 'ratified') assessRatifiedObservation(packet, problems);
 
   return { ok: problems.length === 0, problems };
 }
 
-function runSelfTest() {
-  const base = {
-    schema_id: 'xlooop.authority_decision_packet.v1',
-    status: 'observed_unreconciled',
-    production_changes_frozen: true,
+function approvedFixture() {
+  const candidate = 'a'.repeat(40);
+  const posture = {
+    single_intake: true,
+    role_skill_catalog: true,
+    context_packet_persistence: true,
+    chat_history_persistence_required: true,
+    tenant_projection_queue: false,
+    current_work_projection: false,
+  };
+  return {
+    schema_id: 'xlooop.authority_decision_packet.v2',
+    status: 'approved_to_deploy',
+    candidate_commit_sha: candidate,
+    deployment_allowed: true,
     commercial_release_allowed: false,
-    candidate_commit_sha: 'a'.repeat(40),
     exact_deployed_sha_verified: false,
-    decision: { approver: null, approval_reference: null },
-    rollback: { target_sha: null, rehearsal_reference: null },
-    deployment: {
-      reported_build: 'a'.repeat(7),
+    decision: {
+      approver: 'operator',
+      approval_reference: 'conversation:approval-1',
+      approved_at: '2026-07-25T00:00:00Z',
+    },
+    target: {
+      operation: 'deploy_worker',
+      worker_name: 'xlooop-api',
+      environment: 'production',
+    },
+    rollback: {
+      target_sha: 'c'.repeat(40),
+      cloudflare_version_id: '5c20d49c-957b-4a89-8379-7e4bb1bde936',
+      evidence_reference: 'wrangler:deployments-list:2026-07-25',
+    },
+    expected_deployment: {
+      worker_name: 'xlooop-api',
+      build_sha: candidate,
       contract_hash: 'b'.repeat(64),
-      schema_head: null,
+      schema_head: 89,
       environment: 'production',
       authority: 'production',
+      feature_posture: posture,
+    },
+  };
+}
+
+function runSelfTest() {
+  const approved = approvedFixture();
+  const approvedResult = assessAuthorityPacket(approved, 'deploy', approved.candidate_commit_sha);
+  const unapprovedResult = assessAuthorityPacket(
+    { ...approved, status: 'observed_unreconciled', schema_id: 'xlooop.authority_decision_packet.v1' },
+    'deploy',
+    approved.candidate_commit_sha,
+  );
+  const wrongHead = assessAuthorityPacket(approved, 'deploy', 'd'.repeat(40));
+  const ratified = {
+    ...approved,
+    status: 'ratified',
+    deployment_allowed: false,
+    exact_deployed_sha_verified: true,
+    deployment: {
+      reported_build: approved.expected_deployment.build_sha,
+      contract_hash: approved.expected_deployment.contract_hash,
+      schema_head: approved.expected_deployment.schema_head,
+      environment: approved.expected_deployment.environment,
+      authority: approved.expected_deployment.authority,
+      feature_posture: structuredClone(approved.expected_deployment.feature_posture),
     },
     health_observation: {
       response: {
         status: 'ok',
-        feature_posture: {},
+        build: approved.expected_deployment.build_sha,
+        contract_hash: approved.expected_deployment.contract_hash,
+        schema_head: approved.expected_deployment.schema_head,
+        environment: approved.expected_deployment.environment,
+        authority: approved.expected_deployment.authority,
+        feature_posture: structuredClone(approved.expected_deployment.feature_posture),
       },
     },
-    blocking_gaps: ['approval missing'],
   };
-  const truthful = assessAuthorityPacket(base, false);
-  const blocked = assessAuthorityPacket(base, true);
-  if (!truthful.ok || blocked.ok || !blocked.problems.includes('authority_not_ratified')) {
+  const ratifiedResult = assessAuthorityPacket(ratified, 'ratified', ratified.candidate_commit_sha);
+  const commercialReleaseLeak = structuredClone(ratified);
+  commercialReleaseLeak.commercial_release_allowed = true;
+  const commercialReleaseLeakResult = assessAuthorityPacket(
+    commercialReleaseLeak,
+    'ratified',
+    commercialReleaseLeak.candidate_commit_sha,
+  );
+  const reorderedPosture = structuredClone(ratified);
+  reorderedPosture.health_observation.response.feature_posture = Object.fromEntries(
+    Object.entries(reorderedPosture.health_observation.response.feature_posture).reverse(),
+  );
+  const reorderedPostureResult = assessAuthorityPacket(
+    reorderedPosture,
+    'ratified',
+    reorderedPosture.candidate_commit_sha,
+  );
+  const postureDrift = structuredClone(ratified);
+  postureDrift.health_observation.response.feature_posture.chat_history_persistence_required = false;
+  const postureDriftResult = assessAuthorityPacket(postureDrift, 'ratified', ratified.candidate_commit_sha);
+
+  const ok =
+    approvedResult.ok &&
+    !unapprovedResult.ok &&
+    unapprovedResult.problems.includes('authority_not_approved_to_deploy') &&
+    !wrongHead.ok &&
+    wrongHead.problems.includes('candidate_not_current_head') &&
+    ratifiedResult.ok &&
+    !commercialReleaseLeakResult.ok &&
+    commercialReleaseLeakResult.problems.includes('commercial_release_must_remain_blocked') &&
+    reorderedPostureResult.ok &&
+    !postureDriftResult.ok &&
+    postureDriftResult.problems.includes('health_feature_posture');
+  if (!ok) {
     console.error('verify-authority-decision-packet self-test FAIL');
+    console.error(JSON.stringify({
+      approvedResult,
+      unapprovedResult,
+      wrongHead,
+      ratifiedResult,
+      commercialReleaseLeakResult,
+      reorderedPostureResult,
+      postureDriftResult,
+    }, null, 2));
     process.exit(1);
   }
-  console.log('verify-authority-decision-packet self-test PASS · truthful-unreconciled and release-block controls');
+  console.log('verify-authority-decision-packet self-test PASS · approval, exact-HEAD, consumed authorization, and health-ratification controls');
+}
+
+function currentHead() {
+  return execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim();
+}
+
+function packetPathForPhase() {
+  const supplied = process.env.XLOOOP_AUTHORITY_DECISION_PACKET;
+  if ((requireApproved || requireRatified) && !supplied) {
+    throw new Error('XLOOOP_AUTHORITY_DECISION_PACKET is required for deploy or post-deploy ratification');
+  }
+  if (!supplied) return defaultPacketPath;
+  return isAbsolute(supplied) ? supplied : resolve(process.cwd(), supplied);
+}
+
+if (requireApproved && requireRatified) {
+  console.error('verify-authority-decision-packet · FAIL-CLOSED · choose one required phase');
+  process.exit(2);
 }
 
 if (selfTest) {
   runSelfTest();
 } else {
   try {
+    const phase = requireApproved ? 'deploy' : requireRatified ? 'ratified' : 'observe';
+    const packetPath = packetPathForPhase();
     const packet = JSON.parse(readFileSync(packetPath, 'utf8'));
-    const result = assessAuthorityPacket(packet, requireRatified);
+    const result = assessAuthorityPacket(packet, phase, phase === 'observe' ? null : currentHead());
     if (!result.ok) {
       console.error(`verify-authority-decision-packet · FAIL-CLOSED · ${result.problems.join(',')}`);
       process.exit(1);
     }
     console.log(
-      `verify-authority-decision-packet · PASS · status=${packet.status} release_allowed=${packet.commercial_release_allowed}`,
+      `verify-authority-decision-packet · PASS · phase=${phase} status=${packet.status}`
+      + ` candidate=${packet.candidate_commit_sha}`,
     );
   } catch (error) {
     console.error(

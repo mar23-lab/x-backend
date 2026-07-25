@@ -12,6 +12,9 @@ posture.
 
 - Production deploys, data changes, migrations, secrets, flags, and authority transitions require
   explicit current operator approval for the exact operation and target.
+- Production approval is an external exact-SHA `approved_to_deploy` packet consumed by
+  `npm run deploy:api`; post-deploy health is recorded separately as `ratified`. Neither state is a
+  commercial-readiness claim.
 - Never bypass `npm run deploy:api` with raw Wrangler or report merged code as deployed.
 - Do not add frontend implementation or import from `x-ai-front` or legacy frontend roots.
 - Keep tenant/workspace binding, RBAC, RLS, audit events, receipts, and idempotency fail-closed.
