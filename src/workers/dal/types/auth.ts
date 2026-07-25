@@ -59,6 +59,7 @@ export type ApiErrorCode =
   | 'FORBIDDEN'
   | 'NOT_FOUND'
   | 'CONFLICT'
+  | 'INTAKE_REQUEST_ID_CONFLICT'
   | 'UNPROCESSABLE'
   | 'RATE_LIMITED'
   | 'INTERNAL_ERROR'

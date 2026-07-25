@@ -1,16 +1,19 @@
 import { describe, expect, it } from 'vitest';
 import { Hono } from 'hono';
 import { intakeRoute } from '../routes/intake';
+import { WorkersDalAdapter } from '../dal/WorkersDalAdapter';
+import { neonClient } from '../db/client';
 
 const AUTH = { user_id: 'user_a', workspace_id: 'tenant_a', role: 'owner' };
 
-function appFor(opts: { enabled?: boolean; packets?: any[]; approvals?: any[]; auth?: Record<string, unknown> } = {}) {
+function appFor(opts: { enabled?: boolean; packets?: any[]; approvals?: any[]; auth?: Record<string, unknown>; createError?: Error } = {}) {
   const calls: Array<Record<string, unknown>> = [];
   const dal = {
     listTaskPackets: async (workspace_id: string) => { calls.push({ method: 'listTaskPackets', workspace_id }); return opts.packets ?? []; },
     listApprovalRequests: async (workspace_id: string) => { calls.push({ method: 'listApprovalRequests', workspace_id }); return opts.approvals ?? []; },
     createIntakeResolution: async (workspace_id: string, actor_user_id: string, input: any) => {
       calls.push({ method: 'createIntakeResolution', workspace_id, actor_user_id, input });
+      if (opts.createError) throw opts.createError;
       return { id: 'inr_1', workspace_id, actor_user_id, version: 1, status: 'pending', consumed_at: null, created_at: '2026-07-15T00:00:00Z', ...input };
     },
     executeIntakeResolution: async (workspace_id: string, actor_user_id: string, id: string, version: number, current_work_version: number, client_request_id: string, closing: any) => {
@@ -72,6 +75,24 @@ describe('single intake route', () => {
     }
   });
 
+  it('preserves the stable request-id conflict code on the wire', async () => {
+    const conflict = Object.assign(
+      new Error('client_request_id was already used for different intake input'),
+      { code: 'INTAKE_REQUEST_ID_CONFLICT', status: 409 },
+    );
+    const { app, env } = appFor({ enabled: true, createError: conflict });
+    const response = await app.request('/api/v1/intake/resolve', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ text: 'What changed?', client_request_id: 'reused' }),
+    }, env);
+    expect(response.status).toBe(409);
+    expect(await response.json()).toMatchObject({
+      code: 'INTAKE_REQUEST_ID_CONFLICT',
+      error: 'client_request_id was already used for different intake input',
+    });
+  });
+
   it('requires immutable resolution and current-work versions to execute', async () => {
     const { app, calls, env } = appFor({ enabled: true });
     const bad = await app.request('/api/v1/intake/inr_1/execute', { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' }, env);
@@ -99,6 +120,63 @@ describe('single intake route', () => {
       }, env);
       expect(res.status).toBe(403);
       expect(calls.some((c: any) => c.method === 'executeIntakeResolution')).toBe(false);
+    }
+  });
+});
+
+const runLiveRlsRouteProbe = process.env.XLOOOP_RUN_INTAKE_RLS_LIVE === '1';
+const describeLiveRlsRoute = runLiveRlsRouteProbe ? describe : describe.skip;
+
+describeLiveRlsRoute('single-intake live route through RLS', () => {
+  it('returns a persisted resolution for a fresh authenticated read request', async () => {
+    const appDatabaseUrl = process.env.XLOOOP_RLS_APP_DATABASE_URL;
+    const ownerDatabaseUrl = process.env.DATABASE_URL;
+    const workspaceId = process.env.XLOOOP_LIVE_WORKSPACE_ID;
+    const actorUserId = process.env.XLOOOP_LIVE_ACTOR_USER_ID;
+    if (!appDatabaseUrl || !ownerDatabaseUrl || !workspaceId || !actorUserId) {
+      throw new Error('live intake route probe requires app/owner DSNs plus workspace and actor ids');
+    }
+
+    const ownerSql = neonClient(ownerDatabaseUrl);
+    const appSql = neonClient(appDatabaseUrl);
+    const clientRequestId = crypto.randomUUID();
+    const app = new Hono();
+    app.use('*', async (ctx, next) => {
+      ctx.set('request_id', 'intake-live-route-probe');
+      ctx.set('auth', { user_id: actorUserId, workspace_id: workspaceId, role: 'owner' } as never);
+      ctx.set('sql', ownerSql as never);
+      ctx.set('dal', new WorkersDalAdapter(ownerSql, appSql) as never);
+      await next();
+    });
+    app.route('/api/v1', intakeRoute);
+
+    try {
+      const response = await app.request('/api/v1/intake/resolve', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          text: 'What is currently waiting on me? Answer only; do not change work.',
+          client_request_id: clientRequestId,
+          project_id: null,
+          context_refs: [],
+        }),
+      }, {
+        DATABASE_URL: ownerDatabaseUrl,
+        SINGLE_INTAKE_ENABLED: 'true',
+        ENTITLEMENT_ENFORCEMENT: 'on',
+      });
+      const body = await response.clone().json() as { resolution?: { client_request_id?: string }; error?: unknown; code?: string };
+      expect({ status: response.status, body }).toMatchObject({
+        status: 201,
+        body: { resolution: { client_request_id: clientRequestId } },
+      });
+    } finally {
+      await ownerSql`
+        DELETE FROM intake_resolutions
+         WHERE workspace_id = ${workspaceId}
+           AND actor_user_id = ${actorUserId}
+           AND client_request_id = ${clientRequestId}
+      `;
     }
   });
 });
