@@ -2477,6 +2477,32 @@
           "reason": "Proves exact project-name semantics, tenant scope, deterministic output, and fail-closed unavailable behavior"
         }
       ]
+    },
+    {
+      "delta_id": "20260726-backend-clean-bootstrap",
+      "generated_at": "2026-07-25T23:42:43.699Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "8a9d9128ed89d40bb13deaa3f99639b356675382",
+      "target_base_commit": "8a9d9128ed89d40bb13deaa3f99639b356675382",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "README.md",
+          "target_blob": "251489ba7128285127238758ad5f43d4232d3d02",
+          "reason": "make backend and MCP dependency bootstrap reproducible and align source authority documentation"
+        },
+        {
+          "path": "package.json",
+          "target_blob": "5fcb9b9ccbf95a4c1963d4a55e5282d3737eadbc",
+          "reason": "make backend and MCP dependency bootstrap reproducible and align source authority documentation"
+        },
+        {
+          "path": "scripts/verify-installed-dependencies.mjs",
+          "target_blob": "92ec91f272f1455f98c970f0899c06a8049aaa7e",
+          "reason": "make backend and MCP dependency bootstrap reproducible and align source authority documentation"
+        }
+      ]
     }
   ]
 }
