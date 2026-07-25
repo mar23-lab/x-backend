@@ -107,6 +107,12 @@ export interface SourceGroundingFact {
   access_tier?: 'index' | 'rely' | 'operate';
 }
 
+export interface ProjectGroundingFact {
+  name: string;
+  status: string;
+  updated_at?: string | null;
+}
+
 export interface CockpitChatFacts {
   /** S1 (260628) · the captured company context (focus/maturity/AI tools/where-work-lives) when the chat
    *  is scoped to a customer workspace — makes the chief-of-staff company-aware instead of a hardcoded
@@ -139,6 +145,8 @@ export interface CockpitChatFacts {
   documents?: DocumentFact[];
   /** Source connection/sync truth for this customer workspace. Keeps chat from trusting stale setup rows. */
   sources?: SourceGroundingFact[];
+  /** Current tenant-bound project inventory, loaded only for explicit project-list questions. */
+  projects?: ProjectGroundingFact[];
   /** Total Plane-A count for the scope (may exceed events.length when capped). */
   total: number;
   scope: CockpitChatScope;
@@ -214,6 +222,11 @@ export interface CockpitChatResult {
         event_count: number;
         latest_event_at: string | null;
       }>;
+    };
+    projects: {
+      available: boolean;
+      total: number;
+      items: ProjectGroundingFact[];
     };
     /** P0.1 (260706) · data-freshness guard (HR-EVIDENCE-BOUND-ASSERTION-1 C8): the age of the newest
      *  grounded event. The chief-of-staff must never imply "all clear / real-time" from a stale record —
@@ -494,6 +507,7 @@ function clip(s: string | null | undefined, max = 140): string {
 export function compileChatFacts(facts: CockpitChatFacts): CockpitChatResult['grounded_on'] {
   const docs = Array.isArray(facts.documents) ? facts.documents : [];
   const sourceFacts = Array.isArray(facts.sources) ? facts.sources : [];
+  const projectFacts = Array.isArray(facts.projects) ? facts.projects : [];
   const pinned = Array.isArray(facts.pinned) ? facts.pinned : [];
   const planeA = Array.isArray(facts.events) ? facts.events : [];
   const planeB = Array.isArray(facts.governance) ? facts.governance : [];
@@ -605,6 +619,11 @@ export function compileChatFacts(facts: CockpitChatFacts): CockpitChatResult['gr
         latest_event_at: s.latest_event_at ?? null,
       })),
     },
+    projects: {
+      available: Array.isArray(facts.projects),
+      total: projectFacts.length,
+      items: projectFacts.slice(0, 50),
+    },
     data_freshness,
     agents,
   };
@@ -662,6 +681,14 @@ function sourceStatusLine(grounded: CockpitChatResult['grounded_on'], question: 
   return `• Source status: ${parts.join('; ')}.`;
 }
 
+export function isProjectInventoryQuestion(message: string): boolean {
+  const q = String(message || '').toLowerCase().replace(/\s+/g, ' ').trim();
+  if (!/\bprojects?\b/.test(q)) return false;
+  return /\b(?:list|show|name)\b.{0,80}\bprojects?\b/.test(q)
+    || /\b(?:which|what)\s+(?:are\s+)?(?:(?:my|our|the)\s+)?(?:(?:current|active)\s+)?projects?\b/.test(q)
+    || /\bprojects?\s+(?:do\s+)?(?:i|we)\s+have\b/.test(q);
+}
+
 export function buildDeterministicChatAnswer(
   message: string,
   grounded: CockpitChatResult['grounded_on'],
@@ -673,6 +700,23 @@ export function buildDeterministicChatAnswer(
   const q = String(message || '').toLowerCase();
   const asksBlocked = mode === 'recommend' || mode === 'plan'
     || /\b(block|blocked|stuck|sign[- ]?off|sign off|approve|approval|review|needs? you)\b/.test(q);
+
+  if (isProjectInventoryQuestion(message)) {
+    if (!grounded.projects.available) {
+      return 'I could not verify the current project inventory, so I will not infer project names from activity events.';
+    }
+    if (grounded.projects.total === 0) {
+      return `There are no active projects recorded in ${where}.`;
+    }
+    const lines = [`Current active projects in ${where} (${grounded.projects.total}):`];
+    for (const project of grounded.projects.items) {
+      lines.push(`• ${project.name}${project.status && project.status !== 'active' ? ` [${project.status}]` : ''}`);
+    }
+    if (grounded.projects.total > grounded.projects.items.length) {
+      lines.push(`• ${grounded.projects.total - grounded.projects.items.length} more projects are not shown in this bounded answer.`);
+    }
+    return lines.join('\n');
+  }
 
   if (grounded.events_total === 0 && grounded.pinned_total === 0) {
     const docNote = grounded.documents && grounded.documents.total > 0
@@ -904,7 +948,17 @@ export async function answerCockpitChat(
   const staleNote = grounded.data_freshness.is_stale
     ? `Note: this record's newest activity is ${grounded.data_freshness.staleness_minutes} minutes old — treat the below as a snapshot, not live status.\n\n`
     : '';
-  const deterministic = staleNote + buildDeterministicChatAnswer(message, grounded, facts.scope, mode, facts.companyContext);
+  const projectInventoryQuestion = isProjectInventoryQuestion(message);
+  const deterministic = (projectInventoryQuestion ? '' : staleNote)
+    + buildDeterministicChatAnswer(message, grounded, facts.scope, mode, facts.companyContext);
+  if (projectInventoryQuestion) {
+    return {
+      answer: deterministic,
+      generated_by: 'deterministic',
+      model: null,
+      grounded_on: grounded,
+    };
+  }
 
   // Build the grounded fact sheet + prompts ONCE — shared verbatim by the Claude (premium) and Llama paths
   // so neither can invent beyond the supplied facts.

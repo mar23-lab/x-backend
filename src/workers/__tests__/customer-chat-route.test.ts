@@ -7,7 +7,7 @@
 //      staff knows the company even with no LLM binding + 0 events (the deterministic floor path).
 // Before this route existed the in-app chat short-circuited to a hardcoded client-side stub.
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { Hono } from 'hono';
 import { customerChatRoute } from '../routes/customer-chat';
 
@@ -30,6 +30,7 @@ function dalStub(overrides: Record<string, unknown> = {}) {
   return {
     getSessionEntitlement: async () => ({ state: 'approved_workspace' }),
     listEvents: async () => ({ events: [], pagination: { has_more: false, next_before: null } }),
+    listProjects: async () => [],
     listUserSources: async () => [],
     getCustomerContextProfile: async () => PROFILE,
     ...overrides,
@@ -88,6 +89,62 @@ describe('POST /api/v1/customer-chat', () => {
     expect(eventsQueriedFor).toBe('org_hy'); // never the attacker-supplied id
     expect(sourcesQueriedFor).toBe('u1');
     expect(contextQueriedFor).toBe('org_hy');
+  });
+
+  it('answers an explicit project-name request from the current tenant project inventory', async () => {
+    let projectsQueriedFor = '';
+    const dal = dalStub({
+      listProjects: async (workspaceId: string) => {
+        projectsQueriedFor = workspaceId;
+        return [
+          { id: 'project_1', workspace_id: workspaceId, name: 'Commercial proof', status: 'active', updated_at: '2026-07-25T01:00:00Z' },
+          { id: 'project_2', workspace_id: workspaceId, name: 'Customer onboarding', status: 'active', updated_at: '2026-07-24T01:00:00Z' },
+        ];
+      },
+    });
+    const res = await ask(appFor(AUTH, dal), {
+      message: 'List the current project names. This is read-only; do not create or change anything.',
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json() as { answer: string; generated_by: string };
+    expect(projectsQueriedFor).toBe('org_hy');
+    expect(body.answer).toContain('Commercial proof');
+    expect(body.answer).toContain('Customer onboarding');
+    expect(body.answer).not.toContain('Here is what is happening');
+    expect(body.generated_by).toBe('deterministic');
+  });
+
+  it('fails closed when an explicit project-name request cannot load the current inventory', async () => {
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    const dal = dalStub({
+      listProjects: async () => { throw new Error('project store unavailable'); },
+    });
+    const res = await ask(appFor(AUTH, dal), {
+      message: 'List the current project names. This is read-only.',
+    });
+    expect(res.status).toBe(503);
+    const body = await res.json() as Record<string, unknown>;
+    expect(body.code).toBe('SERVICE_UNAVAILABLE');
+    expect(body).not.toHaveProperty('answer');
+    expect(logSpy.mock.calls.map((args) => args.join(' ')).join('\n')).not.toContain('project store unavailable');
+    logSpy.mockRestore();
+  });
+
+  it('does not misclassify a project-status question as a project-inventory request', async () => {
+    let projectInventoryReads = 0;
+    const dal = dalStub({
+      listProjects: async () => {
+        projectInventoryReads += 1;
+        return [];
+      },
+    });
+    const res = await ask(appFor(AUTH, dal), {
+      message: 'What is blocked in this project?',
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json() as { answer: string };
+    expect(projectInventoryReads).toBe(0);
+    expect(body.answer).not.toContain('Current active projects');
   });
 
   it('reports Gmail connected/synced even when no Gmail events have been ingested yet', async () => {

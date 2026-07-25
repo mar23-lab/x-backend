@@ -2446,6 +2446,37 @@
           "reason": "reproduces sibling route-group middleware overlap with a stateful reservation store and proves one reserve plus one completion"
         }
       ]
+    },
+    {
+      "delta_id": "customer-project-inventory-grounding-20260726",
+      "generated_at": "2026-07-25T22:26:54.000Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "c013b3f04bcbfd44ab5e1ee3c8358b3b28d6400c",
+      "target_base_commit": "c013b3f04bcbfd44ab5e1ee3c8358b3b28d6400c",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/services/cockpit-chat.ts",
+          "target_blob": "b051ea660bdc8afbc7e830580bb0aa34c0da3044",
+          "reason": "Answers explicit project-list questions from the current tenant project inventory instead of substituting an unrelated activity summary"
+        },
+        {
+          "path": "src/workers/routes/customer-chat.ts",
+          "target_blob": "bfb8515ca1072ae1f71fdb806b562e3c63e0a957",
+          "reason": "Loads active projects only for explicit inventory questions and fails closed when that tenant-bound read is unavailable"
+        },
+        {
+          "path": "src/workers/lib/observability.ts",
+          "target_blob": "5b89508a30bb53baebb420be7c4af126db8458a5",
+          "reason": "Catalogs non-PII telemetry for failed project-inventory grounding reads"
+        },
+        {
+          "path": "src/workers/__tests__/customer-chat-route.test.ts",
+          "target_blob": "393f3226ec51cf4b3d2c7d5fe4811c84a3195573",
+          "reason": "Proves exact project-name semantics, tenant scope, deterministic output, and fail-closed unavailable behavior"
+        }
+      ]
     }
   ]
 }
