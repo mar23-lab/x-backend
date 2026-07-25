@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { Hono } from 'hono';
 import { intakeRoute } from '../routes/intake';
 import { WorkersDalAdapter } from '../dal/WorkersDalAdapter';
@@ -91,6 +91,39 @@ describe('single intake route', () => {
       code: 'INTAKE_REQUEST_ID_CONFLICT',
       error: 'client_request_id was already used for different intake input',
     });
+  });
+
+  it('emits stage-only failure diagnostics without logging customer input', async () => {
+    const conflict = Object.assign(
+      new Error('sensitive database detail'),
+      { code: 'INTAKE_REQUEST_ID_CONFLICT', status: 409 },
+    );
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    try {
+      const { app, env } = appFor({ enabled: true, createError: conflict });
+      const response = await app.request('/api/v1/intake/resolve', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          text: 'PRIVATE CUSTOMER PROMPT MUST NOT APPEAR IN LOGS',
+          client_request_id: 'diagnostic-conflict',
+        }),
+      }, env);
+      expect(response.status).toBe(409);
+      expect(warn).toHaveBeenCalledTimes(1);
+      const event = JSON.parse(String(warn.mock.calls[0]?.[0]));
+      expect(event).toEqual({
+        evt: 'intake.resolve.failure',
+        stage: 'persist_resolution',
+        request_id: 'req_test',
+        code: 'INTAKE_REQUEST_ID_CONFLICT',
+        status: 409,
+      });
+      expect(String(warn.mock.calls[0]?.[0])).not.toContain('PRIVATE CUSTOMER PROMPT');
+      expect(String(warn.mock.calls[0]?.[0])).not.toContain('sensitive database detail');
+    } finally {
+      warn.mockRestore();
+    }
   });
 
   it('requires immutable resolution and current-work versions to execute', async () => {

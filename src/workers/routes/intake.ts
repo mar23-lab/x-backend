@@ -17,6 +17,30 @@ interface IntakeEnv extends AuthEnv {
 
 export const intakeRoute = new Hono<{ Bindings: IntakeEnv; Variables: AuthVariables & { dal: DalAdapter } }>();
 
+type IntakeResolveStage =
+  | 'feature_gate'
+  | 'parse_request'
+  | 'load_inventory'
+  | 'classify_request'
+  | 'persist_resolution';
+
+function observeIntakeResolveFailure(ctx: any, stage: IntakeResolveStage, err: unknown): void {
+  const failure = err && typeof err === 'object'
+    ? err as { code?: unknown; status?: unknown }
+    : {};
+  try {
+    console.warn(JSON.stringify({
+      evt: 'intake.resolve.failure',
+      stage,
+      request_id: String(ctx.get('request_id') || ''),
+      code: typeof failure.code === 'string' && failure.code ? failure.code : 'UNKNOWN',
+      status: typeof failure.status === 'number' ? failure.status : null,
+    }));
+  } catch {
+    // Diagnostics must never change the intake response.
+  }
+}
+
 function fail(ctx: any, status: 400 | 403 | 404 | 409, code: string, error: string) {
   ctx.status(status);
   return ctx.json({ error, code, request_id: ctx.get('request_id') });
@@ -43,8 +67,10 @@ function workspaceRoleLabel(role: string | undefined): string {
 }
 
 intakeRoute.post('/intake/resolve', async (ctx) => {
+  let stage: IntakeResolveStage = 'feature_gate';
   try {
     if (!envFlagTrue(ctx.env.SINGLE_INTAKE_ENABLED)) return fail(ctx, 404, 'FEATURE_DISABLED', 'single intake is not enabled');
+    stage = 'parse_request';
     const body = await ctx.req.json().catch(() => null) as IntakeResolveRequest | null;
     if (!body || typeof body.text !== 'string' || !body.text.trim() || body.text.length > 4000) {
       return fail(ctx, 400, 'VALIDATION_ERROR', 'text must be a non-empty string up to 4000 characters');
@@ -53,6 +79,7 @@ intakeRoute.post('/intake/resolve', async (ctx) => {
       return fail(ctx, 400, 'VALIDATION_ERROR', 'client_request_id is required');
     }
     const { workspace_id, user_id, role } = ctx.get('auth');
+    stage = 'load_inventory';
     const [packets, approvals, createDecision, decideDecision] = await Promise.all([
       ctx.get('dal').listTaskPackets(workspace_id, { limit: 100 }),
       ctx.get('dal').listApprovalRequests(workspace_id, { limit: 100 }),
@@ -66,6 +93,7 @@ intakeRoute.post('/intake/resolve', async (ctx) => {
       if (operation === 'decide') return { allowed: decideDecision.allowed, safe_reason: decideDecision.reason };
       return { allowed: true, safe_reason: 'read_only_or_draft' };
     };
+    stage = 'classify_request';
     const requestDigest = await digest(JSON.stringify({
       text: body.text.trim(),
       project_id: body.project_id ?? null,
@@ -80,6 +108,7 @@ intakeRoute.post('/intake/resolve', async (ctx) => {
     const activeWorkCount = packets.filter((packet) => !['completed', 'archived', 'rejected'].includes(packet.lifecycle_state)).length;
     const pendingApprovalCount = approvals.filter((approval) => approval.status === 'requested').length;
     const approachLabel = ({ answer: 'Answer', plan: 'Draft plan', create_work: 'Create governed work', continue_work: 'Continue governed work', decide: 'Record decision', inspect: 'Inspect', unresolved: 'Clarify' } as const)[input.operation];
+    stage = 'persist_resolution';
     const resolution = await ctx.get('dal').createIntakeResolution(workspace_id, user_id, {
       ...input,
       prior_work: { discovery_executed: true, active_work_count: activeWorkCount, pending_approval_count: pendingApprovalCount, digest_sha256: priorDigest },
@@ -99,6 +128,7 @@ intakeRoute.post('/intake/resolve', async (ctx) => {
     ctx.status(201);
     return ctx.json({ resolution });
   } catch (err) {
+    observeIntakeResolveFailure(ctx, stage, err);
     return errorEnvelope(ctx, err);
   }
 });
