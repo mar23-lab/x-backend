@@ -2404,6 +2404,27 @@
           "reason": "regenerates the deterministic API contract with the stable intake request-id conflict code"
         }
       ]
+    },
+    {
+      "delta_id": "production-intake-failure-stage-observability-20260725",
+      "generated_at": "2026-07-25T08:52:30.000Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "5a4a04bf244fbd7e8f812e5ef613991a2f2dfb00",
+      "target_base_commit": "5a4a04bf244fbd7e8f812e5ef613991a2f2dfb00",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/routes/intake.ts",
+          "target_blob": "4ff1709932004c514dc7ede055a6aae6657cd020",
+          "reason": "adds non-PII stage, status, code, and request-id telemetry for otherwise opaque authenticated intake failures without changing response or authority behavior"
+        },
+        {
+          "path": "src/workers/__tests__/intake-route.test.ts",
+          "target_blob": "5ff5842e93c9b41102ed1c16b6bde42d8a224743",
+          "reason": "proves intake failure telemetry identifies the persistence stage while excluding customer prompt and database error detail"
+        }
+      ]
     }
   ]
 }
