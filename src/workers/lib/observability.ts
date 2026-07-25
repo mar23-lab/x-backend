@@ -30,6 +30,7 @@ export type ObservabilityKind =
   | 'skill_invocation_completed' // an LLM/tool capability completed with a durable skill receipt
   | 'chat_history_persistence_unavailable' // strict chat lineage could not start because the DAL append contract is absent
   | 'chat_history_persistence_failed' // strict/default chat lineage append failed; strict deployments fail closed
+  | 'chat_project_inventory_failed' // an explicit project-list question could not load the current tenant inventory
   | 'role_skill_receipt_write_failed'; // a shadow receipt write rejected — telemetry so evidence loss is never silent (role-skill-shadow · Track A 260713)
 
 /** Emit one structured observability event. Never throws; never blocks. */

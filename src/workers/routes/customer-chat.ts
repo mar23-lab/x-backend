@@ -36,9 +36,11 @@ import { persistAssistantContextLineage, completeAssistantSkillLineage, type Ass
 import { createModelExecutionObserver } from '../lib/model-execution-lineage';
 import {
   answerCockpitChat,
+  isProjectInventoryQuestion,
   type CockpitChatScope,
   type CockpitChatMode,
   type CockpitChatLLM,
+  type ProjectGroundingFact,
   type SourceGroundingFact,
 } from '../services/cockpit-chat';
 
@@ -234,6 +236,27 @@ customerChatRoute.post('/customer-chat', async (ctx) => {
       });
     }
 
+    let projects: ProjectGroundingFact[] | undefined;
+    if (isProjectInventoryQuestion(message)) {
+      try {
+        const rows = await dal.listProjects(workspaceId, { status: 'active' });
+        projects = rows.map((project) => ({
+          name: project.name,
+          status: project.status,
+          updated_at: project.updated_at,
+        }));
+      } catch {
+        emitEvent('chat_project_inventory_failed', {
+          workspace_id: workspaceId,
+        });
+        return errorEnvelope(ctx, {
+          status: 503,
+          code: 'SERVICE_UNAVAILABLE',
+          message: 'the current project inventory could not be loaded',
+        });
+      }
+    }
+
     // TENANT-SAFE event read — workspace-scoped via the DAL guard (never operator-wide, never body-supplied).
     const opts: EventListOpts = { limit: MAX_EVENTS, role: auth.role, top_level: true };
     const page: EventPage = await dal
@@ -356,7 +379,7 @@ customerChatRoute.post('/customer-chat', async (ctx) => {
       : undefined;
     const result = await answerCockpitChat(
       message,
-      { companyContext, events, sources, total: events.length, scope, charter, personalizationProfile },
+      { companyContext, events, projects, sources, total: events.length, scope, charter, personalizationProfile },
       ai,
       mode,
       claudeKey,
@@ -391,7 +414,7 @@ customerChatRoute.post('/customer-chat', async (ctx) => {
     }
     // T3/P6 · the fact-bundle assembly metric (customer plane): size + provenance of what grounded this answer.
     emitEvent('chat_fact_bundle', {
-      workspace_id: workspaceId, events: events.length, sources_total: sources.length,
+      workspace_id: workspaceId, events: events.length, projects_total: projects?.length ?? null, sources_total: sources.length,
       sources_connected: sources.filter((s) => s.status === 'connected').length,
       generated_by: result.generated_by,
     });
