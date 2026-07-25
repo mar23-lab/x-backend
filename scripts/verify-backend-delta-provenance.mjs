@@ -12,6 +12,9 @@ const failures = [];
 const latestByPath = new Map();
 const trackedPaths = new Set(execFileSync('git', ['ls-files'], { cwd: root, encoding: 'utf8' }).trim().split('\n'));
 const seedExclusions = new Map();
+const CURRENT_AUTHORITY = 'source_authority_no_automatic_deploy';
+const LEGACY_AUTHORITY = 'shadow_only_no_production_cutover';
+const LEGACY_AUTHORITY_CUTOFF = Date.parse('2026-07-25T00:00:00.000Z');
 
 function blobFor(relativePath) {
   const absolute = path.join(root, relativePath);
@@ -31,7 +34,12 @@ for (const delta of receipt.deltas ?? []) {
   if (!/^[0-9a-f]{40}$/.test(delta.source_commit ?? '')) {
     failures.push(`invalid source_commit for ${String(delta.delta_id)}`);
   }
-  if (delta.authority !== 'shadow_only_no_production_cutover') {
+  const generatedAt = Date.parse(delta.generated_at ?? '');
+  const isHistoricalLegacy =
+    delta.authority === LEGACY_AUTHORITY &&
+    Number.isFinite(generatedAt) &&
+    generatedAt < LEGACY_AUTHORITY_CUTOFF;
+  if (delta.authority !== CURRENT_AUTHORITY && !isHistoricalLegacy) {
     failures.push(`unsafe authority for ${String(delta.delta_id)}`);
   }
   for (const entry of delta.copied_files ?? []) {
