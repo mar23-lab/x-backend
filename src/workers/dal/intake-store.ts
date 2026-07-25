@@ -83,7 +83,13 @@ export async function createIntakeResolutionRow(
       RETURNING *
     `,
   ]);
-  if (!rows[0]) throw makeError('CONFLICT', 'client_request_id was already used for different input', 409);
+  if (!rows[0]) {
+    throw makeError(
+      'INTAKE_REQUEST_ID_CONFLICT',
+      'client_request_id was already used for different intake input',
+      409,
+    );
+  }
   return normalizeResolution(rows[0]);
 }
 

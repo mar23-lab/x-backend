@@ -2363,6 +2363,47 @@
           "reason": "Bind exact operator-approved deployment packet before deploy and separate post-deploy health ratification from commercial readiness"
         }
       ]
+    },
+    {
+      "delta_id": "production-intake-request-conflict-20260725",
+      "generated_at": "2026-07-25T05:09:00.554Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "09caf677c2941130b022781ffd41bf755c768f53",
+      "target_base_commit": "09caf677c2941130b022781ffd41bf755c768f53",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/dal/types/auth.ts",
+          "target_blob": "476dade07954a4f354e2cd0a4110c1b720c35391",
+          "reason": "adds stable request-id conflict semantics and local plus live RLS regression coverage for authenticated intake resolution"
+        },
+        {
+          "path": "src/workers/dal/intake-store.ts",
+          "target_blob": "07f3db6eb96c3551aa496078884b3bd9b37a6c2d",
+          "reason": "adds stable request-id conflict semantics and local plus live RLS regression coverage for authenticated intake resolution"
+        },
+        {
+          "path": "src/workers/__tests__/intake-route.test.ts",
+          "target_blob": "0643a9548b7fca25603398572e6941054ec16574",
+          "reason": "adds stable request-id conflict semantics and local plus live RLS regression coverage for authenticated intake resolution"
+        },
+        {
+          "path": "src/workers/__tests__/intake-store.test.ts",
+          "target_blob": "dd9bceeeaf9177e11aa20913de8f63d0873a4b5a",
+          "reason": "adds stable request-id conflict semantics and local plus live RLS regression coverage for authenticated intake resolution"
+        },
+        {
+          "path": "src/workers/middleware/error.ts",
+          "target_blob": "6291db565427471a1b12b2af1bdbba96c33eda4f",
+          "reason": "registers the stable intake request-id conflict as an explicit 409 producer contract code"
+        },
+        {
+          "path": "docs/contracts/api-contract.v1.json",
+          "target_blob": "13d93c2dcf8a7ce7f93dcdb0d712ca95ef82cede",
+          "reason": "regenerates the deterministic API contract with the stable intake request-id conflict code"
+        }
+      ]
     }
   ]
 }

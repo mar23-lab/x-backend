@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { countGovernedExecutionReceiptsRow, executeIntakeResolutionRow } from '../dal/intake-store';
+import {
+  countGovernedExecutionReceiptsRow,
+  createIntakeResolutionRow,
+  executeIntakeResolutionRow,
+} from '../dal/intake-store';
+import { neonClient } from '../db/client';
 
 const RESOLUTION = {
   id: 'inr_1', workspace_id: 'ws_1', actor_user_id: 'user_1', project_id: 'proj_1',
@@ -41,6 +46,28 @@ function sqlWith(transactionRows: unknown[][]) {
 }
 
 describe('single-intake transactional execution', () => {
+  it('returns a stable conflict code when a client request id is reused for different input', async () => {
+    const { sql } = sqlWith([[]]);
+    await expect(createIntakeResolutionRow(sql, 'ws_1', 'user_1', {
+      client_request_id: 'resolve_reused',
+      request_digest: 'a'.repeat(64),
+      operation: 'answer',
+      confidence: 0.99,
+      ambiguity: false,
+      target: { type: 'read_model', id: 'ws_1', label: 'Workspace' },
+      effect_summary: 'Answer without changing governed work.',
+      risk: 'low',
+      authority: { allowed: true, safe_reason: 'read_only_or_draft' },
+      context_summary: { reference_count: 0, source_count: 0, evidence_count: 0 },
+      requires_confirmation: false,
+      next_step: 'answer_now',
+      expires_at: '2099-01-01T00:00:00Z',
+    })).rejects.toMatchObject({
+      code: 'INTAKE_REQUEST_ID_CONFLICT',
+      status: 409,
+    });
+  });
+
   it('counts receipts through the tenant RLS context without returning receipt data', async () => {
     const { sql, statements } = sqlWith([[{ receipt_count: '3' }]]);
     const count = await countGovernedExecutionReceiptsRow(sql, 'ws_1');
@@ -75,5 +102,58 @@ describe('single-intake transactional execution', () => {
     const { sql } = sqlWith([[], [EXECUTION_ROW]]);
     const result = await executeIntakeResolutionRow(sql, 'ws_1', 'user_1', 'inr_1', 1, 0, 'execute_other', CLOSING);
     expect(result).toEqual({ ok: false, reason: 'already_consumed' });
+  });
+});
+
+const runLiveRlsProbe = process.env.XLOOOP_RUN_INTAKE_RLS_LIVE === '1';
+const describeLiveRls = runLiveRlsProbe ? describe : describe.skip;
+
+describeLiveRls('single-intake live RLS insert', () => {
+  it('creates and returns an answer resolution through the app-role connection', async () => {
+    const appDatabaseUrl = process.env.XLOOOP_RLS_APP_DATABASE_URL;
+    const ownerDatabaseUrl = process.env.DATABASE_URL;
+    const workspaceId = process.env.XLOOOP_LIVE_WORKSPACE_ID;
+    const actorUserId = process.env.XLOOOP_LIVE_ACTOR_USER_ID;
+    if (!appDatabaseUrl || !ownerDatabaseUrl || !workspaceId || !actorUserId) {
+      throw new Error('live intake RLS probe requires app/owner DSNs plus workspace and actor ids');
+    }
+
+    const appSql = neonClient(appDatabaseUrl);
+    const ownerSql = neonClient(ownerDatabaseUrl);
+    const clientRequestId = `intake-rls-probe-${crypto.randomUUID()}`;
+    try {
+      const resolution = await createIntakeResolutionRow(appSql, workspaceId, actorUserId, {
+        project_id: null,
+        client_request_id: clientRequestId,
+        request_digest: 'a'.repeat(64),
+        operation: 'answer',
+        confidence: 0.99,
+        ambiguity: false,
+        target: { type: 'read_model', id: workspaceId, label: 'Workspace' },
+        effect_summary: 'Answer without changing governed work.',
+        risk: 'low',
+        authority: { allowed: true, safe_reason: 'read_only_or_draft' },
+        context_summary: { reference_count: 0, source_count: 0, evidence_count: 0 },
+        requires_confirmation: false,
+        next_step: 'answer_now',
+        action_payload: {},
+        current_work_version: 0,
+        expires_at: new Date(Date.now() + 10 * 60_000).toISOString(),
+      });
+      expect(resolution).toMatchObject({
+        workspace_id: workspaceId,
+        actor_user_id: actorUserId,
+        client_request_id: clientRequestId,
+        operation: 'answer',
+        next_step: 'answer_now',
+      });
+    } finally {
+      await ownerSql`
+        DELETE FROM intake_resolutions
+         WHERE workspace_id = ${workspaceId}
+           AND actor_user_id = ${actorUserId}
+           AND client_request_id = ${clientRequestId}
+      `;
+    }
   });
 });
