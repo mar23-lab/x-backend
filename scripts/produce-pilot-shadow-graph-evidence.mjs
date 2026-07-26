@@ -11,6 +11,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import process from 'node:process';
+import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { neon } from '@neondatabase/serverless';
 import { GRAPH_CENSUS_SQL, graphCensusQueryMatchesSchema } from './lib/pilot-graph-census.mjs';
@@ -24,6 +25,7 @@ const EVIDENCE_FILE = process.env.XLOOOP_PILOT_SHADOW_GRAPH_EVIDENCE_FILE || '';
 const ENVIRONMENT = process.env.XLOOOP_GRAPH_EVIDENCE_ENVIRONMENT || 'pilot-shadow';
 const APPROVED = process.env.XLOOOP_GRAPH_EVIDENCE_APPROVED_NONPROD === '1';
 const DB_LABEL = process.env.XLOOOP_GRAPH_EVIDENCE_DB_LABEL || '';
+const CANDIDATE_SHA = process.env.XLOOOP_GRAPH_EVIDENCE_CANDIDATE_SHA || '';
 const PROJECTION_P95_SECONDS = Number(process.env.XLOOOP_GRAPH_EVIDENCE_PROJECTION_P95_SECONDS ?? NaN);
 
 const CENSUS_KEYS = [
@@ -82,6 +84,7 @@ async function produceEvidence() {
   if (!['pilot-shadow', 'staging', 'test'].includes(ENVIRONMENT)) throw new Error('environment must be pilot-shadow, staging, or test');
   assertNonProductionDatabaseUrl(DATABASE_URL);
   if (!DB_LABEL || /(prod|production)/i.test(DB_LABEL)) throw new Error('XLOOOP_GRAPH_EVIDENCE_DB_LABEL must name an approved nonproduction branch/DB');
+  assertCandidateState(CANDIDATE_SHA);
   if (!Number.isFinite(PROJECTION_P95_SECONDS) || PROJECTION_P95_SECONDS < 0) {
     throw new Error('XLOOOP_GRAPH_EVIDENCE_PROJECTION_P95_SECONDS must be a measured nonnegative number');
   }
@@ -95,8 +98,18 @@ async function produceEvidence() {
     evidence_class: 'pilot_shadow_live_graph_projection',
     environment: ENVIRONMENT,
     generated_at: generatedAt,
+    authority: ENVIRONMENT === 'pilot-shadow' ? 'shadow' : 'nonproduction',
+    candidate: {
+      git_sha: CANDIDATE_SHA,
+      git_worktree_clean: true,
+    },
+    producer: {
+      name: 'x-backend.produce-pilot-shadow-graph-evidence',
+      kind: 'live_read_only_database_census',
+      approved_nonproduction: true,
+      production_data_allowed: false,
+    },
     source: {
-      producer: 'x-backend.produce-pilot-shadow-graph-evidence',
       db_label: DB_LABEL,
       approved_nonproduction: true,
       read_only: true,
@@ -200,6 +213,32 @@ function assertNonProductionDatabaseUrl(databaseUrl) {
   }
 }
 
+function assertCandidateState(candidateSha, gitState = readGitState()) {
+  if (!/^[0-9a-f]{40}$/.test(candidateSha)) {
+    throw new Error('XLOOOP_GRAPH_EVIDENCE_CANDIDATE_SHA must be a full 40-character lowercase Git SHA');
+  }
+  if (gitState.sha !== candidateSha) throw new Error('candidate SHA does not match current git HEAD');
+  if (!gitState.clean) throw new Error('graph evidence requires a clean git worktree');
+}
+
+function readGitState() {
+  const sha = spawnSync('git', ['rev-parse', 'HEAD'], {
+    cwd: process.cwd(),
+    encoding: 'utf8',
+  });
+  const status = spawnSync('git', ['status', '--porcelain'], {
+    cwd: process.cwd(),
+    encoding: 'utf8',
+  });
+  if (sha.status !== 0 || status.status !== 0) {
+    throw new Error('cannot determine Git candidate state');
+  }
+  return {
+    sha: String(sha.stdout || '').trim(),
+    clean: String(status.stdout || '').trim().length === 0,
+  };
+}
+
 function isoOrNull(value) {
   if (!value) return null;
   const date = value instanceof Date ? value : new Date(value);
@@ -298,13 +337,49 @@ census:
     }
   })();
   const queryContractOk = graphCensusQueryMatchesSchema();
-  if (!manifestOk || !prodRejected || !insufficientRejected || !danglingRejected || !queryContractOk) {
+  const candidateAccepted = (() => {
+    try {
+      assertCandidateState('a'.repeat(40), { sha: 'a'.repeat(40), clean: true });
+      return true;
+    } catch {
+      return false;
+    }
+  })();
+  const candidateMismatchRejected = (() => {
+    try {
+      assertCandidateState('a'.repeat(40), { sha: 'b'.repeat(40), clean: true });
+      return false;
+    } catch {
+      return true;
+    }
+  })();
+  const dirtyCandidateRejected = (() => {
+    try {
+      assertCandidateState('a'.repeat(40), { sha: 'a'.repeat(40), clean: false });
+      return false;
+    } catch {
+      return true;
+    }
+  })();
+  if (
+    !manifestOk
+    || !prodRejected
+    || !insufficientRejected
+    || !danglingRejected
+    || !queryContractOk
+    || !candidateAccepted
+    || !candidateMismatchRejected
+    || !dirtyCandidateRejected
+  ) {
     console.error(JSON.stringify({
       manifestOk,
       prodRejected,
       insufficientRejected,
       danglingRejected,
       queryContractOk,
+      candidateAccepted,
+      candidateMismatchRejected,
+      dirtyCandidateRejected,
       updated,
     }, null, 2));
     throw new Error('self-test failed');
