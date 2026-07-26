@@ -25,6 +25,16 @@ async function fetchRequired(url) {
   return response;
 }
 
+async function parseJsonResponse(response, label) {
+  const text = await response.text();
+  try {
+    return JSON.parse(text);
+  } catch {
+    const contentType = response.headers.get('content-type') || 'unknown';
+    throw new Error(`${label} is not valid JSON (content-type=${contentType})`);
+  }
+}
+
 const failures = [];
 try {
   const manifest = JSON.parse(readFileSync(path.join(releaseDir, 'release-manifest.json'), 'utf8'));
@@ -37,9 +47,9 @@ try {
   ]);
   const [html, liveManifest, contractMeta, health] = await Promise.all([
     indexResponse.text(),
-    manifestResponse.json(),
+    parseJsonResponse(manifestResponse, 'live release manifest'),
     contractResponse.text(),
-    healthResponse.json(),
+    parseJsonResponse(healthResponse, 'backend health response'),
   ]);
   const config = parseFrontendReleaseHtml(html);
   const artifact = assessFrontendReleaseArtifact(config, {
