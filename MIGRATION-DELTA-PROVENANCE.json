@@ -2881,6 +2881,32 @@
           "reason": "Require short-lived single-use deployment authorization shared across worktrees before Cloudflare side effects"
         }
       ]
+    },
+    {
+      "delta_id": "chat-compound-inventory-grounding-20260727",
+      "generated_at": "2026-07-26T17:40:36.716Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "6a12c2d8f138fcdcec46912e16f6992b0cb98a30",
+      "target_base_commit": "6a12c2d8f138fcdcec46912e16f6992b0cb98a30",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/services/cockpit-chat.ts",
+          "target_blob": "20a7dc17f58fbb46b4360364b7848272e10ae39c",
+          "reason": "compose canonical project IDs with explicitly workspace-bound source inventory and preserve generic summaries"
+        },
+        {
+          "path": "src/workers/__tests__/cockpit-chat.test.ts",
+          "target_blob": "be8b410d66b29cccc0e4005f00947b879650ca86",
+          "reason": "compose canonical project IDs with explicitly workspace-bound source inventory and preserve generic summaries"
+        },
+        {
+          "path": "src/workers/__tests__/customer-chat-route.test.ts",
+          "target_blob": "4cb4179ab91bdbaf1233c2f6b795364c9bf401ab",
+          "reason": "compose canonical project IDs with explicitly workspace-bound source inventory and preserve generic summaries"
+        }
+      ]
     }
   ]
 }
