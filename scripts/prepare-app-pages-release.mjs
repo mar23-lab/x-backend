@@ -13,6 +13,7 @@ import { fileURLToPath } from 'node:url';
 import {
   assessFrontendReleaseArtifact,
   hashReleaseFiles,
+  normalizePagesFunctionsBundle,
   parseFrontendReleaseArtifact,
   verifyStaticArtifactFiles,
 } from './lib/app-pages-release-contract.mjs';
@@ -75,6 +76,17 @@ const build = spawnSync(
   { cwd: root, encoding: 'utf8' },
 );
 if (build.status !== 0) fail(`Pages Functions build failed\n${build.stderr || build.stdout}`);
+const workerBundlePath = path.join(outputDir, '_worker.js', 'index.js');
+try {
+  const workerBundle = readFileSync(workerBundlePath, 'utf8');
+  writeFileSync(workerBundlePath, normalizePagesFunctionsBundle(workerBundle));
+} catch (error) {
+  fail(
+    `Pages Functions bundle normalization failed: ${
+      error instanceof Error ? error.message : String(error)
+    }`,
+  );
+}
 
 const manifest = {
   schema_id: 'xlooop.app_pages_release_manifest.v1',
