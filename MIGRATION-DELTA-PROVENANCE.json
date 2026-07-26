@@ -2698,6 +2698,127 @@
           "reason": "reconcile merged graph, cron, intake polarity, and signoff authority source"
         }
       ]
+    },
+    {
+      "delta_id": "signed-chain-authority-20260726",
+      "generated_at": "2026-07-26T10:05:13.923Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "54325c778e1c59c7c244adc9dd99bf440d3d4082",
+      "target_base_commit": "54325c778e1c59c7c244adc9dd99bf440d3d4082",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "docs/architecture/backend/API_CONTRACT_V1.md",
+          "target_blob": "c218f7147d7a86e24c4cd2e1df1fe2554f3088d9",
+          "reason": "Fail-closed document and source authority receipts, workspace-scoped source evidence, and canonical DAL ownership"
+        },
+        {
+          "path": "docs/governance/DOCUMENT_VERSION_CHAIN.md",
+          "target_blob": "d5a0e7848aa95d90ebb87659ec79316861acf497",
+          "reason": "Fail-closed document and source authority receipts, workspace-scoped source evidence, and canonical DAL ownership"
+        },
+        {
+          "path": "docs/security/RETENTION_POLICY.md",
+          "target_blob": "befbe5caea9296a4e457b26985a59e7b2f646990",
+          "reason": "Fail-closed document and source authority receipts, workspace-scoped source evidence, and canonical DAL ownership"
+        },
+        {
+          "path": "package.json",
+          "target_blob": "b1f86cc713069276acd2a603eed66aeadaaec6f2",
+          "reason": "Fail-closed document and source authority receipts, workspace-scoped source evidence, and canonical DAL ownership"
+        },
+        {
+          "path": "scripts/verify-document-version-chain.mjs",
+          "target_blob": "61926b06ecbc9ec6c849598f36a979824b447a60",
+          "reason": "Fail-closed document and source authority receipts, workspace-scoped source evidence, and canonical DAL ownership"
+        },
+        {
+          "path": "scripts/verify-no-raw-operation-events-insert.mjs",
+          "target_blob": "e700846d52a5c69bfca5b1cac093ab5c90b639c8",
+          "reason": "Fail-closed document and source authority receipts, workspace-scoped source evidence, and canonical DAL ownership"
+        },
+        {
+          "path": "src/workers/__tests__/documents-route.test.ts",
+          "target_blob": "8991de7e33693cd82e96451f48d64c29182a7c3a",
+          "reason": "Fail-closed document and source authority receipts, workspace-scoped source evidence, and canonical DAL ownership"
+        },
+        {
+          "path": "src/workers/__tests__/gmail-translator-wave-c.test.ts",
+          "target_blob": "e061133a8f341fb2aefe1d08f32710c8b1f9719b",
+          "reason": "Fail-closed document and source authority receipts, workspace-scoped source evidence, and canonical DAL ownership"
+        },
+        {
+          "path": "src/workers/__tests__/sources-connect-sync.test.ts",
+          "target_blob": "994e2de3c1574ed7177f19a93aaf1f71663073c5",
+          "reason": "Fail-closed document and source authority receipts, workspace-scoped source evidence, and canonical DAL ownership"
+        },
+        {
+          "path": "src/workers/__tests__/sources-repos-route.test.ts",
+          "target_blob": "9ac43934d131672db743584b1bfb1aa62c73cc94",
+          "reason": "Fail-closed document and source authority receipts, workspace-scoped source evidence, and canonical DAL ownership"
+        },
+        {
+          "path": "src/workers/dal/DalAdapter.ts",
+          "target_blob": "b81c6d54847238737e214e4f1e1a6ebca51a067a",
+          "reason": "Fail-closed document and source authority receipts, workspace-scoped source evidence, and canonical DAL ownership"
+        },
+        {
+          "path": "src/workers/dal/WorkersDalAdapter.ts",
+          "target_blob": "18a60f869cbe5fb120feb40cc350c9ea47a8aab7",
+          "reason": "Fail-closed document and source authority receipts, workspace-scoped source evidence, and canonical DAL ownership"
+        },
+        {
+          "path": "src/workers/dal/document-access-store.ts",
+          "target_blob": "b46ea303d52f7953998cdce523e57ce1a1d01c60",
+          "reason": "Fail-closed document and source authority receipts, workspace-scoped source evidence, and canonical DAL ownership"
+        },
+        {
+          "path": "src/workers/dal/governance-store.ts",
+          "target_blob": "a072651c2e2786a7bd42367939fe574fcae9e0bf",
+          "reason": "Fail-closed document and source authority receipts, workspace-scoped source evidence, and canonical DAL ownership"
+        },
+        {
+          "path": "src/workers/dal/source-store.ts",
+          "target_blob": "bf5f90981a7a03e05bbde79357a6419eff534d29",
+          "reason": "Fail-closed document and source authority receipts, workspace-scoped source evidence, and canonical DAL ownership"
+        },
+        {
+          "path": "src/workers/lib/document-store.ts",
+          "target_blob": "1d86e2ba77499995c8e1b89e7d5013309067a756",
+          "reason": "Fail-closed document and source authority receipts, workspace-scoped source evidence, and canonical DAL ownership"
+        },
+        {
+          "path": "src/workers/routes/documents.ts",
+          "target_blob": "08e600a1f380c302b53eca76a8a6780f6ff4bc0a",
+          "reason": "Fail-closed document and source authority receipts, workspace-scoped source evidence, and canonical DAL ownership"
+        },
+        {
+          "path": "src/workers/routes/mcp-customer-reads.ts",
+          "target_blob": "b6688d104f738d343b752a4e6e1980d726670e6b",
+          "reason": "Fail-closed document and source authority receipts, workspace-scoped source evidence, and canonical DAL ownership"
+        },
+        {
+          "path": "src/workers/routes/sources.ts",
+          "target_blob": "0b396785a7fb4dbd665ecb4d4edf38866a5c5bc9",
+          "reason": "Fail-closed document and source authority receipts, workspace-scoped source evidence, and canonical DAL ownership"
+        },
+        {
+          "path": "src/workers/routes/workspaces.ts",
+          "target_blob": "7a137db5d7507cd3a6bf5f9fbf423844d20d3b48",
+          "reason": "Fail-closed document and source authority receipts, workspace-scoped source evidence, and canonical DAL ownership"
+        },
+        {
+          "path": "src/workers/sources/translators/gmail.ts",
+          "target_blob": "e19f855b6edc0c0950d29d2b4bd94cf03d58bf29",
+          "reason": "Fail-closed document and source authority receipts, workspace-scoped source evidence, and canonical DAL ownership"
+        },
+        {
+          "path": "src/workers/sources/translators/types.ts",
+          "target_blob": "30ebd71323185672f15687b31e6e7087bdcb5803",
+          "reason": "Fail-closed document and source authority receipts, workspace-scoped source evidence, and canonical DAL ownership"
+        }
+      ]
     }
   ]
 }

@@ -15,7 +15,7 @@ import { Hono } from 'hono';
 import { errorEnvelope, clientError } from '../middleware/error';
 import { neonClient } from '../db/client';
 import { listWorkspaceSourcesRow } from '../dal/source-store';
-import { listDocumentsRow } from '../lib/document-store';
+import { listDocumentsRow } from '../dal/document-store';
 import { listWorkspaceAuditLogRow, listWorkspaceMemberIdsRow } from '../dal/customer-audit-store';
 import { redactAuditActorForCustomer } from '../lib/audit-export';
 import { recordMcpRead } from '../dal/mcp-access-store';

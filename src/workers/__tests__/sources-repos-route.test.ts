@@ -58,13 +58,24 @@ describe('GET /sources/:id/repos · security guards', () => {
   });
 
   it('404 when the source is not found / not owned by the caller', async () => {
-    const res = await reposReq({ user_id: 'u1' }, async () => null);
+    const res = await reposReq({ user_id: 'u1', workspace_id: 'ws1' }, async () => null);
     expect(res.status).toBe(404);
   });
 
   it('400 when the source is not a github provider', async () => {
-    const res = await reposReq({ user_id: 'u1' }, async () => ({ id: 's1', provider: 'dropbox' }));
+    const res = await reposReq(
+      { user_id: 'u1', workspace_id: 'ws1' },
+      async () => ({ id: 's1', provider: 'dropbox', workspace_id: 'ws1' }),
+    );
     expect(res.status).toBe(400);
+  });
+
+  it('404 when the owned source belongs to another workspace', async () => {
+    const res = await reposReq(
+      { user_id: 'u1', workspace_id: 'ws1' },
+      async () => ({ id: 's1', provider: 'github', workspace_id: 'ws2' }),
+    );
+    expect(res.status).toBe(404);
   });
 
   it('200 + mapped repos for an owned github source', async () => {
@@ -72,7 +83,10 @@ describe('GET /sources/:id/repos · security guards', () => {
       { id: 1, name: 'demo', full_name: 'mar23/demo', owner: { login: 'mar23' }, default_branch: 'main', pushed_at: '2026-06-01T00:00:00Z', private: false, description: null, html_url: 'https://github.com/mar23/demo' },
     ]));
     try {
-      const res = await reposReq({ user_id: 'u1' }, async (userId, id) => ({ id, provider: 'github', user_id: userId }));
+      const res = await reposReq(
+        { user_id: 'u1', workspace_id: 'ws1' },
+        async (userId, id) => ({ id, provider: 'github', user_id: userId, workspace_id: 'ws1' }),
+      );
       expect(res.status).toBe(200);
       const body = (await res.json()) as { provider: string; repos: Array<{ full_name: string }> };
       expect(body.provider).toBe('github');

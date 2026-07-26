@@ -20,7 +20,7 @@
 // RATE LIMIT: Gmail per-user quota; 429 → stop. CONTRACT INVARIANT: enforceContract() per event.
 
 import { enforceContract } from '../contract-enforcer';
-import type { TranslatorInput, TranslatorResult, TranslatorError } from './types';
+import type { TranslatorInput, TranslatorResult, TranslatorError, TranslatorEmittedEvent } from './types';
 import { DEFAULT_MAX_EVENTS_PER_RUN } from './types';
 import type { HarnessFlowEventInput } from '../../dal/types';
 
@@ -76,12 +76,18 @@ export function messageToEvent(msg: GmailMessage): HarnessFlowEventInput {
   };
 }
 
+async function hashSourceRef(value: string): Promise<string> {
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value));
+  return Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
 export async function runTranslator(input: TranslatorInput): Promise<TranslatorResult> {
   const { adapter, dal, userSource, since } = input;
   const maxEvents = input.max_events ?? DEFAULT_MAX_EVENTS_PER_RUN;
   const errors: TranslatorError[] = [];
   let events_emitted = 0;
   let events_rejected = 0;
+  const emitted_events: TranslatorEmittedEvent[] = [];
   const workspaceId = String(userSource.workspace_id || '').trim();
   if (!workspaceId) {
     return {
@@ -133,9 +139,18 @@ export async function runTranslator(input: TranslatorInput): Promise<TranslatorR
     const event = messageToEvent(msgResp.data);
     const verdict = enforceContract(event, userSource.contract);
     if (!verdict.ok) { events_rejected++; continue; }
-    try { await dal.upsertEvent(workspaceId, verdict.event); events_emitted++; }
+    try {
+      await dal.upsertEvent(workspaceId, verdict.event);
+      const sourceRefHash = await hashSourceRef(id);
+      emitted_events.push({
+        source_event_id: `gmail:${sourceRefHash}`,
+        operation_event_id: verdict.event.id,
+        source_ref_hash: sourceRefHash,
+      });
+      events_emitted++;
+    }
     catch (err) { errors.push({ code: 'dal_upsert_failed', message: (err as Error).message }); }
   }
 
-  return { events_emitted, events_rejected, errors, completed_at: new Date().toISOString() };
+  return { events_emitted, events_rejected, errors, completed_at: new Date().toISOString(), emitted_events };
 }

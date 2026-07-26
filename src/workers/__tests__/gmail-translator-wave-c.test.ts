@@ -66,6 +66,12 @@ describe('Wave C · S5b · runTranslator (end-to-end against mocks)', () => {
     const out = await runTranslator({ adapter, dal, userSource, since: '2026-06-01T00:00:00Z', max_events: 100 });
     expect(out.events_emitted).toBe(2);
     expect(out.errors).toEqual([]);
+    expect(out.emitted_events).toHaveLength(2);
+    expect(out.emitted_events?.[0]).toEqual({
+      source_event_id: `gmail:${out.emitted_events[0]?.source_ref_hash}`,
+      operation_event_id: 'usc_evt_gmail_msg_m1',
+      source_ref_hash: expect.stringMatching(/^[0-9a-f]{64}$/),
+    });
     expect(upsertEvent).toHaveBeenCalledTimes(2);
     expect((upsertEvent.mock.calls[0][1] as { source_tool: string }).source_tool).toBe('gmail');
   });

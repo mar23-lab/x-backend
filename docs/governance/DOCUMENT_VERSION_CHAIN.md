@@ -29,7 +29,7 @@ version-chain walk; `idx_documents_supersedes (supersedes_id) WHERE supersedes_i
 
 ## Write path — who/what created a version (uses A-W4 lineage)
 `POST /api/v1/documents` (`src/workers/routes/documents.ts`):
-1. Compute `contentHash = sha256Hex(bytes)` (`src/workers/lib/document-store.ts` — `crypto.subtle.digest`).
+1. Compute `contentHash = sha256Hex(bytes)` (`src/workers/dal/document-store.ts` — `crypto.subtle.digest`).
 2. `getLatestDocumentVersionRow(sql, ws, project, filename)` — the "same logical document" = identical
    `filename` within the same `project`. If a prior version exists → new row gets `version = prior.version+1`
    and `supersedes_id = prior.id`; else `version = 1`, `supersedes_id = null`.

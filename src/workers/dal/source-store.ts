@@ -27,11 +27,11 @@ import type {
   SourceReadPolicy,
 } from './types';
 import type { Sql } from '../db/client';
+import type { SourceTool } from './types/event';
 
 // G2 (migration 067) · the access-tier vocabulary. Reuses the exact 016 enum so source-tier.ts maps
 // unchanged. Kept degrade-safe: reads default to 'metadata_only' if the column is absent (pre-067).
 const VALID_READ_POLICIES: ReadonlySet<SourceReadPolicy> = new Set(['metadata_only', 'proposal_only', 'read_only']);
-
 export interface SourceConnectionWriteReceipt {
   source: UserSourceConnection;
   source_binding_id: string;
@@ -48,6 +48,20 @@ export interface SourceDisconnectWriteReceipt {
 export interface SourceSyncWriteReceipt {
   source_sync_receipt_id: string;
   audit_event_id: string;
+  operation_event_id: string;
+  projection_outbox_id: string;
+}
+
+export interface SourceSyncAuthorityInput {
+  operation_event_id: string;
+  projection_outbox_id: string;
+  request_id: string | null;
+  source_tool: SourceTool;
+  emitted_events?: Array<{
+    source_event_id: string;
+    operation_event_id: string;
+    source_ref_hash: string;
+  }>;
 }
 
 export interface SourceReadPolicyWriteReceipt {
@@ -344,11 +358,16 @@ export async function markUserSourceSyncRow(
   id: string,
   result: { success: true } | { success: false; error: string },
   workspaceId?: WorkspaceId | null,
+  authority?: SourceSyncAuthorityInput,
 ): Promise<SourceSyncWriteReceipt> {
   if (!userId) throw new Error('markUserSourceSync: userId required');
   if (!id) throw new Error('markUserSourceSync: id required');
+  if (!authority?.operation_event_id || !authority.projection_outbox_id) {
+    throw new Error('markUserSourceSync: authority event and outbox ids required');
+  }
   const action = result.success ? 'source_sync_success' : 'source_sync_failure';
   const reason = result.success ? 'source sync success' : `source sync failed: ${result.error}`.slice(0, 500);
+  const emittedEvents = JSON.stringify(authority.emitted_events ?? []);
   const rows = (await sql`
     WITH source_updated AS (
       UPDATE user_source_connections
@@ -359,28 +378,111 @@ export async function markUserSourceSyncRow(
       WHERE id = ${id} AND user_id = ${userId}
       RETURNING id, workspace_id, user_id, provider, last_sync_at, last_sync_error, status
     ),
+    event_written AS (
+      INSERT INTO operation_events (
+        id, workspace_id, project_id, source_tool, agent_id, status, summary,
+        visibility, occurred_at, authorized_by_user_id, instrument_kind,
+        authority_source, request_id
+      )
+      SELECT
+        ${authority.operation_event_id},
+        COALESCE(source_updated.workspace_id, ${workspaceId}),
+        NULL,
+        ${authority.source_tool},
+        source_updated.user_id,
+        CASE WHEN ${result.success}::boolean THEN 'completed' ELSE 'failed' END,
+        CASE WHEN ${result.success}::boolean
+          THEN 'Source sync completed: ' || source_updated.provider
+          ELSE 'Source sync failed: ' || source_updated.provider
+        END,
+        'internal_workspace',
+        now(),
+        source_updated.user_id,
+        'human',
+        'role',
+        ${authority.request_id}
+      FROM source_updated
+      WHERE COALESCE(source_updated.workspace_id, ${workspaceId}) IS NOT NULL
+        AND source_updated.provider = ${authority.source_tool}
+      RETURNING id
+    ),
     audit_written AS (
-      INSERT INTO audit_logs (actor_user_id, action, target_type, target_id, workspace_id, reason, metadata)
+      INSERT INTO audit_logs (
+        actor_user_id, action, target_type, target_id, workspace_id, reason,
+        causation_id, metadata
+      )
       SELECT ${userId},
              ${action}::text,
-             CASE WHEN COALESCE(source_updated.workspace_id, ${workspaceId}) IS NULL THEN 'user' ELSE 'workspace' END,
-             COALESCE(source_updated.workspace_id, ${workspaceId}, source_updated.user_id),
+             'event',
+             event_written.id,
              COALESCE(source_updated.workspace_id, ${workspaceId}),
              ${reason},
-             jsonb_build_object('source_id', source_updated.id, 'provider', source_updated.provider, 'status', source_updated.status, 'last_sync_error', source_updated.last_sync_error)
+             event_written.id,
+             jsonb_build_object(
+               'source_id', source_updated.id,
+               'provider', source_updated.provider,
+               'status', source_updated.status,
+               'last_sync_error', source_updated.last_sync_error,
+               'emitted_events', ${emittedEvents}::jsonb,
+               'request_id', ${authority.request_id}
+             )
       FROM source_updated
+      JOIN event_written ON TRUE
       RETURNING id::text AS audit_event_id
+    ),
+    outbox_written AS (
+      INSERT INTO projection_outbox (
+        id, workspace_id, event_type, aggregate_type, aggregate_id, payload
+      )
+      SELECT
+        ${authority.projection_outbox_id},
+        COALESCE(source_updated.workspace_id, ${workspaceId}),
+        CASE WHEN ${result.success}::boolean THEN 'source.sync.completed' ELSE 'source.sync.failed' END,
+        'source',
+        source_updated.id,
+        jsonb_build_object(
+          'source_id', source_updated.id,
+          'provider', source_updated.provider,
+          'operation_event_id', event_written.id,
+          'audit_event_id', audit_written.audit_event_id,
+          'emitted_events', ${emittedEvents}::jsonb
+        )
+      FROM source_updated
+      JOIN event_written ON TRUE
+      JOIN audit_written ON TRUE
+      RETURNING id
     )
-    SELECT source_updated.id, audit_written.audit_event_id
+    SELECT
+      source_updated.id,
+      event_written.id AS operation_event_id,
+      audit_written.audit_event_id,
+      outbox_written.id AS projection_outbox_id
     FROM source_updated
+    JOIN event_written ON TRUE
     JOIN audit_written ON TRUE
-  `) as Array<{ id: string; audit_event_id: string }>;
+    JOIN outbox_written ON TRUE
+  `) as Array<{
+    id: string;
+    operation_event_id: string;
+    audit_event_id: string;
+    projection_outbox_id: string;
+  }>;
   const row = rows[0];
-  if (!row) throw makeError('NOT_FOUND', `source ${id} not found`, 404);
-  if (!row.audit_event_id) throw new Error('source sync missing audit receipt');
+  if (!row) {
+    throw makeError(
+      'SOURCE_SYNC_AUTHORITY_MISSING',
+      `source ${id} was not workspace-bound or did not produce complete authority lineage`,
+      409,
+    );
+  }
+  if (!row.audit_event_id || !row.operation_event_id || !row.projection_outbox_id) {
+    throw new Error('source sync missing event, audit, or outbox receipt');
+  }
   return {
     source_sync_receipt_id: sourceSyncReceipt(row.id, result, row.audit_event_id),
     audit_event_id: row.audit_event_id,
+    operation_event_id: row.operation_event_id,
+    projection_outbox_id: row.projection_outbox_id,
   };
 }
 

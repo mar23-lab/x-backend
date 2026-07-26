@@ -13,10 +13,15 @@ import { Hono } from 'hono';
 
 const STORE = new Map<string, any[]>();
 const mocks = vi.hoisted(() => ({
-  upsertEventRow: vi.fn(async () => ({ id: 'evt_doc_test', created: true })),
+  insertDocumentWithAuthorityRow: vi.fn(),
+  updateDocumentAdmissibilityWithAuthorityRow: vi.fn(),
+  neonClient: vi.fn(() => ({})),
 }));
 
-vi.mock('../lib/document-store', () => ({
+vi.mock('../db/client', () => ({ neonClient: mocks.neonClient }));
+
+vi.mock('../dal/document-store', () => ({
+  insertDocumentWithAuthorityRow: mocks.insertDocumentWithAuthorityRow,
   insertDocumentRow: vi.fn(async (_sql: unknown, doc: any) => {
     const meta = {
       id: doc.id, workspace_id: doc.workspace_id, project_id: doc.project_id, filename: doc.filename,
@@ -38,24 +43,22 @@ vi.mock('../lib/document-store', () => ({
   sha256Hex: vi.fn(async () => 'a'.repeat(64)),
   getLatestDocumentVersionRow: vi.fn(async () => null),
   updateDocumentAdmissibilityRow: vi.fn(async () => null),
-}));
-
-// P4 (260629): the document audit event now routes through the typed canonical upsertEventRow (event-store),
-// not a bespoke document-store raw INSERT. Mock it so the route's best-effort mirror doesn't hit real SQL.
-vi.mock('../dal/event-store', () => ({
-  upsertEventRow: mocks.upsertEventRow,
+  updateDocumentAdmissibilityWithAuthorityRow: mocks.updateDocumentAdmissibilityWithAuthorityRow,
 }));
 
 import { documentsRoute } from '../routes/documents';
 
-function appFor(workspace_id: string, user_id = 'u1') {
+function appFor(workspace_id: string, user_id = 'u1', role = 'owner') {
   const app = new Hono();
-  app.use('*', async (ctx, next) => { ctx.set('auth', { user_id, workspace_id } as never); await next(); });
+  app.use('*', async (ctx, next) => { ctx.set('auth', { user_id, workspace_id, role } as never); await next(); });
   app.route('/api/v1', documentsRoute);
   return app;
 }
 // Format-valid URL so neon() doesn't throw on construction; the store is mocked so it never connects.
-const ENV = { DATABASE_URL: 'postgresql://u:p@host.tld/db' } as never;
+const ENV = {
+  DATABASE_URL: 'postgresql://owner:p@host.tld/db',
+  XLOOOP_RLS_APP_DATABASE_URL: 'postgresql://app:p@host.tld/db',
+} as never;
 const URL = 'http://local/api/v1/documents';
 
 // Build an explicit Request so the multipart boundary/content-type is set for ctx.req.formData().
@@ -69,8 +72,41 @@ const listReq = () => new Request(URL, { method: 'GET' });
 
 beforeEach(() => {
   STORE.clear();
-  mocks.upsertEventRow.mockReset();
-  mocks.upsertEventRow.mockResolvedValue({ id: 'evt_doc_test', created: true });
+  mocks.insertDocumentWithAuthorityRow.mockReset();
+  mocks.updateDocumentAdmissibilityWithAuthorityRow.mockReset();
+  mocks.neonClient.mockClear();
+  mocks.insertDocumentWithAuthorityRow.mockImplementation(async (_sql: unknown, doc: any) => {
+    const meta = {
+      id: doc.id, workspace_id: doc.workspace_id, project_id: doc.project_id, filename: doc.filename,
+      content_type: doc.content_type, size_bytes: doc.size_bytes, extracted_text: doc.extracted_text,
+      uploaded_by: doc.uploaded_by, uploaded_at: '2026-06-28T00:00:00Z', status: doc.status,
+      admissibility: 'approved', content_hash: doc.content_hash, version: doc.version, supersedes_id: doc.supersedes_id,
+    };
+    const arr = STORE.get(doc.workspace_id) ?? [];
+    arr.push(meta);
+    STORE.set(doc.workspace_id, arr);
+    return {
+      document: meta,
+      receipt_id: `document-upload:${doc.id}:audit_doc_test`,
+      operation_event_id: 'evt_doc_test',
+      audit_event_id: 'audit_doc_test',
+      projection_outbox_id: 'outbox_doc_test',
+    };
+  });
+  mocks.updateDocumentAdmissibilityWithAuthorityRow.mockImplementation(
+    async (_sql: unknown, workspaceId: string, id: string, admissibility: string) => {
+      const doc = (STORE.get(workspaceId) ?? []).find((candidate) => candidate.id === id);
+      if (!doc) return null;
+      doc.admissibility = admissibility;
+      return {
+        document: doc,
+        receipt_id: `document-admissibility:${id}:audit_adm_test`,
+        operation_event_id: 'evt_adm_test',
+        audit_event_id: 'audit_adm_test',
+        projection_outbox_id: 'outbox_adm_test',
+      };
+    },
+  );
 });
 
 describe('POST/GET /documents · tenant isolation + validation', () => {
@@ -87,18 +123,17 @@ describe('POST/GET /documents · tenant isolation + validation', () => {
       id: 'evt_doc_test',
       created: true,
     });
+    expect(j.receipt_id).toContain('document-upload:');
+    expect(j.operation_event_id).toBe('evt_doc_test');
+    expect(j.audit_event_id).toBe('audit_doc_test');
+    expect(j.projection_outbox_id).toBe('outbox_doc_test');
   });
 
-  it('still stores the document but reports audit_event failed when the governed event mirror fails', async () => {
-    mocks.upsertEventRow.mockRejectedValueOnce(new Error('source_tool check failed'));
+  it('fails closed and stores nothing when authority lineage cannot be written', async () => {
+    mocks.insertDocumentWithAuthorityRow.mockRejectedValueOnce(new Error('outbox write failed'));
     const res = await appFor('ws-A').request(uploadReq('hello world', 'a.txt'), undefined, ENV);
-    expect(res.status).toBe(201);
-    const j = (await res.json()) as any;
-    expect(j.document.workspace_id).toBe('ws-A');
-    expect(j.document.status).toBe('ingested');
-    expect(j.audit_event.status).toBe('failed');
-    expect(j.audit_event.source_tool).toBe('document_upload');
-    expect(j.audit_event.error).toContain('source_tool check failed');
+    expect(res.status).toBe(500);
+    expect(STORE.get('ws-A')).toBeUndefined();
   });
 
   it('a request body CANNOT override the workspace (no cross-tenant write)', async () => {
@@ -134,5 +169,43 @@ describe('POST/GET /documents · tenant isolation + validation', () => {
   it('400 when no file field is present', async () => {
     const res = await appFor('ws-A').request(new Request(URL, { method: 'POST', body: new FormData() }), undefined, ENV);
     expect(res.status).toBe(400);
+  });
+});
+
+describe('PATCH /documents/:id/admissibility · fail-closed authority', () => {
+  it('returns the durable event, audit, and outbox receipt', async () => {
+    const upload = await appFor('ws-A').request(uploadReq('govern me', 'a.txt'), undefined, ENV);
+    const id = ((await upload.json()) as any).document.id;
+    const res = await appFor('ws-A').request(
+      new Request(`${URL}/${id}/admissibility`, {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ admissibility: 'excluded' }),
+      }),
+      undefined,
+      ENV,
+    );
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as any;
+    expect(body.document.admissibility).toBe('excluded');
+    expect(body.receipt_id).toBe(`document-admissibility:${id}:audit_adm_test`);
+    expect(body.operation_event_id).toBe('evt_adm_test');
+    expect(body.audit_event_id).toBe('audit_adm_test');
+    expect(body.projection_outbox_id).toBe('outbox_adm_test');
+    expect(mocks.neonClient).toHaveBeenCalledWith('postgresql://owner:p@host.tld/db');
+  });
+
+  it('does not report success when the authority transaction fails', async () => {
+    mocks.updateDocumentAdmissibilityWithAuthorityRow.mockRejectedValueOnce(new Error('audit write failed'));
+    const res = await appFor('ws-A').request(
+      new Request(`${URL}/doc-1/admissibility`, {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ admissibility: 'excluded' }),
+      }),
+      undefined,
+      ENV,
+    );
+    expect(res.status).toBe(500);
   });
 });

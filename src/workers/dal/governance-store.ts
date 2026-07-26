@@ -28,6 +28,7 @@ import { getProjectRow } from './project-store';
 // 047 · board_cards LIST runs inside the workspace-GUC transaction so the RLS-subject client
 // (rlsSql) is DB-filtered. INERT until XLOOOP_RLS_APP_DATABASE_URL is set (rlsSql defaults to owner).
 import { withWorkspaceRlsContext } from './operational-spine-store';
+import type { SourceTool } from './types/event';
 import type {
   WorkspaceId,
   ProjectId,
@@ -37,6 +38,8 @@ import type {
   SignOff,
 } from './types';
 import type { Sql } from '../db/client';
+
+const SIGN_OFF_AUTHORITY_SOURCE: SourceTool = 'xlooop';
 
 // ------------------------------------------------------------
 // Internal helpers (lifted verbatim from WorkersDalAdapter)
@@ -293,7 +296,7 @@ export async function createSignOffRow(
         authority_source, request_id
       )
       SELECT
-        LEFT('evt_signoff_' || inserted.id::text, 128), workspace_id, 'xlooop',
+        LEFT('evt_signoff_' || inserted.id::text, 128), workspace_id, ${SIGN_OFF_AUTHORITY_SOURCE},
         'xlooop:operator-action', ${mirrorStatus}, ${summary}, ${body},
         'internal_workspace', signed_at, event_id, user_id, 'human',
         'explicit_approval', ${requestId ?? null}

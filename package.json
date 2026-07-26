@@ -73,6 +73,8 @@
     "produce:pilot-shadow-live-rls-evidence:self-test": "node scripts/produce-pilot-shadow-live-rls-evidence.mjs --self-test",
     "produce:pilot-shadow-signed-chain-evidence": "node scripts/produce-pilot-shadow-signed-chain-evidence.mjs",
     "produce:pilot-shadow-signed-chain-evidence:self-test": "node scripts/produce-pilot-shadow-signed-chain-evidence.mjs --self-test",
+    "capture:pilot-shadow-signed-chain": "node scripts/capture-pilot-shadow-signed-chain-from-responses.mjs",
+    "capture:pilot-shadow-signed-chain:self-test": "node scripts/capture-pilot-shadow-signed-chain-from-responses.mjs --self-test",
     "verify:pilot-shadow-signed-chain-evidence": "node scripts/verify-pilot-shadow-signed-chain-evidence.mjs --strict",
     "verify:pilot-shadow-signed-chain-evidence:self-test": "node scripts/verify-pilot-shadow-signed-chain-evidence.mjs --self-test",
     "soak:sample": "node scripts/pilot-shadow-soak-sampler.mjs",

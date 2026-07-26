@@ -1547,8 +1547,9 @@ export class WorkersDalAdapter implements DalAdapter {
     id: string,
     result: { success: true } | { success: false; error: string },
     workspaceId?: WorkspaceId | null,
+    authority?: import('./source-store').SourceSyncAuthorityInput,
   ): Promise<import('./source-store').SourceSyncWriteReceipt> {
-    return markUserSourceSyncRow(this.sql, userId, id, result, workspaceId);
+    return markUserSourceSyncRow(this.sql, userId, id, result, workspaceId, authority);
   }
   // ============================================================
   // R51-γ · LEM-v4 inference quality framework (impls)

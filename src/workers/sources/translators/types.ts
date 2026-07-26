@@ -33,6 +33,14 @@ export interface TranslatorResult {
   errors: TranslatorError[];
   /** When this run completed. */
   completed_at: string;
+  /** Sanitized references for events durably emitted by this run. */
+  emitted_events?: TranslatorEmittedEvent[];
+}
+
+export interface TranslatorEmittedEvent {
+  source_event_id: string;
+  operation_event_id: string;
+  source_ref_hash: string;
 }
 
 export interface TranslatorError {

@@ -58,6 +58,7 @@ export function recordChatGroundingReads(opts: {
 }
 
 export interface DocumentAccessRow {
+  document_access_log_id: string;
   document_id: string;
   user_id: string;
   access_date: string;
@@ -77,6 +78,13 @@ export async function listDocumentAccessRow(sql: Sql, workspaceId: string, limit
       ORDER BY access_date DESC, last_read_at DESC LIMIT ${cap}
     `) as Array<Record<string, unknown>>;
     return rows.map((r) => ({
+      document_access_log_id: [
+        'document-access',
+        ws,
+        String(r.document_id ?? ''),
+        String(r.user_id ?? ''),
+        r.access_date == null ? '' : String(r.access_date),
+      ].map(encodeURIComponent).join(':'),
       document_id: String(r.document_id ?? ''),
       user_id: String(r.user_id ?? ''),
       access_date: r.access_date == null ? '' : String(r.access_date),

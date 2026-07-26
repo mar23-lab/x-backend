@@ -58,6 +58,31 @@ function isValidProvider(s: string): s is OAuthProvider {
   return VALID_PROVIDERS.has(s as OAuthProvider);
 }
 
+function sourceMatchesActiveWorkspace(
+  source: Pick<UserSourceConnection, 'workspace_id'>,
+  workspaceId: string | null | undefined,
+): boolean {
+  return workspaceId
+    ? source.workspace_id === workspaceId
+    : source.workspace_id == null;
+}
+
+function requireCompleteSyncReceipt(write: {
+  source_sync_receipt_id?: string;
+  operation_event_id?: string;
+  audit_event_id?: string;
+  projection_outbox_id?: string;
+}): void {
+  if (
+    !write.source_sync_receipt_id ||
+    !write.operation_event_id ||
+    !write.audit_event_id ||
+    !write.projection_outbox_id
+  ) {
+    throw new Error('SOURCE_RECEIPT_MISSING: source sync did not produce complete event, audit, and outbox lineage');
+  }
+}
+
 // ============================================================
 // GET /api/v1/connectors · Wave C2 · connector registry SSOT
 // ============================================================
@@ -116,7 +141,8 @@ sourcesRoute.get('/sources', async (ctx) => {
     }
     const dal = ctx.get('dal');
     const rows = await dal.listUserSources(auth.user_id);
-    return ctx.json(withDataClass(withAuthority({ sources: rows.map(toApiResponse) }, auth, 'source'), 'live'));
+    const scoped = rows.filter((source) => sourceMatchesActiveWorkspace(source, auth.workspace_id));
+    return ctx.json(withDataClass(withAuthority({ sources: scoped.map(toApiResponse) }, auth, 'source'), 'live'));
   } catch (err) {
     return errorEnvelope(ctx, { status: 500, code: 'INTERNAL_ERROR', message: (err as Error).message });
   }
@@ -144,7 +170,7 @@ sourcesRoute.get('/sources/:id/repos', async (ctx) => {
     }
     const dal = ctx.get('dal');
     const existing = await dal.getUserSource(auth.user_id, id);
-    if (!existing) {
+    if (!existing || !sourceMatchesActiveWorkspace(existing, auth.workspace_id)) {
       return errorEnvelope(ctx, { status: 404, code: 'NOT_FOUND', message: `source ${id} not found` });
     }
     if (existing.provider !== 'github') {
@@ -192,7 +218,7 @@ sourcesRoute.get('/sources/:id/folders', async (ctx) => {
     }
     const dal = ctx.get('dal');
     const existing = await dal.getUserSource(auth.user_id, id);
-    if (!existing) {
+    if (!existing || !sourceMatchesActiveWorkspace(existing, auth.workspace_id)) {
       return errorEnvelope(ctx, { status: 404, code: 'NOT_FOUND', message: `source ${id} not found` });
     }
     if (!FOLDER_PROVIDERS.has(existing.provider)) {
@@ -316,6 +342,19 @@ sourcesRoute.post('/sources/connect/:provider', async (ctx) => {
     // a re-connect of an existing provider updates scopes/external_account_id
     // rather than duplicating.
     const dal = ctx.get('dal');
+    const activeProviderSource = (await dal.listUserSources(auth.user_id))
+      .find((source) => source.provider === provider);
+    if (
+      auth.workspace_id &&
+      activeProviderSource?.workspace_id &&
+      activeProviderSource.workspace_id !== auth.workspace_id
+    ) {
+      return errorEnvelope(ctx, {
+        status: 409,
+        code: 'SOURCE_BOUND_TO_OTHER_WORKSPACE',
+        message: `${provider} is already bound to another workspace; disconnect it there before reconnecting here`,
+      });
+    }
     const write = await dal.upsertUserSource({
       // OAuth identity is user-owned, but customer ingestion must have an explicit tenant target.
       // Orgless operator sessions remain user-account scoped; workspace sessions bind to that workspace.
@@ -359,7 +398,7 @@ sourcesRoute.delete('/sources/:id', async (ctx) => {
     const dal = ctx.get('dal');
     // Verify ownership before delete (returns 404 if not found OR owned by different user)
     const existing = await dal.getUserSource(auth.user_id, id);
-    if (!existing) {
+    if (!existing || !sourceMatchesActiveWorkspace(existing, auth.workspace_id)) {
       return errorEnvelope(ctx, { status: 404, code: 'NOT_FOUND', message: `source ${id} not found` });
     }
     const write = await dal.disconnectUserSource(auth.user_id, id, auth.workspace_id || existing.workspace_id || null);
@@ -410,7 +449,7 @@ sourcesRoute.patch('/sources/:id', (ctx) => withIdempotency(ctx, 'PATCH /api/v1/
     const dal = ctx.get('dal');
     // Ownership 404 first (mirror DELETE): a missing / not-owned id is indistinguishable to the caller.
     const existing = await dal.getUserSource(auth.user_id, id);
-    if (!existing) {
+    if (!existing || !sourceMatchesActiveWorkspace(existing, auth.workspace_id)) {
       return errorEnvelope(ctx, { status: 404, code: 'NOT_FOUND', message: `source ${id} not found` });
     }
     let updated: UserSourceConnection;
@@ -463,6 +502,24 @@ sourcesRoute.post('/sources/:id/sync', async (ctx) => {
     if (!existing) {
       return errorEnvelope(ctx, { status: 404, code: 'NOT_FOUND', message: `source ${id} not found` });
     }
+    if (!existing.workspace_id) {
+      return errorEnvelope(ctx, {
+        status: 409,
+        code: 'SOURCE_WORKSPACE_BINDING_REQUIRED',
+        message: 'SOURCE_WORKSPACE_BINDING_REQUIRED: reconnect this legacy source from the active workspace before syncing it.',
+      });
+    }
+    if (!sourceMatchesActiveWorkspace(existing, auth.workspace_id)) {
+      return errorEnvelope(ctx, { status: 404, code: 'NOT_FOUND', message: `source ${id} not found` });
+    }
+    const targetWorkspaceId = existing.workspace_id;
+    const authorityFor = (emittedEvents: TranslatorResult['emitted_events'] = []) => ({
+      operation_event_id: crypto.randomUUID(),
+      projection_outbox_id: crypto.randomUUID(),
+      request_id: ctx.get('request_id') || null,
+      source_tool: existing.provider,
+      emitted_events: emittedEvents,
+    });
 
     const secretKey = ctx.env.CLERK_SECRET_KEY;
     if (!secretKey) {
@@ -478,7 +535,14 @@ sourcesRoute.post('/sources/:id/sync', async (ctx) => {
       await adapter.getAccessToken(auth.user_id, existing.provider, { force_refresh: true });
     } catch (err) {
       const msg = (err as Error).message || 'unknown error';
-      await dal.markUserSourceSync(auth.user_id, id, { success: false, error: msg }, auth.workspace_id || existing.workspace_id || null);
+      const failureWrite = await dal.markUserSourceSync(
+        auth.user_id,
+        id,
+        { success: false, error: msg },
+        targetWorkspaceId,
+        authorityFor(),
+      );
+      requireCompleteSyncReceipt(failureWrite);
       const e = err as { code?: string };
       return errorEnvelope(ctx, { status: 502, code: e.code || 'OAUTH_CLERK_API_ERROR', message: msg });
     }
@@ -487,12 +551,6 @@ sourcesRoute.post('/sources/:id/sync', async (ctx) => {
     const translator = getTranslator(existing.provider);
     if (translator) {
       try {
-        const targetWorkspaceId = existing.workspace_id || auth.workspace_id || null;
-        if (!targetWorkspaceId) {
-          const msg = 'SOURCE_WORKSPACE_BINDING_REQUIRED: source sync needs a workspace target before provider events can be ingested.';
-          await dal.markUserSourceSync(auth.user_id, id, { success: false, error: msg }, auth.workspace_id || existing.workspace_id || null);
-          return errorEnvelope(ctx, { status: 409, code: 'SOURCE_WORKSPACE_BINDING_REQUIRED', message: msg });
-        }
         sync = await translator({
           adapter,
           dal,
@@ -501,20 +559,58 @@ sourcesRoute.post('/sources/:id/sync', async (ctx) => {
           // first-run lookback when never synced).
           since: existing.last_sync_at || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
         });
-        const write = await dal.markUserSourceSync(auth.user_id, id, { success: true }, targetWorkspaceId);
+        if (sync.errors.length > 0 && sync.events_emitted === 0) {
+          throw new Error(sync.errors.map((error) => `${error.code}: ${error.message}`).join('; '));
+        }
+        const write = await dal.markUserSourceSync(
+          auth.user_id,
+          id,
+          { success: true },
+          targetWorkspaceId,
+          authorityFor(sync.emitted_events),
+        );
+        requireCompleteSyncReceipt(write);
         emitEvent('source_sync_completed', { provider: existing.provider, workspace_id: existing.workspace_id ?? auth.workspace_id ?? null, events: (sync as { events?: unknown[] })?.events?.length ?? 0 }); // T3/P6
         const refreshed = await dal.getUserSource(auth.user_id, id);
-        return ctx.json({ source: refreshed ? toApiResponse(refreshed) : null, sync, source_sync_receipt_id: write.source_sync_receipt_id, audit_event_id: write.audit_event_id });
+        return ctx.json({
+          source: refreshed ? toApiResponse(refreshed) : null,
+          sync,
+          source_sync_receipt_id: write.source_sync_receipt_id,
+          operation_event_id: write.operation_event_id,
+          audit_event_id: write.audit_event_id,
+          projection_outbox_id: write.projection_outbox_id,
+        });
       } catch (err) {
         const msg = (err as Error).message || 'translator error';
-        await dal.markUserSourceSync(auth.user_id, id, { success: false, error: msg }, auth.workspace_id || existing.workspace_id || null);
+        const failureWrite = await dal.markUserSourceSync(
+          auth.user_id,
+          id,
+          { success: false, error: msg },
+          targetWorkspaceId,
+          authorityFor(sync?.emitted_events),
+        );
+        requireCompleteSyncReceipt(failureWrite);
         emitEvent('source_sync_failed', { provider: existing.provider, workspace_id: existing.workspace_id ?? auth.workspace_id ?? null, error: msg.slice(0, 200) }); // T3/P6
         return errorEnvelope(ctx, { status: 502, code: 'SOURCE_SYNC_ERROR', message: msg });
       }
     } else {
-      const write = await dal.markUserSourceSync(auth.user_id, id, { success: true }, auth.workspace_id || existing.workspace_id || null);
+      const write = await dal.markUserSourceSync(
+        auth.user_id,
+        id,
+        { success: true },
+        targetWorkspaceId,
+        authorityFor(),
+      );
+      requireCompleteSyncReceipt(write);
       const refreshed = await dal.getUserSource(auth.user_id, id);
-      return ctx.json({ source: refreshed ? toApiResponse(refreshed) : null, sync, source_sync_receipt_id: write.source_sync_receipt_id, audit_event_id: write.audit_event_id });
+      return ctx.json({
+        source: refreshed ? toApiResponse(refreshed) : null,
+        sync,
+        source_sync_receipt_id: write.source_sync_receipt_id,
+        operation_event_id: write.operation_event_id,
+        audit_event_id: write.audit_event_id,
+        projection_outbox_id: write.projection_outbox_id,
+      });
     }
   } catch (err) {
     return errorEnvelope(ctx, { status: 500, code: 'INTERNAL_ERROR', message: (err as Error).message });

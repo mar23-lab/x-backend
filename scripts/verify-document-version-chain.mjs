@@ -20,7 +20,7 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const ROUTE = 'src/workers/routes/documents.ts';
-const STORE = 'src/workers/lib/document-store.ts';
+const STORE = 'src/workers/dal/document-store.ts';
 const MIGRATION = 'src/workers/db/migrations/051_documents_version_chain.sql';
 
 const fail = [];
