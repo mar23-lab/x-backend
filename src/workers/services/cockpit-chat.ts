@@ -660,9 +660,16 @@ function companyContextSummary(c?: import('../dal/customer-context-store').Custo
 
 function sourceStatusLine(grounded: CockpitChatResult['grounded_on'], question: string): string | null {
   const sources = grounded.sources && Array.isArray(grounded.sources.providers) ? grounded.sources.providers : [];
-  if (!sources.length) return null;
   const q = String(question || '').toLowerCase();
   const asksEmail = /\b(email|emails|mail|gmail|inbox|message|messages)\b/.test(q);
+  const asksBinding = /\b(?:binding|bound|workspace)\b/.test(q);
+  if (!sources.length) {
+    if (asksEmail) return '• Source status: no Gmail or Outlook connection is recorded for this workspace.';
+    if (isSourceInventoryQuestion(question)) {
+      return '• Source status: no explicitly workspace-bound source connections are recorded.';
+    }
+    return null;
+  }
   const relevant = asksEmail
     ? sources.filter((s) => /gmail|outlook/.test(String(s.provider).toLowerCase()))
     : sources;
@@ -672,6 +679,7 @@ function sourceStatusLine(grounded: CockpitChatResult['grounded_on'], question: 
   }
   const parts = relevant.map((s) => {
     const bits = [`${s.provider} ${s.status}`];
+    if (asksBinding && s.workspace_binding === 'workspace_bound') bits.push('workspace-bound');
     if (s.workspace_binding === 'legacy_user_account_unbound') bits.push('legacy user-account binding');
     if (s.last_sync_error) bits.push(`last sync error: ${s.last_sync_error}`);
     else if (s.last_sync_at) bits.push(`last synced ${timeAgo(s.last_sync_at) || s.last_sync_at}`);
@@ -688,6 +696,12 @@ export function isProjectInventoryQuestion(message: string): boolean {
   return /\b(?:list|show|name)\b.{0,80}\bprojects?\b/.test(q)
     || /\b(?:which|what)\s+(?:are\s+)?(?:(?:my|our|the)\s+)?(?:(?:current|active)\s+)?projects?\b/.test(q)
     || /\bprojects?\s+(?:do\s+)?(?:i|we)\s+have\b/.test(q);
+}
+
+export function isSourceInventoryQuestion(message: string): boolean {
+  const q = String(message || '').toLowerCase().replace(/\s+/g, ' ').trim();
+  if (!/\b(?:sources?|source connections?|connectors?)\b/.test(q)) return false;
+  return /\b(?:list|show|which|what|connected|connection|binding|bound|sync|synced)\b/.test(q);
 }
 
 export function projectInventoryAnswerOptions(message: string): {
@@ -715,23 +729,41 @@ export function buildDeterministicChatAnswer(
   const asksBlocked = mode === 'recommend' || mode === 'plan'
     || /\b(block|blocked|stuck|sign[- ]?off|sign off|approve|approval|review|needs? you)\b/.test(q);
 
-  if (isProjectInventoryQuestion(message)) {
-    if (!grounded.projects.available) {
-      return 'I could not verify the current project inventory, so I will not infer project names from activity events.';
+  const asksProjectInventory = isProjectInventoryQuestion(message);
+  const asksSourceInventory = isSourceInventoryQuestion(message);
+  if (asksProjectInventory || asksSourceInventory) {
+    const lines: string[] = [];
+    let rowsOnly = false;
+
+    if (asksProjectInventory) {
+      if (!grounded.projects.available) {
+        return 'I could not verify the current project inventory, so I will not infer project names from activity events.';
+      }
+      if (grounded.projects.total === 0) {
+        lines.push(`There are no active projects recorded in ${where}.`);
+      } else {
+        const answerOptions = projectInventoryAnswerOptions(message);
+        rowsOnly = answerOptions.rowsOnly;
+        lines.push(`Current active projects in ${where} (${grounded.projects.total}):`);
+        for (const project of grounded.projects.items) {
+          const id = answerOptions.includeIds ? ` — ${project.id}` : '';
+          lines.push(`• ${project.name}${id}${project.status && project.status !== 'active' ? ` [${project.status}]` : ''}`);
+        }
+        if (grounded.projects.total > grounded.projects.items.length) {
+          lines.push(`• ${grounded.projects.total - grounded.projects.items.length} more projects are not shown in this bounded answer.`);
+        }
+      }
     }
-    if (grounded.projects.total === 0) {
-      return `There are no active projects recorded in ${where}.`;
+
+    if (asksSourceInventory) {
+      const sourceLine = sourceStatusLine(grounded, message);
+      if (sourceLine) {
+        if (lines.length) lines.push('');
+        lines.push(sourceLine);
+      }
     }
-    const answerOptions = projectInventoryAnswerOptions(message);
-    const lines = [`Current active projects in ${where} (${grounded.projects.total}):`];
-    for (const project of grounded.projects.items) {
-      const id = answerOptions.includeIds ? ` — ${project.id}` : '';
-      lines.push(`• ${project.name}${id}${project.status && project.status !== 'active' ? ` [${project.status}]` : ''}`);
-    }
-    if (grounded.projects.total > grounded.projects.items.length) {
-      lines.push(`• ${grounded.projects.total - grounded.projects.items.length} more projects are not shown in this bounded answer.`);
-    }
-    return (answerOptions.rowsOnly ? lines.slice(1) : lines).join('\n');
+
+    return (rowsOnly ? lines.slice(1) : lines).join('\n');
   }
 
   if (grounded.events_total === 0 && grounded.pinned_total === 0) {
