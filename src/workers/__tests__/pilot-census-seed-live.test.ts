@@ -87,11 +87,62 @@ describeLive('pilot-shadow census seed (real governed code paths)', () => {
   beforeAll(async () => {
     ownerSql = neonClient(databaseUrl);
     await ownerSql`
+      INSERT INTO users(id, email, status, approved_at, approved_by)
+      VALUES (${SEED_USER}, 'pilot-census-seed@example.test', 'approved', now(), ${SEED_USER})
+      ON CONFLICT (id) DO UPDATE SET
+        status = 'approved',
+        approved_at = COALESCE(users.approved_at, EXCLUDED.approved_at),
+        approved_by = EXCLUDED.approved_by,
+        updated_at = now()
+    `;
+    await ownerSql`
       INSERT INTO workspaces(id, name, owner_user_id, slug)
       VALUES
         (${WORKSPACES[0]}, 'Pilot Census A', ${SEED_USER}, 'pilot-census-a'),
         (${WORKSPACES[1]}, 'Pilot Census B', ${SEED_USER}, 'pilot-census-b')
       ON CONFLICT (id) DO NOTHING
+    `;
+    await ownerSql`
+      INSERT INTO workspace_members(workspace_id, user_id, role, status, activated_at, activated_by)
+      VALUES
+        (${WORKSPACES[0]}, ${SEED_USER}, 'owner', 'active', now(), ${SEED_USER}),
+        (${WORKSPACES[1]}, ${SEED_USER}, 'owner', 'active', now(), ${SEED_USER})
+      ON CONFLICT (workspace_id, user_id) DO UPDATE SET
+        role = 'owner',
+        status = 'active',
+        activated_at = COALESCE(workspace_members.activated_at, EXCLUDED.activated_at),
+        activated_by = EXCLUDED.activated_by
+    `;
+    await ownerSql`
+      INSERT INTO customer_entitlements(
+        id, user_id, workspace_id, app_id, account_type, allowed_modes,
+        allowed_actions, denied_actions, authority_ref, granted_by
+      )
+      VALUES
+        ('cent_pilot_census_a', ${SEED_USER}, ${WORKSPACES[0]}, 'xlooop-product', 'company',
+          ARRAY['watch','test','operator']::TEXT[], ARRAY['*']::TEXT[], ARRAY[]::TEXT[],
+          'pilot-census-seed', ${SEED_USER}),
+        ('cent_pilot_census_b', ${SEED_USER}, ${WORKSPACES[1]}, 'xlooop-product', 'company',
+          ARRAY['watch','test','operator']::TEXT[], ARRAY['*']::TEXT[], ARRAY[]::TEXT[],
+          'pilot-census-seed', ${SEED_USER})
+      ON CONFLICT (user_id, workspace_id, app_id) DO UPDATE SET
+        allowed_modes = EXCLUDED.allowed_modes,
+        allowed_actions = EXCLUDED.allowed_actions,
+        denied_actions = EXCLUDED.denied_actions,
+        authority_ref = EXCLUDED.authority_ref,
+        revoked_at = NULL,
+        revoked_by = NULL,
+        revoked_reason = NULL,
+        updated_at = now()
+    `;
+    await ownerSql`
+      INSERT INTO user_session_preferences(user_id, workspace_id, operating_mode)
+      VALUES
+        (${SEED_USER}, ${WORKSPACES[0]}, 'operator'),
+        (${SEED_USER}, ${WORKSPACES[1]}, 'operator')
+      ON CONFLICT (user_id, workspace_id) DO UPDATE SET
+        operating_mode = 'operator',
+        updated_at = now()
     `;
   });
 
