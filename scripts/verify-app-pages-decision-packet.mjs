@@ -20,7 +20,7 @@ function fixture() {
       approval_reference: 'conversation:approval-1',
       approved_at: '2026-07-26T00:00:00Z',
       authorization_id: '78b80df7-a1e6-4cbc-8d51-8cd4250e329d',
-      expires_at: '2030-07-26T00:00:00Z',
+      expires_at: '2026-07-26T00:30:00Z',
     },
     target: {
       operation: 'deploy_pages',
@@ -63,7 +63,7 @@ if (selfTest) {
     contract_hash: approved.expected_deployment.contract_hash,
     schema_head: approved.expected_deployment.schema_head,
     feature_posture: approved.expected_deployment.feature_posture,
-    now: '2026-07-26T01:00:00Z',
+    now: '2026-07-26T00:10:00Z',
   };
   const cases = [
     ['approved', assessPagesDecisionPacket(approved, expected).ok],
@@ -82,7 +82,19 @@ if (selfTest) {
     }, expected).ok],
     ['expired approval', !assessPagesDecisionPacket({
       ...approved,
-      decision: { ...approved.decision, expires_at: '2026-07-26T00:30:00Z' },
+      decision: { ...approved.decision, expires_at: '2026-07-26T00:05:00Z' },
+    }, expected).ok],
+    ['overlong approval', !assessPagesDecisionPacket({
+      ...approved,
+      decision: { ...approved.decision, expires_at: '2026-07-26T00:30:01Z' },
+    }, expected).ok],
+    ['future approval', !assessPagesDecisionPacket({
+      ...approved,
+      decision: {
+        ...approved.decision,
+        approved_at: '2026-07-26T00:11:00Z',
+        expires_at: '2026-07-26T00:30:00Z',
+      },
     }, expected).ok],
     ['same rollback', !assessPagesDecisionPacket({
       ...approved,

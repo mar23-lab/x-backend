@@ -182,6 +182,7 @@ export function assessReleaseManifest(manifest, currentHashes = null) {
 
 export function assessPagesDecisionPacket(packet, expected) {
   const problems = [];
+  const maxAuthorizationTtlMs = 30 * 60 * 1000;
   const decision = packet?.decision || {};
   const target = packet?.target || {};
   const candidate = packet?.candidate || {};
@@ -195,12 +196,28 @@ export function assessPagesDecisionPacket(packet, expected) {
   if (!decision.approver) problems.push('approver');
   if (!decision.approval_reference) problems.push('approval_reference');
   if (!UUID_PATTERN.test(decision.authorization_id || '')) problems.push('authorization_id');
-  if (Number.isNaN(Date.parse(decision.approved_at || ''))) problems.push('approved_at');
-  if (Number.isNaN(Date.parse(decision.expires_at || ''))) problems.push('expires_at');
+  const approvedAt = Date.parse(decision.approved_at || '');
+  const expiresAt = Date.parse(decision.expires_at || '');
+  if (Number.isNaN(approvedAt)) problems.push('approved_at');
+  if (Number.isNaN(expiresAt)) problems.push('expires_at');
+  if (
+    Number.isFinite(approvedAt)
+    && Number.isFinite(expiresAt)
+    && (expiresAt <= approvedAt || expiresAt - approvedAt > maxAuthorizationTtlMs)
+  ) {
+    problems.push('authorization_window');
+  }
   if (
     expected?.now
-    && Number.isFinite(Date.parse(decision.expires_at || ''))
-    && Date.parse(decision.expires_at) <= Date.parse(expected.now)
+    && Number.isFinite(approvedAt)
+    && approvedAt > Date.parse(expected.now)
+  ) {
+    problems.push('authorization_not_yet_valid');
+  }
+  if (
+    expected?.now
+    && Number.isFinite(expiresAt)
+    && expiresAt <= Date.parse(expected.now)
   ) {
     problems.push('authorization_expired');
   }
