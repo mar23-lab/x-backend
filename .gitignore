@@ -41,6 +41,8 @@ storybook-static/
 dist-vite-standalone/
 dist-cloudflare/
 dist-production/
+dist-app-pages-release/
+.app-pages-deployment-authorizations/
 # R51-β · per-tenant build output from scripts/tenant-projection-builder.mjs
 dist-tenant-*/
 .wrangler/

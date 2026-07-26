@@ -14,35 +14,20 @@
 // live deploy matches it. The JSON is bundled into the _worker.js at build time by wrangler.
 
 import MANIFEST from '../data/security-headers.manifest.json';
-
-function jsString(value) {
-  return JSON.stringify(String(value ?? ''));
-}
-
-function sentryBootstrap(env) {
-  const dsn = String(env?.SENTRY_DSN || '').trim();
-  if (!dsn) return '';
-  const environment = String(env?.SENTRY_ENVIRONMENT || 'production');
-  const release = String(env?.SENTRY_RELEASE || '');
-  const sampleRate = String(env?.SENTRY_SAMPLE_RATE || '1.0');
-  const tracesSampleRate = String(env?.SENTRY_TRACES_SAMPLE_RATE || '0.10');
-  return [
-    '<script data-xlooop-sentry-bootstrap>',
-    `window.SENTRY_DSN=${jsString(dsn)};`,
-    `window.SENTRY_ENVIRONMENT=${jsString(environment)};`,
-    release ? `window.SENTRY_RELEASE=${jsString(release)};` : '',
-    `window.SENTRY_SAMPLE_RATE=${jsString(sampleRate)};`,
-    `window.SENTRY_TRACES_SAMPLE_RATE=${jsString(tracesSampleRate)};`,
-    '</script>',
-  ].join('');
-}
+import { sentryBootstrap } from './_lib/frontend-release-provenance.js';
 
 async function maybeInjectSentryBootstrap(response, env) {
-  const bootstrap = sentryBootstrap(env);
-  if (!bootstrap) return response;
   const contentType = response.headers.get('content-type') || '';
   if (!contentType.includes('text/html')) return response;
   const html = await response.text();
+  const bootstrap = sentryBootstrap(env, html);
+  if (!bootstrap) {
+    return new Response(html, {
+      status: response.status,
+      statusText: response.statusText,
+      headers: response.headers,
+    });
+  }
   const injected = html.includes('data-xlooop-sentry-bootstrap')
     ? html
     : html.replace(/<head([^>]*)>/i, `<head$1>${bootstrap}`);

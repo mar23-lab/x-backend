@@ -1,0 +1,43 @@
+{
+  "schema_id": "xlooop.app_pages_deployment_decision.v1",
+  "status": "draft_not_approved",
+  "deployment_allowed": false,
+  "commercial_release_allowed": false,
+  "decision": {
+    "approver": null,
+    "approval_reference": null,
+    "approved_at": null,
+    "authorization_id": "<uuid>",
+    "expires_at": "<short-lived-ISO-8601-timestamp>"
+  },
+  "target": {
+    "operation": "deploy_pages",
+    "project_name": "xlooop-app",
+    "branch": "main",
+    "environment": "production"
+  },
+  "candidate": {
+    "frontend_sha": "<40-character-x-ai-front-sha>",
+    "backend_sha": "<40-character-x-backend-sha>"
+  },
+  "rollback": {
+    "frontend_sha": "<distinct-40-character-frontend-sha>",
+    "cloudflare_deployment_id": "<uuid>",
+    "evidence_reference": "<wrangler-pages-deployment-list-reference>"
+  },
+  "expected_deployment": {
+    "api_base": "https://api.xlooop.com",
+    "schema_head": 89,
+    "contract_hash": "<64-character-api-contract-hash>",
+    "environment": "production",
+    "authority": "production",
+    "feature_posture": {
+      "single_intake": true,
+      "role_skill_catalog": true,
+      "context_packet_persistence": true,
+      "chat_history_persistence_required": true,
+      "tenant_projection_queue": false,
+      "current_work_projection": false
+    }
+  }
+}

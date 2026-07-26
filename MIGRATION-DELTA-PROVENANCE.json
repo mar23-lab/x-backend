@@ -2503,6 +2503,42 @@
           "reason": "make backend and MCP dependency bootstrap reproducible and align source authority documentation"
         }
       ]
+    },
+    {
+      "delta_id": "app-pages-release-provenance-20260726",
+      "generated_at": "2026-07-26T01:06:48.719Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "914be0f24ac53208b744216637a699fff2b81cc8",
+      "target_base_commit": "914be0f24ac53208b744216637a699fff2b81cc8",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": ".gitignore",
+          "target_blob": "189008d22174222e1ade3a5d81f92800a0db4c87",
+          "reason": "bind the Pages release to exact frontend/backend commits, artifact-owned observability identity, and an approval-gated assembly path"
+        },
+        {
+          "path": "docs/deployment/DEPLOYED_SURFACES.yml",
+          "target_blob": "8d31a3caa0ef54654fdf7ffc342cdafb47894308",
+          "reason": "bind the Pages release to exact frontend/backend commits, artifact-owned observability identity, and an approval-gated assembly path"
+        },
+        {
+          "path": "functions/_middleware.js",
+          "target_blob": "9e4cb20cbde5a2046d0699005dccff4caa5a9594",
+          "reason": "bind the Pages release to exact frontend/backend commits, artifact-owned observability identity, and an approval-gated assembly path"
+        },
+        {
+          "path": "package.json",
+          "target_blob": "3e5a6b9522bc6ee131c4553b34558efd3340757c",
+          "reason": "bind the Pages release to exact frontend/backend commits, artifact-owned observability identity, and an approval-gated assembly path"
+        },
+        {
+          "path": "scripts/ci-local.mjs",
+          "target_blob": "810946e508c46da89f403e4104d7772faf99d021",
+          "reason": "bind the Pages release to exact frontend/backend commits, artifact-owned observability identity, and an approval-gated assembly path"
+        }
+      ]
     }
   ]
 }
