@@ -1,8 +1,9 @@
 # OAR-W3 Evidence Packet — Customer-Safe Role/Skill Catalog Publisher (260713)
 
 **Scope:** Track B of the operator-approved plan: the deterministic publisher that fills the empty
-mig-035 catalog with immutable, customer-safe role/skill/pack contracts — merged WITHOUT any production
-publication. `--apply` against prod is a named operator gate ⚙.
+mig-035 catalog with immutable, customer-safe role/skill/pack contracts. The source implementation was
+merged without a production publication; a later operator publication emitted a tracked receipt for all
+11 current entries. `--apply` against any database remains a named operator gate.
 
 ## 1. Inventory reconciliation (the 4-vs-23-vs-223 question, settled)
 
@@ -15,7 +16,8 @@ publication. `--apply` against prod is a named operator gate ⚙.
 
 These are **four distinct SSOTs with a stated boundary** — the earlier "3/4 vs 23/223" confusion was a
 category error: the small numbers are Xlooop runtime surfaces, the large ones are MB-P's internal
-authoring corpus. There are **9 published customer-safe entries** in catalog v2026.07.0.
+authoring corpus. The tracked publication receipt records **11 customer-safe entries** in catalog
+v2026.07.2. The receipt is source-integrity verified; the database effect requires live SELECT proof.
 
 ## 2. Contract schema + curation provenance
 
@@ -44,7 +46,7 @@ authoring corpus. There are **9 published customer-safe entries** in catalog v20
 | Identical republish = skip | hash-equal triplets are skipped with a notice | T10 |
 | Reader-compatible rows | versions ship `lifecycle_state='approved'` + every reader-consumed NOT NULL; bindings (optional `--workspace`) ship `binding_scope='workspace'`, `lifecycle_state='active'`, `approved_by`, `approval_ref` | T9/T13/T14 |
 | Runtime cannot do this | mig-070 REVOKEs catalog INSERT/UPDATE/DELETE from `xlooop_app`; the publisher is out-of-band with the operator's DSN | Neon-branch verify (Track A §3: `app_can_insert_catalog=false`) |
-| Publish receipt | file artifact `docs/audits/receipts/role-skill-catalog-publish-<sha8>.json` (timestamps live HERE, not in SQL) | code path; exercised at first ⚙ apply |
+| Publish receipt | file artifact `docs/audits/receipts/role-skill-catalog-publish-<sha8>.json` (timestamps live HERE, not in SQL) | `role-skill-catalog-publish-d814f1a4.json` records 11/11; deterministic source-integrity gate passes; database effect is not independently verified |
 
 ## 4. Gates added / extended (ci-local 92→94 blocking)
 
@@ -52,6 +54,9 @@ authoring corpus. There are **9 published customer-safe entries** in catalog v20
   agent-key disjointness) · dry-run determinism (two CLI runs) · SQL exposure scan · kernel `RoleSkillBinding`
   field parity (5 bindings) · reader safe-tier predicate present · evidence-packet count parity.
 - **NEW `verify:role-skill-evidence-rls`** (Track A) — 070 RLS/grant/provenance shape.
+- **NEW `verify:role-skill-catalog-publish-receipt`** — exact catalog Git blob, catalog version,
+  ordered entry hashes, aggregate hash, complete publication list, credential-free host, timestamp, and
+  publication-only scope. It explicitly does not promote the receipt into live database proof.
 - **EXTENDED `verifyNoRawGovernanceTemplateExposure`** — the catalog contract file joins the raw-MB-P-path
   scan set (it is published verbatim into `redacted_content`); the publisher lib is deliberately excluded
   (its FORBIDDEN_MARKERS scanner constant contains the path it scans for).
@@ -67,18 +72,23 @@ authoring corpus. There are **9 published customer-safe entries** in catalog v20
 `role-skill-catalog-publisher.test.ts` — the mission's 18 acceptance tests (T15/T16 share one block):
 catalog parses+validates · internal_sensitive rejected · agent-key collision rejected · forbidden markers
 rejected AND absent · canonicalJson reorder-invariant · 64-hex stable hashes · hash changes on any field
-change · SQL byte-determinism + no timestamps · BEGIN/COMMIT + 9+9(+9 bindings) row families ·
+change · SQL byte-determinism + no timestamps · BEGIN/COMMIT + 11+11(+11 bindings) row families ·
 identical-republish skip · hash-drift hard conflict · sqlString escaping · reader NOT NULLs + approved
 lifecycle · binding validity · reader predicate present · kernel parity (catalog projection →
 `resolved` with selected skills; empty floor → honest `no_catalog`) · SQL exposure scan.
-**17/17 green.** Registered in ci-local (`verify:ip-boundary-suite` array) + orphan gate holds.
+**17/17 green.** Registered in ci-local (`verify:ip-boundary-suite` array) + orphan gate holds. The
+publication receipt verifier adds three negative controls for altered aggregate hash, altered entry hash,
+and an unsubstantiated workspace binding.
 
 ## 6. Explicit non-claims
 
-- Role/skill invocation is **NOT operational**: the catalog is 0 rows in prod until the operator runs
-  `--apply`; the resolver flag is OFF; production receipts are 0.
-- No tenant binding exists anywhere; publish-and-bind are SEPARATE operator decisions (auto-binding
-  would be a de-facto flag flip).
+- The tracked receipt says that 11 unbound platform entries were published. Its source SHA, entry hashes,
+  aggregate hash, and host shape are verified. The current database rows are **not independently
+  verified** because a live read-only Neon query has not succeeded in this validation session.
+- Workspace bindings remain **unverified**. Publish-and-bind are separate operator decisions; the
+  publication receipt has `workspace_binding: null` and cannot substantiate any later binding backfill.
+- Role/skill invocation is **not claimed** by this packet. Catalog publication, workspace binding,
+  resolver selection, model/tool execution, and closing evidence are separate proof stages.
 - The shadow's catalog LOADER (BindingSource seam → published rows) is deliberately NOT built in this
   wave — it is the activation-stage slice, designed against the seam in `role-skill-shadow.ts`.
 - Rehearsal note: a `--apply` rehearsal against the Track A Neon branch was NOT performed (the branch was
@@ -91,5 +101,5 @@ lifecycle · binding validity · reader predicate present · kernel parity (cata
 1. Publish: `DATABASE_URL=<prod> node scripts/publish-role-skill-catalog.mjs --apply --approval-ref <ref>`
    (after mig-070 prod apply from Track A's queue).
 2. Bind per workspace: re-run with `--workspace <ws_id>` (or the future admin surface).
-3. Catalog content sign-off: the 9 curated entries are PROPOSED content — review the descriptions/action
-   scopes before first publish.
+3. Catalog content sign-off: the 11 curated entries require review whenever their immutable versions or
+   action scopes change.

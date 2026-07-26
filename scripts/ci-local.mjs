@@ -24,6 +24,7 @@ const gates = [
   ['typed work relationships', 'npm', ['run', 'verify:typed-work-relationships']],
   ['action intent shadow', 'npm', ['run', 'verify:action-intent-shadow']],
   ['role-skill catalog loader freshness', 'npm', ['run', 'verify:role-skill-catalog-loader-fresh']],
+  ['role-skill publication receipt source integrity', 'npm', ['run', 'verify:role-skill-catalog-publish-receipt:self-test']],
   ['model execution callsite coverage', 'npm', ['run', 'verify:model-execution-callsites']],
   ['shadow observability storage', 'npm', ['run', 'verify:shadow-observability-storage']],
   ['backend trust proofs (static)', 'npm', ['run', 'verify:trust-proofs']],
