@@ -2819,6 +2819,47 @@
           "reason": "Fail-closed document and source authority receipts, workspace-scoped source evidence, and canonical DAL ownership"
         }
       ]
+    },
+    {
+      "delta_id": "packet-receipt-read-model-20260726",
+      "generated_at": "2026-07-26T13:38:57.758Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "cb66344bdf5c1e1001165921f29c3548bb452dd9",
+      "target_base_commit": "cb66344bdf5c1e1001165921f29c3548bb452dd9",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/__tests__/intake-store.test.ts",
+          "target_blob": "3e098b901254f25ee67432ef414652b977273d3b",
+          "reason": "Expose tenant-scoped, customer-safe packet execution receipts for durable frontend reload hydration"
+        },
+        {
+          "path": "src/workers/__tests__/operational-spine-route.test.ts",
+          "target_blob": "7d104660e67b5c2bcbb440d04ad992a66265f183",
+          "reason": "Expose tenant-scoped, customer-safe packet execution receipts for durable frontend reload hydration"
+        },
+        {
+          "path": "src/workers/dal/DalAdapter.ts",
+          "target_blob": "aff75d919b98a79f1918f6d7dbf6e5f5456ccff3",
+          "reason": "Expose tenant-scoped, customer-safe packet execution receipts for durable frontend reload hydration"
+        },
+        {
+          "path": "src/workers/dal/intake-store.ts",
+          "target_blob": "34bebae23263e5bb87afb37a32dcd1dda2a7c61b",
+          "reason": "Expose tenant-scoped, customer-safe packet execution receipts for durable frontend reload hydration"
+        },
+        {
+          "path": "src/workers/dal/operational-spine-methods.ts",
+          "target_blob": "b8e6c33033c12b6190e2d04a190c64711a9c465a",
+          "reason": "Expose tenant-scoped, customer-safe packet execution receipts for durable frontend reload hydration"
+        },
+        {
+          "path": "src/workers/routes/operational-spine.ts",
+          "target_blob": "7f6e20aa10765181d72a92c39851d50caf5f0df1",
+          "reason": "Expose tenant-scoped, customer-safe packet execution receipts for durable frontend reload hydration"
+        }
+      ]
     }
   ]
 }
