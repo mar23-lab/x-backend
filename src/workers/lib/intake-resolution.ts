@@ -38,9 +38,16 @@ function normalizedProjectText(value: string): string {
   return value.replace(/\s+/g, ' ').trim().toLocaleLowerCase('en');
 }
 
-function explicitProjectName(text: string): string | null {
+function explicitProjectQualifier(text: string): string | null {
   const value = text.match(/\b(?:in|for|under)\s+([^.!?\n]{2,200}?)\s+(?:titled|called|named)\s+["']/i)?.[1];
   return value?.replace(/\s+/g, ' ').trim() || null;
+}
+
+function canonicalProjectIdsInQualifier(qualifier: string, projects: Project[]): Project[] {
+  return projects.filter((project) => {
+    const escaped = project.id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return new RegExp(`(?:^|[^A-Za-z0-9_-])${escaped}(?:$|[^A-Za-z0-9_-])`).test(qualifier);
+  });
 }
 
 function resolveCreateProject(
@@ -53,7 +60,19 @@ function resolveCreateProject(
     return { project: exact.length === 1 ? exact[0]! : null, targetWasRequested: true, ambiguous: exact.length !== 1 };
   }
 
-  const requestedName = explicitProjectName(request.text);
+  const requestedQualifier = explicitProjectQualifier(request.text);
+  const canonicalIdMatches = requestedQualifier
+    ? canonicalProjectIdsInQualifier(requestedQualifier, active)
+    : [];
+  if (canonicalIdMatches.length > 0) {
+    return {
+      project: canonicalIdMatches.length === 1 ? canonicalIdMatches[0]! : null,
+      targetWasRequested: true,
+      ambiguous: canonicalIdMatches.length !== 1,
+    };
+  }
+
+  const requestedName = requestedQualifier;
   if (requestedName) {
     const normalizedName = normalizedProjectText(requestedName);
     const exact = active.filter((project) => normalizedProjectText(project.name) === normalizedName);

@@ -2950,37 +2950,6 @@
       ]
     },
     {
-      "delta_id": "intake-canonical-project-target-20260727",
-      "generated_at": "2026-07-26T18:57:14.859Z",
-      "source_repo": "mar23-lab/x-backend",
-      "source_commit": "2d3817cff9b55b712d35354f2e3f686432fe17a8",
-      "target_base_commit": "2d3817cff9b55b712d35354f2e3f686432fe17a8",
-      "authority": "source_authority_no_automatic_deploy",
-      "copied_files": [],
-      "transformed_files": [
-        {
-          "path": "src/workers/lib/intake-resolution.ts",
-          "target_blob": "0ac08e55bc624b55dd172bb2a4417c29c4366b46",
-          "reason": "Require canonical active-project resolution and clarification before governed work confirmation"
-        },
-        {
-          "path": "src/workers/routes/intake.ts",
-          "target_blob": "73ed618e2decc9e2ae46b406c0a319fc0f96ef05",
-          "reason": "Require canonical active-project resolution and clarification before governed work confirmation"
-        },
-        {
-          "path": "src/workers/__tests__/intake-resolution.test.ts",
-          "target_blob": "0aaca4974f9b5bf3e0b6323e299828252aa1b4e1",
-          "reason": "Require canonical active-project resolution and clarification before governed work confirmation"
-        },
-        {
-          "path": "src/workers/__tests__/intake-route.test.ts",
-          "target_blob": "8e89a6a2e1609faf4a6170f69e1ab4daf794d9f0",
-          "reason": "Require canonical active-project resolution and clarification before governed work confirmation"
-        }
-      ]
-    },
-    {
       "delta_id": "migration-090-select-preflight-20260727",
       "generated_at": "2026-07-26T19:22:29.946Z",
       "source_repo": "mar23-lab/x-backend",
@@ -3024,6 +2993,37 @@
           "path": "docs/audits/OAR_W3_EVIDENCE_PACKET.md",
           "target_blob": "4d493f08e231ea4aec02f9c3123fa35d6295aea5",
           "reason": "Track publication receipt source integrity without claiming live database effect"
+        }
+      ]
+    },
+    {
+      "delta_id": "intake-canonical-project-target-20260727",
+      "generated_at": "2026-07-26T22:36:59.693Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "dc89350882a0a4b370be3ac1ea79dac2703c0409",
+      "target_base_commit": "dc89350882a0a4b370be3ac1ea79dac2703c0409",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/lib/intake-resolution.ts",
+          "target_blob": "d42615f918bc216f08b3345af237cdd6547107f2",
+          "reason": "Resolve selected project context and parenthesized canonical ids while preserving fail-closed ambiguity, title isolation, and route coverage"
+        },
+        {
+          "path": "src/workers/routes/intake.ts",
+          "target_blob": "73ed618e2decc9e2ae46b406c0a319fc0f96ef05",
+          "reason": "Resolve selected project context and parenthesized canonical ids while preserving fail-closed ambiguity, title isolation, and route coverage"
+        },
+        {
+          "path": "src/workers/__tests__/intake-resolution.test.ts",
+          "target_blob": "f16b9ec72d8f68615736d93da4543f5bc5b1615b",
+          "reason": "Resolve selected project context and parenthesized canonical ids while preserving fail-closed ambiguity, title isolation, and route coverage"
+        },
+        {
+          "path": "src/workers/__tests__/intake-route.test.ts",
+          "target_blob": "8e89a6a2e1609faf4a6170f69e1ab4daf794d9f0",
+          "reason": "Resolve selected project context and parenthesized canonical ids while preserving fail-closed ambiguity, title isolation, and route coverage"
         }
       ]
     }
