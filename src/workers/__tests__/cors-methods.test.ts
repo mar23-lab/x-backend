@@ -39,11 +39,11 @@ describe('CORS preflight — allowed methods', () => {
     expect(res.headers.get('Access-Control-Allow-Origin')).toBeNull();
   });
 
-  it('pilot-shadow Pages previews are allowed only for the staging frontend project', async () => {
-    const pilotEnv = { ALLOWED_ORIGIN_PATTERN: 'https://*.xlooop-app-next.pages.dev' } as never;
+  it('pilot-shadow Pages previews are allowed only for the test frontend project', async () => {
+    const pilotEnv = { ALLOWED_ORIGIN_PATTERN: 'https://*.xlooop-test.pages.dev' } as never;
     for (const origin of [
-      'https://e894386f.xlooop-app-next.pages.dev',
-      'https://codex-pilot-shadow-evidence.xlooop-app-next.pages.dev',
+      'https://0325a910.xlooop-test.pages.dev',
+      'https://main.xlooop-test.pages.dev',
     ]) {
       const res = await app().request('/x', { method: 'OPTIONS', headers: { origin } }, pilotEnv);
       expect(res.headers.get('Access-Control-Allow-Origin')).toBe(origin);
@@ -53,16 +53,14 @@ describe('CORS preflight — allowed methods', () => {
     expect(otherPagesProject.headers.get('Access-Control-Allow-Origin')).toBeNull();
   });
 
-  // pilot.xlooop.com (operator-approved 260717): Clerk pk_live is domain-locked to xlooop.com, so the
-  // authenticated 12-journey proof can only run from an xlooop.com host. The pilot therefore serves TWO
-  // governed origins, which the comma-separated pattern supports without widening either entry.
-  it('pilot-shadow allows both the xlooop.com pilot host and the staging Pages previews', async () => {
+  // test.xlooop.com is the existing Access-protected, Clerk-compatible nonproduction origin.
+  it('pilot-shadow allows both the xlooop.com test host and the test Pages previews', async () => {
     const pilotEnv = {
-      ALLOWED_ORIGIN_PATTERN: 'https://pilot.xlooop.com,https://*.xlooop-app-next.pages.dev',
+      ALLOWED_ORIGIN_PATTERN: 'https://test.xlooop.com,https://*.xlooop-test.pages.dev',
     } as never;
     for (const origin of [
-      'https://pilot.xlooop.com',
-      'https://codex-pilot-shadow-evidence.xlooop-app-next.pages.dev',
+      'https://test.xlooop.com',
+      'https://main.xlooop-test.pages.dev',
     ]) {
       const res = await app().request('/x', { method: 'OPTIONS', headers: { origin } }, pilotEnv);
       expect(res.headers.get('Access-Control-Allow-Origin')).toBe(origin);
@@ -72,8 +70,8 @@ describe('CORS preflight — allowed methods', () => {
     // Pages projects stay refused.
     for (const origin of [
       'https://app.xlooop.com',
-      'https://evil.pilot.xlooop.com',
-      'https://pilot.xlooop.com.attacker.dev',
+      'https://evil.test.xlooop.com',
+      'https://test.xlooop.com.attacker.dev',
       'https://preview.other.pages.dev',
     ]) {
       const res = await app().request('/x', { method: 'OPTIONS', headers: { origin } }, pilotEnv);
@@ -82,9 +80,9 @@ describe('CORS preflight — allowed methods', () => {
   });
 
   it('a stray comma or empty entry cannot degrade the pattern into an allow-all', async () => {
-    const sloppyEnv = { ALLOWED_ORIGIN_PATTERN: 'https://pilot.xlooop.com,,  ,' } as never;
-    const allowed = await app().request('/x', { method: 'OPTIONS', headers: { origin: 'https://pilot.xlooop.com' } }, sloppyEnv);
-    expect(allowed.headers.get('Access-Control-Allow-Origin')).toBe('https://pilot.xlooop.com');
+    const sloppyEnv = { ALLOWED_ORIGIN_PATTERN: 'https://test.xlooop.com,,  ,' } as never;
+    const allowed = await app().request('/x', { method: 'OPTIONS', headers: { origin: 'https://test.xlooop.com' } }, sloppyEnv);
+    expect(allowed.headers.get('Access-Control-Allow-Origin')).toBe('https://test.xlooop.com');
     const refused = await app().request('/x', { method: 'OPTIONS', headers: { origin: 'https://anything.example.com' } }, sloppyEnv);
     expect(refused.headers.get('Access-Control-Allow-Origin')).toBeNull();
   });

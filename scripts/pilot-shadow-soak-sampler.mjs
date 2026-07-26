@@ -60,7 +60,7 @@ function readEvidence() {
       environment: 'pilot-shadow',
       authority: 'shadow',
       api_base: API_BASE,
-      frontend_origin: process.env.XLOOOP_PILOT_SHADOW_FRONTEND_ORIGIN || 'https://codex-pilot-shadow-evidence.xlooop-app-next.pages.dev',
+      frontend_origin: process.env.XLOOOP_PILOT_SHADOW_FRONTEND_ORIGIN || 'https://test.xlooop.com',
       backend_build_sha: null,
       schema_head: null,
       contract_hash: null,
