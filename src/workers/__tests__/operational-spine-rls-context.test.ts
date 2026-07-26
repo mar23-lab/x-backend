@@ -7,6 +7,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   createApprovalRequestRow,
+  decideApprovalRequestRow,
   createEvidenceItemRow,
   createMetricDeltaRow,
   executeCustomerDataLifecycleRequestRow,
@@ -101,6 +102,47 @@ describe('operational spine RLS context', () => {
     expect(rows).toHaveLength(1);
     expect(transactions[0]?.queries[0]?.text).toContain("set_config('xlooop.current_workspace_id'");
     expect(transactions[0]?.queries[1]?.text).toContain('FROM task_packets');
+  });
+
+  it('approval decisions issue a receipt only from the durably updated target row', async () => {
+    const decidedAt = '2026-07-27T00:00:00.000Z';
+    const { sql, transactions } = fakeSql([
+      [{ workspace_context: 'tenant_a' }],
+      [{
+        id: 'apr_1',
+        workspace_id: 'tenant_a',
+        packet_id: 'pkt_1',
+        packet_version: 1,
+        event_id: 'evt_1',
+        requested_by: 'user_requester',
+        decided_by: 'user_op',
+        status: 'approved',
+        reason: 'review',
+        decision_comment: 'approved',
+        requested_at: '2026-07-26T00:00:00.000Z',
+        decided_at: decidedAt,
+      }],
+    ]);
+
+    const result = await decideApprovalRequestRow(sql, 'tenant_a', 'apr_1', 'user_op', {
+      status: 'approved',
+      decision_comment: 'approved',
+    });
+
+    expect(result?.approval.id).toBe('apr_1');
+    expect(result?.approval_decision_receipt_id).toBe(`approval-decision:apr_1:${decidedAt}`);
+    expect(transactions[0]?.queries[1]?.text).toContain("AND status = 'requested'");
+  });
+
+  it('zero approval target rows cannot yield a successful decision receipt', async () => {
+    const { sql } = fakeSql([
+      [{ workspace_context: 'tenant_a' }],
+      [],
+    ]);
+
+    await expect(decideApprovalRequestRow(sql, 'tenant_a', 'apr_missing', 'user_op', {
+      status: 'approved',
+    })).resolves.toBeNull();
   });
 
   it.each([

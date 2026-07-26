@@ -16,6 +16,7 @@ import type {
   ApprovalRequest,
   ApprovalRequestInput,
   ApprovalDecisionInput,
+  ApprovalDecisionResult,
   ToolEvent,
   ToolEventInput,
   MetricDelta,
@@ -399,7 +400,7 @@ export async function decideApprovalRequestRow(
   approvalId: string,
   actorUserId: UserId,
   input: ApprovalDecisionInput,
-): Promise<ApprovalRequest | null> {
+): Promise<ApprovalDecisionResult | null> {
   assertWorkspaceScope(workspaceId);
   if (!approvalId) return null;
   const [rows] = await withWorkspaceRlsContext<[ApprovalRequest[]]>(sql, workspaceId, (tx) => [
@@ -416,7 +417,15 @@ export async function decideApprovalRequestRow(
         status, reason, decision_comment, requested_at, decided_at
     `,
   ]);
-  return rows[0] ?? null;
+  const approval = rows[0];
+  if (!approval) return null;
+  if (!approval.decided_at || !approval.decided_by) {
+    throw makeError('CONFLICT', 'approval decision was not durably recorded; receipt not issued', 409);
+  }
+  return {
+    approval,
+    approval_decision_receipt_id: `approval-decision:${approval.id}:${approval.decided_at}`,
+  };
 }
 
 export async function listApprovalRequestsRow(

@@ -140,6 +140,11 @@ export interface ApprovalDecisionInput {
   decision_comment?: string | null;
 }
 
+export interface ApprovalDecisionResult {
+  approval: ApprovalRequest;
+  approval_decision_receipt_id: string;
+}
+
 export interface TaskPacketCompletionEvaluation {
   packet_id: string;
   packet_version: number;

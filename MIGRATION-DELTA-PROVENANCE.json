@@ -2746,6 +2746,47 @@
           "reason": "Backport compound canonical project IDs and explicitly workspace-bound source inventory to the schema-89 owner-testing line"
         }
       ]
+    },
+    {
+      "delta_id": "approval-decision-receipt-schema89-backport-20260727",
+      "generated_at": "2026-07-26T23:02:57.085Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "1a65f2199e174ee7270df12494dfe7945ac25b3d",
+      "target_base_commit": "8a9375aa7595cd0c682bc65ef773016dbaba338a",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/__tests__/operational-spine-rls-context.test.ts",
+          "target_blob": "6abfee8be75b685da7b358f8f22d691d22e607db",
+          "reason": "Require persisted approval target state and canonical decision receipt before commercial success UI"
+        },
+        {
+          "path": "src/workers/__tests__/operational-spine-route.test.ts",
+          "target_blob": "6df4ab6bdb7d315516a580a5df2e1f8279722e7e",
+          "reason": "Require persisted approval target state and canonical decision receipt before commercial success UI"
+        },
+        {
+          "path": "src/workers/dal/DalAdapter.ts",
+          "target_blob": "01ec00212afdf71e5de48d6e412e80f30091f5d8",
+          "reason": "Backport persisted approval target state and canonical decision receipt to the schema-89 owner-testing line"
+        },
+        {
+          "path": "src/workers/dal/operational-spine-store.ts",
+          "target_blob": "4a56d2e6b70992545830a186fcc2d5ff5f9691ab",
+          "reason": "Require persisted approval target state and canonical decision receipt before commercial success UI"
+        },
+        {
+          "path": "src/workers/dal/types/operational-spine.ts",
+          "target_blob": "36ab648b361428d1bc940c6c95ec229d6345be5e",
+          "reason": "Require persisted approval target state and canonical decision receipt before commercial success UI"
+        },
+        {
+          "path": "src/workers/routes/operational-spine.ts",
+          "target_blob": "2dabbe829c22ec9fa58662346d38f24c434526d9",
+          "reason": "Require persisted approval target state and canonical decision receipt before commercial success UI"
+        }
+      ]
     }
   ]
 }
