@@ -2637,6 +2637,67 @@
           "reason": "Repair out-of-order operation_events source_tool constraint drift; enforce semantic deploy proof, SHA-bound evidence, and current live RLS authority fixtures"
         }
       ]
+    },
+    {
+      "delta_id": "commercial-completion-main-reconcile-20260726",
+      "generated_at": "2026-07-26T09:09:13.051Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "a2869c0c5ed24de5298a8b5f5bbee3e7ca891ff3",
+      "target_base_commit": "a2869c0c5ed24de5298a8b5f5bbee3e7ca891ff3",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/__tests__/action-intent.test.ts",
+          "target_blob": "144bbf0e18dc93b1a611c9ddaa7a437f75d8e8ec",
+          "reason": "reconcile merged graph, cron, intake polarity, and signoff authority source"
+        },
+        {
+          "path": "src/workers/lib/action-intent.ts",
+          "target_blob": "98c068d71646e89fa0a4560cd44666d65151fe71",
+          "reason": "reconcile merged graph, cron, intake polarity, and signoff authority source"
+        },
+        {
+          "path": "docs/graph/GRAPH_SUBSTRATE_MANIFEST.yml",
+          "target_blob": "18ad853a949e64bfe58e8fd6e652b38ae9f64e42",
+          "reason": "reconcile merged graph, cron, intake polarity, and signoff authority source"
+        },
+        {
+          "path": "scripts/verify-projection-substrate-evidence.mjs",
+          "target_blob": "b6d84b2bde904d1526a0df48c712f26b2b7412a8",
+          "reason": "reconcile merged graph, cron, intake polarity, and signoff authority source"
+        },
+        {
+          "path": "src/workers/__tests__/tenant-projection-queue.test.ts",
+          "target_blob": "2ace6fe40039a49c15893fb47bd33991fb838931",
+          "reason": "reconcile merged graph, cron, intake polarity, and signoff authority source"
+        },
+        {
+          "path": "src/workers/crons/index.ts",
+          "target_blob": "0c3d854cb362e735fa4e60d077e2cbc30e7ed5e3",
+          "reason": "reconcile merged graph, cron, intake polarity, and signoff authority source"
+        },
+        {
+          "path": "src/workers/__tests__/sign-off-atomic-lineage.test.ts",
+          "target_blob": "e12be9f4a0faafe8c86df729c5627f5642a93a8b",
+          "reason": "reconcile merged graph, cron, intake polarity, and signoff authority source"
+        },
+        {
+          "path": "src/workers/dal/governance-store.ts",
+          "target_blob": "205fbe17939c455e626147edb4f18df2729f9428",
+          "reason": "reconcile merged graph, cron, intake polarity, and signoff authority source"
+        },
+        {
+          "path": "src/workers/__tests__/pilot-census-seed-live.test.ts",
+          "target_blob": "502e50e7a6fc7f05c3dbb5d8b9f0201aff8ff2a5",
+          "reason": "reconcile merged graph, cron, intake polarity, and signoff authority source"
+        },
+        {
+          "path": "docs/architecture/backend/API_CONTRACT_V1.md",
+          "target_blob": "c1286b58a039f1443466d788fe1a772a06ec0591",
+          "reason": "reconcile merged graph, cron, intake polarity, and signoff authority source"
+        }
+      ]
     }
   ]
 }
