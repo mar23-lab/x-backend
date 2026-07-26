@@ -18,6 +18,13 @@ This is one deployed frontend with a cross-repository release boundary, not a se
    npm run verify:app-pages-release
    ```
 
+   Assembly compiles Pages Functions and normalizes Wrangler's randomized
+   `functionsRoutes-<random>.mjs` source comment before hashing. The normalizer
+   changes comments only, requires exactly one recognized generated marker, and
+   fails closed on missing, duplicate, or unfamiliar Wrangler temporary-path
+   comments. This keeps `_worker.js/index.js` in the immutable manifest without
+   allowing build-directory randomness to masquerade as source drift.
+
 3. Obtain an exact operator decision packet using
    `docs/deployment/evidence/app-pages-deployment-decision.example.json` as the shape.
    The packet must name both candidate SHAs, expected backend contract/schema/posture,
@@ -47,6 +54,9 @@ This is one deployed frontend with a cross-repository release boundary, not a se
 - Frontend build and backend assembly/deploy checkouts are clean; dirty code cannot inherit a committed SHA.
 - The embedded contract hash equals `x-backend/docs/contracts/api-contract.v1.json`.
 - The release contains the compiled Pages Functions and immutable file hashes.
+- Repeated builds of the same Pages Functions source produce the same normalized
+  `_worker.js/index.js` hash; the deployed bytes are the bytes recorded in the
+  manifest.
 - The manifest timestamp comes from the backend commit, so identical source inputs remain reproducible.
 - Pages Sentry release identity comes from the frontend artifact SHA. A mutable
   `SENTRY_RELEASE` secret is only a compatibility fallback for legacy artifacts.

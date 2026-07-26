@@ -18,6 +18,12 @@ export const FEATURE_POSTURE_KEYS = [
   'tenant_projection_queue',
   'current_work_projection',
 ];
+export const PAGES_FUNCTIONS_ROUTE_SOURCE_MARKER =
+  '// xlooop: normalized Wrangler Pages Functions route module';
+const PAGES_FUNCTIONS_ROUTE_SOURCE_PATTERN =
+  /^\/\/ (?:\.\.\/)+\.wrangler\/tmp\/pages-[A-Za-z0-9_-]+\/functionsRoutes-[0-9.]+\.mjs$/gm;
+const PAGES_FUNCTIONS_TMP_COMMENT_PATTERN =
+  /^\/\/ .*\.wrangler\/tmp\/pages-[^\r\n]+$/gm;
 
 function assignment(source, name) {
   const match = source.match(new RegExp(`window\\.${name}=([^;]+);`));
@@ -131,6 +137,26 @@ export function hashReleaseFiles(root, excluded = new Set(['release-manifest.jso
     result[relative] = createHash('sha256').update(readFileSync(absolute)).digest('hex');
   }
   return result;
+}
+
+export function normalizePagesFunctionsBundle(source) {
+  const generatedMatches = [...source.matchAll(PAGES_FUNCTIONS_ROUTE_SOURCE_PATTERN)];
+  const stableMatches = source.split(PAGES_FUNCTIONS_ROUTE_SOURCE_MARKER).length - 1;
+  const tmpComments = [...source.matchAll(PAGES_FUNCTIONS_TMP_COMMENT_PATTERN)];
+
+  if (generatedMatches.length === 0 && stableMatches === 1 && tmpComments.length === 0) {
+    return source;
+  }
+  if (
+    generatedMatches.length !== 1
+    || stableMatches !== 0
+    || tmpComments.length !== generatedMatches.length
+  ) {
+    throw new Error(
+      'Pages Functions bundle must contain exactly one recognized Wrangler route-source comment',
+    );
+  }
+  return source.replace(PAGES_FUNCTIONS_ROUTE_SOURCE_PATTERN, PAGES_FUNCTIONS_ROUTE_SOURCE_MARKER);
 }
 
 export function assessReleaseManifest(manifest, currentHashes = null) {
