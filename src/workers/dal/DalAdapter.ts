@@ -399,7 +399,12 @@ export interface DalAdapter {
 
   /** Approval workflow requests and decisions scoped by workspace. */
   createApprovalRequest(workspaceId: WorkspaceId, actorUserId: UserId, input: ApprovalRequestInput): Promise<ApprovalRequest>;
-  decideApprovalRequest(workspaceId: WorkspaceId, approvalId: string, actorUserId: UserId, input: ApprovalDecisionInput): Promise<ApprovalRequest | null>;
+  decideApprovalRequest(
+    workspaceId: WorkspaceId,
+    approvalId: string,
+    actorUserId: UserId,
+    input: ApprovalDecisionInput,
+  ): Promise<import('./types').ApprovalDecisionResult | null>;
   listApprovalRequests(workspaceId: WorkspaceId, opts?: OperationalSpineListOpts): Promise<ApprovalRequest[]>;
 
   /** MCP/tool gateway audit events scoped by packet/workspace. */

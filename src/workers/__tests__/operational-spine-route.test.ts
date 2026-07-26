@@ -89,7 +89,17 @@ function appFor(auth: Record<string, unknown>, calls: Call[], opts?: {
     decideApprovalRequest: async (ws: string, id: string, actor: string, input: Record<string, unknown>) => {
       calls.push({ method: 'decideApprovalRequest', ws, id, actor, input });
       if (opts?.missingApproval) return null;
-      return { id, workspace_id: ws, decided_by: actor, ...input };
+      const decidedAt = '2026-07-27T00:00:00.000Z';
+      return {
+        approval: {
+          id,
+          workspace_id: ws,
+          decided_by: actor,
+          decided_at: decidedAt,
+          ...input,
+        },
+        approval_decision_receipt_id: `approval-decision:${id}:${decidedAt}`,
+      };
     },
     listToolEvents: async (ws: string) => {
       calls.push({ method: 'listToolEvents', ws });
@@ -401,6 +411,16 @@ describe('operational spine routes', () => {
       decision_comment: 'ok',
     });
     expect(res.status).toBe(200);
+    const payload = await res.json() as Record<string, any>;
+    expect(payload.approval_decision_receipt_id).toBe('approval-decision:apr_1:2026-07-27T00:00:00.000Z');
+    expect(payload.receipt).toMatchObject({
+      schema_id: 'xlooop.approval_decision_receipt.v1',
+      id: 'approval-decision:apr_1:2026-07-27T00:00:00.000Z',
+      approval_id: 'apr_1',
+      workspace_id: 'tenant_a',
+      actor_user_id: 'user_op',
+      status: 'approved',
+    });
     expect(calls[0]).toMatchObject({
       method: 'decideApprovalRequest',
       ws: 'tenant_a',
