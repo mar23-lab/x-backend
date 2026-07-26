@@ -5,6 +5,7 @@ import type {
   IntakeOperation,
   IntakeResolutionInput,
   IntakeTarget,
+  Project,
   TaskPacket,
 } from '../dal/types';
 
@@ -19,6 +20,7 @@ export interface IntakeResolveRequest {
 export interface IntakeResolveInventory {
   packets: TaskPacket[];
   approvals: ApprovalRequest[];
+  projects: Project[];
   authorityFor: (operation: IntakeOperation) => { allowed: boolean; safe_reason: string };
   now: Date;
 }
@@ -27,7 +29,38 @@ const ACTIVE_PACKET_STATES = new Set(['draft', 'ready', 'in_progress', 'evidence
 
 function titleFor(text: string): string {
   const clean = text.replace(/\s+/g, ' ').trim();
+  const explicitlyNamed = clean.match(/\b(?:titled|called|named)\s+["']([^"']{1,160})["']/i)?.[1]?.trim();
+  if (explicitlyNamed) return explicitlyNamed;
   return clean.length > 120 ? `${clean.slice(0, 117)}...` : clean;
+}
+
+function normalizedProjectText(value: string): string {
+  return value.replace(/\s+/g, ' ').trim().toLocaleLowerCase('en');
+}
+
+function explicitProjectName(text: string): string | null {
+  const value = text.match(/\b(?:in|for|under)\s+([^.!?\n]{2,200}?)\s+(?:titled|called|named)\s+["']/i)?.[1];
+  return value?.replace(/\s+/g, ' ').trim() || null;
+}
+
+function resolveCreateProject(
+  request: IntakeResolveRequest,
+  projects: Project[],
+): { project: Project | null; targetWasRequested: boolean; ambiguous: boolean } {
+  const active = projects.filter((project) => project.status === 'active');
+  if (request.project_id) {
+    const exact = active.filter((project) => project.id === request.project_id);
+    return { project: exact.length === 1 ? exact[0]! : null, targetWasRequested: true, ambiguous: exact.length !== 1 };
+  }
+
+  const requestedName = explicitProjectName(request.text);
+  if (requestedName) {
+    const normalizedName = normalizedProjectText(requestedName);
+    const exact = active.filter((project) => normalizedProjectText(project.name) === normalizedName);
+    return { project: exact.length === 1 ? exact[0]! : null, targetWasRequested: true, ambiguous: exact.length !== 1 };
+  }
+
+  return { project: null, targetWasRequested: false, ambiguous: false };
 }
 
 function contextSummary(refs: IntakeResolveRequest['context_refs']): IntakeContextSummary {
@@ -84,12 +117,30 @@ export function buildIntakeResolution(
   }
   if (operation === 'create_work') {
     const title = titleFor(request.text);
+    const projectResolution = resolveCreateProject(request, inventory.projects);
+    if (projectResolution.targetWasRequested && (!projectResolution.project || projectResolution.ambiguous)) {
+      return {
+        ...base,
+        ambiguity: true,
+        target: { type: 'none', id: null, label: 'Project clarification required' },
+        effect_summary: 'Choose one active project before anything is created.',
+        risk: 'low', requires_confirmation: false, next_step: 'clarify', action_payload: {},
+      };
+    }
+    const project = projectResolution.project;
+    const destination = project ? ` in ${project.name} (${project.id})` : '';
     return {
       ...base,
-      target: { type: 'task_packet', id: null, label: title },
-      effect_summary: `Create one governed work item: ${title}`,
+      project_id: project?.id ?? request.project_id ?? null,
+      target: { type: 'task_packet', id: null, label: `${title}${destination}` },
+      effect_summary: `Create one governed work item${destination}: ${title}`,
       risk: 'medium', requires_confirmation: true, next_step: authority.allowed ? 'confirm' : 'blocked',
-      action_payload: { title, summary: request.text.trim(), project_id: request.project_id ?? null },
+      action_payload: {
+        title,
+        summary: request.text.trim(),
+        project_id: project?.id ?? request.project_id ?? null,
+        ...(project ? { project_name: project.name } : {}),
+      },
     };
   }
   if (operation === 'continue_work') {

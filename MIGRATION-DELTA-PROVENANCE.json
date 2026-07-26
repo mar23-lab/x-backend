@@ -2689,6 +2689,37 @@
           "reason": "Require short-lived single-use deployment authorization shared across worktrees before Cloudflare side effects"
         }
       ]
+    },
+    {
+      "delta_id": "intake-canonical-project-target-schema89-backport-20260727",
+      "generated_at": "2026-07-26T18:57:14.859Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "6d531db6452e02a1f5a904b78a9891e8720a41ac",
+      "target_base_commit": "278024d340657eb38402b749ccbb60e658804381",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/lib/intake-resolution.ts",
+          "target_blob": "0ac08e55bc624b55dd172bb2a4417c29c4366b46",
+          "reason": "Backport canonical active-project resolution and clarification before governed work confirmation without importing schema-90 changes"
+        },
+        {
+          "path": "src/workers/routes/intake.ts",
+          "target_blob": "73ed618e2decc9e2ae46b406c0a319fc0f96ef05",
+          "reason": "Backport canonical active-project inventory into intake resolution without importing schema-90 changes"
+        },
+        {
+          "path": "src/workers/__tests__/intake-resolution.test.ts",
+          "target_blob": "0aaca4974f9b5bf3e0b6323e299828252aa1b4e1",
+          "reason": "Prove named-project and quoted-title resolution, missing-project clarification, and title isolation on schema 89"
+        },
+        {
+          "path": "src/workers/__tests__/intake-route.test.ts",
+          "target_blob": "8e89a6a2e1609faf4a6170f69e1ab4daf794d9f0",
+          "reason": "Keep the intake route fixture aligned with canonical project inventory resolution on schema 89"
+        }
+      ]
     }
   ]
 }

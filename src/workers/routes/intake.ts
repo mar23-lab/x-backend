@@ -80,9 +80,10 @@ intakeRoute.post('/intake/resolve', async (ctx) => {
     }
     const { workspace_id, user_id, role } = ctx.get('auth');
     stage = 'load_inventory';
-    const [packets, approvals, createDecision, decideDecision] = await Promise.all([
+    const [packets, approvals, projects, createDecision, decideDecision] = await Promise.all([
       ctx.get('dal').listTaskPackets(workspace_id, { limit: 100 }),
       ctx.get('dal').listApprovalRequests(workspace_id, { limit: 100 }),
+      ctx.get('dal').listProjects(workspace_id, { status: 'active' }),
       authorizeSpineWrite(ctx as never, 'packet:create'),
       authorizeSpineWrite(ctx as never, 'approval:decide'),
     ]);
@@ -99,10 +100,11 @@ intakeRoute.post('/intake/resolve', async (ctx) => {
       project_id: body.project_id ?? null,
       target: body.target ?? null,
     }));
-    const input = buildIntakeResolution(body, requestDigest, { packets, approvals, authorityFor, now: new Date() });
+    const input = buildIntakeResolution(body, requestDigest, { packets, approvals, projects, authorityFor, now: new Date() });
     const priorDigest = await digest(JSON.stringify({
       packets: packets.map((packet) => [packet.id, packet.version, packet.lifecycle_state]).sort(),
       approvals: approvals.map((approval) => [approval.id, approval.status, approval.packet_version]).sort(),
+      projects: projects.map((project) => [project.id, project.name, project.status]).sort(),
     }));
     const generatedAt = new Date().toISOString();
     const activeWorkCount = packets.filter((packet) => !['completed', 'archived', 'rejected'].includes(packet.lifecycle_state)).length;
