@@ -2720,6 +2720,32 @@
           "reason": "Maintain the complete schema-89 canonical project target backport: active-project inventory, selected context, parenthesized canonical ids, fail-closed ambiguity, and route coverage"
         }
       ]
+    },
+    {
+      "delta_id": "chat-compound-inventory-grounding-schema89-backport-20260727",
+      "generated_at": "2026-07-26T22:59:30.662Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "80816068e17af068a3b6964f350d9a4eeb2784c6",
+      "target_base_commit": "2e022fcdd2eb6fd4cb0b6e8a73b728a2e9566f51",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/services/cockpit-chat.ts",
+          "target_blob": "20a7dc17f58fbb46b4360364b7848272e10ae39c",
+          "reason": "Backport compound canonical project IDs and explicitly workspace-bound source inventory to the schema-89 owner-testing line"
+        },
+        {
+          "path": "src/workers/__tests__/cockpit-chat.test.ts",
+          "target_blob": "be8b410d66b29cccc0e4005f00947b879650ca86",
+          "reason": "Backport compound canonical project IDs and explicitly workspace-bound source inventory to the schema-89 owner-testing line"
+        },
+        {
+          "path": "src/workers/__tests__/customer-chat-route.test.ts",
+          "target_blob": "4cb4179ab91bdbaf1233c2f6b795364c9bf401ab",
+          "reason": "Backport compound canonical project IDs and explicitly workspace-bound source inventory to the schema-89 owner-testing line"
+        }
+      ]
     }
   ]
 }

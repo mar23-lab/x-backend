@@ -140,6 +140,80 @@ describe('POST /api/v1/customer-chat', () => {
     ]);
   });
 
+  it('composes requested project IDs with explicitly workspace-bound source inventory', async () => {
+    const source = (id: string, provider: string, workspaceId: string | null) => ({
+      id,
+      workspace_id: workspaceId,
+      user_id: 'u1',
+      provider,
+      provider_user_id: id,
+      provider_username: `${provider}@example.test`,
+      status: 'connected',
+      scopes: [],
+      connected_at: '2026-07-01T00:00:00Z',
+      last_sync_at: '2026-07-26T00:00:00Z',
+      last_sync_error: null,
+    });
+    const dal = dalStub({
+      listProjects: async (workspaceId: string) => [
+        { id: 'project_1', workspace_id: workspaceId, name: 'Commercial proof', status: 'active', updated_at: '2026-07-25T01:00:00Z' },
+      ],
+      listUserSources: async () => [
+        source('source_bound', 'gmail', 'org_hy'),
+        source('source_legacy', 'google_drive', null),
+        source('source_other', 'slack', 'org_other'),
+      ],
+    });
+    const res = await ask(appFor(AUTH, dal), {
+      message: 'First list every active project as project name and canonical project ID. Then list only source connections explicitly bound to this current workspace, with provider and binding status.',
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json() as {
+      answer: string;
+      generated_by: string;
+      grounded_on: { sources: { total: number; providers: Array<{ provider: string }> } };
+    };
+    expect(body.answer).toContain('• Commercial proof — project_1');
+    expect(body.answer).toContain('gmail connected, workspace-bound');
+    expect(body.answer).not.toContain('google_drive');
+    expect(body.answer).not.toContain('slack');
+    expect(body.answer).not.toContain('legacy user-account binding');
+    expect(body.generated_by).toBe('deterministic');
+    expect(body.grounded_on.sources).toMatchObject({
+      total: 1,
+      providers: [expect.objectContaining({ provider: 'gmail' })],
+    });
+  });
+
+  it('reports an honest empty bound-source inventory even when no activity events exist', async () => {
+    const dal = dalStub({
+      listUserSources: async () => [{
+        id: 'source_legacy',
+        workspace_id: null,
+        user_id: 'u1',
+        provider: 'gmail',
+        provider_user_id: 'legacy',
+        provider_username: 'legacy@example.test',
+        status: 'connected',
+        scopes: [],
+        connected_at: '2026-07-01T00:00:00Z',
+        last_sync_at: '2026-07-26T00:00:00Z',
+        last_sync_error: null,
+      }],
+    });
+    const res = await ask(appFor(AUTH, dal), {
+      message: 'Which source connections are explicitly bound to this workspace and synced?',
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json() as {
+      answer: string;
+      grounded_on: { sources: { total: number } };
+    };
+    expect(body.answer).toBe('• Source status: no explicitly workspace-bound source connections are recorded.');
+    expect(body.answer).not.toContain('legacy');
+    expect(body.grounded_on.sources.total).toBe(0);
+  });
+
   it('fails closed rather than returning a partial inventory when a canonical project ID is missing', async () => {
     const dal = dalStub({
       listProjects: async (workspaceId: string) => [

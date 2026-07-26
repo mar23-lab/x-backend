@@ -102,6 +102,7 @@ describe('buildDeterministicChatAnswer — grounded, not canned', () => {
     expect(a).toMatch(/1 awaiting your sign-off/);
     expect(a).toMatch(/github \(6\)/);
     expect(a).toMatch(/legible empty\/degraded project banner/); // a real named item
+    expect(a).not.toMatch(/no explicitly workspace-bound source connections/i);
   });
 
   it('surfaces blocked / sign-off items first when the operator asks for them', () => {
