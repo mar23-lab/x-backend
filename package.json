@@ -7,7 +7,7 @@
     "node": ">=22 <23"
   },
   "scripts": {
-    "deploy:api": "npm run verify:authority-decision:deploy && node scripts/preflight-rls-dsn.mjs && node scripts/verify-rls-grant-parity.mjs && node scripts/verify-prod-migrations.mjs && node scripts/verify-deploy-schema-head.mjs && node scripts/verify-deploy-sha-current.mjs && wrangler deploy --config wrangler.toml --var BUILD_SHA:$(git rev-parse HEAD) --var BUILD_TIME:$(date -u +%Y%m%dT%H%M%SZ) --var XLOOOP_SCHEMA_HEAD:$XLOOOP_SCHEMA_HEAD",
+    "deploy:api": "npm run verify:authority-decision:deploy && node scripts/preflight-rls-dsn.mjs && node scripts/verify-rls-grant-parity.mjs && node scripts/verify-prod-migrations.mjs && node scripts/verify-operation-event-source-tool-constraint.mjs --live && node scripts/verify-deploy-schema-head.mjs && node scripts/verify-deploy-sha-current.mjs && wrangler deploy --config wrangler.toml --var BUILD_SHA:$(git rev-parse HEAD) --var BUILD_TIME:$(date -u +%Y%m%dT%H%M%SZ) --var XLOOOP_SCHEMA_HEAD:$XLOOOP_SCHEMA_HEAD",
     "prepare:app:prod": "node scripts/prepare-app-pages-release.mjs",
     "deploy:app:prod": "node scripts/deploy-app-prod.mjs",
     "verify:app-pages-release": "node scripts/verify-app-pages-release.mjs",
@@ -29,6 +29,9 @@
     "dev:api": "DEPLOY_MIGRATION_GATE_NONPROD=1 wrangler dev --config wrangler.toml",
     "verify:prod-migrations": "node scripts/verify-prod-migrations.mjs",
     "verify:prod-migrations:self-test": "node scripts/verify-prod-migrations.mjs --self-test",
+    "verify:operation-event-source-tool-constraint": "node scripts/verify-operation-event-source-tool-constraint.mjs",
+    "verify:operation-event-source-tool-constraint:live": "node scripts/verify-operation-event-source-tool-constraint.mjs --live",
+    "verify:operation-event-source-tool-constraint:self-test": "node scripts/verify-operation-event-source-tool-constraint.mjs --self-test",
     "verify:predeploy-migration-gate:self-test": "node scripts/predeploy-migration-gate.mjs --self-test",
     "bootstrap:local": "npm ci && npm --prefix packages/xlooop-mcp-server ci",
     "ci-local": "node scripts/ci-local.mjs",

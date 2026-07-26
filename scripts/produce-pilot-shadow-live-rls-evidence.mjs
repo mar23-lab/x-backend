@@ -19,6 +19,7 @@ const APP_DATABASE_URL = process.env.XLOOOP_RLS_APP_DATABASE_URL || '';
 const ENVIRONMENT = process.env.XLOOOP_LIVE_RLS_EVIDENCE_ENVIRONMENT || 'pilot-shadow';
 const APPROVED = process.env.XLOOOP_LIVE_RLS_EVIDENCE_APPROVED_NONPROD === '1';
 const DB_LABEL = process.env.XLOOOP_LIVE_RLS_EVIDENCE_DB_LABEL || '';
+const CANDIDATE_SHA = process.env.XLOOOP_LIVE_RLS_EVIDENCE_CANDIDATE_SHA || '';
 
 if (SELF_TEST) {
   runSelfTest();
@@ -52,6 +53,7 @@ function produceEvidence() {
     environment: ENVIRONMENT,
     approved: APPROVED,
     dbLabel: DB_LABEL,
+    candidateSha: CANDIDATE_SHA,
   });
 
   const command = runCommand('npm', ['run', 'verify:trust-proofs:live'], {
@@ -67,29 +69,48 @@ function produceEvidence() {
   return buildEvidence({
     environment: ENVIRONMENT,
     dbLabel: DB_LABEL,
+    candidateSha: CANDIDATE_SHA,
     commands: [command],
     generatedAt: new Date().toISOString(),
   });
 }
 
-function assertPreconditions({ evidenceFile, ownerDatabaseUrl, appDatabaseUrl, environment, approved, dbLabel }) {
+function assertPreconditions({
+  evidenceFile,
+  ownerDatabaseUrl,
+  appDatabaseUrl,
+  environment,
+  approved,
+  dbLabel,
+  candidateSha,
+  gitState = readGitState(),
+}) {
   if (!evidenceFile) throw new Error('XLOOOP_PILOT_SHADOW_LIVE_RLS_EVIDENCE_FILE is required');
   if (!ownerDatabaseUrl) throw new Error('DATABASE_URL is required');
   if (!appDatabaseUrl) throw new Error('XLOOOP_RLS_APP_DATABASE_URL is required');
   if (!approved) throw new Error('XLOOOP_LIVE_RLS_EVIDENCE_APPROVED_NONPROD=1 is required');
   if (!['pilot-shadow', 'staging', 'test'].includes(environment)) throw new Error('environment must be pilot-shadow, staging, or test');
   if (!dbLabel || /(prod|production)/i.test(dbLabel)) throw new Error('XLOOOP_LIVE_RLS_EVIDENCE_DB_LABEL must name an approved nonproduction branch/DB');
+  if (!/^[0-9a-f]{40}$/.test(candidateSha)) {
+    throw new Error('XLOOOP_LIVE_RLS_EVIDENCE_CANDIDATE_SHA must be a full 40-character lowercase Git SHA');
+  }
+  if (gitState.sha !== candidateSha) throw new Error('candidate SHA does not match current git HEAD');
+  if (!gitState.clean) throw new Error('live evidence requires a clean git worktree');
   assertNonProductionDatabaseUrl(ownerDatabaseUrl, 'DATABASE_URL');
   assertNonProductionDatabaseUrl(appDatabaseUrl, 'XLOOOP_RLS_APP_DATABASE_URL');
 }
 
-function buildEvidence({ environment, dbLabel, commands, generatedAt }) {
+function buildEvidence({ environment, dbLabel, candidateSha, commands, generatedAt }) {
   return {
     schema_id: 'xlooop.pilot_shadow_live_rls_evidence.v1',
     evidence_class: 'pilot_shadow_live_rls_command_capture',
     generated_at: generatedAt,
     environment,
     authority: environment === 'pilot-shadow' ? 'shadow' : 'nonproduction',
+    candidate: {
+      git_sha: candidateSha,
+      git_worktree_clean: true,
+    },
     producer: {
       name: 'x-backend.produce-pilot-shadow-live-rls-evidence',
       kind: 'live_command_capture',
@@ -118,6 +139,24 @@ function buildEvidence({ environment, dbLabel, commands, generatedAt }) {
     leakage_count: 0,
     cross_tenant_read_count: 0,
     boundary: 'No production database, route, flag, migration, or authority was touched. This artifact satisfies only the pilot-shadow completion readiness live RLS evidence gate.',
+  };
+}
+
+function readGitState() {
+  const sha = spawnSync('git', ['rev-parse', 'HEAD'], {
+    cwd: process.cwd(),
+    encoding: 'utf8',
+  });
+  const status = spawnSync('git', ['status', '--porcelain'], {
+    cwd: process.cwd(),
+    encoding: 'utf8',
+  });
+  if (sha.status !== 0 || status.status !== 0) {
+    throw new Error('cannot determine Git candidate state');
+  }
+  return {
+    sha: String(sha.stdout || '').trim(),
+    clean: String(status.stdout || '').trim().length === 0,
   };
 }
 
@@ -170,6 +209,8 @@ function runSelfTest() {
         environment: 'pilot-shadow',
         approved: true,
         dbLabel: 'pilot-shadow-self-test',
+        candidateSha: 'a'.repeat(40),
+        gitState: { sha: 'a'.repeat(40), clean: true },
       });
       return true;
     } catch {
@@ -185,6 +226,8 @@ function runSelfTest() {
         environment: 'pilot-shadow',
         approved: true,
         dbLabel: 'pilot-shadow-self-test',
+        candidateSha: 'a'.repeat(40),
+        gitState: { sha: 'a'.repeat(40), clean: true },
       });
       return false;
     } catch {
@@ -200,6 +243,8 @@ function runSelfTest() {
         environment: 'pilot-shadow',
         approved: false,
         dbLabel: 'pilot-shadow-self-test',
+        candidateSha: 'a'.repeat(40),
+        gitState: { sha: 'a'.repeat(40), clean: true },
       });
       return false;
     } catch {
@@ -208,18 +253,47 @@ function runSelfTest() {
   })();
   const redacted = safeTail('DATABASE_URL=postgres://u:p@branch-test.neon.tech/db ok');
   const redactionOk = !redacted.includes('u:p@branch-test');
+  const dirtyRejected = (() => {
+    try {
+      assertPreconditions({
+        evidenceFile,
+        ownerDatabaseUrl: 'postgres://owner:secret@branch-test.neon.tech/xlooop_shadow',
+        appDatabaseUrl: 'postgres://app:secret@branch-test.neon.tech/xlooop_shadow',
+        environment: 'pilot-shadow',
+        approved: true,
+        dbLabel: 'pilot-shadow-self-test',
+        candidateSha: 'a'.repeat(40),
+        gitState: { sha: 'a'.repeat(40), clean: false },
+      });
+      return false;
+    } catch {
+      return true;
+    }
+  })();
   const evidence = buildEvidence({
     environment: 'pilot-shadow',
     dbLabel: 'pilot-shadow-self-test',
+    candidateSha: 'a'.repeat(40),
     generatedAt: '2026-07-22T00:00:00.000Z',
     commands: [{ command: 'npm run verify:trust-proofs:live', status: 0, output_tail: 'PASS' }],
   });
   const evidenceOk = evidence.producer.name === 'x-backend.produce-pilot-shadow-live-rls-evidence' &&
     evidence.producer.production_data_allowed === false &&
+    evidence.candidate.git_sha === 'a'.repeat(40) &&
+    evidence.candidate.git_worktree_clean === true &&
     evidence.leakage_count === 0 &&
     evidence.cross_tenant_read_count === 0;
-  if (!preconditionsOk || !prodRejected || !approvalRejected || !redactionOk || !evidenceOk) {
-    console.error(JSON.stringify({ preconditionsOk, prodRejected, approvalRejected, redactionOk, evidenceOk, redacted, evidence }, null, 2));
+  if (!preconditionsOk || !prodRejected || !approvalRejected || !dirtyRejected || !redactionOk || !evidenceOk) {
+    console.error(JSON.stringify({
+      preconditionsOk,
+      prodRejected,
+      approvalRejected,
+      dirtyRejected,
+      redactionOk,
+      evidenceOk,
+      redacted,
+      evidence,
+    }, null, 2));
     throw new Error('self-test failed');
   }
   console.log('PASS pilot-shadow live RLS evidence producer self-test');

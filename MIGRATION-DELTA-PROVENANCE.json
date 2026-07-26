@@ -2606,6 +2606,37 @@
           "reason": "derive pilot schema from migrations, reuse the existing xlooop-test surface, and make soak sampling independent of disposable worktree paths"
         }
       ]
+    },
+    {
+      "delta_id": "operation-source-tool-drift-repair-20260726",
+      "generated_at": "2026-07-26T04:43:28.182Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "0a3a0054a86907bb0216d4da1d37232cfd44d3e9",
+      "target_base_commit": "0a3a0054a86907bb0216d4da1d37232cfd44d3e9",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "package.json",
+          "target_blob": "91a4bc500091d9f6a35b0236a9467c2b24449d21",
+          "reason": "Repair out-of-order operation_events source_tool constraint drift; enforce semantic deploy proof, SHA-bound evidence, and current live RLS authority fixtures"
+        },
+        {
+          "path": "scripts/ci-local.mjs",
+          "target_blob": "a4d6e7cc514e84b785cc4930c6f5b21563f95dd5",
+          "reason": "Repair out-of-order operation_events source_tool constraint drift; enforce semantic deploy proof, SHA-bound evidence, and current live RLS authority fixtures"
+        },
+        {
+          "path": "wrangler.pilot-shadow.toml",
+          "target_blob": "22606568482dbd4abdfedf6c0ea05b78077e43fe",
+          "reason": "Repair out-of-order operation_events source_tool constraint drift; enforce semantic deploy proof, SHA-bound evidence, and current live RLS authority fixtures"
+        },
+        {
+          "path": "src/workers/__tests__/operational-spine-live-rls.test.ts",
+          "target_blob": "c0a726413cee795b437d5623542d769e4b45f128",
+          "reason": "Repair out-of-order operation_events source_tool constraint drift; enforce semantic deploy proof, SHA-bound evidence, and current live RLS authority fixtures"
+        }
+      ]
     }
   ]
 }

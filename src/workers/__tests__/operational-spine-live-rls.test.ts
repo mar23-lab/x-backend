@@ -30,6 +30,10 @@ if (liveGateRequested && !databaseUrl) {
 const ROLE = `xlooop_rls_live_probe_${randomUUID().replace(/-/g, '').slice(0, 12)}`;
 const WORKSPACE_A = 'rls_live_ws_a';
 const WORKSPACE_B = 'rls_live_ws_b';
+const USER_A = 'rls_live_user_a';
+const USER_B = 'rls_live_user_b';
+const ENTITLEMENT_A = 'rls_live_entitlement_a';
+const ENTITLEMENT_B = 'rls_live_entitlement_b';
 const PACKET_A = 'rls_live_packet_a';
 const PACKET_B = 'rls_live_packet_b';
 const EVIDENCE_A = 'rls_live_evidence_a';
@@ -49,12 +53,18 @@ function sqlIdentifier(value: string): string {
   return `"${value.replace(/"/g, '""')}"`;
 }
 
-function appFor(sql: Sql, auth: Record<string, unknown>) {
+function appFor(spineSql: Sql, authoritySql: Sql, auth: Record<string, unknown>) {
   const app = new Hono();
   app.use('*', async (ctx, next) => {
+    const spineDal = new WorkersDalAdapter(spineSql);
+    const authorityDal = new WorkersDalAdapter(authoritySql);
+    spineDal.getOperatingMode = authorityDal.getOperatingMode;
     ctx.set('request_id', 'live-rls-test');
     ctx.set('auth', auth as never);
-    ctx.set('dal', new WorkersDalAdapter(sql) as never);
+    // Governed writes use the restricted probe role. Authority state is hydrated through the
+    // owner connection, matching the current worker architecture while entitlement enforcement is on.
+    ctx.set('sql', authoritySql as never);
+    ctx.set('dal', spineDal as never);
     await next();
   });
   app.route('/api/v1', operationalSpineRoute);
@@ -78,7 +88,15 @@ async function cleanup(ownerSql: Sql) {
   await ownerSql`DELETE FROM approval_requests WHERE id IN (${APPROVAL_A}, ${APPROVAL_B})`;
   await ownerSql`DELETE FROM evidence_items WHERE id IN (${EVIDENCE_A}, ${EVIDENCE_B})`;
   await ownerSql`DELETE FROM task_packets WHERE id IN (${PACKET_A}, ${PACKET_B})`;
+  await ownerSql`DELETE FROM customer_entitlements WHERE id IN (${ENTITLEMENT_A}, ${ENTITLEMENT_B})`;
+  await ownerSql`DELETE FROM user_session_preferences
+    WHERE (user_id = ${USER_A} AND workspace_id = ${WORKSPACE_A})
+       OR (user_id = ${USER_B} AND workspace_id = ${WORKSPACE_B})`;
+  await ownerSql`DELETE FROM workspace_members
+    WHERE (user_id = ${USER_A} AND workspace_id = ${WORKSPACE_A})
+       OR (user_id = ${USER_B} AND workspace_id = ${WORKSPACE_B})`;
   await ownerSql`DELETE FROM workspaces WHERE id IN (${WORKSPACE_A}, ${WORKSPACE_B})`;
+  await ownerSql`DELETE FROM users WHERE id IN (${USER_A}, ${USER_B})`;
   await ownerSql(`REVOKE ALL ON operation_events FROM ${sqlIdentifier(ROLE)}`);
   await ownerSql(`REVOKE ALL ON metric_deltas FROM ${sqlIdentifier(ROLE)}`);
   await ownerSql(`REVOKE ALL ON tool_events FROM ${sqlIdentifier(ROLE)}`);
@@ -108,10 +126,41 @@ describeLive('operational spine live RLS route proof', () => {
     // Packet/evidence/approval writes now record durable operation-event receipts (RLS'd, mig 043+).
     await ownerSql(`GRANT SELECT, INSERT, UPDATE ON operation_events TO ${sqlIdentifier(ROLE)}`);
     await ownerSql`
+      INSERT INTO users(id, email, status, approved_at, approved_by)
+      VALUES
+        (${USER_A}, 'rls-live-a@example.test', 'approved', now(), ${USER_A}),
+        (${USER_B}, 'rls-live-b@example.test', 'approved', now(), ${USER_B})
+    `;
+    await ownerSql`
       INSERT INTO workspaces(id, name, owner_user_id, slug)
       VALUES
-        (${WORKSPACE_A}, 'RLS Live Probe A', 'rls_live_owner', 'rls-live-a'),
-        (${WORKSPACE_B}, 'RLS Live Probe B', 'rls_live_owner', 'rls-live-b')
+        (${WORKSPACE_A}, 'RLS Live Probe A', ${USER_A}, 'rls-live-a'),
+        (${WORKSPACE_B}, 'RLS Live Probe B', ${USER_B}, 'rls-live-b')
+    `;
+    await ownerSql`
+      INSERT INTO workspace_members(workspace_id, user_id, role, status, activated_at, activated_by)
+      VALUES
+        (${WORKSPACE_A}, ${USER_A}, 'operator', 'active', now(), ${USER_A}),
+        (${WORKSPACE_B}, ${USER_B}, 'operator', 'active', now(), ${USER_B})
+    `;
+    await ownerSql`
+      INSERT INTO customer_entitlements(
+        id, user_id, workspace_id, app_id, account_type, allowed_modes,
+        allowed_actions, denied_actions, authority_ref, granted_by
+      )
+      VALUES
+        (${ENTITLEMENT_A}, ${USER_A}, ${WORKSPACE_A}, 'xlooop-product', 'company',
+          ARRAY['watch','test','operator']::TEXT[], ARRAY['*']::TEXT[], ARRAY[]::TEXT[],
+          'live-rls-authority-fixture', ${USER_A}),
+        (${ENTITLEMENT_B}, ${USER_B}, ${WORKSPACE_B}, 'xlooop-product', 'company',
+          ARRAY['watch','test','operator']::TEXT[], ARRAY['*']::TEXT[], ARRAY[]::TEXT[],
+          'live-rls-authority-fixture', ${USER_B})
+    `;
+    await ownerSql`
+      INSERT INTO user_session_preferences(user_id, workspace_id, operating_mode)
+      VALUES
+        (${USER_A}, ${WORKSPACE_A}, 'operator'),
+        (${USER_B}, ${WORKSPACE_B}, 'operator')
     `;
 
     const probeUrl = new URL(databaseUrl);
@@ -125,8 +174,8 @@ describeLive('operational spine live RLS route proof', () => {
   });
 
   it('creates and reads operational spine rows only through the request workspace context', async () => {
-    const appA = appFor(probeSql, { user_id: 'user_a', role: 'operator', workspace_id: WORKSPACE_A });
-    const appB = appFor(probeSql, { user_id: 'user_b', role: 'operator', workspace_id: WORKSPACE_B });
+    const appA = appFor(probeSql, ownerSql, { user_id: USER_A, role: 'operator', workspace_id: WORKSPACE_A });
+    const appB = appFor(probeSql, ownerSql, { user_id: USER_B, role: 'operator', workspace_id: WORKSPACE_B });
 
     const createA = await appA.request('/api/v1/packets', {
       method: 'POST',
