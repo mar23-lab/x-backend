@@ -2565,6 +2565,83 @@
           "reason": "preserve tenant-bound canonical project IDs and honor explicit ID output contracts"
         }
       ]
+    },
+    {
+      "delta_id": "schema89-stale-signoff-backport-20260727",
+      "generated_at": "2026-07-26T14:44:00.000Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "a2869c0c5ed24de5298a8b5f5bbee3e7ca891ff3",
+      "target_base_commit": "bba4cb65909ecb7c8e7c4610d97dce2cf00bd16c",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/__tests__/action-intent.test.ts",
+          "target_blob": "144bbf0e18dc93b1a611c9ddaa7a437f75d8e8ec",
+          "reason": "backport reviewed stale sign-off rejection without importing unrelated pilot or schema-90 changes"
+        },
+        {
+          "path": "src/workers/lib/action-intent.ts",
+          "target_blob": "98c068d71646e89fa0a4560cd44666d65151fe71",
+          "reason": "backport reviewed stale sign-off rejection without importing unrelated pilot or schema-90 changes"
+        },
+        {
+          "path": "src/workers/__tests__/sign-off-atomic-lineage.test.ts",
+          "target_blob": "e12be9f4a0faafe8c86df729c5627f5642a93a8b",
+          "reason": "backport reviewed stale sign-off rejection without importing unrelated pilot or schema-90 changes"
+        },
+        {
+          "path": "src/workers/dal/governance-store.ts",
+          "target_blob": "205fbe17939c455e626147edb4f18df2729f9428",
+          "reason": "backport reviewed stale sign-off rejection without importing unrelated pilot or schema-90 changes"
+        },
+        {
+          "path": "docs/architecture/backend/API_CONTRACT_V1.md",
+          "target_blob": "c1286b58a039f1443466d788fe1a772a06ec0591",
+          "reason": "backport reviewed stale sign-off rejection without importing unrelated pilot or schema-90 changes"
+        }
+      ]
+    },
+    {
+      "delta_id": "schema89-packet-receipt-backport-20260727",
+      "generated_at": "2026-07-26T14:45:00.000Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "da20c7d84264725b8fdf5775e604d4a0cfd8b1d3",
+      "target_base_commit": "5ee9f8a4a70b4944fb1c4ccdf96effe6f52b2e26",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/__tests__/intake-store.test.ts",
+          "target_blob": "3e098b901254f25ee67432ef414652b977273d3b",
+          "reason": "backport the reviewed tenant-scoped, customer-safe packet execution receipt read model without importing schema-90 changes"
+        },
+        {
+          "path": "src/workers/__tests__/operational-spine-route.test.ts",
+          "target_blob": "7d104660e67b5c2bcbb440d04ad992a66265f183",
+          "reason": "backport the reviewed tenant-scoped, customer-safe packet execution receipt read model without importing schema-90 changes"
+        },
+        {
+          "path": "src/workers/dal/DalAdapter.ts",
+          "target_blob": "561bb43df459d9b3a4e02fcd055a8c25b2ed2852",
+          "reason": "backport the reviewed tenant-scoped, customer-safe packet execution receipt read model without importing schema-90 changes"
+        },
+        {
+          "path": "src/workers/dal/intake-store.ts",
+          "target_blob": "34bebae23263e5bb87afb37a32dcd1dda2a7c61b",
+          "reason": "backport the reviewed tenant-scoped, customer-safe packet execution receipt read model without importing schema-90 changes"
+        },
+        {
+          "path": "src/workers/dal/operational-spine-methods.ts",
+          "target_blob": "b8e6c33033c12b6190e2d04a190c64711a9c465a",
+          "reason": "backport the reviewed tenant-scoped, customer-safe packet execution receipt read model without importing schema-90 changes"
+        },
+        {
+          "path": "src/workers/routes/operational-spine.ts",
+          "target_blob": "7f6e20aa10765181d72a92c39851d50caf5f0df1",
+          "reason": "backport the reviewed tenant-scoped, customer-safe packet execution receipt read model without importing schema-90 changes"
+        }
+      ]
     }
   ]
 }

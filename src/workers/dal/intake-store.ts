@@ -111,6 +111,33 @@ export async function countGovernedExecutionReceiptsRow(
   return Number(rows[0]?.receipt_count ?? 0);
 }
 
+export async function listGovernedExecutionReceiptsRow(
+  sql: Sql,
+  workspaceId: WorkspaceId,
+  limit = 200,
+): Promise<GovernedExecutionReceipt[]> {
+  assertWorkspaceScope(workspaceId);
+  const boundedLimit = Math.max(1, Math.min(Number.isFinite(limit) ? Math.floor(limit) : 200, 200));
+  const [rows] = await withWorkspaceRlsContext<[GovernedExecutionReceipt[]]>(
+    sql,
+    workspaceId,
+    (tx) => [tx/*sql*/`
+      SELECT id, workspace_id, resolution_id, actor_user_id, client_request_id,
+        operation, target_type, target_id, result, effect_summary,
+        closing_attestation_id, created_at
+        FROM governed_execution_receipts
+       WHERE workspace_id = ${workspaceId}
+       ORDER BY created_at DESC
+       LIMIT ${boundedLimit}
+    `],
+    { readOnly: true },
+  );
+  return rows.map((row) => ({
+    ...row,
+    closing_attestation_id: row.closing_attestation_id ?? null,
+  }));
+}
+
 type ExecutionRow = ResolutionRow & {
   receipt_id: string;
   receipt_client_request_id: string;

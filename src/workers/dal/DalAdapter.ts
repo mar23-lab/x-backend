@@ -379,6 +379,11 @@ export interface DalAdapter {
   ): Promise<IntakeExecutionResult>;
   /** Tenant-scoped count used by Current Work; returns no receipt identifiers or payloads. */
   countGovernedExecutionReceipts(workspaceId: WorkspaceId): Promise<number>;
+  /** Tenant-scoped durable execution receipts for canonical packet reload projections. */
+  listGovernedExecutionReceipts(
+    workspaceId: WorkspaceId,
+    limit?: number,
+  ): Promise<import('./types').GovernedExecutionReceipt[]>;
   /** Append-only customer-safe dual-read telemetry; never changes Current Work authority. */
   createCurrentWorkParityObservation(
     workspaceId: WorkspaceId,

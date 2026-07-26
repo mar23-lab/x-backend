@@ -3,6 +3,7 @@ import {
   countGovernedExecutionReceiptsRow,
   createIntakeResolutionRow,
   executeIntakeResolutionRow,
+  listGovernedExecutionReceiptsRow,
 } from '../dal/intake-store';
 import { neonClient } from '../db/client';
 
@@ -75,6 +76,30 @@ describe('single-intake transactional execution', () => {
     const query = statements.find((statement) => statement.text.includes('governed_execution_receipts'))!;
     expect(query.text).toContain('WHERE workspace_id =');
     expect(query.values).toContain('ws_1');
+  });
+
+  it('lists bounded receipts through the tenant RLS context for reload projections', async () => {
+    const receipt = {
+      id: 'ger_1',
+      workspace_id: 'ws_1',
+      resolution_id: 'inr_1',
+      actor_user_id: 'user_1',
+      client_request_id: 'exec_1',
+      operation: 'create_work',
+      target_type: 'task_packet',
+      target_id: 'pkt_1',
+      result: 'completed',
+      effect_summary: 'Created work',
+      closing_attestation_id: null,
+      created_at: '2026-07-15T00:00:01Z',
+    };
+    const { sql, statements } = sqlWith([[receipt]]);
+    const rows = await listGovernedExecutionReceiptsRow(sql, 'ws_1', 500);
+    expect(rows).toEqual([receipt]);
+    const query = statements.find((statement) => statement.text.includes('ORDER BY created_at DESC'))!;
+    expect(query.text).toContain('WHERE workspace_id =');
+    expect(query.values).toContain('ws_1');
+    expect(query.values).toContain(200);
   });
 
   it('binds project validation and the execution idempotency key into the atomic write', async () => {
