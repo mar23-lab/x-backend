@@ -2642,6 +2642,32 @@
           "reason": "backport the reviewed tenant-scoped, customer-safe packet execution receipt read model without importing schema-90 changes"
         }
       ]
+    },
+    {
+      "delta_id": "schema89-candidate-soak-selection-backport-20260727",
+      "generated_at": "2026-07-26T14:56:00.000Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "9f00bd3ee1ebfcce5021a0ed92bb63cb3da6987d",
+      "target_base_commit": "99e167b2b1cfbe507caaef5d3698e727ad525e4d",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "scripts/pilot-shadow-soak-arm.sh",
+          "target_blob": "fb4221dc0abce8469017d94689a70816dbd8cb76",
+          "reason": "select candidate-specific active soak evidence and preserve the sampler independently of disposable worktrees"
+        },
+        {
+          "path": "scripts/pilot-shadow-soak-sampler.mjs",
+          "target_blob": "d95b8c0d04b6fe106464a2c0220a339b19eae315",
+          "reason": "select candidate-specific active soak evidence and preserve the sampler independently of disposable worktrees"
+        },
+        {
+          "path": "scripts/verify-pilot-shadow-soak-rollback-evidence.mjs",
+          "target_blob": "9ecb98603e8adee59b37c9ddbf18587439cd1f49",
+          "reason": "select candidate-specific active soak evidence and preserve the sampler independently of disposable worktrees"
+        }
+      ]
     }
   ]
 }
