@@ -91,6 +91,42 @@ describe('canonical intake resolution', () => {
     });
   });
 
+  it('binds a parenthesized canonical project id without treating it as part of the project name', () => {
+    const text = 'Create a reversible todo in Honest & Young · Operations (proj_honest-young_default) titled "Verify canonical receipt".';
+    const row = buildIntakeResolution(
+      { text, client_request_id: 'c3-canonical-id' },
+      '6'.repeat(64),
+      inventory([], [], [project('proj_honest-young_default', 'Honest & Young · Operations')]),
+    );
+    expect(row).toMatchObject({
+      next_step: 'confirm',
+      ambiguity: false,
+      project_id: 'proj_honest-young_default',
+      target: {
+        label: 'Verify canonical receipt in Honest & Young · Operations (proj_honest-young_default)',
+      },
+      action_payload: {
+        title: 'Verify canonical receipt',
+        project_id: 'proj_honest-young_default',
+        project_name: 'Honest & Young · Operations',
+      },
+    });
+  });
+
+  it('asks for clarification when text contains more than one active canonical project id', () => {
+    const row = buildIntakeResolution(
+      { text: 'Create a task for proj_alpha and proj_beta titled "Do not guess".', client_request_id: 'c3-many-project-ids' },
+      '7'.repeat(64),
+      inventory([], [], [project('proj_alpha', 'Alpha'), project('proj_beta', 'Beta')]),
+    );
+    expect(row).toMatchObject({
+      next_step: 'clarify',
+      ambiguity: true,
+      requires_confirmation: false,
+      action_payload: {},
+    });
+  });
+
   it('asks one clarification when a named project cannot be resolved', () => {
     const row = buildIntakeResolution(
       { text: 'Create a todo in Missing Project titled "Do not guess".', client_request_id: 'c3-missing-project' },
@@ -118,6 +154,21 @@ describe('canonical intake resolution', () => {
       ambiguity: true,
       target: { type: 'none', id: null },
       action_payload: {},
+    });
+  });
+
+  it('does not bind a canonical project id mentioned only inside the requested title', () => {
+    const row = buildIntakeResolution(
+      { text: 'Create a todo titled "Review proj_known".', client_request_id: 'c3-title-project-id' },
+      '8'.repeat(64),
+      inventory([], [], [project('proj_known', 'Known Project')]),
+    );
+    expect(row).toMatchObject({
+      next_step: 'confirm',
+      ambiguity: false,
+      project_id: null,
+      target: { label: 'Review proj_known' },
+      action_payload: { title: 'Review proj_known', project_id: null },
     });
   });
 
