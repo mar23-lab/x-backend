@@ -328,12 +328,22 @@ export const CRON_REGISTRY: ReadonlyArray<CronRegistryEntry> = Object.freeze([
 /**
  * O(1) lookup. Frozen at module load.
  */
-export const CRON_BY_EXPRESSION: Readonly<Record<string, CronRegistryEntry>> = Object.freeze(
-  CRON_REGISTRY.reduce<Record<string, CronRegistryEntry>>((acc, entry) => {
-    acc[entry.cron] = entry;
-    return acc;
-  }, {}),
+export const PILOT_PROJECTION_CRON_ALIAS = '*/5 * * * *';
+
+const cronByExpression = CRON_REGISTRY.reduce<Record<string, CronRegistryEntry>>((acc, entry) => {
+  acc[entry.cron] = entry;
+  return acc;
+}, {});
+const propagationProjectionEntry = CRON_REGISTRY.find(
+  (entry) => entry.loop_name === 'propagation_tick+tenant_projection_dispatch',
 );
+if (!propagationProjectionEntry) {
+  throw new Error('propagation and tenant projection cron entry is required');
+}
+// Pilot-shadow keeps the projection proof responsive without changing the production daily trigger.
+cronByExpression[PILOT_PROJECTION_CRON_ALIAS] = propagationProjectionEntry;
+
+export const CRON_BY_EXPRESSION: Readonly<Record<string, CronRegistryEntry>> = Object.freeze(cronByExpression);
 
 export const CRON_BY_LOOP_NAME: Readonly<Record<string, CronRegistryEntry>> = Object.freeze(
   CRON_REGISTRY.reduce<Record<string, CronRegistryEntry>>((acc, entry) => {

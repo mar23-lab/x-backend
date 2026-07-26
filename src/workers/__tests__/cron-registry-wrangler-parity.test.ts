@@ -18,8 +18,8 @@ import { describe, it, expect } from 'vitest';
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
 
 /** The cron expressions Cloudflare will actually fire — the `crons = [ ... ]` array under [triggers]. */
-function wranglerTriggerExpressions(): string[] {
-  const toml = readFileSync(resolve(repoRoot, 'wrangler.toml'), 'utf8');
+function wranglerTriggerExpressions(configFile = 'wrangler.toml'): string[] {
+  const toml = readFileSync(resolve(repoRoot, configFile), 'utf8');
   const triggersIdx = toml.indexOf('[triggers]');
   expect(triggersIdx).toBeGreaterThanOrEqual(0);
   const after = toml.slice(triggersIdx);
@@ -35,6 +35,11 @@ function wranglerTriggerExpressions(): string[] {
 function registryExpressions(): string[] {
   const src = readFileSync(resolve(repoRoot, 'src/workers/crons/index.ts'), 'utf8');
   return [...src.matchAll(/cron:\s*'([^']+)'/g)].map((m) => m[1]);
+}
+
+function dispatchAliasExpressions(): string[] {
+  const src = readFileSync(resolve(repoRoot, 'src/workers/crons/index.ts'), 'utf8');
+  return [...src.matchAll(/export const [A-Z0-9_]+_CRON_ALIAS\s*=\s*'([^']+)'/g)].map((m) => m[1]);
 }
 
 describe('cron registry ↔ wrangler.toml [triggers] parity', () => {
@@ -61,5 +66,15 @@ describe('cron registry ↔ wrangler.toml [triggers] parity', () => {
 
   it('the two sets are identical (1:1)', () => {
     expect([...registryExpressions()].sort()).toEqual([...wranglerTriggerExpressions()].sort());
+  });
+
+  it('routes every pilot-shadow trigger through the registry or an explicit dispatch alias', () => {
+    const dispatchable = new Set([...registryExpressions(), ...dispatchAliasExpressions()]);
+    const unhandled = wranglerTriggerExpressions('wrangler.pilot-shadow.toml')
+      .filter((cron) => !dispatchable.has(cron));
+    expect(
+      unhandled,
+      `pilot-shadow triggers with no dispatch handler: ${unhandled.join(', ')}`,
+    ).toEqual([]);
   });
 });
