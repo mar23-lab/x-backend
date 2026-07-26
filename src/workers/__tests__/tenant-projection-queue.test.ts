@@ -9,6 +9,7 @@ import {
 } from '../services/tenant-projection-queue';
 import type { ProjectionOutboxRow } from '../dal/projection-outbox-store';
 import type { DataGraphFacts } from '../graph/data-graph';
+import { CRON_BY_EXPRESSION, PILOT_PROJECTION_CRON_ALIAS } from '../crons';
 
 const NOW = new Date('2026-07-15T01:00:00Z');
 const row = (over: Partial<ProjectionOutboxRow> = {}): ProjectionOutboxRow => ({
@@ -44,6 +45,11 @@ const body = { schema_id: TENANT_PROJECTION_MESSAGE_SCHEMA, outbox_id: 'out_1', 
 const message = (value: unknown = body, attempts = 1) => ({ body: value, attempts, ack: vi.fn(), retry: vi.fn() });
 
 describe('tenant projection transactional outbox dispatcher', () => {
+  it('routes the pilot five-minute trigger through the production projection handler', () => {
+    expect(CRON_BY_EXPRESSION[PILOT_PROJECTION_CRON_ALIAS])
+      .toBe(CRON_BY_EXPRESSION['0 6 * * *']);
+  });
+
   it('is fully inert while disabled', async () => {
     const g = gateway();
     const result = await dispatchTenantProjectionOutbox({ enabled: false, gateway: g, now: NOW });
