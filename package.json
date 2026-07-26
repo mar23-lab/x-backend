@@ -53,6 +53,8 @@
     "verify:typed-work-relationships": "node scripts/verify-typed-work-relationships.mjs",
     "verify:action-intent-shadow": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/verify-action-intent-shadow.mjs",
     "verify:role-skill-catalog-loader-fresh": "node scripts/verify-role-skill-catalog-loader-fresh.mjs",
+    "verify:role-skill-catalog-publish-receipt": "node scripts/verify-role-skill-catalog-publish-receipt.mjs",
+    "verify:role-skill-catalog-publish-receipt:self-test": "node scripts/verify-role-skill-catalog-publish-receipt.mjs --self-test",
     "verify:model-execution-callsites": "node scripts/verify-model-execution-callsites.mjs",
     "verify:shadow-observability-storage": "node scripts/verify-shadow-observability-storage.mjs",
     "produce:pilot-shadow-graph-evidence": "node scripts/produce-pilot-shadow-graph-evidence.mjs",

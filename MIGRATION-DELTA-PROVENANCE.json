@@ -3000,6 +3000,32 @@
           "reason": "Require a machine-readable SELECT-only production predecessor check before migration 090 approval"
         }
       ]
+    },
+    {
+      "delta_id": "role-skill-catalog-publish-receipt-reconcile-20260727",
+      "generated_at": "2026-07-26T19:58:44.955Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "d3cbaa4b7c0d43cf66b5e9c2834efbd55fbadd88",
+      "target_base_commit": "d3cbaa4b7c0d43cf66b5e9c2834efbd55fbadd88",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "package.json",
+          "target_blob": "2c2bce2465032d6df2df88966420ed58ce409e99",
+          "reason": "Track publication receipt source integrity without claiming live database effect"
+        },
+        {
+          "path": "scripts/ci-local.mjs",
+          "target_blob": "066d2b8cc68a9d37cfe1ce278da8d44db5adf7a8",
+          "reason": "Track publication receipt source integrity without claiming live database effect"
+        },
+        {
+          "path": "docs/audits/OAR_W3_EVIDENCE_PACKET.md",
+          "target_blob": "4d493f08e231ea4aec02f9c3123fa35d6295aea5",
+          "reason": "Track publication receipt source integrity without claiming live database effect"
+        }
+      ]
     }
   ]
 }

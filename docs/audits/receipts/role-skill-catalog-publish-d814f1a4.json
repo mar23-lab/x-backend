@@ -1,0 +1,92 @@
+{
+  "schema_id": "xlooop.role_skill_catalog_publish_receipt.v1",
+  "catalog_version": "2026.07.2",
+  "catalog_sha256": "d814f1a4f8a9f408aaaa5b8683968d2700d9d368e4a72d31af2c4646e645551c",
+  "source_sha": "2a4d6271eef279bdb9e39efc48234d183b1bd933",
+  "approval_ref": "oar-w3-catalog-v1",
+  "approved_by": "operator",
+  "workspace_binding": null,
+  "entries": [
+    {
+      "key": "role.operator-lead",
+      "category": "role",
+      "version": "1.0.0",
+      "content_sha256": "9624449591982df394393f642b503b52ebb6574934cffc85f18cd6e4087ba8c9"
+    },
+    {
+      "key": "role.delivery-collaborator",
+      "category": "role",
+      "version": "1.0.0",
+      "content_sha256": "fc015376bf9d3327110fe9d1914d1a9266a24c67a3e31867d2ad87f23c757f75"
+    },
+    {
+      "key": "role.governance-reviewer",
+      "category": "role",
+      "version": "1.0.0",
+      "content_sha256": "42e486a21164b3a56ca76ecae8cb990dca47f1e43a9ced40a27d714ba85b2e22"
+    },
+    {
+      "key": "role.workspace-member",
+      "category": "role",
+      "version": "1.0.0",
+      "content_sha256": "66d4ac5ecfd31d43be9d7c2d05f8d986290d53792b420d733d0b4eca82f29cfd"
+    },
+    {
+      "key": "skill.software-delivery.governed-shipping",
+      "category": "skill",
+      "version": "1.0.0",
+      "content_sha256": "383bdbe47d34306a06e55572ec79704829c9c628595d43a1c05a31ef5322b106"
+    },
+    {
+      "key": "skill.software-delivery.evidence-capture",
+      "category": "skill",
+      "version": "1.0.0",
+      "content_sha256": "8d8a713fdd17db6a84d5a5f9543d295609c443e6b15b675871af5cec65bab01f"
+    },
+    {
+      "key": "skill.enterprise-governance.approval-stewardship",
+      "category": "skill",
+      "version": "1.0.0",
+      "content_sha256": "a1de6018e63b8ebc3c6faa972ed132bea730361b97ba8f7cef648599184eb316"
+    },
+    {
+      "key": "skill.enterprise-governance.data-operations",
+      "category": "skill",
+      "version": "1.0.0",
+      "content_sha256": "28fefdfd5cf6c15f61042ab5e646d7c55b1dc5b3b99bc14685b5fd3035abc0b8"
+    },
+    {
+      "key": "skill.founder-operator.progress-tracking",
+      "category": "skill",
+      "version": "1.0.0",
+      "content_sha256": "6effce53a8b597f4000783125615eb801151963b192ede6289b8f075128ceabe"
+    },
+    {
+      "key": "skill.workspace-assistant.grounded-assistance",
+      "category": "skill",
+      "version": "1.0.0",
+      "content_sha256": "c434c3f492ea7ef11bdc0b2aa7a1bc946afd68b232910535ebbcf9ba32d36bf2"
+    },
+    {
+      "key": "pack.starter.software-delivery",
+      "category": "pack",
+      "version": "1.0.0",
+      "content_sha256": "b6370700521696e9b09e85e9d6a60417bf9103fd1c3e6de527eade59b659acc8"
+    }
+  ],
+  "published": [
+    "role.operator-lead@1.0.0",
+    "role.delivery-collaborator@1.0.0",
+    "role.governance-reviewer@1.0.0",
+    "role.workspace-member@1.0.0",
+    "skill.software-delivery.governed-shipping@1.0.0",
+    "skill.software-delivery.evidence-capture@1.0.0",
+    "skill.enterprise-governance.approval-stewardship@1.0.0",
+    "skill.enterprise-governance.data-operations@1.0.0",
+    "skill.founder-operator.progress-tracking@1.0.0",
+    "skill.workspace-assistant.grounded-assistance@1.0.0",
+    "pack.starter.software-delivery@1.0.0"
+  ],
+  "applied_at": "2026-07-21T03:31:14.003Z",
+  "target_host": "ep-square-frost-a7rohpxg.ap-southeast-2.aws.neon.tech"
+}
