@@ -108,6 +108,7 @@ export interface SourceGroundingFact {
 }
 
 export interface ProjectGroundingFact {
+  id: string;
   name: string;
   status: string;
   updated_at?: string | null;
@@ -689,6 +690,19 @@ export function isProjectInventoryQuestion(message: string): boolean {
     || /\bprojects?\s+(?:do\s+)?(?:i|we)\s+have\b/.test(q);
 }
 
+export function projectInventoryAnswerOptions(message: string): {
+  includeIds: boolean;
+  rowsOnly: boolean;
+} {
+  const q = String(message || '').toLowerCase().replace(/\s+/g, ' ').trim();
+  const mentionsIds = /\b(?:project\s+)?(?:ids?|identifiers?)\b/.test(q);
+  const excludesIds = /\b(?:without|omit|exclude|no|do not include|don't include)\b.{0,32}\b(?:project\s+)?(?:ids?|identifiers?)\b/.test(q);
+  return {
+    includeIds: mentionsIds && !excludesIds,
+    rowsOnly: /\b(?:return|show|list)\s+only\b/.test(q) || /\bonly\s+(?:each|the)\b/.test(q),
+  };
+}
+
 export function buildDeterministicChatAnswer(
   message: string,
   grounded: CockpitChatResult['grounded_on'],
@@ -708,14 +722,16 @@ export function buildDeterministicChatAnswer(
     if (grounded.projects.total === 0) {
       return `There are no active projects recorded in ${where}.`;
     }
+    const answerOptions = projectInventoryAnswerOptions(message);
     const lines = [`Current active projects in ${where} (${grounded.projects.total}):`];
     for (const project of grounded.projects.items) {
-      lines.push(`• ${project.name}${project.status && project.status !== 'active' ? ` [${project.status}]` : ''}`);
+      const id = answerOptions.includeIds ? ` — ${project.id}` : '';
+      lines.push(`• ${project.name}${id}${project.status && project.status !== 'active' ? ` [${project.status}]` : ''}`);
     }
     if (grounded.projects.total > grounded.projects.items.length) {
       lines.push(`• ${grounded.projects.total - grounded.projects.items.length} more projects are not shown in this bounded answer.`);
     }
-    return lines.join('\n');
+    return (answerOptions.rowsOnly ? lines.slice(1) : lines).join('\n');
   }
 
   if (grounded.events_total === 0 && grounded.pinned_total === 0) {
