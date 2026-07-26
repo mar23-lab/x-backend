@@ -2948,6 +2948,37 @@
           "reason": "Require persisted approval target state and canonical decision receipt before commercial success UI"
         }
       ]
+    },
+    {
+      "delta_id": "intake-canonical-project-target-20260727",
+      "generated_at": "2026-07-26T18:57:14.859Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "2d3817cff9b55b712d35354f2e3f686432fe17a8",
+      "target_base_commit": "2d3817cff9b55b712d35354f2e3f686432fe17a8",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/lib/intake-resolution.ts",
+          "target_blob": "0ac08e55bc624b55dd172bb2a4417c29c4366b46",
+          "reason": "Require canonical active-project resolution and clarification before governed work confirmation"
+        },
+        {
+          "path": "src/workers/routes/intake.ts",
+          "target_blob": "73ed618e2decc9e2ae46b406c0a319fc0f96ef05",
+          "reason": "Require canonical active-project resolution and clarification before governed work confirmation"
+        },
+        {
+          "path": "src/workers/__tests__/intake-resolution.test.ts",
+          "target_blob": "0aaca4974f9b5bf3e0b6323e299828252aa1b4e1",
+          "reason": "Require canonical active-project resolution and clarification before governed work confirmation"
+        },
+        {
+          "path": "src/workers/__tests__/intake-route.test.ts",
+          "target_blob": "8e89a6a2e1609faf4a6170f69e1ab4daf794d9f0",
+          "reason": "Require canonical active-project resolution and clarification before governed work confirmation"
+        }
+      ]
     }
   ]
 }

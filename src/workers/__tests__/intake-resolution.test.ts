@@ -11,9 +11,16 @@ const packet = (id: string, version = 1) => ({
   expires_at: null, created_at: now.toISOString(), updated_at: now.toISOString(),
 } as const);
 
-const inventory = (packets: any[] = [], approvals: any[] = []) => ({
+const project = (id: string, name: string) => ({
+  id, workspace_id: 'tenant_a', name, status: 'active', description: null, metadata: {},
+  scope_binding: null, scope_binding_updated_at: null, scope_binding_updated_by: null,
+  parent_project_id: null, created_at: now.toISOString(), updated_at: now.toISOString(),
+});
+
+const inventory = (packets: any[] = [], approvals: any[] = [], projects: any[] = []) => ({
   packets,
   approvals,
+  projects,
   authorityFor: () => ({ allowed: true, safe_reason: 'active_entitlement' }),
   now,
 });
@@ -57,6 +64,61 @@ describe('canonical intake resolution', () => {
   it('previews one new work item and requires confirmation', () => {
     const row = buildIntakeResolution({ text: 'Create a task to verify Gmail sync', client_request_id: 'c3' }, 'c'.repeat(64), inventory());
     expect(row).toMatchObject({ operation: 'create_work', next_step: 'confirm', requires_confirmation: true, risk: 'medium' });
+  });
+
+  it('binds an explicitly named project and quoted title to canonical preview data', () => {
+    const text = 'Create a reversible todo in Honest & Young · Operations titled "Verify governed receipt 2026-07-27". Execute only after explicit approval.';
+    const row = buildIntakeResolution(
+      { text, client_request_id: 'c3-project' },
+      '3'.repeat(64),
+      inventory([], [], [project('proj_honest-young_default', 'Honest & Young · Operations')]),
+    );
+    expect(row).toMatchObject({
+      operation: 'create_work',
+      next_step: 'confirm',
+      ambiguity: false,
+      project_id: 'proj_honest-young_default',
+      target: {
+        type: 'task_packet',
+        label: 'Verify governed receipt 2026-07-27 in Honest & Young · Operations (proj_honest-young_default)',
+      },
+      effect_summary: 'Create one governed work item in Honest & Young · Operations (proj_honest-young_default): Verify governed receipt 2026-07-27',
+      action_payload: {
+        title: 'Verify governed receipt 2026-07-27',
+        project_id: 'proj_honest-young_default',
+        project_name: 'Honest & Young · Operations',
+      },
+    });
+  });
+
+  it('asks one clarification when a named project cannot be resolved', () => {
+    const row = buildIntakeResolution(
+      { text: 'Create a todo in Missing Project titled "Do not guess".', client_request_id: 'c3-missing-project' },
+      '4'.repeat(64),
+      inventory([], [], [project('proj_known', 'Known Project')]),
+    );
+    expect(row).toMatchObject({
+      operation: 'create_work',
+      next_step: 'clarify',
+      ambiguity: true,
+      requires_confirmation: false,
+      target: { type: 'none', id: null, label: 'Project clarification required' },
+      action_payload: {},
+    });
+  });
+
+  it('does not bind a project mentioned only inside the requested title', () => {
+    const row = buildIntakeResolution(
+      { text: 'Create a todo in Missing Project titled "Review Known Project".', client_request_id: 'c3-title-project' },
+      '5'.repeat(64),
+      inventory([], [], [project('proj_known', 'Known Project')]),
+    );
+    expect(row).toMatchObject({
+      next_step: 'clarify',
+      ambiguity: true,
+      target: { type: 'none', id: null },
+      action_payload: {},
+    });
   });
 
   it('never silently chooses among multiple active work items', () => {
