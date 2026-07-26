@@ -7,18 +7,16 @@
 //   3. GET lists strictly WHERE workspace_id = auth.workspace_id (the store enforces it), so a caller
 //      never sees another tenant's documents.
 // Plus: content-type allow-list, a 5 MB cap (also a DB CHECK), honest text-only ingestion (PDF bytes
-// stored, extraction deferred — no fabricated text), and a best-effort governed audit event.
+// stored, extraction deferred — no fabricated text), and fail-closed authority receipts.
 
 import { Hono } from 'hono';
 import { neonClient } from '../db/client';
 import { errorEnvelope } from '../middleware/error';
 import { withDataClass } from '../lib/response-envelope';
 import { isAdmissibility, ADMISSIBILITY_VALUES } from '../lib/admissibility';
-import { lineageFor } from '../lib/actor-lineage';
 import { idempotencyMiddleware } from '../lib/idempotency';
 import type { AuthEnv, AuthVariables } from '../middleware/auth';
-import { insertDocumentRow, listDocumentsRow, updateDocumentAdmissibilityRow, getLatestDocumentVersionRow, sha256Hex } from '../lib/document-store';
-import { upsertEventRow } from '../dal/event-store';
+import { insertDocumentWithAuthorityRow, listDocumentsRow, updateDocumentAdmissibilityWithAuthorityRow, getLatestDocumentVersionRow, sha256Hex } from '../dal/document-store';
 import { emitEvent } from '../lib/observability'; // T3/P6
 
 export interface DocumentsEnv extends AuthEnv {
@@ -109,7 +107,7 @@ documentsRoute.post('/documents', async (ctx) => {
     let priorVersion: { id: string; version: number } | null = null;
     try { priorVersion = await getLatestDocumentVersionRow(sql, auth.workspace_id, projectId, filename); }
     catch (err) { console.warn('[documents] prior-version lookup failed (best-effort; fresh v1)', { error: (err as Error)?.message }); }
-    const meta = await insertDocumentRow(sql, {
+    const write = await insertDocumentWithAuthorityRow(sql, {
       id: crypto.randomUUID(),
       workspace_id: auth.workspace_id, // FROM AUTH — never the request body
       project_id: projectId,
@@ -123,59 +121,30 @@ documentsRoute.post('/documents', async (ctx) => {
       content_hash: contentHash,
       version: priorVersion ? priorVersion.version + 1 : 1,
       supersedes_id: priorVersion ? priorVersion.id : null,
+    }, {
+      operation_event_id: crypto.randomUUID(),
+      projection_outbox_id: crypto.randomUUID(),
+      request_id: ctx.get('request_id') || null,
     });
-
-    // Governed audit event via the TYPED canonical path (upsertEventRow -> operation_events). source_tool is
-    // typed SourceTool, so an invalid value is a COMPILE error — the prior raw INSERT used an unregistered
-    // 'document-upload' that silently failed the source_tool CHECK and was swallowed. Best-effort + OBSERVABLE:
-    // a failed mirror never blocks the upload, but it is LOGGED (not silently swallowed) — audit loss must be visible.
-    let auditEvent: {
-      status: 'recorded' | 'failed';
-      source_tool: 'document_upload';
-      id: string | null;
-      created: boolean | null;
-      error?: string;
-    } = {
-      status: 'failed',
-      source_tool: 'document_upload',
-      id: null,
-      created: null,
-    };
-    try {
-      const eventResult = await upsertEventRow(sql, auth.workspace_id, {
-        id: crypto.randomUUID(),
-        source_tool: 'document_upload',
-        status: 'completed',
-        summary: `Document added: ${meta.filename}`,
-        project_id: projectId,
-        visibility: 'internal_workspace',
-        occurred_at: new Date().toISOString(),
-        // A-W4/P6 · principal-instrument lineage: the uploader is both principal and instrument (a
-        // human acting directly under their role authority).
-        ...lineageFor(auth),
-        request_id: ctx.get('request_id'),
-      });
-      auditEvent = {
+    emitEvent('document_uploaded', {
+      workspace_id: auth.workspace_id,
+      document_id: write.document.id,
+      operation_event_id: write.operation_event_id,
+      audited: true,
+    }); // T3/P6
+    return ctx.json({
+      document: write.document,
+      receipt_id: write.receipt_id,
+      operation_event_id: write.operation_event_id,
+      audit_event_id: write.audit_event_id,
+      projection_outbox_id: write.projection_outbox_id,
+      audit_event: {
         status: 'recorded',
         source_tool: 'document_upload',
-        id: eventResult.id,
-        created: eventResult.created,
-      };
-    } catch (err) {
-      auditEvent = {
-        status: 'failed',
-        source_tool: 'document_upload',
-        id: null,
-        created: null,
-        error: (err as Error)?.message || 'audit event failed',
-      };
-      console.warn('[documents] governed audit event failed (best-effort; upload still succeeded)', {
-        workspace_id: auth.workspace_id, source_tool: 'document_upload', error: (err as Error)?.message,
-      });
-    }
-
-    emitEvent('document_uploaded', { workspace_id: auth.workspace_id, document_id: (meta as { id?: string })?.id ?? null, audited: Boolean(auditEvent) }); // T3/P6
-    return ctx.json({ document: meta, audit_event: auditEvent }, 201);
+        id: write.operation_event_id,
+        created: true,
+      },
+    }, 201);
   } catch (err) {
     return errorEnvelope(ctx, { status: 500, code: 'INTERNAL_ERROR', message: (err as Error).message });
   }
@@ -213,10 +182,23 @@ documentsRoute.patch('/documents/:id/admissibility', async (ctx) => {
     if (!body || !isAdmissibility(body.admissibility)) {
       return errorEnvelope(ctx, { status: 400, code: 'VALIDATION_ERROR', message: `admissibility must be one of: ${ADMISSIBILITY_VALUES.join(', ')}` });
     }
-    const sql = neonClient(ctx.env.XLOOOP_RLS_APP_DATABASE_URL || ctx.env.DATABASE_URL);
-    let doc;
+    // Writes use the owner connection: xlooop_app intentionally has document SELECT only.
+    // Tenant authority remains the authenticated workspace predicate inside the atomic CTE.
+    const sql = neonClient(ctx.env.DATABASE_URL);
+    let write;
     try {
-      doc = await updateDocumentAdmissibilityRow(sql, auth.workspace_id, id, body.admissibility);
+      write = await updateDocumentAdmissibilityWithAuthorityRow(
+        sql,
+        auth.workspace_id,
+        id,
+        body.admissibility,
+        {
+          actor_user_id: auth.user_id,
+          operation_event_id: crypto.randomUUID(),
+          projection_outbox_id: crypto.randomUUID(),
+          request_id: ctx.get('request_id') || null,
+        },
+      );
     } catch (err) {
       // 049 not applied yet → the column is absent. Surface a clear, non-5xx signal instead of a raw 500.
       if (/admissibility.*does not exist/i.test(String((err as Error)?.message || ''))) {
@@ -224,22 +206,14 @@ documentsRoute.patch('/documents/:id/admissibility', async (ctx) => {
       }
       throw err;
     }
-    if (!doc) return errorEnvelope(ctx, { status: 404, code: 'NOT_FOUND', message: `document ${id} not found` });
-    // Best-effort governed audit event on the customer-visible spine (admissibility is a governance act).
-    try {
-      await upsertEventRow(sql, auth.workspace_id, {
-        id: crypto.randomUUID(),
-        source_tool: 'document_upload',
-        status: 'completed',
-        summary: `Document admissibility set to ${body.admissibility}: ${doc.filename}`.slice(0, 512),
-        project_id: doc.project_id,
-        visibility: 'internal_workspace',
-        occurred_at: new Date().toISOString(),
-      });
-    } catch (err) {
-      console.warn('[documents] admissibility audit event failed (best-effort)', { workspace_id: auth.workspace_id, error: (err as Error)?.message });
-    }
-    return ctx.json(withDataClass({ document: doc }, 'live'));
+    if (!write) return errorEnvelope(ctx, { status: 404, code: 'NOT_FOUND', message: `document ${id} not found` });
+    return ctx.json(withDataClass({
+      document: write.document,
+      receipt_id: write.receipt_id,
+      operation_event_id: write.operation_event_id,
+      audit_event_id: write.audit_event_id,
+      projection_outbox_id: write.projection_outbox_id,
+    }, 'live'));
   } catch (err) {
     return errorEnvelope(ctx, { status: 500, code: 'INTERNAL_ERROR', message: (err as Error).message });
   }

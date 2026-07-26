@@ -46,7 +46,7 @@ import { envFlagTrue } from '../lib/env-flag';
 import { idempotencyMiddleware } from '../lib/idempotency'; // J-W1/IDEM-4
 import { persistAssistantContextLineage, completeAssistantSkillLineage, type AssistantContextLineage } from '../lib/assistant-context-lineage';
 import { createModelExecutionObserver } from '../lib/model-execution-lineage';
-import { listDocumentsRow } from '../lib/document-store';
+import { listDocumentsRow } from '../dal/document-store';
 import { lineageFor } from '../lib/actor-lineage';
 import type { EventListOpts, HarnessFlowEvent } from '../dal/types/event';
 // Plane B fallback (defense in depth): the build-time operations-live-stream bundle — the SAME source

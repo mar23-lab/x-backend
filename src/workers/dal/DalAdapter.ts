@@ -964,6 +964,7 @@ export interface DalAdapter {
     id: string,
     result: { success: true } | { success: false; error: string },
     workspaceId?: WorkspaceId | null,
+    authority?: import('./source-store').SourceSyncAuthorityInput,
   ): Promise<import('./source-store').SourceSyncWriteReceipt>;
 
   // G1 plan_entities (writes 1–8) + G2 source read_policy (write 25) · composed sub-facade,

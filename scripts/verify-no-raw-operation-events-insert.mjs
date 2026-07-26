@@ -32,6 +32,11 @@ const ALLOWLIST = new Set([
   // The source_tool is the compile-checked TOOL_ACTION_SOURCE: SourceTool constant, preserving exactly the
   // typed-seam property this gate exists for.
   'src/workers/dal/operational-spine-store.ts',
+  // Document/source authority writes are transaction-composable DAL CTEs: domain state, typed operation
+  // event, audit row, and projection outbox either commit together or produce no receipt.
+  'src/workers/dal/document-store.ts',
+  'src/workers/dal/source-store.ts',
+  'src/workers/dal/governance-store.ts',
 ]);
 
 function tsFiles(dir) {

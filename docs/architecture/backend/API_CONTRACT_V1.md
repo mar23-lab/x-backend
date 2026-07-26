@@ -823,6 +823,84 @@ the contract at the ROUTE level; per-endpoint field specs follow the same envelo
 spine (error envelope, `request_id`, tenant scoping via `auth.workspace_id`). Detailed field specs are
 follow-up work where a surface becomes externally consumed.
 
+### Customer write authority receipts
+
+`POST /documents`, `PATCH /documents/:id/admissibility`, and
+`POST /sources/:id/sync` are server-first governed writes. A success response
+is issued only after the domain row/state,
+`operation_events` authority event, `audit_logs` row, and
+`projection_outbox` row all exist. The final SQL authority result joins every
+mandatory CTE; zero authority rows cannot yield a receipt.
+
+`POST /documents` returns:
+
+```json
+{
+  "document": {
+    "id": "doc_...",
+    "workspace_id": "org_...",
+    "content_hash": "64-char-sha256",
+    "version": 1
+  },
+  "receipt_id": "document-upload:doc_...:123",
+  "operation_event_id": "evt_...",
+  "audit_event_id": "123",
+  "projection_outbox_id": "outbox_...",
+  "audit_event": {
+    "status": "recorded",
+    "source_tool": "document_upload",
+    "id": "evt_...",
+    "created": true
+  }
+}
+```
+
+`PATCH /documents/:id/admissibility` returns the updated `document` plus
+`receipt_id`, `operation_event_id`, `audit_event_id`, and
+`projection_outbox_id`. Its receipt prefix is
+`document-admissibility:<document-id>:`. A missing tenant-scoped document
+returns `404`; an event, audit, or outbox failure rolls back the update.
+
+`POST /sources/:id/sync` requires an explicit workspace target. A legacy
+user-only source without an active workspace returns
+`409 SOURCE_WORKSPACE_BINDING_REQUIRED`.
+`GET /sources` and source actions expose only rows bound to the active
+workspace; a provider already bound elsewhere returns
+`409 SOURCE_BOUND_TO_OTHER_WORKSPACE` on connect instead of being silently
+moved between tenants.
+
+Successful sync returns:
+
+```json
+{
+  "source": {
+    "id": "src_...",
+    "workspace_id": "org_...",
+    "provider": "gmail",
+    "scopes": ["https://www.googleapis.com/auth/gmail.readonly"]
+  },
+  "sync": {
+    "events_emitted": 1,
+    "events_rejected": 0,
+    "errors": [],
+    "emitted_events": [{
+      "source_event_id": "gmail:<sha256>",
+      "operation_event_id": "usc_evt_gmail_msg_...",
+      "source_ref_hash": "64-char-sha256"
+    }]
+  },
+  "source_sync_receipt_id": "source-sync:src_...:success:124",
+  "operation_event_id": "evt_sync_...",
+  "audit_event_id": "124",
+  "projection_outbox_id": "outbox_..."
+}
+```
+
+Gmail response evidence exposes only a hash of the provider message reference;
+it never adds a raw message body or raw message identifier to the receipt
+payload. A translator result with errors and zero emitted events is a failed
+sync, not a false-green success.
+
 | Route file | Surfaces | Auth class | Purpose |
 |---|---|---|---|
 | `customer-chat.ts` | POST /customer-chat | tenant JWT | tenant-scoped AI chief-of-staff (Claude→Llama→deterministic ladder) |
