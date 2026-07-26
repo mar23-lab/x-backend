@@ -186,8 +186,23 @@ async function jsonBody(ctx: any): Promise<Record<string, unknown> | null> {
 operationalSpineRoute.get('/packets', async (ctx) => {
   try {
     const { workspace_id } = ctx.get('auth');
-    const packets = await ctx.get('dal').listTaskPackets(workspace_id, listOpts(ctx));
-    return ctx.json({ packets });
+    const opts = listOpts(ctx);
+    const [packets, receipts] = await Promise.all([
+      ctx.get('dal').listTaskPackets(workspace_id, opts),
+      ctx.get('dal').listGovernedExecutionReceipts(workspace_id, opts.limit),
+    ]);
+    const packetIds = new Set(packets.map((packet) => packet.id));
+    const execution_receipts = receipts
+      .filter((receipt) => receipt.target_type === 'task_packet' && receipt.target_id && packetIds.has(receipt.target_id))
+      .map((receipt) => ({
+        id: receipt.id,
+        operation: receipt.operation,
+        target_type: receipt.target_type,
+        target_id: receipt.target_id,
+        result: receipt.result,
+        created_at: receipt.created_at,
+      }));
+    return ctx.json({ packets, execution_receipts });
   } catch (err) {
     return errorEnvelope(ctx, err);
   }

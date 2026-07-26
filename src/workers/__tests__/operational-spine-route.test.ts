@@ -44,6 +44,23 @@ function appFor(auth: Record<string, unknown>, calls: Call[], opts?: {
         forbidden_tools: opts?.fencePacket?.forbidden_tools ?? [],
       }];
     },
+    listGovernedExecutionReceipts: async (ws: string) => {
+      calls.push({ method: 'listGovernedExecutionReceipts', ws });
+      return [{
+        id: 'ger_1',
+        workspace_id: ws,
+        resolution_id: 'inr_1',
+        actor_user_id: 'user_op',
+        client_request_id: 'exec_1',
+        operation: 'create_work',
+        target_type: 'task_packet',
+        target_id: 'pkt_1',
+        result: 'completed',
+        effect_summary: 'Internal effect detail',
+        closing_attestation_id: 'cla_1',
+        created_at: '2026-07-15T00:00:00Z',
+      }];
+    },
     createTaskPacket: async (ws: string, actor: string, input: Record<string, unknown>) => {
       calls.push({ method: 'createTaskPacket', ws, actor, input });
       return { id: 'pkt_new', workspace_id: ws, actor_user_id: actor, ...input };
@@ -137,7 +154,22 @@ describe('operational spine routes', () => {
   it('GET /packets is workspace-scoped', async () => {
     const { res, calls } = await request('GET', '/packets', OPERATOR);
     expect(res.status).toBe(200);
-    expect(calls).toEqual([{ method: 'listTaskPackets', ws: 'tenant_a' }]);
+    expect(calls).toEqual(expect.arrayContaining([
+      { method: 'listTaskPackets', ws: 'tenant_a' },
+      { method: 'listGovernedExecutionReceipts', ws: 'tenant_a' },
+    ]));
+    const body = await res.json();
+    expect(body.execution_receipts).toEqual([{
+      id: 'ger_1',
+      operation: 'create_work',
+      target_type: 'task_packet',
+      target_id: 'pkt_1',
+      result: 'completed',
+      created_at: '2026-07-15T00:00:00Z',
+    }]);
+    expect(JSON.stringify(body)).not.toContain('Internal effect detail');
+    expect(JSON.stringify(body)).not.toContain('exec_1');
+    expect(JSON.stringify(body)).not.toContain('user_op');
   });
 
   it('completion evaluation is default-off and does not touch the DAL', async () => {

@@ -24,6 +24,7 @@ import {
   countGovernedExecutionReceiptsRow,
   createIntakeResolutionRow,
   executeIntakeResolutionRow,
+  listGovernedExecutionReceiptsRow,
 } from './intake-store';
 import { createCurrentWorkParityObservationRow } from './current-work-parity-store';
 import type { Sql } from '../db/client';
@@ -46,6 +47,7 @@ export type OperationalSpineDalMethods = Pick<
   | 'createIntakeResolution'
   | 'executeIntakeResolution'
   | 'countGovernedExecutionReceipts'
+  | 'listGovernedExecutionReceipts'
   | 'createCurrentWorkParityObservation'
 >;
 
@@ -74,6 +76,9 @@ export function applyOperationalSpineMethods(adapter: AdapterCtor): void {
     },
     countGovernedExecutionReceipts(workspaceId) {
       return countGovernedExecutionReceiptsRow(sqlOf(this), workspaceId);
+    },
+    listGovernedExecutionReceipts(workspaceId, limit) {
+      return listGovernedExecutionReceiptsRow(sqlOf(this), workspaceId, limit);
     },
     createCurrentWorkParityObservation(workspaceId, actorUserId, input) {
       return createCurrentWorkParityObservationRow(sqlOf(this), workspaceId, actorUserId, input);
