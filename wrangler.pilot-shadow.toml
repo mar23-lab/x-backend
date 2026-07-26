@@ -25,7 +25,7 @@ binding = "AI"
 [vars]
 ENVIRONMENT = "pilot-shadow"
 XLOOOP_AUTHORITY_MODE = "shadow"
-XLOOOP_SCHEMA_HEAD = "89"
+XLOOOP_SCHEMA_HEAD = "90"
 ALLOWED_ORIGIN_PATTERN = "https://test.xlooop.com,https://*.xlooop-test.pages.dev"
 LOG_LEVEL = "info"
 

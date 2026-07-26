@@ -24,6 +24,10 @@ try {
   const pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
   const wrangler = readFileSync(join(root, 'wrangler.toml'), 'utf8');
   const pilotShadow = readFileSync(join(root, 'wrangler.pilot-shadow.toml'), 'utf8');
+  const predeployMigrationGate = readFileSync(
+    join(root, 'scripts', 'predeploy-migration-gate.mjs'),
+    'utf8',
+  );
   const deploy = pkg.scripts?.['deploy:api'];
   const dev = pkg.scripts?.['dev:api'];
   const bundle = pkg.scripts?.['verify:bundle'];
@@ -41,6 +45,13 @@ try {
   }
   if (!/verify-deploy-schema-head\.mjs/.test(deploy)) {
     missing.push('verify-deploy-schema-head.mjs preflight');
+  }
+  if (!/verify-operation-event-source-tool-constraint\.mjs\s+--live/.test(deploy)) {
+    missing.push('deploy:api live operation-event source-tool semantic proof');
+  }
+  if (!/verify-operation-event-source-tool-constraint\.mjs/.test(predeployMigrationGate)
+      || !/--live/.test(predeployMigrationGate)) {
+    missing.push('raw wrangler predeploy live operation-event source-tool semantic proof');
   }
   if (!/npm\s+run\s+verify:authority-decision:deploy/.test(deploy)) {
     missing.push('verify:authority-decision:deploy preflight');
@@ -85,7 +96,7 @@ try {
     process.exit(1);
   }
 
-  console.log('☑ deploy-provenance-wiring · PASS · exact approval, provenance, schema, strict chat persistence, and idempotency retry protection are configured');
+  console.log('☑ deploy-provenance-wiring · PASS · exact approval, provenance, schema/object semantics, strict chat persistence, and idempotency retry protection are configured');
   process.exit(0);
 } catch (err) {
   console.error(`✗ deploy-provenance-wiring · FAIL-CLOSED — could not verify deploy:api wiring: ${err.message}`);

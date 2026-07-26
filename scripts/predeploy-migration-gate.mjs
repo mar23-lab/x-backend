@@ -158,6 +158,19 @@ if (unexpected.length === 0) {
          pendingHit.map((v) => String(v).padStart(3, '0')).join(', ') +
          ' — accepted per scripts/prod-migration-accepted-pending.json)');
   }
+  const semantic = spawnSync(
+    'node',
+    [resolve(REPO, 'scripts', 'verify-operation-event-source-tool-constraint.mjs'), '--live'],
+    { cwd: REPO, encoding: 'utf8', env: process.env },
+  );
+  if (semantic.status !== 0) {
+    banner('ABORT — live constraint semantics drifted');
+    line((semantic.stderr || semantic.stdout || '  operation_events source_tool proof failed').trimEnd());
+    line('  A migration ledger row is not proof that an ALTER/CHECK object still has current semantics.');
+    line('');
+    process.exit(1);
+  }
+  line((semantic.stdout || '').trimEnd());
   const schema = spawnSync('node', [resolve(REPO, 'scripts', 'verify-deploy-schema-head.mjs')], {
     cwd: REPO, encoding: 'utf8', env: process.env,
   });
@@ -168,7 +181,7 @@ if (unexpected.length === 0) {
     process.exit(1);
   }
   line((schema.stdout || '').trimEnd());
-  line('  ✓ migration objects and configured/database/local schema heads agree — deploy may proceed.');
+  line('  ✓ migration objects, critical constraint semantics, and configured/database/local schema heads agree — deploy may proceed.');
   line('');
   process.exit(0);
 }
