@@ -2979,6 +2979,27 @@
           "reason": "Require canonical active-project resolution and clarification before governed work confirmation"
         }
       ]
+    },
+    {
+      "delta_id": "migration-090-select-preflight-20260727",
+      "generated_at": "2026-07-26T19:22:29.946Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "a64ed36ca3afb83b8d60b9dfa92caf97124a457e",
+      "target_base_commit": "a64ed36ca3afb83b8d60b9dfa92caf97124a457e",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "package.json",
+          "target_blob": "9e9903c0c086d4779e877ee893404eff74d72013",
+          "reason": "Require a machine-readable SELECT-only production predecessor check before migration 090 approval"
+        },
+        {
+          "path": "scripts/ci-local.mjs",
+          "target_blob": "1ed4e024c7ed1e76e4279113519744a2947a0e8e",
+          "reason": "Require a machine-readable SELECT-only production predecessor check before migration 090 approval"
+        }
+      ]
     }
   ]
 }
