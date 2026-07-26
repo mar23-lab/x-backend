@@ -344,14 +344,26 @@ operationalSpineRoute.patch('/approvals/:id', async (ctx) => {
     if (!APPROVAL_DECISIONS.has(body.status as ApprovalDecisionInput['status'])) {
       return jsonError(ctx, 400, 'VALIDATION_ERROR', 'status must be approved, rejected, or cancelled');
     }
-    const approval = await ctx.get('dal').decideApprovalRequest(
+    const decision = await ctx.get('dal').decideApprovalRequest(
       workspace_id,
       ctx.req.param('id'),
       user_id,
       body as never,
     );
-    if (!approval) return jsonError(ctx, 404, 'NOT_FOUND', 'approval request not found or already decided');
-    return ctx.json({ approval });
+    if (!decision) return jsonError(ctx, 404, 'NOT_FOUND', 'approval request not found or already decided');
+    return ctx.json({
+      approval: decision.approval,
+      approval_decision_receipt_id: decision.approval_decision_receipt_id,
+      receipt: {
+        schema_id: 'xlooop.approval_decision_receipt.v1',
+        id: decision.approval_decision_receipt_id,
+        approval_id: decision.approval.id,
+        workspace_id: decision.approval.workspace_id,
+        actor_user_id: decision.approval.decided_by,
+        status: decision.approval.status,
+        recorded_at: decision.approval.decided_at,
+      },
+    });
   } catch (err) {
     return errorEnvelope(ctx, err);
   }
