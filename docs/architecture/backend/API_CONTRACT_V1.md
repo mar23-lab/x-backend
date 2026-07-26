@@ -337,13 +337,18 @@ typing fields (Q-A, 260720).
 ```
 
 **Validation:**
-- `event_id`: required, must exist in the workspace
+- `event_id`: required, must exist in the workspace and still have `approval_state=pending`
 - `verdict`: required, one of `approved|rejected|noted`
 - `comment`: optional, string, max 2000 chars
 
-**Transaction:** In a single DB transaction:
-1. Insert into `sign_offs`
-2. Update `operation_events.approval_state = verdict` WHERE `id = event_id`
+**Authority transaction:** One SQL statement atomically:
+1. Claims the pending target with `UPDATE ... WHERE approval_state='pending'`
+2. Inserts the sign-off from that claimed row
+3. Inserts the operation-event receipt
+4. Inserts the audit log
+
+If the target is missing, already decided, or otherwise no longer pending, the authority statement
+returns zero rows and the API returns `409 CONFLICT`; no sign-off or receipt is issued.
 
 **Response 201:**
 ```json

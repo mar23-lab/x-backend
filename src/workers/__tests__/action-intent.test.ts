@@ -30,5 +30,9 @@ describe('action-intent shadow classifier', () => {
     expect(classifyActionIntent('Create a task and do not duplicate existing work.')).toMatchObject({ action_intent: 'create_work' });
     expect(classifyActionIntent('Create a read-only report showing current status.')).toMatchObject({ action_intent: 'create_work' });
     expect(classifyActionIntent('Do not wait; create a task now.')).toMatchObject({ action_intent: 'create_work' });
+    expect(classifyActionIntent('Create one reversible test task. Do not approve it or complete it.')).toMatchObject({ action_intent: 'create_work', matched_rule: 'create' });
+    expect(classifyActionIntent('Create a task and do not finish the remaining work.')).toMatchObject({ action_intent: 'create_work', matched_rule: 'create' });
+    expect(classifyActionIntent('Do not wait; approve the pending item.')).toMatchObject({ action_intent: 'decide', matched_rule: 'decide' });
+    expect(classifyActionIntent('Do not stop; continue the current work.')).toMatchObject({ action_intent: 'continue_work', matched_rule: 'continue' });
   });
 });
