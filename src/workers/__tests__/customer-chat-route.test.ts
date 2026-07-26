@@ -110,8 +110,49 @@ describe('POST /api/v1/customer-chat', () => {
     expect(projectsQueriedFor).toBe('org_hy');
     expect(body.answer).toContain('Commercial proof');
     expect(body.answer).toContain('Customer onboarding');
+    expect(body.answer).not.toContain('project_1');
+    expect(body.answer).not.toContain('project_2');
     expect(body.answer).not.toContain('Here is what is happening');
     expect(body.generated_by).toBe('deterministic');
+  });
+
+  it('returns canonical project IDs when explicitly requested and honors rows-only output', async () => {
+    const dal = dalStub({
+      listProjects: async (workspaceId: string) => [
+        { id: 'project_1', workspace_id: workspaceId, name: 'Commercial proof', status: 'active', updated_at: '2026-07-25T01:00:00Z' },
+        { id: 'project_2', workspace_id: workspaceId, name: 'Customer onboarding', status: 'active', updated_at: '2026-07-24T01:00:00Z' },
+      ],
+    });
+    const res = await ask(appFor(AUTH, dal), {
+      message: 'List every project in this workspace. Return only each project name and project ID. Do not create or change anything.',
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json() as {
+      answer: string;
+      generated_by: string;
+      grounded_on: { projects: { items: Array<{ id: string; name: string }> } };
+    };
+    expect(body.answer).toBe('• Commercial proof — project_1\n• Customer onboarding — project_2');
+    expect(body.generated_by).toBe('deterministic');
+    expect(body.grounded_on.projects.items).toEqual([
+      expect.objectContaining({ id: 'project_1', name: 'Commercial proof' }),
+      expect.objectContaining({ id: 'project_2', name: 'Customer onboarding' }),
+    ]);
+  });
+
+  it('fails closed rather than returning a partial inventory when a canonical project ID is missing', async () => {
+    const dal = dalStub({
+      listProjects: async (workspaceId: string) => [
+        { id: '   ', workspace_id: workspaceId, name: 'Commercial proof', status: 'active', updated_at: '2026-07-25T01:00:00Z' },
+      ],
+    });
+    const res = await ask(appFor(AUTH, dal), {
+      message: 'List each project name and ID.',
+    });
+    expect(res.status).toBe(503);
+    const body = await res.json() as Record<string, unknown>;
+    expect(body.code).toBe('SERVICE_UNAVAILABLE');
+    expect(body).not.toHaveProperty('answer');
   });
 
   it('fails closed when an explicit project-name request cannot load the current inventory', async () => {

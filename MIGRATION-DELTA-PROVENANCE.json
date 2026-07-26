@@ -2539,6 +2539,32 @@
           "reason": "bind the Pages release to exact frontend/backend commits, artifact-owned observability identity, and an approval-gated assembly path"
         }
       ]
+    },
+    {
+      "delta_id": "project_inventory_canonical_ids_20260726",
+      "generated_at": "2026-07-26T02:43:29.062Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "04b28196329a5854e49642695ac4d4710e584b1b",
+      "target_base_commit": "04b28196329a5854e49642695ac4d4710e584b1b",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/services/cockpit-chat.ts",
+          "target_blob": "19327469463d9c394ccc7931370875d335262190",
+          "reason": "preserve tenant-bound canonical project IDs and honor explicit ID output contracts"
+        },
+        {
+          "path": "src/workers/routes/customer-chat.ts",
+          "target_blob": "841576a81bb0b4f4b342d63074b6d2d4e797b372",
+          "reason": "preserve tenant-bound canonical project IDs and honor explicit ID output contracts"
+        },
+        {
+          "path": "src/workers/__tests__/customer-chat-route.test.ts",
+          "target_blob": "2763f87d5173d11bca1d169e2c4782be6fbd333d",
+          "reason": "preserve tenant-bound canonical project IDs and honor explicit ID output contracts"
+        }
+      ]
     }
   ]
 }

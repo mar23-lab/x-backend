@@ -240,11 +240,17 @@ customerChatRoute.post('/customer-chat', async (ctx) => {
     if (isProjectInventoryQuestion(message)) {
       try {
         const rows = await dal.listProjects(workspaceId, { status: 'active' });
-        projects = rows.map((project) => ({
-          name: project.name,
-          status: project.status,
-          updated_at: project.updated_at,
-        }));
+        projects = rows.map((project) => {
+          const id = String(project.id ?? '').trim();
+          const name = String(project.name ?? '').trim();
+          if (!id || !name) throw new Error('invalid project inventory row');
+          return {
+            id,
+            name,
+            status: project.status,
+            updated_at: project.updated_at,
+          };
+        });
       } catch {
         emitEvent('chat_project_inventory_failed', {
           workspace_id: workspaceId,
