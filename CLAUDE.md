@@ -12,8 +12,10 @@ posture.
 
 - Production deploys, data changes, migrations, secrets, flags, and authority transitions require
   explicit current operator approval for the exact operation and target.
-- Production approval is an external exact-SHA `approved_to_deploy` packet consumed by
-  `npm run deploy:api`; post-deploy health is recorded separately as `ratified`. Neither state is a
+- Production approval is an external exact-SHA `approved_to_deploy` packet with a short-lived
+  authorization UUID. `npm run deploy:api` reserves that UUID in the repository Git common
+  directory before Cloudflare is called, so every worktree rejects replay and a failed attempt needs
+  new approval. Post-deploy health is recorded separately as `ratified`. Neither state is a
   commercial-readiness claim.
 - Never bypass `npm run deploy:api` with raw Wrangler or report merged code as deployed.
 - Do not add frontend implementation or import from `x-ai-front` or legacy frontend roots.

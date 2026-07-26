@@ -2860,6 +2860,27 @@
           "reason": "Expose tenant-scoped, customer-safe packet execution receipts for durable frontend reload hydration"
         }
       ]
+    },
+    {
+      "delta_id": "deploy-authorization-replay-protection-20260727",
+      "generated_at": "2026-07-26T15:19:49.904Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "b10f2be35c17a168f16b600f49fbc6fbfef1ed7c",
+      "target_base_commit": "b10f2be35c17a168f16b600f49fbc6fbfef1ed7c",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "package.json",
+          "target_blob": "c4b78b505872929cbb2ddf608cc5c425074af2c1",
+          "reason": "Require short-lived single-use deployment authorization shared across worktrees before Cloudflare side effects"
+        },
+        {
+          "path": "scripts/ci-local.mjs",
+          "target_blob": "44a3cded1cc63eaa5464305f35fed16ec248735d",
+          "reason": "Require short-lived single-use deployment authorization shared across worktrees before Cloudflare side effects"
+        }
+      ]
     }
   ]
 }

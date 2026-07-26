@@ -60,5 +60,9 @@ This is one deployed frontend with a cross-repository release boundary, not a se
 - The manifest timestamp comes from the backend commit, so identical source inputs remain reproducible.
 - Pages Sentry release identity comes from the frontend artifact SHA. A mutable
   `SENTRY_RELEASE` secret is only a compatibility fallback for legacy artifacts.
-- No deploy runs without an exact, unconsumed operator approval packet.
+- No deploy runs without an exact, unexpired, unconsumed operator approval packet whose validity
+  window is no longer than 30 minutes.
+- Deployment authorization receipts live under the repository's Git common directory, so every
+  worktree sees the same consumed token. The token is reserved before Cloudflare is called; a failed
+  or interrupted deployment attempt requires a new operator authorization.
 - The assembled `_worker.js` is uploaded without rebundling, preserving its manifest hash.

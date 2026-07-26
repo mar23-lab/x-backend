@@ -2,14 +2,15 @@
 
 import { execFileSync, spawnSync } from 'node:child_process';
 import {
-  existsSync,
-  mkdirSync,
   readFileSync,
-  writeFileSync,
 } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { assessPagesDecisionPacket } from './lib/app-pages-release-contract.mjs';
+import {
+  consumeDeploymentAuthorization,
+  isDeploymentAuthorizationConsumed,
+} from './lib/deployment-authorization-store.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const releaseDir = path.resolve(process.env.XLOOOP_APP_PAGES_RELEASE_DIR || path.join(root, 'dist-app-pages-release'));
@@ -36,8 +37,6 @@ const backendDirty = execFileSync('git', ['status', '--porcelain=v1'], {
   encoding: 'utf8',
 }).trim();
 if (backendDirty) fail('production deploy requires a clean backend worktree');
-const authorizationDir = path.join(root, '.app-pages-deployment-authorizations');
-const authorizationReceipt = path.join(authorizationDir, `${packet?.decision?.authorization_id || 'invalid'}.json`);
 const decision = assessPagesDecisionPacket(packet, {
   frontend_sha: manifest.frontend_sha,
   backend_sha: backendSha,
@@ -47,7 +46,29 @@ const decision = assessPagesDecisionPacket(packet, {
   now: new Date().toISOString(),
 });
 if (!decision.ok) fail(decision.problems.join(','));
-if (existsSync(authorizationReceipt)) fail('deployment authorization has already been consumed');
+if (isDeploymentAuthorizationConsumed(root, 'pages', packet.decision.authorization_id)) {
+  fail('deployment authorization has already been consumed');
+}
+
+try {
+  consumeDeploymentAuthorization(root, 'pages', packet.decision.authorization_id, {
+    schema_id: 'xlooop.app_pages_deployment_authorization_receipt.v1',
+    authorization_id: packet.decision.authorization_id,
+    approval_reference: packet.decision.approval_reference,
+    frontend_sha: manifest.frontend_sha,
+    backend_sha: manifest.backend_sha,
+    project_name: packet.target.project_name,
+    state: 'reserved_before_deploy',
+    reserved_at: new Date().toISOString(),
+    consequence: 'a failed or interrupted deploy attempt requires a new operator authorization',
+  });
+} catch (error) {
+  fail(
+    error?.code === 'EEXIST'
+      ? 'deployment authorization has already been consumed'
+      : error instanceof Error ? error.message : String(error),
+  );
+}
 
 const wrangler = path.join(root, 'node_modules', '.bin', 'wrangler');
 const deploy = spawnSync(
@@ -70,15 +91,6 @@ const deploy = spawnSync(
   { cwd: root, stdio: 'inherit' },
 );
 if (deploy.status !== 0) fail(`wrangler pages deploy exited ${String(deploy.status)}`);
-mkdirSync(authorizationDir, { recursive: true });
-writeFileSync(authorizationReceipt, `${JSON.stringify({
-  schema_id: 'xlooop.app_pages_deployment_authorization_receipt.v1',
-  authorization_id: packet.decision.authorization_id,
-  approval_reference: packet.decision.approval_reference,
-  frontend_sha: manifest.frontend_sha,
-  backend_sha: manifest.backend_sha,
-  consumed_at: new Date().toISOString(),
-}, null, 2)}\n`);
 console.log(
   `deploy-app-prod · DEPLOYED · frontend=${manifest.frontend_sha} backend=${manifest.backend_sha}`
   + ' · post-deploy ratification and live probes are still required',

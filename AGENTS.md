@@ -20,10 +20,12 @@ donor-only and must not receive new backend authority.
    data, alter secrets, flip feature flags, or transfer authority without explicit current approval
    naming the operation and target. A deployment must use the committed candidate, the repository
    preflight, an external exact-SHA `approved_to_deploy` authority packet, a numeric `schema_head`,
-   an exact 40-character build SHA, and a verified rollback target. After deployment, consume that
-   authorization in a separate `ratified` packet with exact health equality. Deployment ratification
-   does not grant commercial-release or public-readiness authority. Never bypass `npm run deploy:api`
-   with a raw `wrangler deploy`.
+   an exact 40-character build SHA, and a verified rollback target. The packet must carry a
+   short-lived authorization UUID. `npm run deploy:api` reserves it in the repository Git common
+   directory before Cloudflare is called, so every worktree rejects replay; a failed or interrupted
+   attempt requires a new approval. After deployment, record a separate `ratified` packet with exact
+   health equality. Deployment ratification does not grant commercial-release or public-readiness
+   authority. Never bypass `npm run deploy:api` with a raw `wrangler deploy`.
 2. **RLS GRANT-PARITY INVARIANT — the most dangerous silent defect a DB-writing agent can introduce.**
    Any table `GRANT`ed to the `xlooop_app` role MUST also have `ENABLE ROW LEVEL SECURITY` **and** at
    least one row-level policy. A single missing `ENABLE ROW LEVEL SECURITY` on a granted table = silent
@@ -52,9 +54,10 @@ donor-only and must not receive new backend authority.
 - Run `npm run ci-local` before every commit; run `npm run verify:bundle` for bundle-affecting
   changes. No GitHub Actions are required while the operator keeps cloud CI disabled.
 - Before an approved production deployment, additionally run the migration, RLS grant-parity,
-  schema-head, current-SHA, `approved_to_deploy` authority, and rollback checks required by the
-  deployment runbook. After deployment, consume the single-use authorization and ratify the complete
-  health handshake against the committed candidate.
+  schema-head, current-SHA, unexpired and unconsumed `approved_to_deploy` authority, and rollback
+  checks required by the deployment runbook. The deploy command consumes the authorization before
+  the external side effect. After deployment, ratify the complete health handshake against the
+  committed candidate.
 
 ---
 _`CLAUDE.md` holds the same rule set in brief. This AGENTS.md is the agent-neutral SSOT; when the two

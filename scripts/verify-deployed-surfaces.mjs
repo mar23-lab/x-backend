@@ -36,6 +36,14 @@ if (pkg.scripts?.['deploy:app:prod'] !== 'node scripts/deploy-app-prod.mjs') {
 }
 const appDeploy = readFileSync(path.join(root, 'scripts/deploy-app-prod.mjs'), 'utf8');
 const appPrepare = readFileSync(path.join(root, 'scripts/prepare-app-pages-release.mjs'), 'utf8');
+const apiAuthorization = readFileSync(
+  path.join(root, 'scripts/consume-api-deployment-authorization.mjs'),
+  'utf8',
+);
+const authorizationStore = readFileSync(
+  path.join(root, 'scripts/lib/deployment-authorization-store.mjs'),
+  'utf8',
+);
 for (const marker of [
   'XLOOOP_APP_PAGES_DECISION_PACKET',
   'authorization_expired',
@@ -51,6 +59,17 @@ for (const marker of [
   }
 }
 for (const marker of [
+  'reserved_before_deploy',
+  'git-common-dir',
+  'openSync(receiptPath, \'wx\'',
+]) {
+  if (!appDeploy.includes(marker)
+      && !apiAuthorization.includes(marker)
+      && !authorizationStore.includes(marker)) {
+    problems.push(`authorization_contract:${marker}`);
+  }
+}
+for (const marker of [
   'normalizePagesFunctionsBundle',
   'Pages Functions bundle normalization failed',
 ]) {
@@ -63,6 +82,9 @@ for (const file of [
   'scripts/verify-app-pages-release.mjs',
   'scripts/verify-app-pages-live.mjs',
   'scripts/verify-app-pages-decision-packet.mjs',
+  'scripts/consume-api-deployment-authorization.mjs',
+  'scripts/lib/deployment-authorization-store.mjs',
+  'scripts/verify-deployment-authorization-store.mjs',
 ]) {
   if (!existsSync(path.join(root, file))) problems.push(`missing:${file}`);
 }
