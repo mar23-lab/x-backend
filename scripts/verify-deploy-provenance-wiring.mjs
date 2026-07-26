@@ -45,6 +45,9 @@ try {
   if (!/npm\s+run\s+verify:authority-decision:deploy/.test(deploy)) {
     missing.push('verify:authority-decision:deploy preflight');
   }
+  if (!/consume-api-deployment-authorization\.mjs/.test(deploy)) {
+    missing.push('single-use API deployment authorization reservation');
+  }
   if (
     typeof authorityDeploy !== 'string'
     || !/verify-authority-decision-packet\.mjs\s+--require-approved-to-deploy/.test(authorityDeploy)
@@ -85,7 +88,7 @@ try {
     process.exit(1);
   }
 
-  console.log('☑ deploy-provenance-wiring · PASS · exact approval, provenance, schema, strict chat persistence, and idempotency retry protection are configured');
+  console.log('☑ deploy-provenance-wiring · PASS · short-lived single-use approval, provenance, schema, strict chat persistence, and idempotency retry protection are configured');
   process.exit(0);
 } catch (err) {
   console.error(`✗ deploy-provenance-wiring · FAIL-CLOSED — could not verify deploy:api wiring: ${err.message}`);

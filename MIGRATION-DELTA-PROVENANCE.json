@@ -2668,6 +2668,27 @@
           "reason": "select candidate-specific active soak evidence and preserve the sampler independently of disposable worktrees"
         }
       ]
+    },
+    {
+      "delta_id": "deploy-authorization-replay-protection-20260727",
+      "generated_at": "2026-07-26T15:19:49.904Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "d61d5aab1e81b64552387a7ea2ecdd6a6044de98",
+      "target_base_commit": "cffe0bade3bf77c5153b0d0d29242ac01ff6bff2",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "package.json",
+          "target_blob": "c139ff2ccd47136edc957c57adecd636115e44d2",
+          "reason": "Require short-lived single-use deployment authorization shared across worktrees before Cloudflare side effects"
+        },
+        {
+          "path": "scripts/ci-local.mjs",
+          "target_blob": "bdd3885917264a2f2b15d10097a1284f233e2f16",
+          "reason": "Require short-lived single-use deployment authorization shared across worktrees before Cloudflare side effects"
+        }
+      ]
     }
   ]
 }

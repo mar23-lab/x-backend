@@ -4,6 +4,7 @@ import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { dirname, isAbsolute, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { isDeploymentAuthorizationConsumed } from './lib/deployment-authorization-store.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const defaultPacketPath = resolve(
@@ -58,7 +59,8 @@ function assessObservedLegacy(packet, problems) {
   if (packet?.health_observation?.response?.status !== 'ok') problems.push('health_status');
 }
 
-function assessApprovedShape(packet, problems, currentHead) {
+function assessApprovedShape(packet, problems, currentHead, now) {
+  const maxAuthorizationTtlMs = 30 * 60 * 1000;
   const expected = packet?.expected_deployment || {};
   const decision = packet?.decision || {};
   const rollback = packet?.rollback || {};
@@ -67,7 +69,32 @@ function assessApprovedShape(packet, problems, currentHead) {
   if (packet?.schema_id !== 'xlooop.authority_decision_packet.v2') problems.push('approved_schema_id');
   if (!decision.approver) problems.push('approver');
   if (!decision.approval_reference) problems.push('approval_reference');
-  if (Number.isNaN(Date.parse(decision.approved_at || ''))) problems.push('approved_at');
+  if (!uuidPattern.test(decision.authorization_id || '')) problems.push('authorization_id');
+  const approvedAt = Date.parse(decision.approved_at || '');
+  const expiresAt = Date.parse(decision.expires_at || '');
+  if (Number.isNaN(approvedAt)) problems.push('approved_at');
+  if (Number.isNaN(expiresAt)) problems.push('expires_at');
+  if (
+    Number.isFinite(approvedAt)
+    && Number.isFinite(expiresAt)
+    && (expiresAt <= approvedAt || expiresAt - approvedAt > maxAuthorizationTtlMs)
+  ) {
+    problems.push('authorization_window');
+  }
+  if (
+    packet?.status === 'approved_to_deploy'
+    && Number.isFinite(approvedAt)
+    && approvedAt > Date.parse(now)
+  ) {
+    problems.push('authorization_not_yet_valid');
+  }
+  if (
+    packet?.status === 'approved_to_deploy'
+    && Number.isFinite(expiresAt)
+    && expiresAt <= Date.parse(now)
+  ) {
+    problems.push('authorization_expired');
+  }
   if (target.operation !== 'deploy_worker') problems.push('target_operation');
   if (target.worker_name !== 'xlooop-api') problems.push('target_worker_name');
   if (target.environment !== 'production') problems.push('target_environment');
@@ -121,9 +148,15 @@ function assessRatifiedObservation(packet, problems) {
   }
 }
 
-export function assessAuthorityPacket(packet, requiredPhase = 'observe', currentHead = null) {
+export function assessAuthorityPacket(
+  packet,
+  requiredPhase = 'observe',
+  currentHead = null,
+  options = {},
+) {
   const problems = [];
   const status = packet?.status;
+  const now = options.now || new Date().toISOString();
   if (!['xlooop.authority_decision_packet.v1', 'xlooop.authority_decision_packet.v2'].includes(packet?.schema_id)) {
     problems.push('schema_id');
   }
@@ -135,11 +168,14 @@ export function assessAuthorityPacket(packet, requiredPhase = 'observe', current
   if (status === 'observed_unreconciled') {
     assessObservedLegacy(packet, problems);
   } else if (status === 'approved_to_deploy' || status === 'ratified') {
-    assessApprovedShape(packet, problems, currentHead);
+    assessApprovedShape(packet, problems, currentHead, now);
   }
 
   if (requiredPhase === 'deploy' && status !== 'approved_to_deploy') {
     problems.push('authority_not_approved_to_deploy');
+  }
+  if (requiredPhase === 'deploy' && options.authorizationConsumed === true) {
+    problems.push('authorization_consumed');
   }
   if (requiredPhase === 'ratified' && status !== 'ratified') {
     problems.push('authority_not_ratified');
@@ -170,6 +206,8 @@ function approvedFixture() {
       approver: 'operator',
       approval_reference: 'conversation:approval-1',
       approved_at: '2026-07-25T00:00:00Z',
+      authorization_id: '36eb5d20-49d9-4ed9-b623-0f7250797244',
+      expires_at: '2026-07-25T00:30:00Z',
     },
     target: {
       operation: 'deploy_worker',
@@ -195,13 +233,50 @@ function approvedFixture() {
 
 function runSelfTest() {
   const approved = approvedFixture();
-  const approvedResult = assessAuthorityPacket(approved, 'deploy', approved.candidate_commit_sha);
+  const assessmentOptions = { now: '2026-07-25T00:10:00Z' };
+  const approvedResult = assessAuthorityPacket(
+    approved,
+    'deploy',
+    approved.candidate_commit_sha,
+    assessmentOptions,
+  );
   const unapprovedResult = assessAuthorityPacket(
     { ...approved, status: 'observed_unreconciled', schema_id: 'xlooop.authority_decision_packet.v1' },
     'deploy',
     approved.candidate_commit_sha,
+    assessmentOptions,
   );
-  const wrongHead = assessAuthorityPacket(approved, 'deploy', 'd'.repeat(40));
+  const wrongHead = assessAuthorityPacket(approved, 'deploy', 'd'.repeat(40), assessmentOptions);
+  const expired = structuredClone(approved);
+  expired.decision.expires_at = '2026-07-25T00:05:00Z';
+  const expiredResult = assessAuthorityPacket(
+    expired,
+    'deploy',
+    expired.candidate_commit_sha,
+    assessmentOptions,
+  );
+  const overlong = structuredClone(approved);
+  overlong.decision.expires_at = '2026-07-25T00:30:01Z';
+  const overlongResult = assessAuthorityPacket(
+    overlong,
+    'deploy',
+    overlong.candidate_commit_sha,
+    assessmentOptions,
+  );
+  const future = structuredClone(approved);
+  future.decision.approved_at = '2026-07-25T00:11:00Z';
+  const futureResult = assessAuthorityPacket(
+    future,
+    'deploy',
+    future.candidate_commit_sha,
+    assessmentOptions,
+  );
+  const consumedResult = assessAuthorityPacket(
+    approved,
+    'deploy',
+    approved.candidate_commit_sha,
+    { ...assessmentOptions, authorizationConsumed: true },
+  );
   const ratified = {
     ...approved,
     status: 'ratified',
@@ -227,7 +302,12 @@ function runSelfTest() {
       },
     },
   };
-  const ratifiedResult = assessAuthorityPacket(ratified, 'ratified', ratified.candidate_commit_sha);
+  const ratifiedResult = assessAuthorityPacket(
+    ratified,
+    'ratified',
+    ratified.candidate_commit_sha,
+    assessmentOptions,
+  );
   const commercialReleaseLeak = structuredClone(ratified);
   commercialReleaseLeak.commercial_release_allowed = true;
   const commercialReleaseLeakResult = assessAuthorityPacket(
@@ -254,6 +334,14 @@ function runSelfTest() {
     unapprovedResult.problems.includes('authority_not_approved_to_deploy') &&
     !wrongHead.ok &&
     wrongHead.problems.includes('candidate_not_current_head') &&
+    !expiredResult.ok &&
+    expiredResult.problems.includes('authorization_expired') &&
+    !overlongResult.ok &&
+    overlongResult.problems.includes('authorization_window') &&
+    !futureResult.ok &&
+    futureResult.problems.includes('authorization_not_yet_valid') &&
+    !consumedResult.ok &&
+    consumedResult.problems.includes('authorization_consumed') &&
     ratifiedResult.ok &&
     !commercialReleaseLeakResult.ok &&
     commercialReleaseLeakResult.problems.includes('commercial_release_must_remain_blocked') &&
@@ -266,6 +354,10 @@ function runSelfTest() {
       approvedResult,
       unapprovedResult,
       wrongHead,
+      expiredResult,
+      overlongResult,
+      futureResult,
+      consumedResult,
       ratifiedResult,
       commercialReleaseLeakResult,
       reorderedPostureResult,
@@ -273,7 +365,7 @@ function runSelfTest() {
     }, null, 2));
     process.exit(1);
   }
-  console.log('verify-authority-decision-packet self-test PASS · approval, exact-HEAD, consumed authorization, and health-ratification controls');
+  console.log('verify-authority-decision-packet self-test PASS · short-lived approval, exact-HEAD, replay rejection, and health-ratification controls');
 }
 
 function currentHead() {
@@ -301,7 +393,14 @@ if (selfTest) {
     const phase = requireApproved ? 'deploy' : requireRatified ? 'ratified' : 'observe';
     const packetPath = packetPathForPhase();
     const packet = JSON.parse(readFileSync(packetPath, 'utf8'));
-    const result = assessAuthorityPacket(packet, phase, phase === 'observe' ? null : currentHead());
+    const authorizationConsumed = phase === 'deploy'
+      && isDeploymentAuthorizationConsumed(root, 'api', packet?.decision?.authorization_id);
+    const result = assessAuthorityPacket(
+      packet,
+      phase,
+      phase === 'observe' ? null : currentHead(),
+      { authorizationConsumed },
+    );
     if (!result.ok) {
       console.error(`verify-authority-decision-packet · FAIL-CLOSED · ${result.problems.join(',')}`);
       process.exit(1);
