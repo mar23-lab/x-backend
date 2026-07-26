@@ -19,6 +19,21 @@ const RULES: Array<{ intent: Exclude<ActionIntent, 'unresolved'>; id: string; pa
 
 const EXPLICIT_READ_ONLY = /\bread[- ]only\s*(?=[:;,.!?]|$)|(?:\bdo\s+not\b|\bdon't\b|\bnever\b|\bwithout\b)\s+(?:\w+\s+){0,2}(?:creat(?:e|ing)|open(?:ing)?|start(?:ing)?|add(?:ing)?|implement(?:ing)?|build(?:ing)?|fix(?:ing)?|repair(?:ing)?|writ(?:e|ing)|generat(?:e|ing)|set(?:ting)?\s+up|approv(?:e|ing)|reject(?:ing)?|delet(?:e|ing)|edit(?:ing)?|modif(?:y|ying)|chang(?:e|ing))\b/i;
 const READ_ONLY_INTENTS = new Set<ActionIntent>(['inspect', 'answer']);
+const CONTINUE_CUES = /\b(continue|resume|carry on|pick up|proceed with|finish|complete the remaining|next remaining)\b/gi;
+const DECISION_CUES = /\b(decide|choose|select|approve|reject|go\/no-go|go or no-go|make the call|final call)\b/gi;
+
+function hasAffirmativeCue(text: string, cues: RegExp): boolean {
+  for (const cue of text.matchAll(cues)) {
+    const before = text.slice(Math.max(0, (cue.index ?? 0) - 80), cue.index ?? 0);
+    const clause = before.split(/[.;:!?]/).at(-1) ?? before;
+    // A decision/continuation word inside an explicit negative guardrail describes what must not
+    // happen. It is not the requested operation ("create this, but do not approve it").
+    const negated = /\b(?:do\s+not|don't|never|without)\b[^,]*$/i.test(clause)
+      || /\bnot\s+(?:to\s+)?$/i.test(clause);
+    if (!negated) return true;
+  }
+  return false;
+}
 
 function hasAffirmativeWriteCue(text: string): boolean {
   const writeCues = text.matchAll(/\b(create|open|start|add|implement|build|fix|repair|write|generate|set up|setup)\b/gi);
@@ -43,6 +58,8 @@ export function classifyActionIntent(raw: unknown): ActionIntentClassification {
     }
   }
   for (const rule of RULES) {
+    if (rule.intent === 'continue_work' && !hasAffirmativeCue(text, CONTINUE_CUES)) continue;
+    if (rule.intent === 'decide' && !hasAffirmativeCue(text, DECISION_CUES)) continue;
     if (rule.intent === 'create_work' && !hasAffirmativeWriteCue(text)) continue;
     if (rule.pattern.test(text)) return { action_intent: rule.intent, confidence: 0.9, matched_rule: rule.id };
   }

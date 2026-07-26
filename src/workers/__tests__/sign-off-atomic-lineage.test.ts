@@ -33,6 +33,7 @@ describe('sign-off atomic lineage', () => {
     expect(authorityStatement).toContain('INSERT INTO audit_logs');
     expect(authorityStatement).toContain('FROM target_updated');
     expect(authorityStatement).toContain('JOIN target_updated ON target_updated.id = inserted.event_id');
+    expect(authorityStatement).toContain("approval_state = 'pending'");
     expect(authorityStatement).toContain("LEFT('evt_signoff_' || inserted.id::text, 128)");
     expect(authorityStatement).toContain('CROSS JOIN audit_written');
   });
@@ -60,5 +61,6 @@ describe('sign-off atomic lineage', () => {
     expect(authorityStatement).toContain('INSERT INTO sign_offs');
     expect(authorityStatement).toContain('FROM target_updated');
     expect(authorityStatement).toContain('JOIN target_updated ON target_updated.id = inserted.event_id');
+    expect(authorityStatement).toContain("approval_state = 'pending'");
   });
 });

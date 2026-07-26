@@ -277,7 +277,9 @@ export async function createSignOffRow(
     WITH target_updated AS (
       UPDATE operation_events
       SET approval_state = ${approvalState}
-      WHERE id = ${signOff.event_id} AND workspace_id = ${workspaceId}
+      WHERE id = ${signOff.event_id}
+        AND workspace_id = ${workspaceId}
+        AND approval_state = 'pending'
       RETURNING id
     ), inserted AS (
       INSERT INTO sign_offs (workspace_id, event_id, user_id, verdict, comment)
