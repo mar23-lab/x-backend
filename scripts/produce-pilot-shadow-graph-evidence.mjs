@@ -13,6 +13,7 @@ import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 import { neon } from '@neondatabase/serverless';
+import { GRAPH_CENSUS_SQL, graphCensusQueryMatchesSchema } from './lib/pilot-graph-census.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
@@ -39,6 +40,7 @@ const CENSUS_KEYS = [
   'project_source_bindings',
   'audit_logs_with_causation_id',
   'cross_tenant_edge_refs',
+  'dangling_graph_edge_refs',
   'latest_graph_node_at',
   'model_execution_receipts',
   'skill_invocation_receipts',
@@ -111,36 +113,21 @@ async function produceEvidence() {
       tool_receipt_count: metrics.skill_invocation_receipts,
       closing_attestation_count: metrics.closing_attestations,
       cross_tenant_edges: metrics.cross_tenant_edge_refs,
+      dangling_graph_edge_refs: metrics.dangling_graph_edge_refs,
       projection_p95_seconds: PROJECTION_P95_SECONDS,
     },
   };
 }
 
 async function readMetrics(sql) {
-  const count = async (table, where = '') => {
-    const rows = await sql(`SELECT count(*)::int AS count FROM ${table}${where}`);
-    return Number(rows[0]?.count ?? 0);
-  };
-  const maxGraphNodeRows = await sql('SELECT max(created_at) AS latest_graph_node_at FROM graph_nodes');
-  return {
-    persisted_graph_nodes: await count('graph_nodes'),
-    persisted_graph_edges: await count('graph_edges'),
-    operation_events: await count('operation_events'),
-    operations_unified: await count('operations_unified'),
-    task_packets: await count('task_packets'),
-    projects: await count('projects'),
-    workspaces: await count('workspaces'),
-    synthetic_domains: await count('synthetic_domains'),
-    synthetic_domain_membership: await count('synthetic_domain_membership'),
-    intents: await count('intents'),
-    project_source_bindings: await count('project_source_bindings'),
-    audit_logs_with_causation_id: await count('audit_logs', ' WHERE causation_id IS NOT NULL'),
-    cross_tenant_edge_refs: await count('graph_edges', ' WHERE from_workspace_id <> to_workspace_id'),
-    latest_graph_node_at: isoOrNull(maxGraphNodeRows[0]?.latest_graph_node_at),
-    model_execution_receipts: await count('model_execution_receipts'),
-    skill_invocation_receipts: await count('skill_invocation_receipts'),
-    closing_attestations: await count('closing_attestations'),
-  };
+  const rows = await sql(GRAPH_CENSUS_SQL);
+  const metrics = rows[0] ?? {};
+  return Object.fromEntries(CENSUS_KEYS.map((key) => [
+    key,
+    key === 'latest_graph_node_at'
+      ? isoOrNull(metrics[key])
+      : Number(metrics[key] ?? 0),
+  ]));
 }
 
 function validateMetrics(metrics) {
@@ -162,6 +149,7 @@ function validateMetrics(metrics) {
     if (Number(metrics[key]) <= 0) throw new Error(`metric ${key} must be > 0`);
   }
   if (Number(metrics.cross_tenant_edge_refs) !== 0) throw new Error('cross_tenant_edge_refs must be 0');
+  if (Number(metrics.dangling_graph_edge_refs) !== 0) throw new Error('dangling_graph_edge_refs must be 0');
   if (!metrics.latest_graph_node_at || Number.isNaN(Date.parse(metrics.latest_graph_node_at))) {
     throw new Error('latest_graph_node_at must parse');
   }
@@ -194,7 +182,7 @@ function refreshManifest(evidence, manifestPath = path.join(ROOT, 'docs/graph/GR
   }
   next = next.replace(
     /persisted_lineage_spine:\s*'[^']*'/,
-    `persisted_lineage_spine: 'intent:${metrics.intents}, caused_by:${metrics.audit_logs_with_causation_id}, task_packets:${metrics.task_packets}, cross_tenant_edge_refs:${metrics.cross_tenant_edge_refs}'`,
+    `persisted_lineage_spine: 'intent:${metrics.intents}, caused_by:${metrics.audit_logs_with_causation_id}, task_packets:${metrics.task_packets}, cross_tenant_edge_refs:${metrics.cross_tenant_edge_refs}, dangling_graph_edge_refs:${metrics.dangling_graph_edge_refs}'`,
   );
   fs.writeFileSync(manifestPath, next);
 }
@@ -258,6 +246,7 @@ census:
       persisted_graph_nodes: 11,
       persisted_graph_edges: 12,
       cross_tenant_edge_refs: 0,
+      dangling_graph_edge_refs: 0,
       latest_graph_node_at: '2026-07-22T00:00:00.000Z',
     },
   };
@@ -272,7 +261,7 @@ census:
   const manifestOk = updated.includes("dated: '2026-07-22T00:00:00.000Z'") &&
     updated.includes('operation_events: 10') &&
     updated.includes('persisted_graph_nodes: 11') &&
-    updated.includes("persisted_lineage_spine: 'intent:8, caused_by:10, task_packets:3, cross_tenant_edge_refs:0'");
+    updated.includes("persisted_lineage_spine: 'intent:8, caused_by:10, task_packets:3, cross_tenant_edge_refs:0, dangling_graph_edge_refs:0'");
   const prodRejected = (() => {
     try {
       assertNonProductionDatabaseUrl('postgres://u:p@prod-db.neon.tech/production');
@@ -294,8 +283,30 @@ census:
       return true;
     }
   })();
-  if (!manifestOk || !prodRejected || !insufficientRejected) {
-    console.error(JSON.stringify({ manifestOk, prodRejected, insufficientRejected, updated }, null, 2));
+  const danglingRejected = (() => {
+    try {
+      validateMetrics({
+        ...evidence.metrics,
+        model_execution_receipts: 1,
+        skill_invocation_receipts: 1,
+        closing_attestations: 1,
+        dangling_graph_edge_refs: 1,
+      });
+      return false;
+    } catch {
+      return true;
+    }
+  })();
+  const queryContractOk = graphCensusQueryMatchesSchema();
+  if (!manifestOk || !prodRejected || !insufficientRejected || !danglingRejected || !queryContractOk) {
+    console.error(JSON.stringify({
+      manifestOk,
+      prodRejected,
+      insufficientRejected,
+      danglingRejected,
+      queryContractOk,
+      updated,
+    }, null, 2));
     throw new Error('self-test failed');
   }
   console.log('PASS pilot-shadow graph evidence producer self-test');

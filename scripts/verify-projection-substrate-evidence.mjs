@@ -22,6 +22,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { GRAPH_CENSUS_SQL, graphCensusQueryMatchesSchema } from './lib/pilot-graph-census.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..');
@@ -30,23 +31,7 @@ const read = (rel) => { try { return fs.readFileSync(P(rel), 'utf8'); } catch { 
 
 const MANIFEST = 'docs/graph/GRAPH_SUBSTRATE_MANIFEST.yml';
 const STRICT_PILOT_MAX_CENSUS_AGE_DAYS = 2;
-const CENSUS_REFRESH_SQL = `
-SELECT
-  (SELECT count(*) FROM graph_nodes) AS persisted_graph_nodes,
-  (SELECT count(*) FROM graph_edges) AS persisted_graph_edges,
-  (SELECT count(*) FROM operation_events) AS operation_events,
-  (SELECT count(*) FROM operations_unified) AS operations_unified,
-  (SELECT count(*) FROM task_packets) AS task_packets,
-  (SELECT count(*) FROM projects) AS projects,
-  (SELECT count(*) FROM workspaces) AS workspaces,
-  (SELECT count(*) FROM synthetic_domains) AS synthetic_domains,
-  (SELECT count(*) FROM synthetic_domain_membership) AS synthetic_domain_membership,
-  (SELECT count(*) FROM intents) AS intents,
-  (SELECT count(*) FROM project_source_bindings) AS project_source_bindings,
-  (SELECT count(*) FROM audit_logs WHERE causation_id IS NOT NULL) AS audit_logs_with_causation_id,
-  (SELECT count(*) FROM graph_edges WHERE from_workspace_id <> to_workspace_id) AS cross_tenant_edge_refs,
-  (SELECT max(created_at) FROM graph_nodes) AS latest_graph_node_at;
-`.trim();
+const CENSUS_REFRESH_SQL = GRAPH_CENSUS_SQL;
 
 // Minimal YAML probes (no dep): we only need declared tables, the census row-count keys, status,
 // and persisted_graph_nodes. The manifest is hand-maintained + small, so line-scan is sufficient.
@@ -111,8 +96,9 @@ if (process.argv.includes('--self-test')) {
   const failBites = honestyViolations(failManifest).length > 0;
   const pilotBites = pilotViolations({ dated: '2026-01-01T00:00:00Z', intentCount: 0, causationCount: 0, packetCount: 0, persistedNodes: 1, persistedEdges: 1, unobservedKeys: [] }, new Date('2026-07-15T00:00:00Z')).length >= 3;
   const freshnessBites = pilotViolations({ dated: '2026-07-14T23:00:00Z', intentCount: 1, causationCount: 1, packetCount: 1, persistedNodes: 1, persistedEdges: 1, unobservedKeys: [] }, new Date('2026-07-17T00:00:00Z')).some((v) => v.includes('census age'));
-  if (passOk && failBites && pilotBites && freshnessBites) { console.log('☑ self-test: honesty and strict-pilot gates BITE'); process.exit(0); }
-  console.error(`✗ self-test: gate did not bite (passOk=${passOk}, failBites=${failBites}, pilotBites=${pilotBites}, freshnessBites=${freshnessBites})`); process.exit(1);
+  const queryContractOk = graphCensusQueryMatchesSchema();
+  if (passOk && failBites && pilotBites && freshnessBites && queryContractOk) { console.log('☑ self-test: honesty, schema-query, and strict-pilot gates BITE'); process.exit(0); }
+  console.error(`✗ self-test: gate did not bite (passOk=${passOk}, failBites=${failBites}, pilotBites=${pilotBites}, freshnessBites=${freshnessBites}, queryContractOk=${queryContractOk})`); process.exit(1);
 }
 
 const fails = [];
