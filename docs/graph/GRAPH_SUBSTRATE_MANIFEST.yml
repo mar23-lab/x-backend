@@ -60,25 +60,25 @@ source_tables:
 # 2026-07-17: PILOT-SHADOW census (Neon branch br-summer-dew-a7mrinpd, schema 79, read-only query).
 # Lineage spine proven non-zero via the pilot census seed (pilot-census-seed-live.test.ts): real
 # single-intake executions, Send-Intent rows, atomic sign-off causation, and the DEPLOYED
-# xlooop-api-pilot-shadow outbox->queue->consumer projection (dispatch->processed p95 19.6s).
+# xlooop-api-pilot-shadow outbox->queue->consumer projection (dispatch->processed p95 19.113s).
 census:
-  dated: '2026-07-16T18:05:42Z'    # latest graph_nodes write by the deployed pilot-shadow projection consumer
-  source: pilot-shadow Neon branch br-summer-dew-a7mrinpd of flat-truth-23350426 (read-only)
+  dated: '2026-07-26T06:20:23.525Z'    # latest graph_nodes write by the deployed pilot-shadow projection consumer
+  source: pilot-shadow pilot-shadow-20260726 (read-only producer x-backend.produce-pilot-shadow-graph-evidence)
   row_counts:
-    operation_events: 5544
-    operations_unified: 702
-    task_packets: 11                # FED — includes real single-intake create_work executions (census seed)
-    projects: 103
+    operation_events: 5569
+    operations_unified: 2653
+    task_packets: 12                # FED — includes real single-intake create_work executions (census seed)
+    projects: 108
     workspaces: 12
-    synthetic_domains: 16
+    synthetic_domains: 26
     synthetic_domain_membership: 35
-    intents: 4                      # lineage backbone FED — Send-Intent exercised (census workspaces)
-    project_source_bindings: 57
-    audit_logs_with_causation_id: 6 # causation FED — atomic sign-offs stamped causation_id (census seed)
-  persisted_graph_nodes: 6421       # written by the DEPLOYED pilot-shadow queue consumer (event/intent/packet/workspace census nodes present)
-  persisted_graph_edges: 6225
-  persisted_lineage_spine: 'intent:4, caused_by:6, task_packets:11, cross_tenant_edge_refs:0'
-  projected_capacity_nodes: 6421
+    intents: 7                      # lineage backbone FED — Send-Intent exercised (census workspaces)
+    project_source_bindings: 67
+    audit_logs_with_causation_id: 8 # causation FED — atomic sign-offs stamped causation_id (census seed)
+  persisted_graph_nodes: 8426       # written by the DEPLOYED pilot-shadow queue consumer (event/intent/packet/workspace census nodes present)
+  persisted_graph_edges: 8159
+  persisted_lineage_spine: 'intent:7, caused_by:8, task_packets:12, cross_tenant_edge_refs:0, dangling_graph_edge_refs:0'
+  projected_capacity_nodes: 8426
 
 # status MUST follow the census (the verifier enforces persisted_graph_nodes==0 => wired_not_fed):
 #   wired_not_fed   — code + tables exist but the persisted graph is empty (no rebuild / empty sources)
