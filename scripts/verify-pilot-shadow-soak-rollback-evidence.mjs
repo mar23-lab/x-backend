@@ -334,7 +334,11 @@ function isNonProductionFrontend(origin) {
     return false;
   }
   try {
-    return /\.xlooop-app-next\.pages\.dev$/.test(new URL(origin).hostname);
+    const hostname = new URL(origin).hostname;
+    return hostname === 'test.xlooop.com' ||
+      /\.xlooop-test\.pages\.dev$/.test(hostname) ||
+      // Preserve verification of the completed 2026-07 legacy soak while new runs use test.
+      /\.xlooop-app-next\.pages\.dev$/.test(hostname);
   } catch {
     return false;
   }
@@ -396,7 +400,7 @@ function runSelfTest() {
     environment: 'pilot-shadow',
     authority: 'shadow',
     api_base: 'https://xlooop-api-pilot-shadow.xlooop23.workers.dev',
-    frontend_origin: 'https://0829da1f.xlooop-app-next.pages.dev',
+    frontend_origin: 'https://test.xlooop.com',
     backend_build_sha: build,
     schema_head: 79,
     generated_at: new Date(now).toISOString(),
@@ -461,11 +465,12 @@ function runSelfTest() {
   const prodRejected = !isPilotShadowApi('https://api.xlooop.com') &&
     !isNonProductionFrontend('https://app.xlooop.com') &&
     productionUrlPaths({ api_base: 'https://api.xlooop.com' }).length === 1;
+  const historicalOriginAccepted = isNonProductionFrontend('https://0829da1f.xlooop-app-next.pages.dev');
   const secretRejected = secretPaths({ database_url: 'redacted' }).length > 0;
   const placeholderRejected = placeholderPaths({ note: 'todo' }).length === 1;
   const producerRejected = problemsForProducer({ ...valid.producer, synthetic: true }).includes('producer.manual_or_synthetic');
-  if (!validOk || !prodRejected || !secretRejected || !placeholderRejected || !producerRejected) {
-    console.error(JSON.stringify({ validOk, prodRejected, secretRejected, placeholderRejected, producerRejected, checks, failures }, null, 2));
+  if (!validOk || !prodRejected || !historicalOriginAccepted || !secretRejected || !placeholderRejected || !producerRejected) {
+    console.error(JSON.stringify({ validOk, prodRejected, historicalOriginAccepted, secretRejected, placeholderRejected, producerRejected, checks, failures }, null, 2));
     throw new Error('self-test failed');
   }
   console.log('PASS pilot-shadow soak rollback evidence self-test');

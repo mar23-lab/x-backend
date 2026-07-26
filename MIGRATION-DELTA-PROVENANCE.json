@@ -2565,6 +2565,47 @@
           "reason": "preserve tenant-bound canonical project IDs and honor explicit ID output contracts"
         }
       ]
+    },
+    {
+      "delta_id": "pilot-shadow-schema-test-soak-drift-20260726",
+      "generated_at": "2026-07-26T03:52:51.430Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "20ae05a079b39798a7f5ef8965208c0edf822270",
+      "target_base_commit": "20ae05a079b39798a7f5ef8965208c0edf822270",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "scripts/verify-pilot-shadow-config.mjs",
+          "target_blob": "e27922f4e57961da503256949be02dcb3b7abd92",
+          "reason": "derive pilot schema from migrations, reuse the existing xlooop-test surface, and make soak sampling independent of disposable worktree paths"
+        },
+        {
+          "path": "wrangler.pilot-shadow.toml",
+          "target_blob": "1c54cc6b9c05ff0554b750f6478cf4ab611f37d3",
+          "reason": "derive pilot schema from migrations, reuse the existing xlooop-test surface, and make soak sampling independent of disposable worktree paths"
+        },
+        {
+          "path": "src/workers/__tests__/cors-methods.test.ts",
+          "target_blob": "1ed4362c0de9cf83a521b4c8791f63746ce22b01",
+          "reason": "derive pilot schema from migrations, reuse the existing xlooop-test surface, and make soak sampling independent of disposable worktree paths"
+        },
+        {
+          "path": "scripts/verify-pilot-shadow-soak-rollback-evidence.mjs",
+          "target_blob": "9ecb98603e8adee59b37c9ddbf18587439cd1f49",
+          "reason": "derive pilot schema from migrations, reuse the existing xlooop-test surface, and make soak sampling independent of disposable worktree paths"
+        },
+        {
+          "path": "scripts/pilot-shadow-soak-sampler.mjs",
+          "target_blob": "d95b8c0d04b6fe106464a2c0220a339b19eae315",
+          "reason": "derive pilot schema from migrations, reuse the existing xlooop-test surface, and make soak sampling independent of disposable worktree paths"
+        },
+        {
+          "path": "scripts/pilot-shadow-soak-arm.sh",
+          "target_blob": "fb4221dc0abce8469017d94689a70816dbd8cb76",
+          "reason": "derive pilot schema from migrations, reuse the existing xlooop-test surface, and make soak sampling independent of disposable worktree paths"
+        }
+      ]
     }
   ]
 }
