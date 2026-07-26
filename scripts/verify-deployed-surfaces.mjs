@@ -35,6 +35,7 @@ if (pkg.scripts?.['deploy:app:prod'] !== 'node scripts/deploy-app-prod.mjs') {
   problems.push('package:deploy:app:prod');
 }
 const appDeploy = readFileSync(path.join(root, 'scripts/deploy-app-prod.mjs'), 'utf8');
+const appPrepare = readFileSync(path.join(root, 'scripts/prepare-app-pages-release.mjs'), 'utf8');
 for (const marker of [
   'XLOOOP_APP_PAGES_DECISION_PACKET',
   'authorization_expired',
@@ -48,6 +49,12 @@ for (const marker of [
   ).includes(marker)) {
     problems.push(`deploy_contract:${marker}`);
   }
+}
+for (const marker of [
+  'normalizePagesFunctionsBundle',
+  'Pages Functions bundle normalization failed',
+]) {
+  if (!appPrepare.includes(marker)) problems.push(`prepare_contract:${marker}`);
 }
 for (const file of [
   'functions/_middleware.js',

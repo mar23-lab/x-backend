@@ -15,6 +15,8 @@ import {
   assessFrontendReleaseArtifact,
   assessReleaseManifest,
   hashReleaseFiles,
+  normalizePagesFunctionsBundle,
+  PAGES_FUNCTIONS_ROUTE_SOURCE_MARKER,
   parseFrontendReleaseArtifact,
   verifyStaticArtifactFiles,
 } from './lib/app-pages-release-contract.mjs';
@@ -78,12 +80,39 @@ function runSelfTest() {
   };
   const validManifest = assessReleaseManifest(manifest, hashes);
   const tamperedManifest = assessReleaseManifest(manifest, { ...hashes, 'index.html': 'd'.repeat(64) });
+  const randomRouteCommentA =
+    '// ../.wrangler/tmp/pages-4T2Zm4/functionsRoutes-0.44016116637048475.mjs';
+  const randomRouteCommentB =
+    '// ../../.wrangler/tmp/pages-BbcO6f/functionsRoutes-0.9163805584323002.mjs';
+  const normalizedA = normalizePagesFunctionsBundle(`${randomRouteCommentA}\nexport default {};\n`);
+  const normalizedB = normalizePagesFunctionsBundle(`${randomRouteCommentB}\nexport default {};\n`);
+  const duplicateRouteCommentsRejected = (() => {
+    try {
+      normalizePagesFunctionsBundle(`${randomRouteCommentA}\n${randomRouteCommentB}\n`);
+      return false;
+    } catch {
+      return true;
+    }
+  })();
+  const unknownTmpCommentRejected = (() => {
+    try {
+      normalizePagesFunctionsBundle('// ../.wrangler/tmp/pages-random/unknown.mjs\n');
+      return false;
+    } catch {
+      return true;
+    }
+  })();
   const checks = [
     ['valid artifact', valid.ok],
     ['wrong backend rejected', !wrongBackend.ok && wrongBackend.problems.includes('backend_sha_mismatch')],
     ['required files valid', staticProblems.length === 0],
     ['valid manifest', validManifest.ok],
     ['tampered file rejected', !tamperedManifest.ok && tamperedManifest.problems.includes('file_hashes')],
+    ['randomized route comments normalize identically', normalizedA === normalizedB],
+    ['normalized marker is stable', normalizePagesFunctionsBundle(normalizedA) === normalizedA],
+    ['normalized marker is present once', normalizedA.split(PAGES_FUNCTIONS_ROUTE_SOURCE_MARKER).length === 2],
+    ['duplicate route comments rejected', duplicateRouteCommentsRejected],
+    ['unknown Wrangler tmp comment rejected', unknownTmpCommentRejected],
   ];
   rmSync(testRoot, { recursive: true, force: true });
   const failures = checks.filter(([, ok]) => !ok).map(([name]) => name);
@@ -111,7 +140,23 @@ try {
   });
   problems.push(...artifact.problems);
   problems.push(...verifyStaticArtifactFiles(releaseDir, contract.contract_hash));
-  if (!existsSync(path.join(releaseDir, '_worker.js', 'index.js'))) problems.push('missing:_worker.js/index.js');
+  const workerBundlePath = path.join(releaseDir, '_worker.js', 'index.js');
+  if (!existsSync(workerBundlePath)) {
+    problems.push('missing:_worker.js/index.js');
+  } else {
+    try {
+      const workerBundle = readFileSync(workerBundlePath, 'utf8');
+      if (normalizePagesFunctionsBundle(workerBundle) !== workerBundle) {
+        problems.push('unnormalized:_worker.js/index.js');
+      }
+    } catch (error) {
+      problems.push(
+        `invalid:_worker.js/index.js:${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+    }
+  }
   if (!existsSync(path.join(releaseDir, '_routes.json'))) problems.push('missing:_routes.json');
   if (manifest.backend_sha !== backendSha) problems.push('manifest_backend_sha_mismatch');
   if (manifest.contract_hash !== contract.contract_hash) problems.push('manifest_contract_hash_mismatch');
