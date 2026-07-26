@@ -6,11 +6,12 @@ import { neonClient } from '../db/client';
 
 const AUTH = { user_id: 'user_a', workspace_id: 'tenant_a', role: 'owner' };
 
-function appFor(opts: { enabled?: boolean; packets?: any[]; approvals?: any[]; auth?: Record<string, unknown>; createError?: Error } = {}) {
+function appFor(opts: { enabled?: boolean; packets?: any[]; approvals?: any[]; projects?: any[]; auth?: Record<string, unknown>; createError?: Error } = {}) {
   const calls: Array<Record<string, unknown>> = [];
   const dal = {
     listTaskPackets: async (workspace_id: string) => { calls.push({ method: 'listTaskPackets', workspace_id }); return opts.packets ?? []; },
     listApprovalRequests: async (workspace_id: string) => { calls.push({ method: 'listApprovalRequests', workspace_id }); return opts.approvals ?? []; },
+    listProjects: async (workspace_id: string) => { calls.push({ method: 'listProjects', workspace_id }); return opts.projects ?? []; },
     createIntakeResolution: async (workspace_id: string, actor_user_id: string, input: any) => {
       calls.push({ method: 'createIntakeResolution', workspace_id, actor_user_id, input });
       if (opts.createError) throw opts.createError;
