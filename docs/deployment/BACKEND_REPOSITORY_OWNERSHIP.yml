@@ -5,7 +5,20 @@ schema_id: xlooop.backend_repository_ownership.v1
 updated: "2026-07-13"
 
 authority:
-  deploy_authority: Xlooop-XCP-demo          # SOLE until GATE-FLIP (operator-executed)
+  # CORRECTED 260727. This read `Xlooop-XCP-demo` and had been frozen since 0714 while x-backend was
+  # demonstrably the deployer — so an agent trusting this machine-readable field got the wrong answer.
+  # Evidence: production /health build 3d7ade27e75146ba6704bc2864d0362a80b2bba9 resolves in x-backend
+  # and is NOT a commit in Xlooop-XCP-demo at all (git cat-file -e -> NOT_IN_DEMO); the donor tip is
+  # frozen at 67a9b51c (0718). The cutover happened in fact before it happened in this file.
+  deploy_authority: x-backend                # ACTUAL deployer since the ~260719 cutover (measured 260727)
+  deploy_authority_prior: Xlooop-XCP-demo    # donor; still carries a same-target config — see hazard
+  deploy_authority_hazard: |
+    Xlooop-XCP-demo/wrangler.toml STILL declares name = "xlooop-api" and
+    [[routes]] pattern = "api.xlooop.com", with a deploy:api that has NO RLS/schema/authority
+    preflights and stamps only the 8-char sha. Running it from the frozen donor would overwrite
+    production and regress provenance. It is read-only by POLICY, not by MECHANISM.
+    OPEN 260727: neutralise that route/name in the donor. Not done here — the donor is a separate
+    frozen repo needing its own claim and PR.
   shadow_repo: x-backend                     # github.com/mar23-lab/x-backend · empty until GATE-SEED-PUSH
   frontend_repo: x-ai-front                  # consumes the API by contract pin, never by source import
   docs_repo: x-ai-docs                       # canonical cross-repo ADRs/runbooks (DOC_DISPOSITION_LEDGER routes)

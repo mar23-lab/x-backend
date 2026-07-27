@@ -1736,7 +1736,7 @@
         {
           "path": "package.json",
           "target_blob": "4123456ee6d9bfc0120a514ce58d249ef1cb72b9",
-          "reason": "ops-hardening: gate deploy:api on verify-rls-grant-parity (defense-in-depth — the static tenant-isolation invariant now checked at deploy, not only ci-local)"
+          "reason": "ops-hardening: gate deploy:api on verify-rls-grant-parity (defense-in-depth \u2014 the static tenant-isolation invariant now checked at deploy, not only ci-local)"
         }
       ]
     },
@@ -1924,17 +1924,17 @@
         {
           "path": "wrangler.toml",
           "target_blob": "6a31d5d57db28c1ad64429751a0348440ec00fd5",
-          "reason": "Dial crons to daily for pilot infra cost (5min/hourly propagation+graph_rebuild+reclassify → daily; lets Neon autosuspend)"
+          "reason": "Dial crons to daily for pilot infra cost (5min/hourly propagation+graph_rebuild+reclassify \u2192 daily; lets Neon autosuspend)"
         },
         {
           "path": "src/workers/crons/index.ts",
           "target_blob": "8e023c4580f34a5fa07628eda7c731dccfb0998c",
-          "reason": "Dial crons to daily for pilot infra cost (5min/hourly propagation+graph_rebuild+reclassify → daily; lets Neon autosuspend)"
+          "reason": "Dial crons to daily for pilot infra cost (5min/hourly propagation+graph_rebuild+reclassify \u2192 daily; lets Neon autosuspend)"
         },
         {
           "path": "src/workers/__tests__/operations-queue-consumer.test.ts",
           "target_blob": "2f571922579f59d3ba3bf23665b05f19da3b5136",
-          "reason": "Dial crons to daily for pilot infra cost (5min/hourly propagation+graph_rebuild+reclassify → daily; lets Neon autosuspend)"
+          "reason": "Dial crons to daily for pilot infra cost (5min/hourly propagation+graph_rebuild+reclassify \u2192 daily; lets Neon autosuspend)"
         },
         {
           "path": "src/workers/__tests__/reclassify-unattributed.test.ts",
@@ -3281,6 +3281,42 @@
           "path": "src/workers/__tests__/operational-spine-live-rls.test.ts",
           "target_blob": "7a0888cb296263dea94ce0e5d6ac62a7b6f76c48",
           "reason": "Grant the temporary live RLS probe read access to governed receipt reconciliation"
+        }
+      ]
+    },
+    {
+      "delta_id": "deploy-gate-override-accountability-20260727",
+      "generated_at": "2026-07-27T10:40:00Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "eace9a6f8aa8cad06a3d3ee6273397bd0c6856cd",
+      "target_base_commit": "eace9a6f8aa8cad06a3d3ee6273397bd0c6856cd",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "scripts/verify-deploy-sha-current.mjs",
+          "target_blob": "8acb12a4101c0dc8ecb1b640012d40179a17df26",
+          "reason": "the override was a hole with no floor: XLOOOP_DEPLOY_SHA_OVERRIDE=1 exited 0 on a console warning, requiring no reason and leaving no durable record, so nobody could answer who put production off-main and why. Measured 260727: prod served 3d7ade27 which is NOT an ancestor of origin/main (44 main commits missing, 7 sideways). Now: refuses without XLOOOP_DEPLOY_SHA_OVERRIDE_REASON, writes a waiver receipt to the git common dir, and records head_is_ancestor_of_main. Proven by replaying the real incident: at 3d7ade27 it reports on-main=false and warns production will FORK"
+        },
+        {
+          "path": "scripts/emit-deploy-receipt.mjs",
+          "target_blob": "c542e84864b821f2e6d304726888f3ddab299165",
+          "reason": "two defects found while chaining it: (1) commit 41dc88b changed the stamp to the FULL 40-char sha while this script still compared --short=8, so the comparison was unconditionally false and it would have REFUSED every correct deploy - invisible because it was unchained; (2) a single-shot /health readback races edge propagation (10-25s), so chaining it unfixed would have produced a flaky gate. Now prefix-normalised comparison + --wait polling"
+        },
+        {
+          "path": "scripts/verify-deploy-provenance-wiring.mjs",
+          "target_blob": "5c9c24ebc7bb7f6195b0fa8859f38f8540822f8b",
+          "reason": "a gate must assert every step it claims to protect: OWNERSHIP.yml advertised a receipt_rule but the cutover dropped the receipt step from deploy:api and this gate asserted only 3 of 4 steps, reporting green while the 4th vanished. Now asserts the chained receipt step AND that it passes --wait. Mutation-tested both ways"
+        },
+        {
+          "path": "package.json",
+          "target_blob": "6f21c7fba9ae7d690e3392d7c0d696bce0f6fb75",
+          "reason": "adds deploy:api:receipt (emit-deploy-receipt.mjs --wait 120) and chains it onto deploy:api, restoring the post-deploy readback the cutover dropped - the only step that compares deploy INTENT to LIVE TRUTH"
+        },
+        {
+          "path": "docs/deployment/BACKEND_REPOSITORY_OWNERSHIP.yml",
+          "target_blob": "3c41ecfc5d37ad9253f4a88e876aae9b2c65da2a",
+          "reason": "the machine-readable SSOT said deploy_authority: Xlooop-XCP-demo, frozen since 0714, while x-backend has demonstrably been the deployer since ~260719 (prod build 3d7ade27 is not a commit in the donor at all). Corrected to x-backend and records the donor same-target hazard: the frozen donor still declares name=xlooop-api + api.xlooop.com with a preflight-free deploy"
         }
       ]
     }
