@@ -1,13 +1,13 @@
 {
   "surface": "api.xlooop.com (Cloudflare Worker: xlooop-api)",
-  "commit": "ccdc7c69",
-  "build_sha": "ccdc7c69",
-  "built_at": "20260713T092340Z",
-  "deploy_note": "emitted 2026-07-13T09:24:22.759Z by scripts/emit-deploy-receipt.mjs after live /health readback match",
+  "commit": "472c1134",
+  "build_sha": "472c1134",
+  "built_at": "20260727T130432Z",
+  "deploy_note": "emitted 2026-07-27T13:04:49.406Z by scripts/emit-deploy-receipt.mjs after live /health readback match",
   "health_readback": {
     "status": "ok",
     "version": "1.0.0",
-    "build": "ccdc7c69"
+    "build": "472c11342ce928ee883235b3cc58484f11d6b3cd"
   },
   "observability": {
     "sentry_active": true,
