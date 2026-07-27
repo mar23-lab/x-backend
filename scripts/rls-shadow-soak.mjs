@@ -16,6 +16,8 @@
 // The app role is stateless over the Neon HTTP driver, so the GUC must be set + read in ONE transaction
 // (matches the worker's per-request set_config('xlooop.current_workspace_id', …, true) pattern).
 
+import fs from 'node:fs';
+import path from 'node:path';
 import { neon } from '@neondatabase/serverless';
 
 const OWNER = process.env.DATABASE_URL;
@@ -25,6 +27,10 @@ const STRICT = process.argv.includes('--strict') || process.env.XLOOOP_STRICT_PR
 // + cross-tenant-leak checks apply exactly as for the spine).
 const TABLES = ['task_packets', 'evidence_items', 'approval_requests', 'tool_events', 'metric_deltas', 'operation_events'];
 const SAMPLE_WORKSPACES = 8; // cap
+// Machine-readable summary sink. The evidence producer sets this and REFUSES when the file is
+// absent or malformed, so the leakage/divergence numbers in the readiness artifact are always
+// MEASURED here instead of assumed by the consumer.
+const SUMMARY_JSON = process.env.XLOOOP_RLS_SOAK_SUMMARY_JSON || '';
 
 if (!OWNER || !APP) {
   if (STRICT) {
@@ -70,26 +76,86 @@ const main = async () => {
   if (role.rolbypassrls || role.rolsuper) { console.error(`✗ xlooop_app is privileged (bypassrls=${role.rolbypassrls} super=${role.rolsuper}) — it would NOT be subject to RLS`); process.exit(1); }
   console.log('☑ xlooop_app is non-superuser + NOBYPASSRLS (subject to RLS)');
 
+  let tablesWithRows = 0;
+  let workspacesSampled = 0;
+  let leakProbes = 0;
+  let divergenceCount = 0;
+  let leakageCount = 0;
+  const perTable = [];
+
   for (const table of TABLES) {
     // workspaces that actually have rows in this table (owner sees all)
     const wsRows = await owner(`SELECT DISTINCT workspace_id FROM ${ident(table)} WHERE workspace_id IS NOT NULL LIMIT $1`, [SAMPLE_WORKSPACES]);
     const workspaces = wsRows.map((r) => r.workspace_id);
-    if (workspaces.length === 0) { console.log(`· ${table}: no rows — skipped`); continue; }
+    if (workspaces.length === 0) {
+      // Wording matters: this table was NOT PROVEN, and the run-level guard below decides
+      // whether the whole proof is still claimable. "skipped" read as benign.
+      console.log(`· ${table}: no rows — NOT PROVEN (nothing to compare)`);
+      perTable.push({ table, workspaces_sampled: 0, leak_probes: 0, proven: false });
+      continue;
+    }
+    tablesWithRows += 1;
+    workspacesSampled += workspaces.length;
+    let tableLeakProbes = 0;
 
     for (const ws of workspaces) {
       // (1) zero divergence: app(GUC=ws, no WHERE) === owner(WHERE ws)
       const [{ n: ownerN }] = await owner(`SELECT count(*)::int AS n FROM ${ident(table)} WHERE workspace_id = $1`, [ws]);
       const appN = await appCount(table, ws, null);
-      if (appN !== ownerN) failures.push(`${table} ws=${ws}: DIVERGENCE app=${appN} owner=${ownerN}`);
+      if (appN !== ownerN) {
+        divergenceCount += 1;
+        failures.push(`${table} ws=${ws}: DIVERGENCE app=${appN} owner=${ownerN}`);
+      }
 
-      // (2) RLS bites: app(GUC=ws) must NOT see any OTHER workspace's rows
+      // (2) RLS bites: app(GUC=ws) must NOT see any OTHER workspace's rows.
+      // With a single workspace there is no `other`, so this assertion silently does not run —
+      // counted as a leak PROBE so a one-tenant DB can never masquerade as isolation evidence.
       const other = workspaces.find((w) => w !== ws);
       if (other) {
+        tableLeakProbes += 1;
         const leak = await appCount(table, ws, other); // GUC=ws but asking for `other`'s rows
-        if (leak !== 0) failures.push(`${table}: CROSS-TENANT LEAK — app(GUC=${ws}) saw ${leak} rows of ws=${other}`);
+        if (leak !== 0) {
+          leakageCount += leak;
+          failures.push(`${table}: CROSS-TENANT LEAK — app(GUC=${ws}) saw ${leak} rows of ws=${other}`);
+        }
       }
     }
-    console.log(`☑ ${table}: ${workspaces.length} workspace(s) — isolation holds`);
+    leakProbes += tableLeakProbes;
+    perTable.push({ table, workspaces_sampled: workspaces.length, leak_probes: tableLeakProbes, proven: tableLeakProbes > 0 });
+    console.log(`☑ ${table}: ${workspaces.length} workspace(s), ${tableLeakProbes} cross-tenant probe(s) — isolation holds`);
+  }
+
+  // A SKIP IS NOT A PROOF. Before this guard the loop above `continue`d past every empty table and
+  // still fell through to the GREEN line, so an EMPTY database printed "enforces tenant isolation
+  // with zero divergence" and exited 0. That zero was structural, not measured — and the readiness
+  // evidence producer copied it into an artifact scored as a real measurement.
+  const insufficient = [];
+  if (tablesWithRows === 0) insufficient.push('no spine table contained any rows, so nothing was compared');
+  if (leakProbes === 0) insufficient.push('no spine table held 2+ workspaces, so the cross-tenant leak assertion never ran');
+
+  const summary = {
+    schema_id: 'xlooop.rls_shadow_soak.summary.v1',
+    generated_at: new Date().toISOString(),
+    strict: STRICT,
+    tables_total: TABLES.length,
+    tables_with_rows: tablesWithRows,
+    workspaces_sampled: workspacesSampled,
+    leak_probes: leakProbes,
+    divergence_count: divergenceCount,
+    leakage_count: leakageCount,
+    cross_tenant_read_count: leakageCount,
+    per_table: perTable,
+    failure_count: failures.length,
+    failures,
+    sufficient_sample: insufficient.length === 0,
+    insufficient_reasons: insufficient,
+    status: failures.length ? 'FAIL' : (insufficient.length ? 'INSUFFICIENT_SAMPLE' : 'PASS'),
+  };
+  if (SUMMARY_JSON) {
+    const target = path.resolve(SUMMARY_JSON);
+    fs.mkdirSync(path.dirname(target), { recursive: true });
+    fs.writeFileSync(target, `${JSON.stringify(summary, null, 2)}\n`);
+    console.log(`· summary written: ${target}`);
   }
 
   if (failures.length) {
@@ -97,7 +163,14 @@ const main = async () => {
     for (const f of failures) console.error(`    ${f}`);
     process.exit(1);
   }
-  console.log('\n✓ rls-shadow-soak GREEN · xlooop_app enforces tenant isolation with zero divergence; production cutover still requires separate approval');
+  if (insufficient.length) {
+    console.error('\n✗ rls-shadow-soak INSUFFICIENT SAMPLE · this is NOT a pass:');
+    for (const reason of insufficient) console.error(`    ${reason}`);
+    console.error('  Seed the disposable branch with 2+ prod-shaped tenants holding rows in the spine');
+    console.error('  tables, then rerun. An unexercised database cannot evidence tenant isolation.');
+    process.exit(STRICT ? 2 : 0);
+  }
+  console.log(`\n✓ rls-shadow-soak GREEN · xlooop_app enforces tenant isolation with zero divergence across ${tablesWithRows} table(s), ${workspacesSampled} workspace sample(s) and ${leakProbes} cross-tenant probe(s); production cutover still requires separate approval`);
   process.exit(0);
 };
 

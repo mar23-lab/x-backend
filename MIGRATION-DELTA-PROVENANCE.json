@@ -3340,6 +3340,22 @@
           "reason": "names the live receipt path (the gitignored latest-* file) instead of the frozen seed snapshot, adds receipt_seed_snapshot so the historical artifact stays discoverable, and records receipt_path_history. ALSO CORRECTS THE PRECEDING DELTA'S OWN REASON TEXT: the frozen donor's deploy:api is NOT preflight-free. predeploy:api runs verify-deploy-sha-current.mjs and npm invokes pre<script> automatically. The real donor hazard is WHAT the gate compares - the DONOR repo's HEAD against the DONOR repo's origin/main - so a clean donor checkout PASSES ITS OWN GATE while wrangler.toml still declares name=xlooop-api with pattern=api.xlooop.com. A satisfied gate shipping donor code to the live production Worker is the hazard, which means the mitigation is neutralising the name/pattern binding, not adding another gate. Recorded here because acting on the wrong mechanism would have produced a second gate that also passes"
         }
       ]
+    },
+    {
+      "delta_id": "rls-soak-skip-is-not-a-proof-20260728",
+      "generated_at": "2026-07-28T08:30:00Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "01aad699c69f36be100a0888b803adca245804d5",
+      "target_base_commit": "01aad699c69f36be100a0888b803adca245804d5",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "scripts/rls-shadow-soak.mjs",
+          "target_blob": "0a8393f140cd656a7a54bdc0681a3c2df054f3e9",
+          "reason": "makes an unexercised database refuse instead of certify. The loop skipped every spine table with zero rows and then fell through to the GREEN line, so on an EMPTY database the proof printed 'xlooop_app enforces tenant isolation with zero divergence' and exited 0 - measured directly against a fresh schema-91 database on 260728, where the unfixed script at main 01aad69 returned exit 0 and the fixed script returned exit 2. That zero was structural, not measured, and produce-pilot-shadow-live-rls-evidence.mjs copied it into a readiness artifact whose leakage_count and cross_tenant_read_count checks therefore could never fail. Adds a per-run machine-readable summary (tables_with_rows, workspaces_sampled, leak_probes, divergence_count, leakage_count, sufficient_sample) so the producer derives those counts instead of hardcoding them, and refuses in strict mode when no table held rows or no table held 2+ workspaces, since a single-tenant database never runs the cross-tenant assertion at all."
+        }
+      ]
     }
   ]
 }
