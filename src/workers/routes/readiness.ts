@@ -14,7 +14,7 @@
 // and hence this endpoint — is never reached by the first-login UI).
 
 import { Hono } from 'hono';
-import { errorEnvelope } from '../middleware/error';
+import { errorEnvelope, safeDatabaseErrorMetadata } from '../middleware/error';
 import { envFlagTrue } from '../lib/env-flag';
 import { provisionCustomerFromAccessRequest } from '../services/onboarding-provisioner';
 import { runEnrichmentSweep } from '../services/enrichment-service';
@@ -54,6 +54,18 @@ export interface ReadinessVariables extends AuthVariables {
 export const readinessRoute = new Hono<{ Bindings: ReadinessEnv; Variables: ReadinessVariables }>();
 
 const ALLOWED_ACCOUNT_TYPES = new Set(['personal', 'company', 'both']);
+
+function readinessPersistenceFailure(err: unknown, operation: string) {
+  return {
+    status: 500,
+    code: 'READINESS_PERSISTENCE_FAILED',
+    message: 'onboarding could not be durably saved',
+    diagnostics: {
+      operation,
+      ...safeDatabaseErrorMetadata(err),
+    },
+  };
+}
 
 // Mirror autoProvisionApprover(session.ts): explicit approver → operator → first admin id.
 function readinessApprover(env: ReadinessEnv): string | null {
@@ -207,10 +219,15 @@ readinessRoute.post('/readiness/submit', async (ctx) => {
     // reported success without writing any answers; this path now requires an atomic revision +
     // audit receipt and never re-provisions unless the explicit feature-gated request asks for it.
     if (existing.state === 'approved_workspace' && !reprovision) {
-      const saved = await saveWorkspaceReadinessAssessmentRow(neonClient(ctx.env.DATABASE_URL), {
-        ...writeInput,
-        request_digest: requestDigest,
-      });
+      let saved: WorkspaceReadinessWriteResult;
+      try {
+        saved = await saveWorkspaceReadinessAssessmentRow(neonClient(ctx.env.DATABASE_URL), {
+          ...writeInput,
+          request_digest: requestDigest,
+        });
+      } catch (err) {
+        throw readinessPersistenceFailure(err, 'save_existing_workspace_readiness');
+      }
       return ctx.json(readinessWriteReceipt(saved, {
         workspaceAlreadyProvisioned: true,
         roadmapRefreshed: false,
@@ -235,22 +252,26 @@ readinessRoute.post('/readiness/submit', async (ctx) => {
 
     // 3. Persist the readiness Q&A before provisioning. A persistence failure is authoritative:
     //    the UI must retain the answers and report failure instead of showing a false success.
-    await dal.createReadinessAssessment({
-      access_request_id: accessRequest.id,
-      email,
-      account_type: accountType,
-      also_personal_space: body.also_personal_space === true,
-      company_name: companyName,
-      domain: domainStr,
-      country: typeof body.country === 'string' ? body.country.slice(0, 8) : null,
-      deep_level:
-        typeof body.deep_level === 'number' && Number.isInteger(body.deep_level) ? body.deep_level : null,
-      readiness_answers: readinessAnswers,
-      deep_check: boundedRecord(body.deep_check),
-      enrichment,
-      consent: boundedRecord(body.consent) ?? {},
-      source: 'inapp-readiness-journey',
-    });
+    try {
+      await dal.createReadinessAssessment({
+        access_request_id: accessRequest.id,
+        email,
+        account_type: accountType,
+        also_personal_space: body.also_personal_space === true,
+        company_name: companyName,
+        domain: domainStr,
+        country: typeof body.country === 'string' ? body.country.slice(0, 8) : null,
+        deep_level:
+          typeof body.deep_level === 'number' && Number.isInteger(body.deep_level) ? body.deep_level : null,
+        readiness_answers: readinessAnswers,
+        deep_check: boundedRecord(body.deep_check),
+        enrichment,
+        consent: boundedRecord(body.consent) ?? {},
+        source: 'inapp-readiness-journey',
+      });
+    } catch (err) {
+      throw readinessPersistenceFailure(err, 'save_preprovision_readiness');
+    }
 
     // 4. Provision the workspace + day-1 roadmap, now SCALED to the captured readiness.
     const modelLineage = modelLineagePolicy({ load: () => neonClient(ctx.env.DATABASE_URL) }, ctx.env);
@@ -275,10 +296,15 @@ readinessRoute.post('/readiness/submit', async (ctx) => {
 
     // 5. Bind the saved assessment to the verified workspace and return the same durable receipt
     //    contract used by an already-provisioned customer. No success response exists without it.
-    const saved = await saveWorkspaceReadinessAssessmentRow(neonClient(ctx.env.DATABASE_URL), {
-      ...writeInput,
-      request_digest: requestDigest,
-    });
+    let saved: WorkspaceReadinessWriteResult;
+    try {
+      saved = await saveWorkspaceReadinessAssessmentRow(neonClient(ctx.env.DATABASE_URL), {
+        ...writeInput,
+        request_digest: requestDigest,
+      });
+    } catch (err) {
+      throw readinessPersistenceFailure(err, 'save_provisioned_workspace_readiness');
+    }
     return ctx.json(readinessWriteReceipt(saved, {
       workspaceAlreadyProvisioned: existing.state === 'approved_workspace',
       roadmapRefreshed: existing.state === 'approved_workspace' && reprovision,

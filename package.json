@@ -106,6 +106,7 @@
     "@babel/parser": "7.29.2",
     "@cloudflare/vitest-pool-workers": "0.18.8",
     "@cloudflare/workers-types": "5.20260724.1",
+    "pg": "8.22.0",
     "typescript": "5.9.3",
     "vitest": "4.1.0",
     "wrangler": "4.114.0"

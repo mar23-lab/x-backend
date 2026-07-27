@@ -174,6 +174,7 @@ describeLive('pilot-shadow census seed (real governed code paths)', () => {
         body: JSON.stringify({
           text: `Create a task to record the pilot census seeding evidence for workspace ${suffix.toUpperCase()}`,
           client_request_id: `census-${RUN_TAG}-resolve-${suffix}`,
+          interaction_id: `census-${RUN_TAG}-interaction-${suffix}`,
         }),
       });
       await expectStatus(resolveRes, 201);
@@ -187,6 +188,7 @@ describeLive('pilot-shadow census seed (real governed code paths)', () => {
           version: resolution.version,
           current_work_version: resolution.current_work_version,
           client_request_id: `census-${RUN_TAG}-execute-${suffix}`,
+          interaction_id: `census-${RUN_TAG}-interaction-${suffix}`,
         }),
       });
       await expectStatus(executeRes, 200);

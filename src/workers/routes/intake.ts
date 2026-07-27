@@ -78,6 +78,12 @@ intakeRoute.post('/intake/resolve', async (ctx) => {
     if (typeof body.client_request_id !== 'string' || !body.client_request_id.trim() || body.client_request_id.length > 160) {
       return fail(ctx, 400, 'VALIDATION_ERROR', 'client_request_id is required');
     }
+    if (body.interaction_id != null && (typeof body.interaction_id !== 'string' || !body.interaction_id.trim() || body.interaction_id.length > 200)) {
+      return fail(ctx, 400, 'VALIDATION_ERROR', 'interaction_id must be a non-empty string up to 200 characters');
+    }
+    body.interaction_id = typeof body.interaction_id === 'string'
+      ? body.interaction_id.trim()
+      : body.client_request_id.trim();
     const { workspace_id, user_id, role } = ctx.get('auth');
     stage = 'load_inventory';
     const [packets, approvals, projects, createDecision, decideDecision] = await Promise.all([
@@ -97,6 +103,7 @@ intakeRoute.post('/intake/resolve', async (ctx) => {
     stage = 'classify_request';
     const requestDigest = await digest(JSON.stringify({
       text: body.text.trim(),
+      interaction_id: body.interaction_id,
       project_id: body.project_id ?? null,
       target: body.target ?? null,
     }));
@@ -138,10 +145,16 @@ intakeRoute.post('/intake/resolve', async (ctx) => {
 intakeRoute.post('/intake/:resolution_id/execute', async (ctx) => {
   try {
     if (!envFlagTrue(ctx.env.SINGLE_INTAKE_ENABLED)) return fail(ctx, 404, 'FEATURE_DISABLED', 'single intake is not enabled');
-    const body = await ctx.req.json().catch(() => null) as { version?: unknown; current_work_version?: unknown; client_request_id?: unknown } | null;
+    const body = await ctx.req.json().catch(() => null) as {
+      version?: unknown;
+      current_work_version?: unknown;
+      client_request_id?: unknown;
+      interaction_id?: unknown;
+    } | null;
     if (!body || !Number.isInteger(body.version) || !Number.isInteger(body.current_work_version)
-      || typeof body.client_request_id !== 'string' || !body.client_request_id.trim() || body.client_request_id.length > 160) {
-      return fail(ctx, 400, 'VALIDATION_ERROR', 'version, current_work_version, and client_request_id are required');
+      || typeof body.client_request_id !== 'string' || !body.client_request_id.trim() || body.client_request_id.length > 160
+      || typeof body.interaction_id !== 'string' || !body.interaction_id.trim() || body.interaction_id.length > 200) {
+      return fail(ctx, 400, 'VALIDATION_ERROR', 'version, current_work_version, client_request_id, and interaction_id are required');
     }
     const { workspace_id, user_id, role } = ctx.get('auth');
     // W.2 two-tier ruling (260720): executing a governed intake ADVANCES governed state -> owner/operator
@@ -167,6 +180,7 @@ intakeRoute.post('/intake/:resolution_id/execute', async (ctx) => {
       Number(body.version),
       Number(body.current_work_version),
       body.client_request_id.trim(),
+      body.interaction_id.trim(),
       {
         role_key: `role.workspace.${role}`,
         closing_skill: 'skill.governed-execution-closeout',

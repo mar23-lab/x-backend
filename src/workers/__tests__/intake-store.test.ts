@@ -9,7 +9,8 @@ import { neonClient } from '../db/client';
 
 const RESOLUTION = {
   id: 'inr_1', workspace_id: 'ws_1', actor_user_id: 'user_1', project_id: 'proj_1',
-  client_request_id: 'resolve_1', request_digest: 'a'.repeat(64), operation: 'create_work',
+  client_request_id: 'resolve_1', interaction_id: 'interaction_1',
+  request_digest: 'a'.repeat(64), operation: 'create_work',
   confidence: 0.99, ambiguity: false, target: { type: 'task_packet', id: null, label: 'Launch' },
   effect_summary: 'Create launch packet', risk: 'medium', authority: { allowed: true, safe_reason: 'operator' },
   context_summary: { reference_count: 0, source_count: 0, evidence_count: 0 }, required_tools: [],
@@ -23,6 +24,12 @@ const EXECUTION_ROW = {
   receipt_id: 'ger_1', receipt_client_request_id: 'execute_1',
   receipt_target_type: 'task_packet', receipt_target_id: 'pkt_1', receipt_created_at: '2026-07-15T00:00:01Z',
   receipt_closing_attestation_id: 'cla_1',
+  receipt_interaction_id: 'interaction_1',
+  receipt_intent_id: 'int_1',
+  receipt_operation_event_id: 'evt_1',
+  receipt_audit_event_id: '91',
+  receipt_projection_outbox_id: 'out_1',
+  receipt_conversation_message_id: '501',
 };
 
 const CLOSING = {
@@ -95,7 +102,14 @@ describe('single-intake transactional execution', () => {
     };
     const { sql, statements } = sqlWith([[receipt]]);
     const rows = await listGovernedExecutionReceiptsRow(sql, 'ws_1', 500);
-    expect(rows).toEqual([receipt]);
+    expect(rows).toEqual([{
+      ...receipt,
+      intent_id: null,
+      operation_event_id: null,
+      audit_event_id: null,
+      projection_outbox_id: null,
+      conversation_message_id: null,
+    }]);
     const query = statements.find((statement) => statement.text.includes('ORDER BY created_at DESC'))!;
     expect(query.text).toContain('WHERE workspace_id =');
     expect(query.values).toContain('ws_1');
@@ -104,29 +118,71 @@ describe('single-intake transactional execution', () => {
 
   it('binds project validation and the execution idempotency key into the atomic write', async () => {
     const { sql, statements } = sqlWith([[EXECUTION_ROW]]);
-    const result = await executeIntakeResolutionRow(sql, 'ws_1', 'user_1', 'inr_1', 1, 0, 'execute_1', CLOSING);
-    expect(result).toMatchObject({ ok: true, packet_id: 'pkt_1', receipt: { client_request_id: 'execute_1', closing_attestation_id: 'cla_1' } });
+    const result = await executeIntakeResolutionRow(
+      sql, 'ws_1', 'user_1', 'inr_1', 1, 0, 'execute_1', 'interaction_1', CLOSING,
+    );
+    expect(result).toMatchObject({
+      ok: true,
+      packet_id: 'pkt_1',
+      read_model_watermark: '2026-07-15T00:00:01Z',
+      receipt: {
+        client_request_id: 'execute_1',
+        interaction_id: 'interaction_1',
+        closing_attestation_id: 'cla_1',
+        intent_id: 'int_1',
+        operation_event_id: 'evt_1',
+        audit_event_id: '91',
+        projection_outbox_id: 'out_1',
+        conversation_message_id: '501',
+      },
+    });
     const write = statements.find((statement) => statement.text.includes('WITH claimed AS'))!;
     expect(write.text).toContain("p.workspace_id = intake_resolutions.workspace_id");
     expect(write.text).toContain("p.status <> 'archived'");
     expect(write.text).toContain('client_request_id');
     expect(write.values).toContain('execute_1');
+    expect(write.values).toContain('interaction_1');
+    expect(write.text).toContain('INSERT INTO intents');
+    expect(write.text).toContain('INSERT INTO operation_events');
+    expect(write.text).toContain('INSERT INTO audit_logs');
     expect(write.text).toContain('INSERT INTO closing_attestations');
     expect(write.values).toContain('skill.governed-execution-closeout');
     expect(write.text).toContain('INSERT INTO projection_outbox');
-    expect(write.text).toContain('JOIN queued q ON q.id IS NOT NULL');
+    expect(write.text).toContain('INSERT INTO chat_messages');
+    expect(write.text).toContain('JOIN intent_written i ON i.id = r.intent_id');
+    expect(write.text).toContain('JOIN operation_event_written o ON o.id = r.operation_event_id');
+    expect(write.text).toContain('JOIN audit_written a ON a.id::text = r.audit_event_id');
+    expect(write.text).toContain('JOIN queued q ON q.id = r.projection_outbox_id');
+    expect(write.text).toContain('JOIN conversation_message m ON m.id = r.conversation_message_id');
   });
 
   it('replays the original receipt for the same execution idempotency key', async () => {
     const { sql } = sqlWith([[], [EXECUTION_ROW]]);
-    const result = await executeIntakeResolutionRow(sql, 'ws_1', 'user_1', 'inr_1', 1, 0, 'execute_1', CLOSING);
+    const result = await executeIntakeResolutionRow(
+      sql, 'ws_1', 'user_1', 'inr_1', 1, 0, 'execute_1', 'interaction_1', CLOSING,
+    );
     expect(result).toMatchObject({ ok: true, replayed: true, packet_id: 'pkt_1', receipt: { id: 'ger_1' } });
   });
 
   it('does not replay a consumed resolution for a different execution key', async () => {
     const { sql } = sqlWith([[], [EXECUTION_ROW]]);
-    const result = await executeIntakeResolutionRow(sql, 'ws_1', 'user_1', 'inr_1', 1, 0, 'execute_other', CLOSING);
+    const result = await executeIntakeResolutionRow(
+      sql, 'ws_1', 'user_1', 'inr_1', 1, 0, 'execute_other', 'interaction_1', CLOSING,
+    );
     expect(result).toEqual({ ok: false, reason: 'already_consumed' });
+  });
+
+  it('cannot claim or replay a resolution through a different interaction', async () => {
+    const { sql, statements } = sqlWith([[], [], [{ status: 'consumed', expires_at: RESOLUTION.expires_at, version: 1, current_work_version: 0 }]]);
+    const result = await executeIntakeResolutionRow(
+      sql, 'ws_1', 'user_1', 'inr_1', 1, 0, 'execute_1', 'interaction_other', CLOSING,
+    );
+    expect(result).toEqual({ ok: false, reason: 'already_consumed' });
+    const write = statements.find((statement) => statement.text.includes('WITH claimed AS'))!;
+    expect(write.text).toContain('AND interaction_id =');
+    expect(write.values).toContain('interaction_other');
+    const replay = statements.find((statement) => statement.text.includes('JOIN governed_execution_receipts'))!;
+    expect(replay.text).toContain('AND c.interaction_id =');
   });
 });
 

@@ -3026,6 +3026,200 @@
           "reason": "Resolve selected project context and parenthesized canonical ids while preserving fail-closed ambiguity, title isolation, and route coverage"
         }
       ]
+    },
+    {
+      "delta_id": "production-user-recovery-20260727",
+      "generated_at": "2026-07-27T06:18:44.564Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "58f5c00cb5d5a8ffeb8ef3c5d6d94b0909287844",
+      "target_base_commit": "58f5c00cb5d5a8ffeb8ef3c5d6d94b0909287844",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "package.json",
+          "target_blob": "46f85139250c3c3a72a1bdd7a85cd3ae1f81896b",
+          "reason": "project-scoped conversation durability, semantic grounding, onboarding error contract, and complete governed execution lineage"
+        },
+        {
+          "path": "package-lock.json",
+          "target_blob": "4d75b4d9db441464ca3b0d0ccb79b7b69c41845d",
+          "reason": "project-scoped conversation durability, semantic grounding, onboarding error contract, and complete governed execution lineage"
+        },
+        {
+          "path": "scripts/run-worker-test-batches.mjs",
+          "target_blob": "47ce255cb7bc196420b84a668e84467dafc8b601",
+          "reason": "project-scoped conversation durability, semantic grounding, onboarding error contract, and complete governed execution lineage"
+        },
+        {
+          "path": "src/workers/__tests__/customer-chat-route.test.ts",
+          "target_blob": "2614eba9b2aa4278c0d473b8bf457f88e04ac894",
+          "reason": "project-scoped conversation durability, semantic grounding, onboarding error contract, and complete governed execution lineage"
+        },
+        {
+          "path": "src/workers/__tests__/customer-safe-decision.test.ts",
+          "target_blob": "32b3d319225bc7ad69814a03de2476725f4cc235",
+          "reason": "project-scoped conversation durability, semantic grounding, onboarding error contract, and complete governed execution lineage"
+        },
+        {
+          "path": "src/workers/__tests__/intake-route.test.ts",
+          "target_blob": "d613bb333e23738806a48acfe946d7ba7b7e5fc7",
+          "reason": "project-scoped conversation durability, semantic grounding, onboarding error contract, and complete governed execution lineage"
+        },
+        {
+          "path": "src/workers/__tests__/intake-store.test.ts",
+          "target_blob": "ecc59edde08f5dfce3b73fd908240cc346116543",
+          "reason": "project-scoped conversation durability, semantic grounding, onboarding error contract, and complete governed execution lineage"
+        },
+        {
+          "path": "src/workers/__tests__/pilot-census-seed-live.test.ts",
+          "target_blob": "8d90b09debaf2eca453910944270a6838a11e55a",
+          "reason": "project-scoped conversation durability, semantic grounding, onboarding error contract, and complete governed execution lineage"
+        },
+        {
+          "path": "src/workers/__tests__/readiness-route.test.ts",
+          "target_blob": "65d0425013414fe5dd64dddbb69d15ea0f2b188f",
+          "reason": "project-scoped conversation durability, semantic grounding, onboarding error contract, and complete governed execution lineage"
+        },
+        {
+          "path": "src/workers/dal/DalAdapter.ts",
+          "target_blob": "d6bfd0c5be59206d52cf67c2248b5a9d6e408d74",
+          "reason": "project-scoped conversation durability, semantic grounding, onboarding error contract, and complete governed execution lineage"
+        },
+        {
+          "path": "src/workers/dal/WorkersDalAdapter.ts",
+          "target_blob": "e9f0c4951e9c226819896ef4ee665b237bb0f03a",
+          "reason": "project-scoped conversation durability, semantic grounding, onboarding error contract, and complete governed execution lineage"
+        },
+        {
+          "path": "src/workers/dal/chat-store.ts",
+          "target_blob": "6b59ff891fa1f520551262a176f22bbd139f03f1",
+          "reason": "project-scoped conversation durability, semantic grounding, onboarding error contract, and complete governed execution lineage"
+        },
+        {
+          "path": "src/workers/dal/intake-store.ts",
+          "target_blob": "e5264b30310038f8b043ec53b54b9eda3653bdd4",
+          "reason": "project-scoped conversation durability, semantic grounding, onboarding error contract, and complete governed execution lineage"
+        },
+        {
+          "path": "src/workers/dal/operational-spine-methods.ts",
+          "target_blob": "4152390bd83d9d1d7eb0f6cf33b5e1a205824128",
+          "reason": "project-scoped conversation durability, semantic grounding, onboarding error contract, and complete governed execution lineage"
+        },
+        {
+          "path": "src/workers/dal/types/auth.ts",
+          "target_blob": "983c362299e252d05e49fba248de6ec5c5222d4a",
+          "reason": "project-scoped conversation durability, semantic grounding, onboarding error contract, and complete governed execution lineage"
+        },
+        {
+          "path": "src/workers/dal/types/intake.ts",
+          "target_blob": "7f56ea7a4302d5de1ac68cab7459f71523bed608",
+          "reason": "project-scoped conversation durability, semantic grounding, onboarding error contract, and complete governed execution lineage"
+        },
+        {
+          "path": "src/workers/lib/customer-safe-decision.ts",
+          "target_blob": "484a72c5732dd63b9fa0d1f8ea10c19d2fb3beb3",
+          "reason": "project-scoped conversation durability, semantic grounding, onboarding error contract, and complete governed execution lineage"
+        },
+        {
+          "path": "src/workers/lib/intake-resolution.ts",
+          "target_blob": "6a22fcaa83e4c540c8fdf61c7bc66481f7ec0b7b",
+          "reason": "project-scoped conversation durability, semantic grounding, onboarding error contract, and complete governed execution lineage"
+        },
+        {
+          "path": "src/workers/lib/observability.ts",
+          "target_blob": "23fbdd02c68e35087b6f063af6b37c472a1a4112",
+          "reason": "project-scoped conversation durability, semantic grounding, onboarding error contract, and complete governed execution lineage"
+        },
+        {
+          "path": "src/workers/middleware/error.ts",
+          "target_blob": "0b22c13f6afeeef4cbc499f3c67c7e180a522412",
+          "reason": "project-scoped conversation durability, semantic grounding, onboarding error contract, and complete governed execution lineage"
+        },
+        {
+          "path": "src/workers/routes/customer-chat.ts",
+          "target_blob": "015ddd9786f2f4cad7319414216aab88453242d4",
+          "reason": "project-scoped conversation durability, semantic grounding, onboarding error contract, and complete governed execution lineage"
+        },
+        {
+          "path": "src/workers/routes/intake.ts",
+          "target_blob": "d14adfd79e20a5297dbeea0f410c498a0c74f361",
+          "reason": "project-scoped conversation durability, semantic grounding, onboarding error contract, and complete governed execution lineage"
+        },
+        {
+          "path": "src/workers/routes/readiness.ts",
+          "target_blob": "aa6c687e34c60ba60c18c6e37574df7691885a40",
+          "reason": "project-scoped conversation durability, semantic grounding, onboarding error contract, and complete governed execution lineage"
+        },
+        {
+          "path": "src/workers/routes/workspaces.ts",
+          "target_blob": "f679d266debd5bff6a5082afef30a34c711fa4c3",
+          "reason": "project-scoped conversation durability, semantic grounding, onboarding error contract, and complete governed execution lineage"
+        },
+        {
+          "path": "src/workers/services/cockpit-chat.ts",
+          "target_blob": "412a1812c3c8cb6182f08d9a3b2d51f9a25293e8",
+          "reason": "project-scoped conversation durability, semantic grounding, onboarding error contract, and complete governed execution lineage"
+        },
+        {
+          "path": "wrangler.pilot-shadow.toml",
+          "target_blob": "da929623c91c435261244d0d6de505c8daaeb61d",
+          "reason": "project-scoped conversation durability, semantic grounding, onboarding error contract, and complete governed execution lineage"
+        }
+      ]
+    },
+    {
+      "delta_id": "production-user-recovery-contract-20260727",
+      "generated_at": "2026-07-27T06:29:14.557Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "58f5c00cb5d5a8ffeb8ef3c5d6d94b0909287844",
+      "target_base_commit": "58f5c00cb5d5a8ffeb8ef3c5d6d94b0909287844",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "docs/contracts/api-contract.v1.json",
+          "target_blob": "d221fb79ba98cac6cc537b1b3fbcfb693524426c",
+          "reason": "regenerate the canonical API error and response-envelope contract after production-user recovery"
+        }
+      ]
+    },
+    {
+      "delta_id": "project-fact-semantic-corpus-20260727",
+      "generated_at": "2026-07-27T06:34:31.951Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "58f5c00cb5d5a8ffeb8ef3c5d6d94b0909287844",
+      "target_base_commit": "58f5c00cb5d5a8ffeb8ef3c5d6d94b0909287844",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/services/cockpit-chat.ts",
+          "target_blob": "28b81f8dcb0a6a1002d17a9f37453b091ea45e87",
+          "reason": "scope-aware project fact classification with 60-case semantic recall and charter-goal regression protection"
+        },
+        {
+          "path": "src/workers/__tests__/cockpit-chat.test.ts",
+          "target_blob": "d020eb8c8fc27a0d91236e26706bb1259670cc5c",
+          "reason": "scope-aware project fact classification with 60-case semantic recall and charter-goal regression protection"
+        }
+      ]
+    },
+    {
+      "delta_id": "immutable-chat-interaction-conflict-20260727",
+      "generated_at": "2026-07-27T06:38:42.251Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "58f5c00cb5d5a8ffeb8ef3c5d6d94b0909287844",
+      "target_base_commit": "58f5c00cb5d5a8ffeb8ef3c5d6d94b0909287844",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/dal/chat-store.ts",
+          "target_blob": "c319f0f2725141e86a2be6857575f19ad78099fe",
+          "reason": "fail closed when one interaction identity is reused for different canonical conversation content"
+        }
+      ]
     }
   ]
 }

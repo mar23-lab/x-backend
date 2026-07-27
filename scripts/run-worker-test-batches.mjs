@@ -11,6 +11,9 @@ const batchCooldownMs = Number(process.env.XLOOOP_TEST_BATCH_COOLDOWN_MS || 3000
 const files = [];
 const nodeEnvironmentTests = new Set([
   'src/workers/__tests__/role-skill-catalog-publisher.test.ts',
+  'src/workers/__tests__/migration-091-conversation-lineage.test.ts',
+  // Opt-in real PostgreSQL schema/transaction proof; skipped unless XLOOOP_SCHEMA91_PG_URL is set.
+  'src/workers/__tests__/intake-schema91-postgres.test.ts',
   // J-E TASK 1 (260719) · reads wrangler.toml + crons/index.ts via node:fs (unavailable in the workerd pool).
   'src/workers/__tests__/cron-registry-wrangler-parity.test.ts',
 ]);

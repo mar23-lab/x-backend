@@ -42,6 +42,7 @@ export interface IntakeResolution {
   actor_user_id: UserId;
   project_id: ProjectId | null;
   client_request_id: string;
+  interaction_id: string;
   request_digest: string;
   operation: IntakeOperation;
   confidence: number;
@@ -73,6 +74,7 @@ export interface IntakeResolution {
 export interface IntakeResolutionInput {
   project_id?: ProjectId | null;
   client_request_id: string;
+  interaction_id?: string;
   request_digest: string;
   operation: IntakeOperation;
   confidence: number;
@@ -103,6 +105,7 @@ export interface GovernedExecutionReceipt {
   resolution_id: string;
   actor_user_id: UserId;
   client_request_id: string;
+  interaction_id: string;
   operation: IntakeOperation;
   target_type: IntakeTarget['type'];
   target_id: string | null;
@@ -110,6 +113,12 @@ export interface GovernedExecutionReceipt {
   effect_summary: string;
   /** Always present for executions created after staged migration 079; nullable on historical receipts. */
   closing_attestation_id: string | null;
+  /** Canonical lineage references are present for schema-91 writes; historical receipts remain nullable. */
+  intent_id: string | null;
+  operation_event_id: string | null;
+  audit_event_id: string | null;
+  projection_outbox_id: string | null;
+  conversation_message_id: string | null;
   created_at: string;
 }
 
@@ -124,5 +133,12 @@ export interface GovernedClosingAttestationInput {
 }
 
 export type IntakeExecutionResult =
-  | { ok: true; replayed?: boolean; resolution: IntakeResolution; receipt: GovernedExecutionReceipt; packet_id?: string }
+  | {
+      ok: true;
+      replayed?: boolean;
+      resolution: IntakeResolution;
+      receipt: GovernedExecutionReceipt;
+      packet_id?: string;
+      read_model_watermark: string;
+    }
   | { ok: false; reason: 'not_found' | 'stale' | 'expired' | 'already_consumed' | 'unsupported' };

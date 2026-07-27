@@ -375,6 +375,7 @@ export interface DalAdapter {
     expectedVersion: number,
     expectedCurrentWorkVersion: number,
     clientRequestId: string,
+    interactionId: string,
     closing: import('./types').GovernedClosingAttestationInput,
   ): Promise<IntakeExecutionResult>;
   /** Tenant-scoped count used by Current Work; returns no receipt identifiers or payloads. */
@@ -614,7 +615,7 @@ export interface DalAdapter {
     userId: string,
     scope: import('./chat-store').ChatScopeRef,
     messages: import('./chat-store').ChatMessageInput[],
-  ): Promise<void>;
+  ): Promise<import('./chat-store').ChatExchangeWriteResult>;
 
   /** Wave 3 · load the stored cockpit-chat thread for an (operator, scope), oldest → newest. */
   listChatHistory(

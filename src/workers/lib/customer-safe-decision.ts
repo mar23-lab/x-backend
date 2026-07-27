@@ -65,14 +65,37 @@ const SAFE_GENERATED_BY: Record<string, 'assistant' | 'rule_based'> = {
 
 /** The ONLY keys a customer-safe chat decision may carry (allow-list = deny-by-default for new leaky fields). */
 export interface CustomerSafeChat {
+  interaction_id: string;
+  scope: { workspace_id: string | null; project_id: string | null; domain_id: string | null };
   answer: string;
   generated_by: 'assistant' | 'rule_based';
   grounded_on: { evidence_count: number; sources?: CustomerSafeSources } | null;
+  requested_facts: {
+    required: string[];
+    satisfied: string[];
+    unavailable: string[];
+  };
+  grounding: {
+    evidence_count: number;
+    project_plan_fact_count: number;
+    freshness: string | null;
+  };
+  lineage: {
+    context_receipt_id: string;
+    role_skill_resolution_id: string;
+  } | null;
+  conversation: {
+    thread_id: string;
+    user_message_id: string;
+    assistant_message_id: string;
+  } | null;
   mode: unknown;
   claude_available?: boolean;
 }
 
 export interface ChatDecisionLike {
+  interaction_id?: unknown;
+  scope?: unknown;
   answer: string;
   generated_by?: string;
   model?: string | null;
@@ -80,6 +103,10 @@ export interface ChatDecisionLike {
   mode?: unknown;
   llm_requested?: unknown;
   claude_available?: boolean;
+  requested_facts?: unknown;
+  grounding?: unknown;
+  lineage?: unknown;
+  conversation?: unknown;
   [k: string]: unknown;
 }
 
@@ -92,10 +119,50 @@ export function customerSafeChat<T extends ChatDecisionLike>(payload: T, enabled
   if (!enabled) return payload;
   const g = payload.grounded_on;
   const evidence_count = Array.isArray(g?.event_ids) ? (g!.event_ids as string[]).length : 0;
+  const scope = payload.scope && typeof payload.scope === 'object'
+    ? payload.scope as Record<string, unknown>
+    : {};
+  const requestedFacts = payload.requested_facts && typeof payload.requested_facts === 'object'
+    ? payload.requested_facts as Record<string, unknown>
+    : {};
+  const grounding = payload.grounding && typeof payload.grounding === 'object'
+    ? payload.grounding as Record<string, unknown>
+    : {};
+  const lineage = payload.lineage && typeof payload.lineage === 'object'
+    ? payload.lineage as Record<string, unknown>
+    : null;
+  const conversation = payload.conversation && typeof payload.conversation === 'object'
+    ? payload.conversation as Record<string, unknown>
+    : null;
   const safe: CustomerSafeChat = {
+    interaction_id: String(payload.interaction_id ?? ''),
+    scope: {
+      workspace_id: scope.workspace_id == null ? null : String(scope.workspace_id),
+      project_id: scope.project_id == null ? null : String(scope.project_id),
+      domain_id: scope.domain_id == null ? null : String(scope.domain_id),
+    },
     answer: payload.answer,
     generated_by: SAFE_GENERATED_BY[payload.generated_by ?? ''] ?? 'assistant',
     grounded_on: g ? (sanitizeSources((g as { sources?: unknown }).sources) ? { evidence_count, sources: sanitizeSources((g as { sources?: unknown }).sources) } : { evidence_count }) : null,
+    requested_facts: {
+      required: Array.isArray(requestedFacts.required) ? requestedFacts.required.map(String) : [],
+      satisfied: Array.isArray(requestedFacts.satisfied) ? requestedFacts.satisfied.map(String) : [],
+      unavailable: Array.isArray(requestedFacts.unavailable) ? requestedFacts.unavailable.map(String) : [],
+    },
+    grounding: {
+      evidence_count: Number(grounding.evidence_count ?? evidence_count),
+      project_plan_fact_count: Number(grounding.project_plan_fact_count ?? 0),
+      freshness: grounding.freshness == null ? null : String(grounding.freshness),
+    },
+    lineage: lineage ? {
+      context_receipt_id: String(lineage.context_receipt_id ?? ''),
+      role_skill_resolution_id: String(lineage.role_skill_resolution_id ?? ''),
+    } : null,
+    conversation: conversation ? {
+      thread_id: String(conversation.thread_id ?? ''),
+      user_message_id: String(conversation.user_message_id ?? ''),
+      assistant_message_id: String(conversation.assistant_message_id ?? ''),
+    } : null,
     mode: payload.mode,
   };
   if (payload.claude_available !== undefined) safe.claude_available = payload.claude_available;

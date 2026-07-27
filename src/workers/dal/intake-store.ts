@@ -35,6 +35,7 @@ function objectValue<T extends object>(value: unknown, fallback: T): T {
 function normalizeResolution(row: ResolutionRow): IntakeResolution {
   return {
     ...row,
+    interaction_id: row.interaction_id || row.client_request_id,
     confidence: Number(row.confidence),
     ambiguity: row.ambiguity === true,
     target: objectValue(row.target, { type: 'none', id: null, label: 'Unavailable target' }),
@@ -60,13 +61,13 @@ export async function createIntakeResolutionRow(
   const [rows] = await withWorkspaceRlsContext<[ResolutionRow[]]>(sql, workspaceId, (tx) => [
     tx/*sql*/`
       INSERT INTO intake_resolutions (
-        id, workspace_id, actor_user_id, project_id, client_request_id, request_digest,
+        id, workspace_id, actor_user_id, project_id, client_request_id, interaction_id, request_digest,
         operation, confidence, ambiguity, target, effect_summary, risk, authority,
         context_summary, prior_work, governance_summary, role_label, approach_label, grounding_summary,
         guardrails, freshness, required_tools, requires_confirmation, next_step, action_payload,
         current_work_version, expires_at
       ) VALUES (
-        ${id}, ${workspaceId}, ${actorUserId}, ${input.project_id ?? null}, ${input.client_request_id}, ${input.request_digest},
+        ${id}, ${workspaceId}, ${actorUserId}, ${input.project_id ?? null}, ${input.client_request_id}, ${input.interaction_id ?? input.client_request_id}, ${input.request_digest},
         ${input.operation}, ${input.confidence}, ${input.ambiguity}, ${JSON.stringify(input.target)}::jsonb,
         ${input.effect_summary}, ${input.risk}, ${JSON.stringify(input.authority)}::jsonb,
         ${JSON.stringify(input.context_summary)}::jsonb, ${JSON.stringify(input.prior_work ?? { discovery_executed: true, active_work_count: 0, pending_approval_count: 0, digest_sha256: '' })}::jsonb,
@@ -122,9 +123,10 @@ export async function listGovernedExecutionReceiptsRow(
     sql,
     workspaceId,
     (tx) => [tx/*sql*/`
-      SELECT id, workspace_id, resolution_id, actor_user_id, client_request_id,
+      SELECT id, workspace_id, resolution_id, actor_user_id, client_request_id, interaction_id,
         operation, target_type, target_id, result, effect_summary,
-        closing_attestation_id, created_at
+        closing_attestation_id, intent_id, operation_event_id, audit_event_id,
+        projection_outbox_id, conversation_message_id, created_at
         FROM governed_execution_receipts
        WHERE workspace_id = ${workspaceId}
        ORDER BY created_at DESC
@@ -135,6 +137,11 @@ export async function listGovernedExecutionReceiptsRow(
   return rows.map((row) => ({
     ...row,
     closing_attestation_id: row.closing_attestation_id ?? null,
+    intent_id: row.intent_id ?? null,
+    operation_event_id: row.operation_event_id ?? null,
+    audit_event_id: row.audit_event_id ?? null,
+    projection_outbox_id: row.projection_outbox_id ?? null,
+    conversation_message_id: row.conversation_message_id == null ? null : String(row.conversation_message_id),
   }));
 }
 
@@ -145,6 +152,12 @@ type ExecutionRow = ResolutionRow & {
   receipt_target_id: string | null;
   receipt_created_at: string;
   receipt_closing_attestation_id: string;
+  receipt_interaction_id: string;
+  receipt_intent_id: string;
+  receipt_operation_event_id: string;
+  receipt_audit_event_id: string;
+  receipt_projection_outbox_id: string;
+  receipt_conversation_message_id: string | number;
 };
 
 export async function executeIntakeResolutionRow(
@@ -155,6 +168,7 @@ export async function executeIntakeResolutionRow(
   expectedVersion: number,
   expectedCurrentWorkVersion: number,
   clientRequestId: string,
+  interactionId: string,
   closing: GovernedClosingAttestationInput,
 ): Promise<IntakeExecutionResult> {
   assertWorkspaceScope(workspaceId);
@@ -162,6 +176,8 @@ export async function executeIntakeResolutionRow(
   const receiptId = `ger_${randomNanoid()}`;
   const outboxId = `out_${randomNanoid()}`;
   const closingAttestationId = `cla_${randomNanoid()}`;
+  const intentId = `int_${randomNanoid()}`;
+  const operationEventId = `evt_${randomNanoid()}`;
   const [rows] = await withWorkspaceRlsContext<[ExecutionRow[]]>(sql, workspaceId, (tx) => [
     tx/*sql*/`
       WITH claimed AS (
@@ -170,6 +186,7 @@ export async function executeIntakeResolutionRow(
          WHERE id = ${resolutionId}
            AND workspace_id = ${workspaceId}
            AND actor_user_id = ${actorUserId}
+           AND interaction_id = ${interactionId}
            AND status = 'pending'
            AND version = ${expectedVersion}
            AND current_work_version = ${expectedCurrentWorkVersion}
@@ -238,19 +255,50 @@ export async function executeIntakeResolutionRow(
         RETURNING a.id
       ), effect AS (
         SELECT c.id AS resolution_id, c.workspace_id, c.actor_user_id, c.operation,
+          c.project_id, c.interaction_id,
           CASE WHEN c.operation = 'decide' THEN 'approval' ELSE 'task_packet' END AS target_type,
           COALESCE((SELECT id FROM new_packet), (SELECT id FROM continued), (SELECT id FROM decided)) AS target_id,
           c.effect_summary
         FROM claimed c
-      ), receipt AS (
-        INSERT INTO governed_execution_receipts (
-          id, workspace_id, resolution_id, actor_user_id, client_request_id,
-          operation, target_type, target_id, result, effect_summary, closing_attestation_id
+        WHERE COALESCE((SELECT id FROM new_packet), (SELECT id FROM continued), (SELECT id FROM decided)) IS NOT NULL
+      ), intent_written AS (
+        INSERT INTO intents (
+          id, workspace_id, project_id, title, summary, status, owner_user_id, origin
         )
-        SELECT ${receiptId}, workspace_id, resolution_id, actor_user_id, ${clientRequestId},
-          operation, target_type, target_id, 'completed', effect_summary, ${closingAttestationId}
-          FROM effect WHERE target_id IS NOT NULL
-        RETURNING *
+        SELECT ${intentId}, workspace_id, project_id, left(effect_summary, 160),
+          effect_summary, 'done', actor_user_id, 'operator'
+        FROM effect
+        RETURNING id
+      ), operation_event_written AS (
+        INSERT INTO operation_events (
+          id, workspace_id, project_id, source_tool, intent_id, status, summary,
+          evidence_link, visibility, permission_scope, risk, approval_state,
+          occurred_at, authorized_by_user_id, instrument_kind, authority_source, request_id
+        )
+        SELECT ${operationEventId}, workspace_id, project_id, 'xlooop', ${intentId},
+          'completed', effect_summary, ${`receipt:${receiptId}`}, 'internal_workspace',
+          'customer_data:execute', 'medium',
+          CASE WHEN operation = 'decide' THEN 'approved' ELSE NULL END,
+          now(), actor_user_id, 'human', 'explicit_approval', ${clientRequestId}
+        FROM effect
+        RETURNING id
+      ), audit_written AS (
+        INSERT INTO audit_logs (
+          actor_user_id, action, target_type, target_id, workspace_id, reason, metadata, causation_id
+        )
+        SELECT actor_user_id, 'governed_intake_execute',
+          CASE WHEN target_type = 'approval' THEN 'decision' ELSE 'packet' END,
+          target_id, workspace_id, effect_summary,
+          jsonb_build_object(
+            'resolution_id', resolution_id,
+            'interaction_id', interaction_id,
+            'execution_receipt_id', ${receiptId}::text,
+            'operation_event_id', ${operationEventId}::text,
+            'intent_id', ${intentId}::text
+          ),
+          ${intentId}
+        FROM effect
+        RETURNING id
       ), closed AS (
         INSERT INTO closing_attestations (
           id, workspace_id, principal_id, correlation_id, role_key, closing_skill, outcome,
@@ -259,20 +307,93 @@ export async function executeIntakeResolutionRow(
         SELECT ${closingAttestationId}, workspace_id, actor_user_id, resolution_id, ${closing.role_key},
           ${closing.closing_skill}, ${closing.outcome}, ${closing.evidence_ref_ids}, ${closing.content_sha256},
           ${closing.signature_alg}, ${closing.signature}
-          FROM receipt
+          FROM effect
         RETURNING id
       ), queued AS (
         INSERT INTO projection_outbox (id, workspace_id, event_type, aggregate_type, aggregate_id, payload)
         SELECT ${outboxId}, workspace_id, 'governed_intake.executed', target_type, target_id,
-          jsonb_build_object('resolution_id', resolution_id, 'receipt_id', id, 'operation', operation)
-          FROM receipt
+          jsonb_build_object(
+            'resolution_id', resolution_id,
+            'interaction_id', interaction_id,
+            'receipt_id', ${receiptId}::text,
+            'operation', operation,
+            'intent_id', ${intentId}::text,
+            'operation_event_id', ${operationEventId}::text
+          )
+          FROM effect
         RETURNING id
+      ), conversation_thread AS (
+        INSERT INTO chat_threads (id, user_id, workspace_id, project_id, domain_id, scope_key)
+        SELECT
+          left(
+            'thr_' || regexp_replace(lower(actor_user_id), '[^a-z0-9]', '', 'g') || '__'
+            || regexp_replace(lower(workspace_id), '[^a-z0-9]', '', 'g') || '|'
+            || regexp_replace(lower(COALESCE(project_id, '')), '[^a-z0-9]', '', 'g') || '|',
+            200
+          ),
+          actor_user_id, workspace_id, project_id, NULL,
+          regexp_replace(lower(workspace_id), '[^a-z0-9]', '', 'g') || '|'
+          || regexp_replace(lower(COALESCE(project_id, '')), '[^a-z0-9]', '', 'g') || '|'
+        FROM effect
+        ON CONFLICT (id) DO UPDATE SET updated_at = now()
+        RETURNING id
+      ), conversation_message AS (
+        INSERT INTO chat_messages (
+          thread_id, role, body, mode, generated_by, grounded_on,
+          interaction_id, entry_type, resolution_id, execution_receipt_id, packet_id,
+          operation_event_id, intent_id, audit_event_id, closing_attestation_id
+        )
+        SELECT conversation_thread.id, 'assistant', effect.effect_summary, 'do', 'deterministic',
+          jsonb_build_object(
+            'workspace_id', effect.workspace_id,
+            'project_id', effect.project_id,
+            'execution_receipt_id', ${receiptId}::text,
+            'read_model_watermark', now()
+          ),
+          effect.interaction_id, 'execution_outcome', effect.resolution_id, ${receiptId},
+          CASE WHEN effect.target_type = 'task_packet' THEN effect.target_id ELSE NULL END,
+          ${operationEventId}, ${intentId}, audit_written.id::text, ${closingAttestationId}
+        FROM effect
+        JOIN conversation_thread ON true
+        JOIN audit_written ON true
+        ON CONFLICT (thread_id, interaction_id, entry_type)
+          WHERE interaction_id IS NOT NULL AND entry_type IS NOT NULL
+        DO UPDATE SET thread_id = EXCLUDED.thread_id
+        RETURNING id
+      ), receipt AS (
+        INSERT INTO governed_execution_receipts (
+          id, workspace_id, resolution_id, actor_user_id, client_request_id, interaction_id,
+          operation, target_type, target_id, result, effect_summary, closing_attestation_id,
+          intent_id, operation_event_id, audit_event_id, projection_outbox_id, conversation_message_id
+        )
+        SELECT ${receiptId}, effect.workspace_id, effect.resolution_id, effect.actor_user_id, ${clientRequestId},
+          effect.interaction_id, effect.operation, effect.target_type, effect.target_id, 'completed',
+          effect.effect_summary, ${closingAttestationId}, ${intentId}, ${operationEventId},
+          audit_written.id::text, ${outboxId}, conversation_message.id
+        FROM effect
+        JOIN intent_written ON intent_written.id = ${intentId}
+        JOIN operation_event_written ON operation_event_written.id = ${operationEventId}
+        JOIN audit_written ON true
+        JOIN closed ON closed.id = ${closingAttestationId}
+        JOIN queued ON queued.id = ${outboxId}
+        JOIN conversation_message ON true
+        RETURNING *
       )
       SELECT c.*, r.id AS receipt_id, r.client_request_id AS receipt_client_request_id, r.target_type AS receipt_target_type,
         r.target_id AS receipt_target_id, r.created_at AS receipt_created_at,
-        r.closing_attestation_id AS receipt_closing_attestation_id
-      FROM claimed c JOIN receipt r ON r.resolution_id = c.id JOIN closed x ON x.id = r.closing_attestation_id
-      JOIN queued q ON q.id IS NOT NULL
+        r.closing_attestation_id AS receipt_closing_attestation_id,
+        r.interaction_id AS receipt_interaction_id, r.intent_id AS receipt_intent_id,
+        r.operation_event_id AS receipt_operation_event_id, r.audit_event_id AS receipt_audit_event_id,
+        r.projection_outbox_id AS receipt_projection_outbox_id,
+        r.conversation_message_id AS receipt_conversation_message_id
+      FROM claimed c
+      JOIN receipt r ON r.resolution_id = c.id
+      JOIN intent_written i ON i.id = r.intent_id
+      JOIN operation_event_written o ON o.id = r.operation_event_id
+      JOIN audit_written a ON a.id::text = r.audit_event_id
+      JOIN closed x ON x.id = r.closing_attestation_id
+      JOIN queued q ON q.id = r.projection_outbox_id
+      JOIN conversation_message m ON m.id = r.conversation_message_id
     `,
   ]);
   const row = rows[0];
@@ -284,18 +405,25 @@ export async function executeIntakeResolutionRow(
       resolution_id: row.id,
       actor_user_id: row.actor_user_id,
       client_request_id: row.receipt_client_request_id,
+      interaction_id: row.receipt_interaction_id,
       operation: row.operation,
       target_type: row.receipt_target_type,
       target_id: row.receipt_target_id,
       result: 'completed',
       effect_summary: row.effect_summary,
       closing_attestation_id: row.receipt_closing_attestation_id,
+      intent_id: row.receipt_intent_id,
+      operation_event_id: row.receipt_operation_event_id,
+      audit_event_id: row.receipt_audit_event_id,
+      projection_outbox_id: row.receipt_projection_outbox_id,
+      conversation_message_id: String(row.receipt_conversation_message_id),
       created_at: row.receipt_created_at,
     };
     return {
       ok: true,
       resolution,
       receipt,
+      read_model_watermark: row.receipt_created_at,
       ...(row.receipt_target_type === 'task_packet' && row.receipt_target_id ? { packet_id: row.receipt_target_id } : {}),
     };
   }
@@ -303,12 +431,17 @@ export async function executeIntakeResolutionRow(
   const [replayRows] = await withWorkspaceRlsContext<[ExecutionRow[]]>(sql, workspaceId, (tx) => [tx/*sql*/`
     SELECT c.*, r.id AS receipt_id, r.client_request_id AS receipt_client_request_id,
       r.target_type AS receipt_target_type, r.target_id AS receipt_target_id, r.created_at AS receipt_created_at,
-      r.closing_attestation_id AS receipt_closing_attestation_id
+      r.closing_attestation_id AS receipt_closing_attestation_id,
+      r.interaction_id AS receipt_interaction_id, r.intent_id AS receipt_intent_id,
+      r.operation_event_id AS receipt_operation_event_id, r.audit_event_id AS receipt_audit_event_id,
+      r.projection_outbox_id AS receipt_projection_outbox_id,
+      r.conversation_message_id AS receipt_conversation_message_id
       FROM intake_resolutions c
       JOIN governed_execution_receipts r ON r.resolution_id = c.id
      WHERE c.id = ${resolutionId}
        AND c.workspace_id = ${workspaceId}
        AND c.actor_user_id = ${actorUserId}
+       AND c.interaction_id = ${interactionId}
      LIMIT 1
   `], { readOnly: true });
   const replay = replayRows[0];
@@ -324,12 +457,18 @@ export async function executeIntakeResolutionRow(
       resolution_id: replay.id,
       actor_user_id: replay.actor_user_id,
       client_request_id: replay.receipt_client_request_id,
+      interaction_id: replay.receipt_interaction_id,
       operation: replay.operation,
       target_type: replay.receipt_target_type,
       target_id: replay.receipt_target_id,
       result: 'completed',
       effect_summary: replay.effect_summary,
       closing_attestation_id: replay.receipt_closing_attestation_id,
+      intent_id: replay.receipt_intent_id,
+      operation_event_id: replay.receipt_operation_event_id,
+      audit_event_id: replay.receipt_audit_event_id,
+      projection_outbox_id: replay.receipt_projection_outbox_id,
+      conversation_message_id: String(replay.receipt_conversation_message_id),
       created_at: replay.receipt_created_at,
     };
     return {
@@ -337,6 +476,7 @@ export async function executeIntakeResolutionRow(
       replayed: true,
       resolution,
       receipt,
+      read_model_watermark: replay.receipt_created_at,
       ...(replay.receipt_target_type === 'task_packet' && replay.receipt_target_id ? { packet_id: replay.receipt_target_id } : {}),
     };
   }

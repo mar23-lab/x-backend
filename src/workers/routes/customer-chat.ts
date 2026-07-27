@@ -37,6 +37,7 @@ import { createModelExecutionObserver } from '../lib/model-execution-lineage';
 import {
   answerCockpitChat,
   isProjectInventoryQuestion,
+  type ProjectPlanGrounding,
   type CockpitChatScope,
   type CockpitChatMode,
   type CockpitChatLLM,
@@ -145,6 +146,14 @@ customerChatRoute.get('/customer-chat/history', async (ctx) => {
     );
     if (!scoped.ok) return scoped.res;
 
+    const requestedProjectId = String(ctx.req.query('project_id') || '').trim() || null;
+    if (requestedProjectId) {
+      const project = await gate.dal.getProject(scoped.ws, requestedProjectId);
+      if (!project || project.status === 'archived') {
+        return errorEnvelope(ctx, { status: 404, code: 'NOT_FOUND', message: 'project not found in this workspace' });
+      }
+    }
+
     const strict = envFlagTrue(ctx.env.CHAT_HISTORY_PERSISTENCE_REQUIRED);
     const lister = (gate.dal as unknown as {
       listChatHistory?: (userId: string, scope: CockpitChatScope, limit?: number) => Promise<unknown[]>;
@@ -159,10 +168,10 @@ customerChatRoute.get('/customer-chat/history', async (ctx) => {
           request_id: ctx.get('request_id'),
         });
       }
-      return ctx.json({ messages: [], scope: { workspace_id: scoped.ws, project_id: null, domain_id: null } });
+      return ctx.json({ messages: [], scope: { workspace_id: scoped.ws, project_id: requestedProjectId, domain_id: null } });
     }
 
-    const scope: CockpitChatScope = { workspace_id: scoped.ws, project_id: null, domain_id: null };
+    const scope: CockpitChatScope = { workspace_id: scoped.ws, project_id: requestedProjectId, domain_id: null };
     try {
       const messages = await lister.call(gate.dal, auth.user_id, scope, 100);
       return ctx.json({ messages: Array.isArray(messages) ? messages : [], scope });
@@ -201,7 +210,14 @@ customerChatRoute.post('/customer-chat', async (ctx) => {
     if (!gate.ok) return gate.res;
     const dal = gate.dal;
 
-    const body = (await ctx.req.json().catch(() => null)) as { message?: string; mode?: string; llm?: string; workspace_id?: string } | null;
+    const body = (await ctx.req.json().catch(() => null)) as {
+      message?: string;
+      mode?: string;
+      llm?: string;
+      workspace_id?: string;
+      project_id?: string | null;
+      interaction_id?: string;
+    } | null;
     const message = typeof body?.message === 'string' ? body.message.trim() : '';
     if (!message || message.length > 1000) {
       ctx.status(400);
@@ -221,11 +237,35 @@ customerChatRoute.post('/customer-chat', async (ctx) => {
     );
     if (!scoped.ok) return scoped.res;
     const workspaceId = scoped.ws;
+    const projectId = typeof body?.project_id === 'string' && body.project_id.trim()
+      ? body.project_id.trim()
+      : null;
+    const interactionId = typeof body?.interaction_id === 'string' && body.interaction_id.trim()
+      ? body.interaction_id.trim()
+      : `ix_${crypto.randomUUID().replace(/-/g, '')}`;
+    if (interactionId.length > 200) {
+      ctx.status(400);
+      return ctx.json({
+        error: 'interaction_id must be at most 200 characters',
+        code: 'VALIDATION_ERROR',
+        request_id: ctx.get('request_id'),
+      });
+    }
+    const selectedProject = projectId ? await dal.getProject(workspaceId, projectId) : null;
+    if (projectId && (!selectedProject || selectedProject.status === 'archived')) {
+      return errorEnvelope(ctx, { status: 404, code: 'NOT_FOUND', message: 'project not found in this workspace' });
+    }
     const mode: CockpitChatMode = ALLOWED_MODES.includes(body?.mode as CockpitChatMode) ? (body!.mode as CockpitChatMode) : 'ask';
     // User-selected model (the chat's model switcher). Default = free Llama; 'claude' uses the premium tier.
     const llm: CockpitChatLLM = body?.llm === 'claude' ? 'claude' : 'llama';
     const chatHistoryPersistenceRequired = envFlagTrue(ctx.env.CHAT_HISTORY_PERSISTENCE_REQUIRED);
-    const appendChatExchange = (dal as unknown as { appendChatExchange?: (u: string, s: unknown, m: unknown[]) => Promise<void> }).appendChatExchange;
+    const appendChatExchange = (dal as unknown as {
+      appendChatExchange?: (
+        userId: string,
+        scope: CockpitChatScope,
+        messages: import('../dal/chat-store').ChatMessageInput[],
+      ) => Promise<import('../dal/chat-store').ChatExchangeWriteResult>;
+    }).appendChatExchange;
     if (chatHistoryPersistenceRequired && typeof appendChatExchange !== 'function') {
       emitEvent('chat_history_persistence_unavailable', { workspace_id: workspaceId, required: true });
       ctx.status(503);
@@ -261,10 +301,53 @@ customerChatRoute.post('/customer-chat', async (ctx) => {
           message: 'the current project inventory could not be loaded',
         });
       }
+    } else if (selectedProject) {
+      projects = [{
+        id: selectedProject.id,
+        name: selectedProject.name,
+        status: selectedProject.status,
+        updated_at: selectedProject.updated_at,
+      }];
+    }
+
+    let plan: ProjectPlanGrounding | null = null;
+    if (selectedProject) {
+      try {
+        const rows = await dal.plan.listPlanEntities(selectedProject.id, { workspaceId });
+        plan = {
+          project_id: selectedProject.id,
+          project_name: selectedProject.name,
+          project_status: selectedProject.status,
+          project_updated_at: selectedProject.updated_at,
+          entities: rows.flatMap((entity) => {
+            if (!entity.kind || !['goal', 'milestone', 'todo', 'intent'].includes(entity.kind)) return [];
+            return [{
+              id: entity.id,
+              kind: entity.kind,
+              title: entity.title,
+              status: entity.status,
+              position: entity.position,
+              target_date: entity.target_date,
+              updated_at: entity.updated_at,
+            }];
+          }),
+        };
+      } catch (err) {
+        emitEvent('chat_project_plan_failed', {
+          workspace_id: workspaceId,
+          project_id: selectedProject.id,
+        });
+        return errorEnvelope(ctx, {
+          status: 503,
+          code: 'SERVICE_UNAVAILABLE',
+          message: 'the selected project plan could not be loaded',
+          cause: err,
+        });
+      }
     }
 
     // TENANT-SAFE event read — workspace-scoped via the DAL guard (never operator-wide, never body-supplied).
-    const opts: EventListOpts = { limit: MAX_EVENTS, role: auth.role, top_level: true };
+    const opts: EventListOpts = { limit: MAX_EVENTS, role: auth.role, top_level: true, project_id: projectId ?? undefined };
     const page: EventPage = await dal
       .listEvents(workspaceId, opts)
       .catch(() => ({ events: [], pagination: { has_more: false, next_before: null } } as EventPage));
@@ -349,7 +432,7 @@ customerChatRoute.post('/customer-chat', async (ctx) => {
       ? await dal.getEffectivePersonalizationProfile(workspaceId, auth.user_id, String(auth.role || 'member')).catch(() => null)
       : null;
 
-    const scope: CockpitChatScope = { workspace_id: workspaceId, project_id: null, domain_id: null };
+    const scope: CockpitChatScope = { workspace_id: workspaceId, project_id: projectId, domain_id: null };
     const ai = ctx.env.AI;
     const claudeKey = ctx.env.ANTHROPIC_API_KEY;
 
@@ -385,7 +468,7 @@ customerChatRoute.post('/customer-chat', async (ctx) => {
       : undefined;
     const result = await answerCockpitChat(
       message,
-      { companyContext, events, projects, sources, total: events.length, scope, charter, personalizationProfile },
+      { companyContext, events, projects, plan, sources, total: events.length, scope, charter, personalizationProfile },
       ai,
       mode,
       claudeKey,
@@ -435,16 +518,43 @@ customerChatRoute.post('/customer-chat', async (ctx) => {
     // tolerate a persistence failure, but commercial pilot-shadow sets CHAT_HISTORY_PERSISTENCE_REQUIRED
     // so the route fails closed instead of returning a successful answer with no durable thread.
     // Receipt links ride the assistant message only when CHAT_RECEIPT_GROUNDING_ENABLED.
+    let conversation: {
+      thread_id: string;
+      user_message_id: string;
+      assistant_message_id: string;
+    } | null = null;
     try {
       if (typeof appendChatExchange === 'function') {
         const receiptLinks = envFlagTrue(ctx.env.CHAT_RECEIPT_GROUNDING_ENABLED)
           ? ((result.grounded_on as { event_ids?: string[] })?.event_ids ?? null)
           : null;
-        await appendChatExchange.call(dal, auth.user_id, { workspace_id: workspaceId }, [
-          { role: 'you', body: message, mode },
+        const persisted = await appendChatExchange.call(dal, auth.user_id, scope, [
+          { role: 'you', body: message, mode, interaction_id: interactionId, entry_type: 'user_request' },
           // L1 · attachAssembly(g, null) returns g unchanged by reference — flag-off stays byte-identical.
-          { role: 'assistant', body: result.answer, mode, generated_by: result.generated_by, grounded_on: attachAssembly(result.grounded_on, trace), grounding_event_ids: receiptLinks },
+          {
+            role: 'assistant',
+            body: result.answer,
+            mode,
+            generated_by: result.generated_by,
+            grounded_on: attachAssembly(result.grounded_on, trace),
+            grounding_event_ids: receiptLinks,
+            interaction_id: interactionId,
+            entry_type: 'assistant_answer',
+          },
         ]);
+        const messages = Array.isArray(persisted?.messages) ? persisted.messages : [];
+        const userMessage = messages.find((entry) =>
+          entry.entry_type === 'user_request' || entry.role === 'you');
+        const assistantMessage = messages.find((entry) =>
+          entry.entry_type === 'assistant_answer' || entry.role === 'assistant');
+        if (!persisted?.thread_id || !userMessage?.id || !assistantMessage?.id) {
+          throw new Error('chat persistence did not return canonical conversation ids');
+        }
+        conversation = {
+          thread_id: persisted.thread_id,
+          user_message_id: userMessage.id,
+          assistant_message_id: assistantMessage.id,
+        };
       } else if (chatHistoryPersistenceRequired) {
         throw new Error('appendChatExchange unavailable');
       }
@@ -467,6 +577,8 @@ customerChatRoute.post('/customer-chat', async (ctx) => {
     // AR-0.2 · customer-safe projection (flag-gated). OFF (default) = payload unchanged (byte-identical);
     // ON collapses the engine name, drops the internal model id, reduces grounded_on to an evidence count.
     return ctx.json(customerSafeChat({
+      interaction_id: interactionId,
+      scope,
       answer: result.answer,
       generated_by: result.generated_by,
       model: result.model,
@@ -474,6 +586,17 @@ customerChatRoute.post('/customer-chat', async (ctx) => {
       mode,
       llm_requested: llm,
       claude_available: !!claudeKey, // so the UI can show/enable the Claude option
+      requested_facts: result.grounded_on.requested_facts,
+      grounding: {
+        evidence_count: result.grounded_on.event_ids?.length ?? 0,
+        project_plan_fact_count: result.grounded_on.plan.entities.length,
+        freshness: result.grounded_on.plan.updated_at ?? result.grounded_on.data_freshness.newest_event_at,
+      },
+      lineage: assistantLineage ? {
+        context_receipt_id: assistantLineage.context_packet_id,
+        role_skill_resolution_id: assistantLineage.resolution_id,
+      } : null,
+      conversation,
     }, customerSafeSerializerEnabled((ctx.env as { CUSTOMER_SAFE_SERIALIZER_ENABLED?: string }).CUSTOMER_SAFE_SERIALIZER_ENABLED))); // P3 (260714): DEFAULT-SAFE — a missing/malformed flag serializes; only an explicit 'false' (internal testing) yields raw. Was envFlagTrue = fail-open when the wrangler var vanished.
   } catch (err) {
     return errorEnvelope(ctx, err);

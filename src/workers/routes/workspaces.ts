@@ -674,7 +674,9 @@ workspacesRoute.post('/cockpit-chat', async (ctx) => {
     // do not POST here, so every exchange that reaches this route is a Q&A pair worth remembering.
     // Best-effort: a persistence failure must NEVER break the live answer.
     try {
-      const appender = (dal as { appendChatExchange?: (u: string, s: CockpitChatScope, m: unknown[]) => Promise<void> }).appendChatExchange;
+      const appender = (dal as unknown as {
+        appendChatExchange?: (u: string, s: CockpitChatScope, m: unknown[]) => Promise<unknown>;
+      }).appendChatExchange;
       if (typeof appender === 'function') {
         // W1 receipt substrate: live event links ride the assistant message only when the flag is on
         // (migration 058; chat-store degrades safely pre-058).

@@ -71,8 +71,8 @@ export function applyOperationalSpineMethods(adapter: AdapterCtor): void {
     createIntakeResolution(workspaceId, actorUserId, input) {
       return createIntakeResolutionRow(sqlOf(this), workspaceId, actorUserId, input);
     },
-    executeIntakeResolution(workspaceId, actorUserId, resolutionId, expectedVersion, expectedCurrentWorkVersion, clientRequestId, closing) {
-      return executeIntakeResolutionRow(sqlOf(this), workspaceId, actorUserId, resolutionId, expectedVersion, expectedCurrentWorkVersion, clientRequestId, closing);
+    executeIntakeResolution(workspaceId, actorUserId, resolutionId, expectedVersion, expectedCurrentWorkVersion, clientRequestId, interactionId, closing) {
+      return executeIntakeResolutionRow(sqlOf(this), workspaceId, actorUserId, resolutionId, expectedVersion, expectedCurrentWorkVersion, clientRequestId, interactionId, closing);
     },
     countGovernedExecutionReceipts(workspaceId) {
       return countGovernedExecutionReceiptsRow(sqlOf(this), workspaceId);

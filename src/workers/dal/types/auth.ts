@@ -63,6 +63,7 @@ export type ApiErrorCode =
   | 'UNPROCESSABLE'
   | 'RATE_LIMITED'
   | 'INTERNAL_ERROR'
+  | 'READINESS_PERSISTENCE_FAILED'
   | 'SERVICE_UNAVAILABLE'
   // T1/P3 (260710) · source-connection contract codes. NB: errorEnvelope WHITELISTS codes — an unregistered
   // code silently downgrades to INTERNAL_ERROR on the wire (that latent bug hit SOURCE_WORKSPACE_BINDING_
