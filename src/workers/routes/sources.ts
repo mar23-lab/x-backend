@@ -9,8 +9,8 @@
 //   DELETE /api/v1/sources/:id             disconnect a source (remove DB row)
 //   POST   /api/v1/sources/:id/sync        verify token + mark last_sync_at
 //
-// AUTH: all routes require Clerk-authenticated user; routes are USER-scoped
-// (not workspace-scoped) because OAuth connections belong to the user account.
+// AUTH: all routes require a Clerk-authenticated user. OAuth identity remains user-owned, while
+// customer source reads and operations are constrained to the authenticated active workspace.
 //
 // CONTRACT: this route surface is purely the OPERATOR-facing REST API. Actual
 // per-provider event ingestion (calling GitHub/Google/Dropbox APIs with the
@@ -58,6 +58,15 @@ function isValidProvider(s: string): s is OAuthProvider {
   return VALID_PROVIDERS.has(s as OAuthProvider);
 }
 
+function sourceMatchesActiveWorkspace(
+  source: Pick<UserSourceConnection, 'workspace_id'>,
+  workspaceId: string | null | undefined,
+): boolean {
+  return workspaceId
+    ? source.workspace_id === workspaceId
+    : source.workspace_id == null;
+}
+
 // ============================================================
 // GET /api/v1/connectors · Wave C2 · connector registry SSOT
 // ============================================================
@@ -99,7 +108,8 @@ const LEVEL_TO_READ_POLICY: Record<string, SourceReadPolicy> = {
 // GET /api/v1/sources
 // ============================================================
 //
-// Returns the DB rows verbatim. Does NOT re-query Clerk on every list call
+// Returns only rows explicitly bound to the active workspace.
+// Does NOT re-query Clerk on every list call
 // for two reasons:
 //   1. Cost (Clerk free tier rate limit is 100 req/10s/IP)
 //   2. Single source of truth — the DB row is authoritative for sync state
@@ -116,7 +126,8 @@ sourcesRoute.get('/sources', async (ctx) => {
     }
     const dal = ctx.get('dal');
     const rows = await dal.listUserSources(auth.user_id);
-    return ctx.json(withDataClass(withAuthority({ sources: rows.map(toApiResponse) }, auth, 'source'), 'live'));
+    const scoped = rows.filter((source) => sourceMatchesActiveWorkspace(source, auth.workspace_id));
+    return ctx.json(withDataClass(withAuthority({ sources: scoped.map(toApiResponse) }, auth, 'source'), 'live'));
   } catch (err) {
     return errorEnvelope(ctx, { status: 500, code: 'INTERNAL_ERROR', message: (err as Error).message });
   }
@@ -131,7 +142,7 @@ sourcesRoute.get('/sources', async (ctx) => {
 // (project_source_bindings, via POST /projects/:id/sources). GitHub-only for
 // now (the only provider with a repo concept). Mirrors the /sync route's
 // ownership-verify + token-retrieval pattern; the OAuth connection is
-// USER-scoped, so we verify the source row belongs to the auth'd user first.
+// The OAuth connection is user-owned, so we verify both user ownership and active-workspace binding.
 sourcesRoute.get('/sources/:id/repos', async (ctx) => {
   try {
     const auth = ctx.get('auth');
@@ -144,7 +155,7 @@ sourcesRoute.get('/sources/:id/repos', async (ctx) => {
     }
     const dal = ctx.get('dal');
     const existing = await dal.getUserSource(auth.user_id, id);
-    if (!existing) {
+    if (!existing || !sourceMatchesActiveWorkspace(existing, auth.workspace_id)) {
       return errorEnvelope(ctx, { status: 404, code: 'NOT_FOUND', message: `source ${id} not found` });
     }
     if (existing.provider !== 'github') {
@@ -179,7 +190,8 @@ sourcesRoute.get('/sources/:id/repos', async (ctx) => {
 // GET /api/v1/sources/:id/folders · Wave C3 · folder picker (Drive / Dropbox)
 // ============================================================
 // The non-GitHub equivalent of /repos: list the connected source's folders (metadata only) so the
-// operator can bind ONE folder instead of the whole account. USER-scoped; verifies ownership first.
+// operator can bind ONE folder instead of the whole account. Verifies user ownership and active-workspace
+// binding before provider access.
 sourcesRoute.get('/sources/:id/folders', async (ctx) => {
   try {
     const auth = ctx.get('auth');
@@ -192,7 +204,7 @@ sourcesRoute.get('/sources/:id/folders', async (ctx) => {
     }
     const dal = ctx.get('dal');
     const existing = await dal.getUserSource(auth.user_id, id);
-    if (!existing) {
+    if (!existing || !sourceMatchesActiveWorkspace(existing, auth.workspace_id)) {
       return errorEnvelope(ctx, { status: 404, code: 'NOT_FOUND', message: `source ${id} not found` });
     }
     if (!FOLDER_PROVIDERS.has(existing.provider)) {
@@ -316,6 +328,19 @@ sourcesRoute.post('/sources/connect/:provider', async (ctx) => {
     // a re-connect of an existing provider updates scopes/external_account_id
     // rather than duplicating.
     const dal = ctx.get('dal');
+    const activeProviderSource = (await dal.listUserSources(auth.user_id))
+      .find((source) => source.provider === provider);
+    if (
+      auth.workspace_id &&
+      activeProviderSource?.workspace_id &&
+      activeProviderSource.workspace_id !== auth.workspace_id
+    ) {
+      return errorEnvelope(ctx, {
+        status: 409,
+        code: 'SOURCE_BOUND_TO_OTHER_WORKSPACE',
+        message: `${provider} is already bound to another workspace; disconnect it there before reconnecting here`,
+      });
+    }
     const write = await dal.upsertUserSource({
       // OAuth identity is user-owned, but customer ingestion must have an explicit tenant target.
       // Orgless operator sessions remain user-account scoped; workspace sessions bind to that workspace.
@@ -357,9 +382,9 @@ sourcesRoute.delete('/sources/:id', async (ctx) => {
       return errorEnvelope(ctx, { status: 400, code: 'INVALID_ID', message: 'id path param required' });
     }
     const dal = ctx.get('dal');
-    // Verify ownership before delete (returns 404 if not found OR owned by different user)
+    // Verify user and active-workspace ownership before delete.
     const existing = await dal.getUserSource(auth.user_id, id);
-    if (!existing) {
+    if (!existing || !sourceMatchesActiveWorkspace(existing, auth.workspace_id)) {
       return errorEnvelope(ctx, { status: 404, code: 'NOT_FOUND', message: `source ${id} not found` });
     }
     const write = await dal.disconnectUserSource(auth.user_id, id, auth.workspace_id || existing.workspace_id || null);
@@ -378,8 +403,9 @@ sourcesRoute.delete('/sources/:id', async (ctx) => {
 //
 // The NEW-UI "access level" control (Index / Rely / Operate) was optimistic-only (no column to persist).
 // This PATCH persists the equivalent read_policy. Accepts EITHER `{read_policy}` (the canonical 016
-// enum) OR the UI's `{level}` (index/rely/operate, mapped here). USER-scoped ownership (dal.getUserSource
-// → 404, same as DELETE). 422 on a bad value. Idempotency-Key honoured (flag-gated, byte-identical off).
+// enum) OR the UI's `{level}` (index/rely/operate, mapped here). User ownership plus active-workspace
+// binding is required (`404`, same as DELETE). 422 on a bad value. Idempotency-Key honoured
+// (flag-gated, byte-identical off).
 // Best-effort operation_events mirror so the re-tier is auditable server-side (like the DELETE mirror).
 sourcesRoute.patch('/sources/:id', (ctx) => withIdempotency(ctx, 'PATCH /api/v1/sources/:id', async () => {
   try {
@@ -408,9 +434,10 @@ sourcesRoute.patch('/sources/:id', (ctx) => withIdempotency(ctx, 'PATCH /api/v1/
       });
     }
     const dal = ctx.get('dal');
-    // Ownership 404 first (mirror DELETE): a missing / not-owned id is indistinguishable to the caller.
+    // Ownership 404 first (mirror DELETE): missing, user-mismatched, and workspace-mismatched
+    // sources are indistinguishable to the caller.
     const existing = await dal.getUserSource(auth.user_id, id);
-    if (!existing) {
+    if (!existing || !sourceMatchesActiveWorkspace(existing, auth.workspace_id)) {
       return errorEnvelope(ctx, { status: 404, code: 'NOT_FOUND', message: `source ${id} not found` });
     }
     let updated: UserSourceConnection;
@@ -463,6 +490,16 @@ sourcesRoute.post('/sources/:id/sync', async (ctx) => {
     if (!existing) {
       return errorEnvelope(ctx, { status: 404, code: 'NOT_FOUND', message: `source ${id} not found` });
     }
+    if (!existing.workspace_id) {
+      return errorEnvelope(ctx, {
+        status: 409,
+        code: 'SOURCE_WORKSPACE_BINDING_REQUIRED',
+        message: 'SOURCE_WORKSPACE_BINDING_REQUIRED: reconnect this legacy source from the active workspace before syncing it.',
+      });
+    }
+    if (!sourceMatchesActiveWorkspace(existing, auth.workspace_id)) {
+      return errorEnvelope(ctx, { status: 404, code: 'NOT_FOUND', message: `source ${id} not found` });
+    }
 
     const secretKey = ctx.env.CLERK_SECRET_KEY;
     if (!secretKey) {
@@ -487,12 +524,7 @@ sourcesRoute.post('/sources/:id/sync', async (ctx) => {
     const translator = getTranslator(existing.provider);
     if (translator) {
       try {
-        const targetWorkspaceId = existing.workspace_id || auth.workspace_id || null;
-        if (!targetWorkspaceId) {
-          const msg = 'SOURCE_WORKSPACE_BINDING_REQUIRED: source sync needs a workspace target before provider events can be ingested.';
-          await dal.markUserSourceSync(auth.user_id, id, { success: false, error: msg }, auth.workspace_id || existing.workspace_id || null);
-          return errorEnvelope(ctx, { status: 409, code: 'SOURCE_WORKSPACE_BINDING_REQUIRED', message: msg });
-        }
+        const targetWorkspaceId = existing.workspace_id;
         sync = await translator({
           adapter,
           dal,

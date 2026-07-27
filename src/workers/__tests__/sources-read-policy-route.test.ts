@@ -92,6 +92,14 @@ describe('PATCH /sources/:id — read_policy', () => {
     expect(setUserSourceReadPolicy).not.toHaveBeenCalled();
   });
 
+  it('404 — user-owned source belongs to another workspace; set never called', async () => {
+    const getUserSource = vi.fn(async () => ({ ...source, workspace_id: 'org_b' }));
+    const setUserSourceReadPolicy = vi.fn();
+    const res = await patch(appFor({ getUserSource, setUserSourceReadPolicy }), { read_policy: 'read_only' });
+    expect(res.status).toBe(404);
+    expect(setUserSourceReadPolicy).not.toHaveBeenCalled();
+  });
+
   it('401 — no authenticated user', async () => {
     const res = await patch(appFor({ getUserSource: vi.fn() }, { user_id: '' }), { read_policy: 'read_only' });
     expect(res.status).toBe(401);

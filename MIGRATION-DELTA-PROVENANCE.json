@@ -2787,6 +2787,37 @@
           "reason": "Require persisted approval target state and canonical decision receipt before commercial success UI"
         }
       ]
+    },
+    {
+      "delta_id": "260727-schema89-source-workspace-isolation",
+      "generated_at": "2026-07-27T00:17:16.677Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "8294fc708b1423d97c1c60cebc71c0eda9d327c8",
+      "target_base_commit": "8294fc708b1423d97c1c60cebc71c0eda9d327c8",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/routes/sources.ts",
+          "target_blob": "dad3a2caa61559e279e041a73f6f7c59d0733084",
+          "reason": "backport active-workspace source route isolation without schema migration"
+        },
+        {
+          "path": "src/workers/__tests__/sources-connect-sync.test.ts",
+          "target_blob": "0e96850c9b4b88382b8c1d7546a9b0836df73dcb",
+          "reason": "backport active-workspace source route isolation without schema migration"
+        },
+        {
+          "path": "src/workers/__tests__/sources-repos-route.test.ts",
+          "target_blob": "29eaa51bb9cb1955ebea74cd495a7d1df74f74a3",
+          "reason": "backport active-workspace source route isolation without schema migration"
+        },
+        {
+          "path": "src/workers/__tests__/sources-read-policy-route.test.ts",
+          "target_blob": "ad290745a520c5bfda71daa81cd2d3adf1d25e84",
+          "reason": "backport active-workspace source route isolation without schema migration"
+        }
+      ]
     }
   ]
 }
