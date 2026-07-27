@@ -66,8 +66,13 @@ describe('saveWorkspaceReadinessAssessmentRow', () => {
     expect(capture.statement()).toContain('pg_advisory_xact_lock');
     expect(capture.statement()).toContain('prior_receipt AS MATERIALIZED');
     expect(capture.statement()).toContain('readiness_written AS');
-    expect(capture.statement()).toContain('request_linked AS');
+    expect(capture.statement()).toContain('existing_request_linked AS');
+    expect(capture.statement()).toContain('request_linked AS MATERIALIZED');
+    expect(capture.statement()).toContain('SELECT id FROM request_created');
+    expect(capture.statement()).toContain('SELECT id FROM existing_request_linked');
     expect(capture.statement()).toContain('audit_written AS');
+    expect(capture.statement()).toContain("'client_request_id', ?::text");
+    expect(capture.statement()).toContain("'request_digest', ?::text");
     expect(capture.statement()).toContain('FROM readiness_written r');
     expect(capture.statement()).toContain('JOIN audit_written a ON TRUE');
     expect(capture.statement()).toContain('JOIN readiness_assessments r');

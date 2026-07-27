@@ -1,6 +1,7 @@
 import { Client, type QueryConfig } from 'pg';
 import { describe, expect, it } from 'vitest';
 import { appendChatExchangeRow } from '../dal/chat-store';
+import { saveWorkspaceReadinessAssessmentRow } from '../dal/customer-readiness-store';
 import { createIntakeResolutionRow, executeIntakeResolutionRow } from '../dal/intake-store';
 import type { Sql } from '../db/client';
 
@@ -60,7 +61,135 @@ function postgresSql(client: Client): Sql {
 const databaseUrl = process.env.XLOOOP_SCHEMA91_PG_URL;
 const describePostgres = databaseUrl ? describe : describe.skip;
 
-describePostgres('schema 91 governed intake PostgreSQL authority', () => {
+describePostgres('schema 91 PostgreSQL authority', () => {
+  it('persists and replays one authenticated onboarding baseline with durable readback', async () => {
+    const client = new Client({ connectionString: databaseUrl });
+    await client.connect();
+
+    const suffix = crypto.randomUUID().replaceAll('-', '');
+    const workspaceId = `ws_readiness_pg91_${suffix}`;
+    const userId = `user_readiness_pg91_${suffix}`;
+    const email = `${suffix}@example.test`;
+    const clientRequestId = `readiness_pg91_${suffix}`;
+    const requestDigest = 'd'.repeat(64);
+
+    try {
+      await client.query(
+        `INSERT INTO users (id, email, status, approved_at)
+         VALUES ($1, $2, 'approved', now())`,
+        [userId, email],
+      );
+      await client.query(
+        `INSERT INTO workspaces (id, name, owner_user_id, workspace_type, relationship_status)
+         VALUES ($1, 'Readiness schema 91 integration', $2, 'company', 'internal_dogfood')`,
+        [workspaceId, userId],
+      );
+      await client.query(
+        `INSERT INTO workspace_members (workspace_id, user_id, role, status, activated_at)
+         VALUES ($1, $2, 'owner', 'active', now())`,
+        [workspaceId, userId],
+      );
+
+      const sql = postgresSql(client);
+      const input = {
+        workspace_id: workspaceId,
+        user_id: userId,
+        client_request_id: clientRequestId,
+        request_digest: requestDigest,
+        email,
+        account_type: 'company' as const,
+        company_name: 'Readiness integration',
+        readiness_answers: {
+          focus_90d: 'Prove onboarding durability',
+          business_direction: 'Grow',
+        },
+        consent: { profile_saved: true },
+        source: 'inapp-readiness-profile',
+      };
+      const saved = await saveWorkspaceReadinessAssessmentRow(sql, input);
+
+      expect(saved).toMatchObject({
+        workspace_id: workspaceId,
+        user_id: userId,
+        email,
+        replayed: false,
+        request_digest: requestDigest,
+      });
+      expect(saved.readiness_revision_id).toBe(
+        `readiness:${saved.id}:${saved.audit_event_id}`,
+      );
+
+      const readback = await client.query(
+        `SELECT
+           r.id,
+           r.workspace_id,
+           r.user_id,
+           r.readiness_answers,
+           a.id::text AS audit_event_id,
+           a.metadata->>'client_request_id' AS client_request_id,
+           a.metadata->>'request_digest' AS request_digest
+         FROM readiness_assessments r
+         JOIN audit_logs a
+           ON a.workspace_id = r.workspace_id
+          AND a.action = 'readiness_update'
+          AND a.metadata->>'readiness_assessment_id' = r.id
+        WHERE r.id = $1 AND r.workspace_id = $2`,
+        [saved.id, workspaceId],
+      );
+      expect(readback.rows).toEqual([expect.objectContaining({
+        id: saved.id,
+        workspace_id: workspaceId,
+        user_id: userId,
+        audit_event_id: saved.audit_event_id,
+        client_request_id: clientRequestId,
+        request_digest: requestDigest,
+        readiness_answers: expect.objectContaining({
+          focus_90d: 'Prove onboarding durability',
+        }),
+      })]);
+
+      const replay = await saveWorkspaceReadinessAssessmentRow(sql, input);
+      expect(replay).toMatchObject({
+        id: saved.id,
+        audit_event_id: saved.audit_event_id,
+        readiness_revision_id: saved.readiness_revision_id,
+        replayed: true,
+      });
+
+      await expect(saveWorkspaceReadinessAssessmentRow(sql, {
+        ...input,
+        request_digest: 'e'.repeat(64),
+      })).rejects.toMatchObject({
+        code: 'CONFLICT',
+        status: 409,
+      });
+
+      const authorityCounts = await client.query(
+        `SELECT
+           (SELECT count(*)::integer
+              FROM readiness_assessments
+             WHERE workspace_id = $1) AS readiness_count,
+           (SELECT count(*)::integer
+              FROM audit_logs
+             WHERE workspace_id = $1
+               AND action = 'readiness_update'
+               AND metadata->>'client_request_id' = $2) AS audit_count`,
+        [workspaceId, clientRequestId],
+      );
+      expect(authorityCounts.rows[0]).toEqual({
+        readiness_count: 1,
+        audit_count: 1,
+      });
+    } finally {
+      await client.query('DELETE FROM audit_logs WHERE workspace_id = $1', [workspaceId]);
+      await client.query('DELETE FROM readiness_assessments WHERE workspace_id = $1', [workspaceId]);
+      await client.query('DELETE FROM access_requests WHERE invited_to_workspace_id = $1', [workspaceId]);
+      await client.query('DELETE FROM workspaces WHERE id = $1', [workspaceId]);
+      await client.query('DELETE FROM users WHERE id = $1', [userId]);
+      await client.end();
+    }
+  });
+
   it('writes and replays one complete project-scoped execution lineage', async () => {
     const client = new Client({ connectionString: databaseUrl });
     await client.connect();
