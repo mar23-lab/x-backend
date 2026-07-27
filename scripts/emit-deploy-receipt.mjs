@@ -28,15 +28,53 @@ const apiBase = flagVal('--api') || 'https://api.xlooop.com';
 const receiptPath = flagVal('--receipt') || path.join(ROOT, 'docs/deployment/evidence/cloudflare-api-deploy-receipt.json');
 
 const head = execSync('git rev-parse --short=8 HEAD', { cwd: ROOT, encoding: 'utf8' }).trim();
+const headFull = execSync('git rev-parse HEAD', { cwd: ROOT, encoding: 'utf8' }).trim();
 
-const health = await (async () => {
+// 260727 REPAIR — two defects found while chaining this script into deploy:api.
+//
+// (1) STAMP-FORMAT SKEW. Commit 41dc88b (0722) restored the provenance stamp as the FULL 40-char
+//     `git rev-parse HEAD`; this script still compared it against `--short=8`. A 40-char build can
+//     never equal an 8-char head, so the comparison had become unconditionally false — this script
+//     would have REFUSED every correct deploy. It was invisible because the script was not chained
+//     into deploy:api, so the breakage had no consumer. Compare on a normalised prefix instead, so
+//     both the current full stamp and any legacy short stamp verify correctly.
+//
+// (2) NO PROPAGATION WINDOW. A single-shot read races Cloudflare's edge: a /health readback taken
+//     immediately after `wrangler deploy` returns the PREVIOUS build for ~10-25s. Chaining a
+//     single-shot check would have produced a flaky gate that fails correct deploys — the same
+//     misread that nearly caused a false "rollback is broken" verdict on 260717. `--wait <seconds>`
+//     polls until the build matches (the demo's chained call used `--wait 120`).
+const waitSecs = Number(flagVal('--wait') || 0);
+
+/** True when the live build and local HEAD are the same commit, whichever sha width each uses. */
+const buildMatchesHead = (build) => {
+  const b = String(build || '').trim();
+  if (!b) return false;
+  const n = Math.min(b.length, headFull.length);
+  return n >= 8 && b.slice(0, n) === headFull.slice(0, n);
+};
+
+const fetchHealth = async () => {
   const res = await fetch(`${apiBase}/api/v1/health?cb=${Date.now()}`, { headers: { 'cache-control': 'no-cache' } });
   if (!res.ok) throw new Error(`/health ${res.status}`);
   return res.json();
-})();
+};
 
-if (String(health.build || '') !== head) {
-  console.error(`✗ REFUSED: deployed build ${health.build} != local HEAD ${head} — no receipt written for a mismatched deploy. Deploy first, or run from the deployed commit.`);
+let health = await fetchHealth();
+if (!buildMatchesHead(health.build) && waitSecs > 0) {
+  const deadline = Date.now() + waitSecs * 1000;
+  process.stdout.write(`… waiting up to ${waitSecs}s for /health to report ${head} (edge propagation)`);
+  while (Date.now() < deadline && !buildMatchesHead(health.build)) {
+    await new Promise((r) => setTimeout(r, 5000));
+    process.stdout.write('.');
+    try { health = await fetchHealth(); } catch { /* transient during rollout; keep polling until deadline */ }
+  }
+  process.stdout.write('\n');
+}
+
+if (!buildMatchesHead(health.build)) {
+  console.error(`✗ REFUSED: deployed build ${health.build} != local HEAD ${headFull.slice(0, 12)} — no receipt written for a mismatched deploy. Deploy first, or run from the deployed commit.`);
+  if (waitSecs > 0) console.error(`  (waited ${waitSecs}s for propagation; the live build never became this commit)`);
   process.exit(1);
 }
 

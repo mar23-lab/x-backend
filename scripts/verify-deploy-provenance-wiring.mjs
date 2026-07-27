@@ -46,6 +46,23 @@ try {
   if (!/verify-deploy-schema-head\.mjs/.test(deploy)) {
     missing.push('verify-deploy-schema-head.mjs preflight');
   }
+  // 260727 — the POST-deploy half. A gate's asserted set must cover every step it claims to protect.
+  // BACKEND_REPOSITORY_OWNERSHIP.yml advertises a receipt_rule ("emit-deploy-receipt.mjs refuses
+  // unless live /health build == local HEAD"), but the cutover dropped that step from deploy:api and
+  // THIS gate did not notice — it asserted 3 of 4 steps and reported green while the 4th silently
+  // vanished. Consequence, measured 260727: the committed receipt still read ccdc7c69/20260713 while
+  // production served 3d7ade27 off-main. The readback is the only step that compares INTENT to LIVE
+  // TRUTH, so it is the one that would have caught the fork. Assert it, and assert the propagation
+  // window with it — a single-shot readback races the edge and would fail correct deploys.
+  if (!/deploy:api:receipt|emit-deploy-receipt\.mjs/.test(deploy)) {
+    missing.push('post-deploy receipt step (npm run deploy:api:receipt) chained into deploy:api');
+  }
+  const receiptScript = pkg.scripts?.['deploy:api:receipt'];
+  if (typeof receiptScript !== 'string' || !/emit-deploy-receipt\.mjs/.test(receiptScript)) {
+    missing.push('scripts["deploy:api:receipt"] invoking emit-deploy-receipt.mjs');
+  } else if (!/--wait\s+\d+/.test(receiptScript)) {
+    missing.push('deploy:api:receipt must pass --wait <seconds> (a single-shot /health readback races edge propagation)');
+  }
   if (!/verify-operation-event-source-tool-constraint\.mjs\s+--live/.test(deploy)) {
     missing.push('deploy:api live operation-event source-tool semantic proof');
   }
