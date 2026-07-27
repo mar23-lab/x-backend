@@ -116,6 +116,101 @@ describe('POST /api/v1/customer-chat', () => {
     expect(body.generated_by).toBe('deterministic');
   });
 
+  it('grounds an exact project plan question in tenant-validated plan entities and returns canonical conversation ids', async () => {
+    const calls: Array<Record<string, unknown>> = [];
+    const project = {
+      id: 'project_1',
+      workspace_id: 'org_hy',
+      name: 'Commercial launch',
+      status: 'active',
+      updated_at: '2026-07-26T10:00:00Z',
+    };
+    const dal = dalStub({
+      getProject: async (workspaceId: string, projectId: string) => {
+        calls.push({ method: 'getProject', workspaceId, projectId });
+        return workspaceId === 'org_hy' && projectId === project.id ? project : null;
+      },
+      plan: {
+        listPlanEntities: async (projectId: string, options: Record<string, unknown>) => {
+          calls.push({ method: 'listPlanEntities', projectId, options });
+          return [
+            { id: 'goal_1', kind: 'goal', title: 'Launch safely', status: 'active', position: 1, target_date: null, updated_at: '2026-07-26T10:01:00Z' },
+            { id: 'milestone_1', kind: 'milestone', title: 'Complete acceptance proof', status: 'planned', position: 2, target_date: null, updated_at: '2026-07-26T10:02:00Z' },
+            { id: 'todo_1', kind: 'todo', title: 'Run reload journey', status: 'open', position: 3, target_date: null, updated_at: '2026-07-26T10:03:00Z' },
+          ];
+        },
+      },
+      appendChatExchange: async (
+        _userId: string,
+        _scope: Record<string, unknown>,
+        messages: Array<Record<string, unknown>>,
+      ) => ({
+        thread_id: 'thr_u1__orghy|project1|',
+        messages: messages.map((message, index) => ({
+          ...message,
+          id: String(index + 101),
+          thread_id: 'thr_u1__orghy|project1|',
+          created_at: `2026-07-27T00:00:0${index}Z`,
+        })),
+      }),
+    });
+
+    const res = await askEnv(appFor(AUTH, dal), {
+      message: 'What is the project name, and list every goal, milestone, and todo with counts and last update?',
+      project_id: 'project_1',
+      interaction_id: 'interaction_project_1',
+    }, { CHAT_HISTORY_PERSISTENCE_REQUIRED: 'true' });
+
+    expect(res.status).toBe(200);
+    const body = await res.json() as {
+      answer: string;
+      interaction_id: string;
+      scope: Record<string, unknown>;
+      requested_facts: { required: string[]; satisfied: string[]; unavailable: string[] };
+      conversation: { thread_id: string; user_message_id: string; assistant_message_id: string };
+    };
+    expect(body.answer).toContain('Project: Commercial launch (project_1)');
+    expect(body.answer).toContain('Launch safely');
+    expect(body.answer).toContain('Complete acceptance proof');
+    expect(body.answer).toContain('Run reload journey');
+    expect(body.answer).toContain('Counts: 1 goal · 1 milestone · 1 todo · 0 intents.');
+    expect(body.answer).toContain('Plan last updated: 2026-07-26T10:03:00Z.');
+    expect(body.interaction_id).toBe('interaction_project_1');
+    expect(body.scope).toEqual({ workspace_id: 'org_hy', project_id: 'project_1', domain_id: null });
+    expect(body.requested_facts.unavailable).toEqual([]);
+    expect(body.requested_facts.required).toEqual(body.requested_facts.satisfied);
+    expect(body.conversation).toEqual({
+      thread_id: 'thr_u1__orghy|project1|',
+      user_message_id: '101',
+      assistant_message_id: '102',
+    });
+    expect(calls).toEqual([
+      { method: 'getProject', workspaceId: 'org_hy', projectId: 'project_1' },
+      { method: 'listPlanEntities', projectId: 'project_1', options: { workspaceId: 'org_hy' } },
+    ]);
+  });
+
+  it('does not load plan facts for a project outside the authenticated workspace', async () => {
+    let planReads = 0;
+    const dal = dalStub({
+      getProject: async () => null,
+      plan: {
+        listPlanEntities: async () => {
+          planReads += 1;
+          return [];
+        },
+      },
+    });
+
+    const res = await ask(appFor(AUTH, dal), {
+      message: 'List the goals for this project.',
+      project_id: 'project_other_tenant',
+    });
+
+    expect(res.status).toBe(404);
+    expect(planReads).toBe(0);
+  });
+
   it('returns canonical project IDs when explicitly requested and honors rows-only output', async () => {
     const dal = dalStub({
       listProjects: async (workspaceId: string) => [
@@ -444,6 +539,32 @@ describe('GET /api/v1/customer-chat/history', () => {
     expect(res.status).toBe(503);
     const body = await res.json() as { code: string };
     expect(body.code).toBe('CHAT_HISTORY_PERSISTENCE_FAILED');
+  });
+
+  it('validates and scopes project history through the authenticated workspace', async () => {
+    const captured: Array<Record<string, unknown>> = [];
+    const dal = dalStub({
+      getProject: async (workspaceId: string, projectId: string) => {
+        captured.push({ method: 'getProject', workspaceId, projectId });
+        return { id: projectId, workspace_id: workspaceId, name: 'Launch', status: 'active' };
+      },
+      listChatHistory: async (userId: string, scope: Record<string, unknown>, limit: number) => {
+        captured.push({ method: 'listChatHistory', userId, scope, limit });
+        return [];
+      },
+    });
+
+    const res = await history(appFor(AUTH, dal), '?workspace_id=org_ATTACKER&project_id=project_1');
+    expect(res.status).toBe(200);
+    expect(captured).toEqual([
+      { method: 'getProject', workspaceId: 'org_hy', projectId: 'project_1' },
+      {
+        method: 'listChatHistory',
+        userId: 'u1',
+        scope: { workspace_id: 'org_hy', project_id: 'project_1', domain_id: null },
+        limit: 100,
+      },
+    ]);
   });
 
   it('legacy mode degrades to an empty thread when the DAL history contract is absent', async () => {

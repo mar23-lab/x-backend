@@ -112,7 +112,18 @@ describe('leak-boundary regression guard · novel internal fields', () => {
     expect(blob).not.toContain('usr_internal_777');
     expect(blob).not.toContain('rls_bypass');
     // exactly the allow-listed keys survive
-    expect(Object.keys(out).sort()).toEqual(['answer', 'generated_by', 'grounded_on', 'mode']);
+    expect(Object.keys(out).sort()).toEqual([
+      'answer',
+      'conversation',
+      'generated_by',
+      'grounded_on',
+      'grounding',
+      'interaction_id',
+      'lineage',
+      'mode',
+      'requested_facts',
+      'scope',
+    ]);
   });
 
   it('stripInternalProvisioning ON keeps the deny-list current: every declared internal key is actually removed', () => {
@@ -160,4 +171,3 @@ describe('customerSafeChat · Option A — preserve the customer-safe source cou
     expect(JSON.stringify(out)).not.toContain('scopes');
   });
 });
-

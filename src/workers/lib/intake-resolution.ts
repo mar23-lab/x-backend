@@ -12,6 +12,7 @@ import type {
 export interface IntakeResolveRequest {
   text: string;
   client_request_id: string;
+  interaction_id?: string;
   project_id?: string | null;
   target?: { type?: string; id?: string | null } | null;
   context_refs?: Array<{ kind?: string }>;
@@ -107,6 +108,7 @@ export function buildIntakeResolution(
   const base = {
     project_id: request.project_id ?? null,
     client_request_id: request.client_request_id,
+    interaction_id: request.interaction_id ?? request.client_request_id,
     request_digest: requestDigest,
     operation,
     confidence: classified.confidence,

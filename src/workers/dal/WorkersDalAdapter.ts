@@ -954,7 +954,7 @@ export class WorkersDalAdapter implements DalAdapter {
     userId: string,
     scope: import('./chat-store').ChatScopeRef,
     messages: import('./chat-store').ChatMessageInput[],
-  ): Promise<void> {
+  ): Promise<import('./chat-store').ChatExchangeWriteResult> {
     return appendChatExchangeRow(this.sql, userId, scope, messages);
   }
 

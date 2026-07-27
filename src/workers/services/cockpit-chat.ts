@@ -114,6 +114,26 @@ export interface ProjectGroundingFact {
   updated_at?: string | null;
 }
 
+export type RequestedProjectFact = 'project_name' | 'goals' | 'milestones' | 'todos' | 'counts' | 'freshness';
+
+export interface PlanEntityGroundingFact {
+  id: string;
+  kind: 'goal' | 'milestone' | 'todo' | 'intent';
+  title: string;
+  status: string;
+  position: number;
+  target_date?: string | null;
+  updated_at?: string | null;
+}
+
+export interface ProjectPlanGrounding {
+  project_id: string;
+  project_name: string;
+  project_status: string;
+  project_updated_at?: string | null;
+  entities: PlanEntityGroundingFact[];
+}
+
 export interface CockpitChatFacts {
   /** S1 (260628) · the captured company context (focus/maturity/AI tools/where-work-lives) when the chat
    *  is scoped to a customer workspace — makes the chief-of-staff company-aware instead of a hardcoded
@@ -148,6 +168,8 @@ export interface CockpitChatFacts {
   sources?: SourceGroundingFact[];
   /** Current tenant-bound project inventory, loaded only for explicit project-list questions. */
   projects?: ProjectGroundingFact[];
+  /** Canonical plan facts for an explicitly selected, tenant-validated project. */
+  plan?: ProjectPlanGrounding | null;
   /** Total Plane-A count for the scope (may exceed events.length when capped). */
   total: number;
   scope: CockpitChatScope;
@@ -228,6 +250,20 @@ export interface CockpitChatResult {
       available: boolean;
       total: number;
       items: ProjectGroundingFact[];
+    };
+    plan: {
+      available: boolean;
+      project_id: string | null;
+      project_name: string | null;
+      project_status: string | null;
+      updated_at: string | null;
+      counts: { goals: number; milestones: number; todos: number; intents: number };
+      entities: PlanEntityGroundingFact[];
+    };
+    requested_facts: {
+      required: RequestedProjectFact[];
+      satisfied: RequestedProjectFact[];
+      unavailable: RequestedProjectFact[];
     };
     /** P0.1 (260706) · data-freshness guard (HR-EVIDENCE-BOUND-ASSERTION-1 C8): the age of the newest
      *  grounded event. The chief-of-staff must never imply "all clear / real-time" from a stale record —
@@ -505,10 +541,11 @@ function clip(s: string | null | undefined, max = 140): string {
  * truth the deterministic body AND the LLM prompt both draw from, so the model can only restate real
  * numbers/names. `total` lets the caller report the true scope size even when `events` is capped.
  */
-export function compileChatFacts(facts: CockpitChatFacts): CockpitChatResult['grounded_on'] {
+export function compileChatFacts(facts: CockpitChatFacts, message = ''): CockpitChatResult['grounded_on'] {
   const docs = Array.isArray(facts.documents) ? facts.documents : [];
   const sourceFacts = Array.isArray(facts.sources) ? facts.sources : [];
   const projectFacts = Array.isArray(facts.projects) ? facts.projects : [];
+  const plan = facts.plan ?? null;
   const pinned = Array.isArray(facts.pinned) ? facts.pinned : [];
   const planeA = Array.isArray(facts.events) ? facts.events : [];
   const planeB = Array.isArray(facts.governance) ? facts.governance : [];
@@ -589,6 +626,33 @@ export function compileChatFacts(facts: CockpitChatFacts): CockpitChatResult['gr
 
   // Scope total = Plane-A scope total (may exceed the recency-capped page) + Plane-B rows on record.
   const planeATotal = Number.isFinite(facts.total) ? facts.total : planeA.length;
+  const planEntities = Array.isArray(plan?.entities)
+    ? [...plan.entities].sort((a, b) => a.position - b.position)
+    : [];
+  const newestPlanAt = [
+    plan?.project_updated_at ?? null,
+    ...planEntities.map((entity) => entity.updated_at ?? null),
+  ].filter((value): value is string => Boolean(value)).sort().at(-1) ?? null;
+  // Project vocabulary is only authoritative when the request is actually project-scoped.
+  // Workspace charter questions such as "how am I doing against my goals?" must continue to use
+  // charter grounding rather than being misclassified as a missing project plan.
+  const hasCharterContext = Boolean(
+    facts.charter?.mission
+    || facts.charter?.background
+    || facts.charter?.industry
+    || facts.charter?.objectives_summary,
+  );
+  const asksAboutCharterGoals = !plan
+    && hasCharterContext
+    && /\b(?:(?:my|our)\s+goals?|goals?\s+(?:for\s+)?(?:me|us))\b/i.test(message);
+  const requestedFacts = (facts.scope.project_id || plan) && !asksAboutCharterGoals
+    ? classifyRequestedProjectFacts(message)
+    : [];
+  const satisfiedFacts = requestedFacts.filter((fact) => {
+    if (!plan) return false;
+    if (fact === 'freshness') return Boolean(newestPlanAt);
+    return true;
+  });
 
   return {
     event_ids,
@@ -624,6 +688,25 @@ export function compileChatFacts(facts: CockpitChatFacts): CockpitChatResult['gr
       available: Array.isArray(facts.projects),
       total: projectFacts.length,
       items: projectFacts.slice(0, 50),
+    },
+    plan: {
+      available: Boolean(plan),
+      project_id: plan?.project_id ?? null,
+      project_name: plan?.project_name ?? null,
+      project_status: plan?.project_status ?? null,
+      updated_at: newestPlanAt,
+      counts: {
+        goals: planEntities.filter((entity) => entity.kind === 'goal').length,
+        milestones: planEntities.filter((entity) => entity.kind === 'milestone').length,
+        todos: planEntities.filter((entity) => entity.kind === 'todo').length,
+        intents: planEntities.filter((entity) => entity.kind === 'intent').length,
+      },
+      entities: planEntities.slice(0, 200),
+    },
+    requested_facts: {
+      required: requestedFacts,
+      satisfied: satisfiedFacts,
+      unavailable: requestedFacts.filter((fact) => !satisfiedFacts.includes(fact)),
     },
     data_freshness,
     agents,
@@ -702,6 +785,57 @@ export function isSourceInventoryQuestion(message: string): boolean {
   const q = String(message || '').toLowerCase().replace(/\s+/g, ' ').trim();
   if (!/\b(?:sources?|source connections?|connectors?)\b/.test(q)) return false;
   return /\b(?:list|show|which|what|connected|connection|binding|bound|sync|synced)\b/.test(q);
+}
+
+export function classifyRequestedProjectFacts(message: string): RequestedProjectFact[] {
+  const q = String(message || '').toLowerCase().replace(/\s+/g, ' ').trim();
+  const requested = new Set<RequestedProjectFact>();
+  if (/\b(?:project\s+name|name\s+of\s+(?:(?:this|the|current)\s+){0,2}project|which\s+project|project\s+am\s+i\s+viewing)\b/.test(q)) requested.add('project_name');
+  if (/\bgoals?\b/.test(q)) requested.add('goals');
+  if (/\bmilestones?\b/.test(q)) requested.add('milestones');
+  if (/\b(?:todos?|to-dos?|tasks?)\b/.test(q)) requested.add('todos');
+  if (/\b(?:how many|count|counts|number of)\b/.test(q)) requested.add('counts');
+  if (/\b(?:fresh|freshness|updated|last update|current as of|as of(?: date)?|is\s+(?:this|the)\s+project\s+current)\b/.test(q)) requested.add('freshness');
+  return [...requested];
+}
+
+export function isProjectPlanFactQuestion(message: string): boolean {
+  return classifyRequestedProjectFacts(message).length > 0;
+}
+
+function buildProjectPlanAnswer(grounded: CockpitChatResult['grounded_on']): string {
+  const required = grounded.requested_facts.required;
+  if (!grounded.plan.available) {
+    return 'I could not verify the selected project plan, so I will not infer its goals, milestones, or todos from activity events.';
+  }
+  const lines: string[] = [];
+  if (required.includes('project_name')) {
+    lines.push(`Project: ${grounded.plan.project_name} (${grounded.plan.project_id})`);
+  }
+  const section = (kind: 'goal' | 'milestone' | 'todo', label: string) => {
+    const rows = grounded.plan.entities.filter((entity) => entity.kind === kind);
+    lines.push(`${label} (${rows.length}):`);
+    if (!rows.length) lines.push('• None recorded.');
+    else {
+      for (const row of rows) {
+        lines.push(`• ${row.title}${row.status && row.status !== 'open' ? ` [${row.status}]` : ''}`);
+      }
+    }
+  };
+  if (required.includes('goals')) section('goal', 'Goals');
+  if (required.includes('milestones')) section('milestone', 'Milestones');
+  if (required.includes('todos')) section('todo', 'Todos');
+  if (required.includes('counts')) {
+    const c = grounded.plan.counts;
+    lines.push(
+      `Counts: ${plural(c.goals, 'goal')} · ${plural(c.milestones, 'milestone')} · `
+      + `${plural(c.todos, 'todo')} · ${plural(c.intents, 'intent')}.`,
+    );
+  }
+  if (required.includes('freshness')) {
+    lines.push(`Plan last updated: ${grounded.plan.updated_at || 'unavailable'}.`);
+  }
+  return lines.join('\n');
 }
 
 export function projectInventoryAnswerOptions(message: string): {
@@ -976,6 +1110,26 @@ function buildStructuredFactBlock(facts: CockpitChatFacts, grounded: CockpitChat
       latest_event_at: s.latest_event_at,
     }));
   }
+  if (grounded.plan.available) {
+    block.project_plan = {
+      project_id: grounded.plan.project_id,
+      project_name: grounded.plan.project_name,
+      project_status: grounded.plan.project_status,
+      updated_at: grounded.plan.updated_at,
+      counts: grounded.plan.counts,
+      entities: grounded.plan.entities.map((entity) => ({
+        id: entity.id,
+        kind: entity.kind,
+        title: entity.title,
+        status: entity.status,
+        position: entity.position,
+        target_date: entity.target_date ?? null,
+      })),
+    };
+  }
+  if (grounded.requested_facts.required.length > 0) {
+    block.requested_facts = grounded.requested_facts;
+  }
   return JSON.stringify(block);
 }
 
@@ -991,15 +1145,20 @@ export async function answerCockpitChat(
   llmChoice: CockpitChatLLM = 'llama',
   executionObserver?: ModelExecutionObserver,
 ): Promise<CockpitChatResult> {
-  const grounded = compileChatFacts(facts);
+  const grounded = compileChatFacts(facts, message);
   // P0.1 · the deterministic FLOOR must be honest about staleness too (it is the guaranteed fallback).
   const staleNote = grounded.data_freshness.is_stale
     ? `Note: this record's newest activity is ${grounded.data_freshness.staleness_minutes} minutes old — treat the below as a snapshot, not live status.\n\n`
     : '';
   const projectInventoryQuestion = isProjectInventoryQuestion(message);
+  const projectPlanQuestion = grounded.requested_facts.required.length > 0;
   const deterministic = (projectInventoryQuestion ? '' : staleNote)
-    + buildDeterministicChatAnswer(message, grounded, facts.scope, mode, facts.companyContext);
-  if (projectInventoryQuestion) {
+    + (projectInventoryQuestion
+      ? buildDeterministicChatAnswer(message, grounded, facts.scope, mode, facts.companyContext)
+      : projectPlanQuestion
+      ? buildProjectPlanAnswer(grounded)
+      : buildDeterministicChatAnswer(message, grounded, facts.scope, mode, facts.companyContext));
+  if (projectInventoryQuestion || projectPlanQuestion) {
     return {
       answer: deterministic,
       generated_by: 'deterministic',
@@ -1016,6 +1175,14 @@ export async function answerCockpitChat(
     `Total items on record: ${grounded.events_total} (${grounded.planes.events} activity events + ${grounded.planes.governance} governance packets/decisions; I am giving you the ${grounded.events_considered} most recent).`,
     `Status counts (both planes) — completed: ${grounded.completed}; in progress: ${grounded.in_progress}; awaiting the operator's sign-off: ${grounded.needs_review}; blocked: ${grounded.blocked}.`,
   ];
+  if (grounded.plan.available) {
+    factLines.push(
+      `Selected project plan: ${grounded.plan.project_name} (${grounded.plan.project_id}); `
+      + `${grounded.plan.counts.goals} goals, ${grounded.plan.counts.milestones} milestones, `
+      + `${grounded.plan.counts.todos} todos, ${grounded.plan.counts.intents} intents; `
+      + `last updated ${grounded.plan.updated_at || 'unavailable'}.`,
+    );
+  }
   // PR-4 (260721) · the workspace CHARTER — the operator's OWN captured mission/background/goals reaches
   // this LLM turn (the info->plan->context join: PR-3 seeds it at provisioning, this grounds on it). Absent
   // (CHARTER_GROUNDING_ENABLED off / no charter) ⇒ no line ⇒ prompt byte-identical. Grounds "how am I doing

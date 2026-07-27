@@ -12,6 +12,7 @@ import {
   governanceRowInScope,
   mapGovernanceRowsToEvents,
   mapContextCardsToEvents,
+  classifyRequestedProjectFacts,
   type CockpitChatFacts,
   type CockpitChatScope,
   type GovernanceStreamRow,
@@ -58,6 +59,79 @@ describe('compileChatFacts — grounding extraction', () => {
     expect(g.top_sources[0]).toEqual({ source: 'github', count: 6 });
     expect(g.recent[0].summary).toMatch(/legible empty\/degraded project banner/);
     expect(g.recent[0].status).toBe('completed');
+  });
+});
+
+describe('project requested-fact semantic corpus', () => {
+  const corpus: Array<{ fact: 'project_name' | 'goals' | 'milestones' | 'todos' | 'counts' | 'freshness'; prompts: string[] }> = [
+    {
+      fact: 'project_name',
+      prompts: [
+        'What is the project name?', 'Name of this project', 'Name of the current project',
+        'Which project is selected?', 'Tell me the project name', 'What is the name of the project?',
+        'Name of the project please', 'Which project am I viewing?', 'Show the current project name',
+        'Confirm the project name',
+      ],
+    },
+    {
+      fact: 'goals',
+      prompts: [
+        'List the goals', 'What goals are recorded?', 'Show every goal', 'Do we have a goal?',
+        'Summarize the project goals', 'Give me all goals', 'What is the current goal?',
+        'Are there any goals?', 'Project goal inventory', 'Name each goal',
+      ],
+    },
+    {
+      fact: 'milestones',
+      prompts: [
+        'List the milestones', 'What milestones are recorded?', 'Show every milestone',
+        'Do we have a milestone?', 'Summarize project milestones', 'Give me all milestones',
+        'What is the current milestone?', 'Are there any milestones?', 'Project milestone inventory',
+        'Name each milestone',
+      ],
+    },
+    {
+      fact: 'todos',
+      prompts: [
+        'List the todos', 'What tasks are recorded?', 'Show every to-do', 'Do we have a todo?',
+        'Summarize project tasks', 'Give me all to-dos', 'What is the current task?',
+        'Are there any todos?', 'Project task inventory', 'Name each todo',
+      ],
+    },
+    {
+      fact: 'counts',
+      prompts: [
+        'How many goals are there?', 'Count the milestones', 'Give me counts',
+        'What is the number of todos?', 'Show the project counts', 'How many tasks are recorded?',
+        'Count goals and milestones', 'Number of project goals', 'What are the counts?',
+        'How many plan items do we have?',
+      ],
+    },
+    {
+      fact: 'freshness',
+      prompts: [
+        'How fresh is this plan?', 'When was the plan updated?', 'Show the last update',
+        'Is this project current?', 'Current as of when?', 'What is the freshness?',
+        'Give me the plan as of date', 'When was this last updated?', 'Is this information fresh?',
+        'Show freshness and last update',
+      ],
+    },
+  ];
+
+  it('recalls the named requested fact in all 60 project prompts', () => {
+    const cases = corpus.flatMap(({ fact, prompts }) => prompts.map((prompt) => ({ fact, prompt })));
+    expect(cases).toHaveLength(60);
+    for (const { fact, prompt } of cases) {
+      expect(classifyRequestedProjectFacts(prompt), prompt).toContain(fact);
+    }
+  });
+
+  it('does not convert workspace charter goals into project-plan requirements without project scope', () => {
+    const grounded = compileChatFacts(FACTS({
+      scope: { workspace_id: 'org_3EG82', project_id: null, domain_id: null },
+      plan: null,
+    }), 'how am I doing against my goals?');
+    expect(grounded.requested_facts.required).toEqual([]);
   });
 });
 

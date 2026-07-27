@@ -11,6 +11,7 @@ interface ThrownErrorLike {
   code?: string;
   status?: number;
   cause?: unknown;
+  diagnostics?: Record<string, unknown>;
 }
 
 const CODE_TO_STATUS: Record<string, number> = {
@@ -23,6 +24,7 @@ const CODE_TO_STATUS: Record<string, number> = {
   UNPROCESSABLE: 422,
   RATE_LIMITED: 429,
   INTERNAL_ERROR: 500,
+  READINESS_PERSISTENCE_FAILED: 500,
   SERVICE_UNAVAILABLE: 503,
   // T1/P3 (260710) · source-connection contract codes (mirrored in ApiErrorCode, dal/types/auth.ts).
   // An unregistered code silently downgrades to INTERNAL_ERROR on the wire — that latent bug was hitting
@@ -56,7 +58,13 @@ export function errorEnvelope(
   if (status >= 500) {
     try {
       sentryInit(ctx.env as { SENTRY_DSN?: string });
-      captureException(err, { route: ctx.req?.path, request_id: requestId, status, code });
+      captureException(err, {
+        route: ctx.req?.path,
+        request_id: requestId,
+        status,
+        code,
+        ...(e.diagnostics ? { diagnostics: e.diagnostics } : {}),
+      });
     } catch { /* observability must never break the error response */ }
   }
 
@@ -74,6 +82,29 @@ export function errorEnvelope(
   // hono's ctx.json with status code
   ctx.status(status as 400 | 401 | 403 | 404 | 409 | 422 | 429 | 500 | 502 | 503);
   return ctx.json(payload);
+}
+
+const SAFE_DB_IDENTIFIER = /^[A-Za-z_][A-Za-z0-9_.$-]{0,127}$/;
+const SAFE_SQLSTATE = /^[0-9A-Z]{5}$/;
+
+/** Extract only non-content database diagnostics. Never includes SQL text, values, detail, or hints. */
+export function safeDatabaseErrorMetadata(err: unknown): Record<string, string> {
+  if (!err || typeof err !== 'object') return {};
+  const source = err as Record<string, unknown>;
+  const out: Record<string, string> = {};
+  const sqlstate = String(source.code ?? '');
+  if (SAFE_SQLSTATE.test(sqlstate)) out.sqlstate = sqlstate;
+  for (const [sourceKey, targetKey] of [
+    ['schema', 'schema'],
+    ['table', 'table'],
+    ['column', 'column'],
+    ['constraint', 'constraint'],
+    ['routine', 'routine'],
+  ] as const) {
+    const value = String(source[sourceKey] ?? '');
+    if (SAFE_DB_IDENTIFIER.test(value)) out[targetKey] = value;
+  }
+  return out;
 }
 
 /**

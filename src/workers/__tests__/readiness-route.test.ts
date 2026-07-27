@@ -247,7 +247,7 @@ describe('POST /api/v1/readiness/submit', () => {
 
     expect(res.status).toBe(500);
     expect(await res.json()).toEqual(expect.objectContaining({
-      code: 'INTERNAL_ERROR',
+      code: 'READINESS_PERSISTENCE_FAILED',
       error: 'internal error',
     }));
     expect(provisionCustomerFromAccessRequest).not.toHaveBeenCalled();
@@ -263,7 +263,7 @@ describe('POST /api/v1/readiness/submit', () => {
 
     expect(res.status).toBe(500);
     expect(await res.json()).toEqual(expect.objectContaining({
-      code: 'INTERNAL_ERROR',
+      code: 'READINESS_PERSISTENCE_FAILED',
       error: 'internal error',
     }));
   });

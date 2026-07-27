@@ -21,18 +21,44 @@ export interface ChatMessageInput {
   mode?: string | null;
   generated_by?: string | null;
   grounded_on?: unknown;
+  interaction_id?: string | null;
+  entry_type?: 'user_request' | 'assistant_answer' | 'resolution_preview' | 'execution_outcome' | 'system_failure' | null;
+  resolution_id?: string | null;
+  execution_receipt_id?: string | null;
+  packet_id?: string | null;
+  operation_event_id?: string | null;
+  intent_id?: string | null;
+  audit_event_id?: string | null;
+  closing_attestation_id?: string | null;
   /** W1 (260708) · live links to the operation_events that grounded this answer (migration 058). The route
    *  supplies these only when CHAT_RECEIPT_GROUNDING_ENABLED — absent = legacy insert, byte-identical. */
   grounding_event_ids?: string[] | null;
 }
 
 export interface ChatMessageRow {
+  id: string;
+  thread_id: string;
   role: 'you' | 'assistant';
   body: string;
   mode: string | null;
   generated_by: string | null;
   grounded_on: unknown;
+  receipt_uid: string | null;
+  interaction_id: string | null;
+  entry_type: ChatMessageInput['entry_type'];
+  resolution_id: string | null;
+  execution_receipt_id: string | null;
+  packet_id: string | null;
+  operation_event_id: string | null;
+  intent_id: string | null;
+  audit_event_id: string | null;
+  closing_attestation_id: string | null;
   created_at: string;
+}
+
+export interface ChatExchangeWriteResult {
+  thread_id: string;
+  messages: ChatMessageRow[];
 }
 
 const MAX_BODY = 8000;
@@ -67,41 +93,142 @@ export async function appendChatExchangeRow(
   userId: string,
   scope: ChatScopeRef,
   messages: ChatMessageInput[],
-): Promise<void> {
+): Promise<ChatExchangeWriteResult> {
   const valid = (Array.isArray(messages) ? messages : []).filter(
     (m) => m && (m.role === 'you' || m.role === 'assistant') && typeof m.body === 'string' && m.body.trim(),
   );
-  if (!valid.length) return;
-  const threadId = await getOrCreateChatThreadRow(sql, userId, scope);
-  for (const m of valid) {
-    const links = Array.isArray(m.grounding_event_ids)
+  if (!valid.length) return { thread_id: threadIdFor(userId, chatScopeKey(scope)), messages: [] };
+  if (!userId) throw makeError('VALIDATION_ERROR', 'user_id is required', 400);
+
+  const scopeKey = chatScopeKey(scope);
+  const threadId = threadIdFor(userId, scopeKey);
+  const payload = valid.map((m, sequence) => {
+    const links = Array.isArray(m.grounding_event_ids) && m.role === 'assistant'
       ? m.grounding_event_ids.filter((x) => typeof x === 'string' && x).slice(0, 200)
       : null;
-    if (links && links.length && m.role === 'assistant') {
-      // W1 receipt substrate (migration 058): persist the live event links + mint the opaque receipt key.
-      // Degrade-safe: a pre-058 schema (missing columns) falls back to the legacy insert — the answer's
-      // persistence never depends on the receipt columns existing.
-      const receiptUid = `rcpt_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 12)}`;
-      try {
-        await sql/*sql*/`
-          INSERT INTO chat_messages (thread_id, role, body, mode, generated_by, grounded_on, grounding_event_ids, receipt_uid)
-          VALUES (
-            ${threadId}, ${m.role}, ${String(m.body).slice(0, MAX_BODY)}, ${m.mode ?? null},
-            ${m.generated_by ?? null}, ${m.grounded_on != null ? JSON.stringify(m.grounded_on) : null},
-            ${links}, ${receiptUid}
-          )
-        `;
-        continue;
-      } catch { /* fall through to the legacy insert (pre-058 schema) */ }
-    }
-    await sql/*sql*/`
-      INSERT INTO chat_messages (thread_id, role, body, mode, generated_by, grounded_on)
+    return {
+      sequence,
+      role: m.role,
+      body: String(m.body).slice(0, MAX_BODY),
+      mode: m.mode ?? null,
+      generated_by: m.generated_by ?? null,
+      grounded_on: m.grounded_on ?? null,
+      grounding_event_ids: links,
+      receipt_uid: links?.length ? `rcpt_${crypto.randomUUID().replace(/-/g, '')}` : null,
+      interaction_id: m.interaction_id ?? null,
+      entry_type: m.entry_type ?? null,
+      resolution_id: m.resolution_id ?? null,
+      execution_receipt_id: m.execution_receipt_id ?? null,
+      packet_id: m.packet_id ?? null,
+      operation_event_id: m.operation_event_id ?? null,
+      intent_id: m.intent_id ?? null,
+      audit_event_id: m.audit_event_id ?? null,
+      closing_attestation_id: m.closing_attestation_id ?? null,
+    };
+  });
+
+  const rows = (await sql/*sql*/`
+    WITH thread_written AS (
+      INSERT INTO chat_threads (id, user_id, workspace_id, project_id, domain_id, scope_key)
       VALUES (
-        ${threadId}, ${m.role}, ${String(m.body).slice(0, MAX_BODY)}, ${m.mode ?? null},
-        ${m.generated_by ?? null}, ${m.grounded_on != null ? JSON.stringify(m.grounded_on) : null}
+        ${threadId}, ${userId}, ${scope.workspace_id ?? null}, ${scope.project_id ?? null},
+        ${scope.domain_id ?? null}, ${scopeKey}
       )
-    `;
+      ON CONFLICT (id) DO UPDATE SET updated_at = now()
+      RETURNING id
+    ), input_messages AS MATERIALIZED (
+      SELECT *
+      FROM jsonb_to_recordset(${JSON.stringify(payload)}::jsonb) AS message(
+        sequence integer,
+        role text,
+        body text,
+        mode text,
+        generated_by text,
+        grounded_on jsonb,
+        grounding_event_ids text[],
+        receipt_uid text,
+        interaction_id text,
+        entry_type text,
+        resolution_id text,
+        execution_receipt_id text,
+        packet_id text,
+        operation_event_id text,
+        intent_id text,
+        audit_event_id text,
+        closing_attestation_id text
+      )
+    ), inserted AS (
+      INSERT INTO chat_messages (
+        thread_id, role, body, mode, generated_by, grounded_on, grounding_event_ids, receipt_uid,
+        interaction_id, entry_type, resolution_id, execution_receipt_id, packet_id,
+        operation_event_id, intent_id, audit_event_id, closing_attestation_id
+      )
+      SELECT
+        thread_written.id, message.role, message.body, message.mode, message.generated_by,
+        message.grounded_on, message.grounding_event_ids, message.receipt_uid,
+        message.interaction_id, message.entry_type, message.resolution_id,
+        message.execution_receipt_id, message.packet_id, message.operation_event_id,
+        message.intent_id, message.audit_event_id, message.closing_attestation_id
+      FROM thread_written
+      CROSS JOIN input_messages message
+      ORDER BY message.sequence
+      ON CONFLICT (thread_id, interaction_id, entry_type)
+        WHERE interaction_id IS NOT NULL AND entry_type IS NOT NULL
+      DO UPDATE SET thread_id = EXCLUDED.thread_id
+        WHERE chat_messages.role = EXCLUDED.role
+          AND chat_messages.body = EXCLUDED.body
+          AND chat_messages.mode IS NOT DISTINCT FROM EXCLUDED.mode
+          AND chat_messages.generated_by IS NOT DISTINCT FROM EXCLUDED.generated_by
+          AND chat_messages.grounded_on IS NOT DISTINCT FROM EXCLUDED.grounded_on
+          AND chat_messages.grounding_event_ids IS NOT DISTINCT FROM EXCLUDED.grounding_event_ids
+          AND chat_messages.resolution_id IS NOT DISTINCT FROM EXCLUDED.resolution_id
+          AND chat_messages.execution_receipt_id IS NOT DISTINCT FROM EXCLUDED.execution_receipt_id
+          AND chat_messages.packet_id IS NOT DISTINCT FROM EXCLUDED.packet_id
+          AND chat_messages.operation_event_id IS NOT DISTINCT FROM EXCLUDED.operation_event_id
+          AND chat_messages.intent_id IS NOT DISTINCT FROM EXCLUDED.intent_id
+          AND chat_messages.audit_event_id IS NOT DISTINCT FROM EXCLUDED.audit_event_id
+          AND chat_messages.closing_attestation_id IS NOT DISTINCT FROM EXCLUDED.closing_attestation_id
+      RETURNING *
+    )
+    SELECT *
+    FROM inserted
+    ORDER BY created_at ASC, id ASC
+  `) as Array<Record<string, unknown>>;
+
+  if (rows.length !== valid.length) {
+    throw makeError(
+      'INTERACTION_ID_CONFLICT',
+      'interaction identity was already used for different conversation content',
+      409,
+    );
   }
+  return {
+    thread_id: threadId,
+    messages: rows.map(normalizeChatMessageRow),
+  };
+}
+
+function normalizeChatMessageRow(r: Record<string, unknown>): ChatMessageRow {
+  return {
+    id: String(r.id ?? ''),
+    thread_id: String(r.thread_id ?? ''),
+    role: r.role === 'assistant' ? 'assistant' : 'you',
+    body: String(r.body || ''),
+    mode: (r.mode as string) ?? null,
+    generated_by: (r.generated_by as string) ?? null,
+    grounded_on: r.grounded_on ?? null,
+    receipt_uid: r.receipt_uid == null ? null : String(r.receipt_uid),
+    interaction_id: r.interaction_id == null ? null : String(r.interaction_id),
+    entry_type: (r.entry_type as ChatMessageInput['entry_type']) ?? null,
+    resolution_id: r.resolution_id == null ? null : String(r.resolution_id),
+    execution_receipt_id: r.execution_receipt_id == null ? null : String(r.execution_receipt_id),
+    packet_id: r.packet_id == null ? null : String(r.packet_id),
+    operation_event_id: r.operation_event_id == null ? null : String(r.operation_event_id),
+    intent_id: r.intent_id == null ? null : String(r.intent_id),
+    audit_event_id: r.audit_event_id == null ? null : String(r.audit_event_id),
+    closing_attestation_id: r.closing_attestation_id == null ? null : String(r.closing_attestation_id),
+    created_at: r.created_at ? new Date(r.created_at as string).toISOString() : '',
+  };
 }
 
 /** Load a scope's stored thread (oldest → newest), capped. Empty when no thread exists yet. */
@@ -115,20 +242,19 @@ export async function listChatHistoryRow(
   const threadId = threadIdFor(userId, chatScopeKey(scope));
   const cap = Math.max(1, Math.min(200, Number(limit) || 100));
   const rows = (await sql/*sql*/`
-    SELECT role, body, mode, generated_by, grounded_on, created_at
-    FROM chat_messages
-    WHERE thread_id = ${threadId}
+    SELECT *
+    FROM (
+      SELECT id, thread_id, role, body, mode, generated_by, grounded_on, receipt_uid,
+        interaction_id, entry_type, resolution_id, execution_receipt_id, packet_id,
+        operation_event_id, intent_id, audit_event_id, closing_attestation_id, created_at
+      FROM chat_messages
+      WHERE thread_id = ${threadId}
+      ORDER BY created_at DESC, id DESC
+      LIMIT ${cap}
+    ) newest
     ORDER BY created_at ASC, id ASC
-    LIMIT ${cap}
   `) as Array<Record<string, unknown>>;
-  return rows.map((r) => ({
-    role: r.role === 'assistant' ? 'assistant' : 'you',
-    body: String(r.body || ''),
-    mode: (r.mode as string) ?? null,
-    generated_by: (r.generated_by as string) ?? null,
-    grounded_on: r.grounded_on ?? null,
-    created_at: r.created_at ? new Date(r.created_at as string).toISOString() : '',
-  }));
+  return rows.map(normalizeChatMessageRow);
 }
 
 /** W2 (260708) · receipt lookup: the message + its thread's tenancy, keyed on the opaque receipt_uid.

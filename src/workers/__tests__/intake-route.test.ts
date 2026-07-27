@@ -17,9 +17,24 @@ function appFor(opts: { enabled?: boolean; packets?: any[]; approvals?: any[]; p
       if (opts.createError) throw opts.createError;
       return { id: 'inr_1', workspace_id, actor_user_id, version: 1, status: 'pending', consumed_at: null, created_at: '2026-07-15T00:00:00Z', ...input };
     },
-    executeIntakeResolution: async (workspace_id: string, actor_user_id: string, id: string, version: number, current_work_version: number, client_request_id: string, closing: any) => {
-      calls.push({ method: 'executeIntakeResolution', workspace_id, actor_user_id, id, version, current_work_version, client_request_id, closing });
-      return { ok: true, resolution: { id }, receipt: { id: 'ger_1', target_id: 'pkt_1' }, packet_id: 'pkt_1' };
+    executeIntakeResolution: async (
+      workspace_id: string,
+      actor_user_id: string,
+      id: string,
+      version: number,
+      current_work_version: number,
+      client_request_id: string,
+      interaction_id: string,
+      closing: any,
+    ) => {
+      calls.push({ method: 'executeIntakeResolution', workspace_id, actor_user_id, id, version, current_work_version, client_request_id, interaction_id, closing });
+      return {
+        ok: true,
+        resolution: { id },
+        receipt: { id: 'ger_1', target_id: 'pkt_1' },
+        packet_id: 'pkt_1',
+        read_model_watermark: '2026-07-27T00:00:00Z',
+      };
     },
   };
   const app = new Hono();
@@ -54,6 +69,7 @@ describe('single intake route', () => {
     expect(input.prior_work).toMatchObject({ discovery_executed: true, active_work_count: 0, pending_approval_count: 0 });
     expect(input.prior_work.digest_sha256).toMatch(/^[a-f0-9]{64}$/);
     expect(input.guardrails).toContain('tenant_and_workspace_scope_required');
+    expect(input.interaction_id).toBe('c2');
   });
 
   it('preserves commercial role labels instead of collapsing operators and admins to viewer', async () => {
@@ -132,12 +148,20 @@ describe('single intake route', () => {
     const bad = await app.request('/api/v1/intake/inr_1/execute', { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' }, env);
     expect(bad.status).toBe(400);
     const ok = await app.request('/api/v1/intake/inr_1/execute', {
-      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ version: 1, current_work_version: 3, client_request_id: 'exec_1' }),
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        version: 1,
+        current_work_version: 3,
+        client_request_id: 'exec_1',
+        interaction_id: 'interaction_1',
+      }),
     }, env);
     expect(ok.status).toBe(200);
     expect(calls.at(-1)).toMatchObject({
       method: 'executeIntakeResolution', workspace_id: 'tenant_a', actor_user_id: 'user_a', id: 'inr_1',
       version: 1, current_work_version: 3, client_request_id: 'exec_1',
+      interaction_id: 'interaction_1',
       closing: { role_key: 'role.workspace.owner', closing_skill: 'skill.governed-execution-closeout', outcome: 'attested' },
     });
     expect((calls.at(-1) as any).closing.content_sha256).toMatch(/^[a-f0-9]{64}$/);
@@ -150,7 +174,12 @@ describe('single intake route', () => {
       const { app, calls, env } = appFor({ enabled: true, auth: { ...AUTH, role } });
       const res = await app.request('/api/v1/intake/inr_1/execute', {
         method: 'POST', headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ version: 1, current_work_version: 3, client_request_id: `exec_${role}` }),
+        body: JSON.stringify({
+          version: 1,
+          current_work_version: 3,
+          client_request_id: `exec_${role}`,
+          interaction_id: `interaction_${role}`,
+        }),
       }, env);
       expect(res.status).toBe(403);
       expect(calls.some((c: any) => c.method === 'executeIntakeResolution')).toBe(false);
