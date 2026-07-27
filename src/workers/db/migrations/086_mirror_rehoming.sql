@@ -27,12 +27,26 @@
 
 BEGIN;
 
-INSERT INTO projects (id, workspace_id, name, status, description, metadata) VALUES
+-- REPLAYABILITY GUARD (added 260728). This migration is a one-time DATA consolidation, and the two
+-- INSERTs below carry FKs to a specific PRODUCTION workspace id. On a FRESH database that workspace
+-- does not exist, so the unguarded INSERT aborted with projects_workspace_id_fkey and took the whole
+-- migration set down at 086 of 92 — measured 260728 while building a disposable schema-91 database.
+-- Consequence: no fresh environment (disaster recovery, a new region, any disposable test database)
+-- could be provisioned from the migration set unless the operator already knew four undocumented
+-- identifiers to pre-seed. The `WHERE EXISTS` makes the data half self-skipping: on production the
+-- workspace is present and behaviour is byte-identical, on an empty database zero rows are written
+-- and the migration completes. The SCHEMA half below (the corrected append-only trigger message)
+-- still applies either way, which is the part a fresh database actually needs.
+INSERT INTO projects (id, workspace_id, name, status, description, metadata)
+SELECT v.id, v.workspace_id, v.name, v.status, v.description, v.metadata
+FROM (VALUES
   ('xlooop-repo-x-biz','org_3EG82VEzc8t3t65XSZ0YDlcaDMI','x-biz — repository','active','Repo history re-homed from mirror workspace x-biz (X-EXEC-3 mig 086, 260720)','{"rehomed_from":"x-biz","rehome_wave":"X-EXEC-3","rehomed_at":"2026-07-20"}'::jsonb),
   ('xlooop-repo-xcp-platform','org_3EG82VEzc8t3t65XSZ0YDlcaDMI','XCP — repository','active','Repo history re-homed from mirror workspace xcp-platform (X-EXEC-3 mig 086, 260720)','{"rehomed_from":"xcp-platform","rehome_wave":"X-EXEC-3","rehomed_at":"2026-07-20"}'::jsonb),
   ('xlooop-repo-x-docs','org_3EG82VEzc8t3t65XSZ0YDlcaDMI','x-docs — repository','active','Repo history re-homed from mirror workspace x-docs (X-EXEC-3 mig 086, 260720)','{"rehomed_from":"x-docs","rehome_wave":"X-EXEC-3","rehomed_at":"2026-07-20"}'::jsonb),
   ('xlooop-repo-x-front','org_3EG82VEzc8t3t65XSZ0YDlcaDMI','x-front — repository','active','Repo history re-homed from mirror workspace x-front (X-EXEC-3 mig 086, 260720)','{"rehomed_from":"x-front","rehome_wave":"X-EXEC-3","rehomed_at":"2026-07-20"}'::jsonb),
   ('xlooop-repo-xlooop','org_3EG82VEzc8t3t65XSZ0YDlcaDMI','xlooop — repository','active','Repo history re-homed from mirror workspace xlooop (X-EXEC-3 mig 086, 260720)','{"rehomed_from":"xlooop","rehome_wave":"X-EXEC-3","rehomed_at":"2026-07-20"}'::jsonb)
+) AS v(id, workspace_id, name, status, description, metadata)
+WHERE EXISTS (SELECT 1 FROM workspaces w WHERE w.id = v.workspace_id)
 ON CONFLICT (id) DO NOTHING;
 
 ALTER TABLE operation_events DISABLE TRIGGER trg_operation_events_append_only;
@@ -73,12 +87,18 @@ $BODY$;
 
 ALTER TABLE operation_events ENABLE TRIGGER trg_operation_events_append_only;
 
-INSERT INTO project_source_bindings (id, workspace_id, project_id, source_kind, source_ref, status, read_policy) VALUES
+-- Same guard, keyed on the PROJECT rather than the workspace: if the projects above were skipped,
+-- these bindings must be skipped too, or they would abort on project_source_bindings' project FK.
+INSERT INTO project_source_bindings (id, workspace_id, project_id, source_kind, source_ref, status, read_policy)
+SELECT v.id, v.workspace_id, v.project_id, v.source_kind, v.source_ref, v.status, v.read_policy
+FROM (VALUES
   ('psb-rehome-x-biz','org_3EG82VEzc8t3t65XSZ0YDlcaDMI','xlooop-repo-x-biz','github_repo','{"repo_slug":"x-biz","provider":"github"}'::jsonb,'connected','metadata_only'),
   ('psb-rehome-xcp-platform','org_3EG82VEzc8t3t65XSZ0YDlcaDMI','xlooop-repo-xcp-platform','github_repo','{"repo_slug":"xcp-platform","provider":"github"}'::jsonb,'connected','metadata_only'),
   ('psb-rehome-x-docs','org_3EG82VEzc8t3t65XSZ0YDlcaDMI','xlooop-repo-x-docs','github_repo','{"repo_slug":"x-docs","provider":"github"}'::jsonb,'connected','metadata_only'),
   ('psb-rehome-x-front','org_3EG82VEzc8t3t65XSZ0YDlcaDMI','xlooop-repo-x-front','github_repo','{"repo_slug":"x-front","provider":"github"}'::jsonb,'connected','metadata_only'),
   ('psb-rehome-xlooop','org_3EG82VEzc8t3t65XSZ0YDlcaDMI','xlooop-repo-xlooop','github_repo','{"repo_slug":"xlooop","provider":"github"}'::jsonb,'connected','metadata_only')
+) AS v(id, workspace_id, project_id, source_kind, source_ref, status, read_policy)
+WHERE EXISTS (SELECT 1 FROM projects p WHERE p.id = v.project_id)
 ON CONFLICT (id) DO NOTHING;
 
 UPDATE workspaces SET relationship_status='archived', updated_at=now()
