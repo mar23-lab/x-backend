@@ -3267,6 +3267,22 @@
           "reason": "Make authenticated readiness persistence execute on real schema-91 PostgreSQL and require disposable database proof before deployment"
         }
       ]
+    },
+    {
+      "delta_id": "live-rls-receipt-fixture-20260727",
+      "generated_at": "2026-07-27T08:45:03.978Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "5fcdb69449b3d4a62cca668a4d1961fb76477e21",
+      "target_base_commit": "5fcdb69449b3d4a62cca668a4d1961fb76477e21",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/__tests__/operational-spine-live-rls.test.ts",
+          "target_blob": "7a0888cb296263dea94ce0e5d6ac62a7b6f76c48",
+          "reason": "Grant the temporary live RLS probe read access to governed receipt reconciliation"
+        }
+      ]
     }
   ]
 }
