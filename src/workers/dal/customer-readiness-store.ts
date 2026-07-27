@@ -210,14 +210,19 @@ export async function saveWorkspaceReadinessAssessmentRow(
                 also_personal_space, company_name, domain, country, deep_level,
                 readiness_answers, deep_check, enrichment, consent, source, metadata,
                 created_at, updated_at
-    ), request_linked AS (
+    ), existing_request_linked AS (
       UPDATE access_requests a
       SET user_id = COALESCE(a.user_id, ${input.user_id}),
           invited_to_workspace_id = COALESCE(a.invited_to_workspace_id, ${input.workspace_id}),
           updated_at = now()
       FROM readiness_written r
       WHERE a.id = r.access_request_id
+        AND NOT EXISTS (SELECT 1 FROM request_created)
       RETURNING a.id
+    ), request_linked AS MATERIALIZED (
+      SELECT id FROM request_created
+      UNION ALL
+      SELECT id FROM existing_request_linked
     ), audit_written AS (
       INSERT INTO audit_logs (
         actor_user_id, action, target_type, target_id, workspace_id, reason, metadata
@@ -227,8 +232,8 @@ export async function saveWorkspaceReadinessAssessmentRow(
         ${input.workspace_id}, 'Authenticated customer saved onboarding baseline',
         jsonb_build_object(
           'schema_id', 'xlooop.readiness_write_receipt.v1',
-          'client_request_id', ${input.client_request_id},
-          'request_digest', ${input.request_digest},
+          'client_request_id', ${input.client_request_id}::text,
+          'request_digest', ${input.request_digest}::text,
           'readiness_assessment_id', r.id
         )
       FROM readiness_written r

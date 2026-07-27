@@ -34,6 +34,7 @@ const gates = [
   ['prod-migration object-probe classifier', 'npm', ['run', 'verify:prod-migrations:self-test']],
   ['migration 090 SELECT-only preflight classifier', 'npm', ['run', 'preflight:migration-090:self-test']],
   ['migration 091 SELECT-only preflight classifier', 'npm', ['run', 'preflight:migration-091:self-test']],
+  ['schema 91 disposable PostgreSQL release gate', 'npm', ['run', 'verify:schema91-postgres:self-test']],
   ['operation-event source-tool constraint', 'npm', ['run', 'verify:operation-event-source-tool-constraint']],
   ['operation-event source-tool constraint controls', 'npm', ['run', 'verify:operation-event-source-tool-constraint:self-test']],
   ['pilot live RLS evidence producer', 'npm', ['run', 'produce:pilot-shadow-live-rls-evidence:self-test']],

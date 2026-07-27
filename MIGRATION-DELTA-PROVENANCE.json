@@ -3241,6 +3241,32 @@
           "reason": "fail-closed SELECT-only schema-91 predecessor, ownership, lock, partial-state, and exact-poststate release control"
         }
       ]
+    },
+    {
+      "delta_id": "onboarding-postgres-authority-20260727",
+      "generated_at": "2026-07-27T07:26:01.189Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "1e3df29cdf22d47394a051661a8c37abf9ed5969",
+      "target_base_commit": "1e3df29cdf22d47394a051661a8c37abf9ed5969",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "package.json",
+          "target_blob": "3c31a0a4d19ed9913d4cdf17a2f78ea131843d85",
+          "reason": "Make authenticated readiness persistence execute on real schema-91 PostgreSQL and require disposable database proof before deployment"
+        },
+        {
+          "path": "scripts/ci-local.mjs",
+          "target_blob": "d82cd2fd360c2a45216dbf4a7203475e27dadd33",
+          "reason": "Make authenticated readiness persistence execute on real schema-91 PostgreSQL and require disposable database proof before deployment"
+        },
+        {
+          "path": "src/workers/dal/customer-readiness-store.ts",
+          "target_blob": "b074454e90827818e0b1a7cbbb04487d6a5a286f",
+          "reason": "Make authenticated readiness persistence execute on real schema-91 PostgreSQL and require disposable database proof before deployment"
+        }
+      ]
     }
   ]
 }
