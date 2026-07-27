@@ -3220,6 +3220,27 @@
           "reason": "fail closed when one interaction identity is reused for different canonical conversation content"
         }
       ]
+    },
+    {
+      "delta_id": "schema91-select-preflight-20260727",
+      "generated_at": "2026-07-27T06:59:22.716Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "c3e44a560de73fb66f04ff70c38279418d7d0df4",
+      "target_base_commit": "c3e44a560de73fb66f04ff70c38279418d7d0df4",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "package.json",
+          "target_blob": "d8508256d04f3a87b846ae9a8d7522dce86ed5f1",
+          "reason": "fail-closed SELECT-only schema-91 predecessor, ownership, lock, partial-state, and exact-poststate release control"
+        },
+        {
+          "path": "scripts/ci-local.mjs",
+          "target_blob": "b2ea6b4a77ed1ddb10b1575193e75ae7fb2cc26c",
+          "reason": "fail-closed SELECT-only schema-91 predecessor, ownership, lock, partial-state, and exact-poststate release control"
+        }
+      ]
     }
   ]
 }
