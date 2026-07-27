@@ -103,6 +103,7 @@ async function cleanup(ownerSql: Sql) {
   await ownerSql(`REVOKE ALL ON approval_requests FROM ${sqlIdentifier(ROLE)}`);
   await ownerSql(`REVOKE ALL ON evidence_items FROM ${sqlIdentifier(ROLE)}`);
   await ownerSql(`REVOKE ALL ON task_packets FROM ${sqlIdentifier(ROLE)}`);
+  await ownerSql(`REVOKE ALL ON governed_execution_receipts FROM ${sqlIdentifier(ROLE)}`);
   await ownerSql(`REVOKE ALL ON SCHEMA public FROM ${sqlIdentifier(ROLE)}`);
   await ownerSql(`DROP ROLE IF EXISTS ${sqlIdentifier(ROLE)}`);
 }
@@ -119,6 +120,8 @@ describeLive('operational spine live RLS route proof', () => {
     await ownerSql(`CREATE ROLE ${sqlIdentifier(ROLE)} LOGIN PASSWORD ${sqlLiteral(password)}`);
     await ownerSql(`GRANT USAGE ON SCHEMA public TO ${sqlIdentifier(ROLE)}`);
     await ownerSql(`GRANT SELECT, INSERT, UPDATE ON task_packets TO ${sqlIdentifier(ROLE)}`);
+    // GET /packets reconciles canonical packet rows with governed execution receipts.
+    await ownerSql(`GRANT SELECT ON governed_execution_receipts TO ${sqlIdentifier(ROLE)}`);
     await ownerSql(`GRANT SELECT, INSERT, UPDATE ON evidence_items TO ${sqlIdentifier(ROLE)}`);
     await ownerSql(`GRANT SELECT, INSERT, UPDATE ON approval_requests TO ${sqlIdentifier(ROLE)}`);
     await ownerSql(`GRANT SELECT, INSERT, UPDATE ON tool_events TO ${sqlIdentifier(ROLE)}`);
