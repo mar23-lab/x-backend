@@ -28,8 +28,23 @@ deploy_surfaces:
   api_worker:
     name: xlooop-api
     domain: api.xlooop.com
-    receipt: docs/deployment/evidence/cloudflare-api-deploy-receipt.json
+    # LIVE receipt, rewritten by every deploy. Gitignored via .gitignore:81
+    # (`latest-*-deploy-receipt.json`) — deliberate and load-bearing, see receipt_path_history.
+    receipt: docs/deployment/evidence/latest-cloudflare-api-deploy-receipt.json
     receipt_rule: "emit-deploy-receipt.mjs refuses unless live /health build == local HEAD"
+    receipt_seed_snapshot: docs/deployment/evidence/cloudflare-api-deploy-receipt.json
+    receipt_path_history: >-
+      Until 260727 the emitter wrote the LIVE receipt to
+      docs/deployment/evidence/cloudflare-api-deploy-receipt.json, which is blob-pinned as
+      immutable donor-seed evidence in MIGRATION-PROVENANCE.json (.files[194]). That file is
+      frozen by contract while the receipt is rewritten by every deploy — two contradictory
+      requirements on one path. The contradiction stayed invisible for 14 days because the
+      receipt_rule was never chained into deploy:api, so nothing ever wrote the file; the first
+      real deploy after chaining it turned verify:provenance, and so ci-local, RED. The pinned
+      file is restored to its exact seed blob and kept as a historical snapshot; the live receipt
+      moved to the gitignored latest-* path, matching how pages_app is already handled.
+      .gitignore:77-79 records a third independent reason receipts must not be committed: a
+      committed receipt records the PRE-commit HEAD, creating a source_commit feedback loop.
   pages_app:
     name: xlooop-app
     domain: app.xlooop.com

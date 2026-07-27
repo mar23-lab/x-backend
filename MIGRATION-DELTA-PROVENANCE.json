@@ -3319,6 +3319,27 @@
           "reason": "the machine-readable SSOT said deploy_authority: Xlooop-XCP-demo, frozen since 0714, while x-backend has demonstrably been the deployer since ~260719 (prod build 3d7ade27 is not a commit in the donor at all). Corrected to x-backend and records the donor same-target hazard: the frozen donor still declares name=xlooop-api + api.xlooop.com with a preflight-free deploy"
         }
       ]
+    },
+    {
+      "delta_id": "receipt-path-not-seed-pinned-20260727",
+      "generated_at": "2026-07-27T13:20:00Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "37746d4e4fb29dfef8a481f5c03612c35fdba885",
+      "target_base_commit": "37746d4e4fb29dfef8a481f5c03612c35fdba885",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "package.json",
+          "target_blob": "fea0d5b2a2a0cfd028de5feacbfd94013ab52afb",
+          "reason": "points deploy:api:receipt at docs/deployment/evidence/latest-cloudflare-api-deploy-receipt.json. The emitter previously wrote the LIVE receipt to cloudflare-api-deploy-receipt.json, which MIGRATION-PROVENANCE.json pins at .files[194] as immutable donor-seed evidence - one path required to be BOTH frozen by contract and rewritten by every deploy. The conflict was invisible for 14 days because the receipt step was never chained, so nothing ever wrote the file; the first real deploy after chaining it turned verify:provenance and therefore ci-local RED on main. The latest-* path is already gitignored by .gitignore:81 and is exactly how pages_app is already handled, so this needs no new machinery and no edit to the immutable seed manifest"
+        },
+        {
+          "path": "docs/deployment/BACKEND_REPOSITORY_OWNERSHIP.yml",
+          "target_blob": "1fb6def63a1299d09cf91d30b8c40a4daaf739c1",
+          "reason": "names the live receipt path (the gitignored latest-* file) instead of the frozen seed snapshot, adds receipt_seed_snapshot so the historical artifact stays discoverable, and records receipt_path_history. ALSO CORRECTS THE PRECEDING DELTA'S OWN REASON TEXT: the frozen donor's deploy:api is NOT preflight-free. predeploy:api runs verify-deploy-sha-current.mjs and npm invokes pre<script> automatically. The real donor hazard is WHAT the gate compares - the DONOR repo's HEAD against the DONOR repo's origin/main - so a clean donor checkout PASSES ITS OWN GATE while wrangler.toml still declares name=xlooop-api with pattern=api.xlooop.com. A satisfied gate shipping donor code to the live production Worker is the hazard, which means the mitigation is neutralising the name/pattern binding, not adding another gate. Recorded here because acting on the wrong mechanism would have produced a second gate that also passes"
+        }
+      ]
     }
   ]
 }
