@@ -31,6 +31,7 @@
     "verify:authority-decision:deploy": "node scripts/verify-authority-decision-packet.mjs --require-approved-to-deploy",
     "verify:authority-decision:release": "node scripts/verify-authority-decision-packet.mjs --require-ratified",
     "verify:deployment-authorization-store": "node scripts/verify-deployment-authorization-store.mjs",
+    "verify:deployment-authorization-store:self-test": "node scripts/verify-deployment-authorization-store.mjs --self-test",
     "preflight:rls-dsn": "node scripts/preflight-rls-dsn.mjs",
     "preflight:rls-dsn:self-test": "node scripts/preflight-rls-dsn.mjs --self-test",
     "dev:api": "DEPLOY_MIGRATION_GATE_NONPROD=1 wrangler dev --config wrangler.toml",
