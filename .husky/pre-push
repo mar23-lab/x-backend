@@ -1,0 +1,46 @@
+#!/usr/bin/env sh
+
+# x-backend pre-push gate.
+#
+# WHY. This repo carries 194 Workers test files and 40 `ci-local` gates, and until this hook
+# existed NOTHING triggered any of them: `core.hooksPath` was unset, `.git/hooks` held only
+# samples, and GitHub Actions are deliberately disabled (free-tier minutes). The suite ran only
+# when a human remembered to type `npm run ci-local`.
+#
+# WHAT IT RUNS. `npm run ci-local` — the full local authority stack (40 gates, ending in the
+# typecheck and the complete Workers suite in bounded batches). Expect ~7.5 minutes.
+#
+# ESCAPE HATCH. For a genuine emergency: `git push --no-verify`. Use it knowingly — the same
+# gates are not run anywhere else, so a bypassed push is an unverified push.
+
+# Git LFS (preserves LFS when core.hooksPath is overridden). Must run BEFORE the env is cleared.
+command -v git-lfs >/dev/null 2>&1 && git lfs pre-push "$@"
+
+# Clear git's per-invocation environment before running the suite.
+#
+# Git exports GIT_DIR (and friends) to hooks, and child processes inherit it. GIT_DIR overrides
+# repository discovery, so a verifier that builds a throwaway repo under os.tmpdir() and shells out
+# to `git commit` writes into THIS repository instead. That is not hypothetical: the first run of
+# this hook let `verify:deployment-authorization-store` commit its "test fixture" (a one-line
+# README.md) onto the branch being pushed, and git then shipped that commit. Clearing these
+# restores the behaviour the gates already have when a human runs them from a shell.
+unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_PREFIX GIT_COMMON_DIR
+unset GIT_OBJECT_DIRECTORY GIT_ALTERNATE_OBJECT_DIRECTORIES GIT_QUARANTINE_PATH
+
+start=$(date +%s)
+echo "husky(pre-push): x-backend authority gate — npm run ci-local"
+echo "husky(pre-push): 40 gates + typecheck + full Workers suite; typically ~7.5 min."
+echo "husky(pre-push): emergency bypass is 'git push --no-verify' (an unverified push)."
+
+npm run ci-local
+status=$?
+
+elapsed=$(($(date +%s) - start))
+if [ "$status" -ne 0 ]; then
+  echo "husky(pre-push): FAIL npm run ci-local (exit $status) after ${elapsed}s — push blocked."
+  echo "husky(pre-push): fix the failing gate, or bypass with 'git push --no-verify' if this is an emergency."
+  exit "$status"
+fi
+
+echo "husky(pre-push): OK npm run ci-local in ${elapsed}s"
+exit 0

@@ -3456,6 +3456,22 @@
           "reason": "PRs 101, 102 and 105 added verify scripts and the frontend/API pairing gate to the scripts block. The earlier 98 change to package.json at 01aad69 was already recorded by that same commit, so the residual drift is these three PRs alone."
         }
       ]
+    },
+    {
+      "delta_id": "prepush-gate-260728",
+      "generated_at": "2026-07-28T10:43:05.084Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "720e86532db4073528f46928adc2fd0f3fa50712",
+      "target_base_commit": "720e86532db4073528f46928adc2fd0f3fa50712",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "package.json",
+          "target_blob": "824a01a4e43043e5bf3daeb8f249ffc1e815e361",
+          "reason": "package.json gains the prepare script that binds core.hooksPath for the pre-push gate"
+        }
+      ]
     }
   ]
 }
