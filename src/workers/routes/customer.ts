@@ -295,8 +295,38 @@ customerRoute.post('/customer/invites', async (ctx) => {
       return errorEnvelope(ctx, { status: 400, code: 'VALIDATION_ERROR', message: 'a valid invitee email is required' });
     }
     // Map the requested workspace role to a Clerk org role (default: member).
-    const clerkRole =
-      body.role === 'owner' || body.role === 'operator' || body.role === 'admin' ? 'org:admin' : 'org:member';
+    //
+    // 260728 — SAME-DOMAIN IS DECIDED HERE, SERVER-SIDE, BECAUSE THE CLIENT DECIDED IT WRONG.
+    //
+    // The cockpit classifies an invitee with `inviteClassify` (wired/src/entities/members.dcfrag.js):
+    // same-domain colleague => 'operator', external => 'client' with a visible warning. That design is
+    // deliberate and good. But it compares against `WORKSPACE_DOMAIN`, a HARDCODED 'xlooop.com'. So for
+    // every CUSTOMER tenant, a colleague at their OWN company domain classified EXTERNAL and the client
+    // sent role:'client' — which lands as:
+    //   'client' -> org:member -> viewer -> allowed_actions [] + operating_mode forced to 'watch'
+    //   -> denied on all 18 governed actions (lib/permissions.ts, mode_requires_operator).
+    // Only @xlooop.com addresses ever became operator. Measured 260728 while preparing a
+    // design-partner launch: the colleague a partner brings in is exactly the person whose feedback
+    // the pilot needs, and they would have arrived unable to do anything.
+    //
+    // WHY THE FIX BELONGS HERE AND NOT IN THE COCKPIT. `project/App.dc.html` is a design-tool export —
+    // AGENTS.md: "fresh exports OVERWRITE project/, so any hand-edit is silently destroyed on the next
+    // re-import." A fix in the fragment also breaks `verify-dc-slice-complete` (fragments must stay
+    // byte-identical to the design export), which is BLOCKING in verify:slice. So the client-side fix is
+    // both non-durable and gate-blocked. Here it is durable, and strictly stronger: `auth.email` is the
+    // JWT-trusted inviter identity, not client state, so the decision cannot be spoofed by the caller.
+    //
+    // AUTHORITY NOTE — this does not widen anyone's power. Reaching this line already required
+    // `authorizeGovernedWrite(ctx, 'member:invite')` AND an unlocked workspace authority. The workspace
+    // owner can already set any role via PATCH /api/v1/members/:userId/role, so same-domain elevation is
+    // a default they could apply by hand anyway. An EXTERNAL domain still defaults to 'client' — the
+    // conservative path is unchanged, and an explicit body.role still wins.
+    const inviterDomain = String(auth.email || '').split('@')[1]?.trim().toLowerCase() || '';
+    const inviteeDomain = email.split('@')[1]?.trim().toLowerCase() || '';
+    const sameDomainAsInviter = !!inviterDomain && inviterDomain === inviteeDomain;
+    const explicitElevated =
+      body.role === 'owner' || body.role === 'operator' || body.role === 'admin';
+    const clerkRole = explicitElevated || sameDomainAsInviter ? 'org:admin' : 'org:member';
     const requestedRole = clerkRole === 'org:admin' ? 'operator' : (body.role || 'client');
 
     const audit = await dal.recordCustomerInviteAudit({
