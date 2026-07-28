@@ -189,6 +189,25 @@ export function assessPagesDecisionPacket(packet, expected) {
   const rollback = packet?.rollback || {};
   const deployment = packet?.expected_deployment || {};
 
+  // cutover_id pairing · 260729 — makes "atomic" REFUSABLE, not merely recordable.
+  //
+  // #111 gave both packets a shared cutover_id so a pair could be recognised after the fact. That
+  // is proof-after. This is prevention-before: when the caller states which cutover this Pages
+  // deploy belongs to, a packet that does not carry that id is REFUSED.
+  //
+  // The failure it exists to stop is the one that stranded the pilot on 260728: the API deployed,
+  // the paired Pages deploy did not, and nothing in either artifact could tell that the two were
+  // meant to be one operation. Two independent single-use authorisations with two independent TTLs
+  // and no shared identity is a runbook instruction, not a property of the system.
+  //
+  // ADDITIVE BY CONSTRUCTION: enforcement engages ONLY when `expected.cutover_id` is supplied, so
+  // every existing caller and every standalone Pages deploy is unaffected. Opt-in strictness, not a
+  // new universal requirement — a gate that breaks unrelated flows on the day it lands is a gate
+  // that gets reverted.
+  if (expected?.cutover_id) {
+    if (!packet?.cutover_id) problems.push('cutover_id_missing');
+    else if (packet.cutover_id !== expected.cutover_id) problems.push('cutover_id_mismatch');
+  }
   if (packet?.schema_id !== 'xlooop.app_pages_deployment_decision.v1') problems.push('schema_id');
   if (packet?.status !== 'approved_to_deploy') problems.push('status');
   if (packet?.deployment_allowed !== true) problems.push('deployment_allowed');

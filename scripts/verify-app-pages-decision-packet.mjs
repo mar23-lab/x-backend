@@ -65,8 +65,23 @@ if (selfTest) {
     feature_posture: approved.expected_deployment.feature_posture,
     now: '2026-07-26T00:10:00Z',
   };
+  // cutover_id pairing · both directions, because only asserting the match would pass even if the
+  // check were hardcoded true, and only asserting the mismatch would pass if it were hardcoded
+  // false. The third case is the one that matters most: without an expected id, nothing changes.
+  const CID_A = '11111111-2222-3333-4444-555555555555';
+  const CID_B = '99999999-8888-7777-6666-555555555555';
   const cases = [
     ['approved', assessPagesDecisionPacket(approved, expected).ok],
+    ['cutover_id matching the API packet is accepted',
+      assessPagesDecisionPacket({ ...approved, cutover_id: CID_A }, { ...expected, cutover_id: CID_A }).ok],
+    ['cutover_id from a DIFFERENT cutover is refused',
+      assessPagesDecisionPacket({ ...approved, cutover_id: CID_B }, { ...expected, cutover_id: CID_A })
+        .problems.includes('cutover_id_mismatch')],
+    ['a packet with NO cutover_id is refused once one is expected',
+      assessPagesDecisionPacket(approved, { ...expected, cutover_id: CID_A })
+        .problems.includes('cutover_id_missing')],
+    ['no expected cutover_id => unchanged behaviour (additive, breaks no existing caller)',
+      assessPagesDecisionPacket({ ...approved, cutover_id: CID_B }, expected).ok],
     ['unapproved', !assessPagesDecisionPacket({ ...approved, status: 'draft' }, expected).ok],
     ['wrong frontend', !assessPagesDecisionPacket({
       ...approved,
