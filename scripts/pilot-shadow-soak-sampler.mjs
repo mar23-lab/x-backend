@@ -96,11 +96,60 @@ function writeEvidence(evidence) {
   fs.writeFileSync(EVIDENCE_FILE, `${JSON.stringify(evidence, null, 2)}\n`);
 }
 
+// 260728 — THIS USED TO THROW, AND A THROW DELETED THE EVIDENCE OF THE OUTAGE.
+//
+// readHealth() had no try/catch. An unreachable API raised an unhandled rejection, killed the
+// launchd process, and the failed probe was NEVER APPENDED. Measured on run soak-f9f2083-20260728:
+// launchd runs=11 vs samples=5 (45% capture), a 180-minute hole between 02:13Z and 05:13Z, and 5
+// uncaught `getaddrinfo ENOTFOUND` stanzas in the .err.log. Because only successful probes
+// survived, the completion gate `health_samples.every(s => s.status === 200)` was STRUCTURALLY
+// INCAPABLE of ever observing downtime — it would have certified 100% availability across a window
+// that actually lost half its probes. A number that cannot be false is not evidence.
+//
+// A failed probe is now a RECORDED SAMPLE with status 0, so the gate can see it and fail.
 async function readHealth() {
   const url = `${API_BASE}/api/v1/health?cb=soak-${Date.now()}`;
-  const res = await fetch(url, { cache: 'no-store' });
-  const body = await res.json();
-  return { status: res.status, body };
+  try {
+    const res = await fetch(url, { cache: 'no-store' });
+    let body = {};
+    try {
+      body = await res.json();
+    } catch (parseErr) {
+      return { status: res.status, body: {}, error: `non-JSON body: ${parseErr.message}` };
+    }
+    return { status: res.status, body };
+  } catch (err) {
+    return { status: 0, body: {}, error: `${err.code || err.name || 'fetch_failed'}: ${err.message}` };
+  }
+}
+
+// 260728 — THE SOAK NEVER LOOKED AT THE FRONTEND, WHICH IS THE THING THAT WAS BROKEN.
+//
+// `frontend_origin` was recorded in the evidence header and never fetched; the only fetch in this
+// file was the API. The rollback verifier's `frontend_origin_is_nonproduction_pages` check is a
+// hostname STRING test with no network call. So the 48h gate could complete fully GREEN on
+// 2026-07-30 while every authenticated pilot tester saw "Workspace unavailable" — which is exactly
+// what was happening: test.xlooop.com had been dead for 42+ hours on a handshake mismatch.
+//
+// The pilot frontend sits behind Cloudflare Access, so an unauthenticated probe legitimately gets a
+// 302 to the Access login. That is NOT treated as a failure — it is recorded as `access_gated`, an
+// honest "reachable but not inspectable from here". What IS captured, when the body is readable, is
+// the compiled __XLOOP_EXPECTED_BACKEND_SHA, because a frontend expecting a different SHA than the
+// API reports is the precise failure this soak exists to catch and was blind to.
+async function readFrontend() {
+  const origin = (process.env.XLOOOP_PILOT_SHADOW_FRONTEND_ORIGIN || 'https://test.xlooop.com').replace(/\/$/, '');
+  try {
+    const res = await fetch(`${origin}/?cb=soak-${Date.now()}`, { cache: 'no-store', redirect: 'manual' });
+    if (res.status >= 300 && res.status < 400) {
+      const loc = res.headers.get('location') || '';
+      return { status: res.status, access_gated: /cloudflareaccess\.com/.test(loc), expected_backend_sha: null };
+    }
+    const html = await res.text();
+    const m = html.match(/__XLOOP_EXPECTED_BACKEND_SHA\s*=\s*"([0-9a-f]{40})"/);
+    return { status: res.status, access_gated: false, expected_backend_sha: m ? m[1] : null };
+  } catch (err) {
+    return { status: 0, access_gated: false, expected_backend_sha: null, error: `${err.code || err.name || 'fetch_failed'}: ${err.message}` };
+  }
 }
 
 const evidence = readEvidence();
@@ -119,11 +168,13 @@ if (!evidence.producer || typeof evidence.producer !== 'object') {
     synthetic: false,
   };
 }
-const { status, body } = await readHealth();
+const { status, body, error: healthError } = await readHealth();
+const frontend = await readFrontend();
 
 // Pin identity on the first sample; a drifting build/schema mid-soak is a real finding, so record
 // the sample as-is and let the strict verifier fail on the mismatch rather than silently repinning.
-if (!evidence.backend_build_sha) {
+// Guarded so a FAILED probe (status 0, empty body) can never pin nulls as the soak's identity.
+if (status === 200 && body.build && !evidence.backend_build_sha) {
   evidence.backend_build_sha = body.build;
   evidence.schema_head = Number(body.schema_head);
   evidence.contract_hash = body.contract_hash;
@@ -133,12 +184,29 @@ if (!evidence.soak.started_at) evidence.soak.started_at = new Date().toISOString
 evidence.health_samples.push({
   checked_at: new Date().toISOString(),
   status,
-  build: body.build,
-  schema_head: Number(body.schema_head),
-  environment: body.environment,
-  authority: body.authority,
-  contract_hash: body.contract_hash,
+  // `error` is present ONLY on a failed probe. Its presence is the signal the completion gate
+  // needs: previously a failed probe killed the process and left no trace at all.
+  ...(healthError ? { error: healthError } : {}),
+  build: body.build ?? null,
+  schema_head: body.schema_head === undefined ? null : Number(body.schema_head),
+  environment: body.environment ?? null,
+  authority: body.authority ?? null,
+  contract_hash: body.contract_hash ?? null,
   queue_bound: Boolean(body.bindings?.tenant_projection_queue),
+  // The frontend half of the pair. `frontend_pair_ok` is the invariant the pilot outage violated:
+  // the compiled __XLOOP_EXPECTED_BACKEND_SHA must equal the SHA the API reports. null means
+  // "not determinable from here" (Access-gated or unreadable) — deliberately NOT false, so an
+  // unreadable frontend never masquerades as a proven-good one.
+  frontend: {
+    status: frontend.status,
+    access_gated: frontend.access_gated,
+    expected_backend_sha: frontend.expected_backend_sha,
+    ...(frontend.error ? { error: frontend.error } : {}),
+  },
+  frontend_pair_ok:
+    frontend.expected_backend_sha && body.build
+      ? frontend.expected_backend_sha === body.build
+      : null,
 });
 
 if (rollbackArg) {
