@@ -1736,7 +1736,7 @@
         {
           "path": "package.json",
           "target_blob": "4123456ee6d9bfc0120a514ce58d249ef1cb72b9",
-          "reason": "ops-hardening: gate deploy:api on verify-rls-grant-parity (defense-in-depth \u2014 the static tenant-isolation invariant now checked at deploy, not only ci-local)"
+          "reason": "ops-hardening: gate deploy:api on verify-rls-grant-parity (defense-in-depth — the static tenant-isolation invariant now checked at deploy, not only ci-local)"
         }
       ]
     },
@@ -1924,17 +1924,17 @@
         {
           "path": "wrangler.toml",
           "target_blob": "6a31d5d57db28c1ad64429751a0348440ec00fd5",
-          "reason": "Dial crons to daily for pilot infra cost (5min/hourly propagation+graph_rebuild+reclassify \u2192 daily; lets Neon autosuspend)"
+          "reason": "Dial crons to daily for pilot infra cost (5min/hourly propagation+graph_rebuild+reclassify → daily; lets Neon autosuspend)"
         },
         {
           "path": "src/workers/crons/index.ts",
           "target_blob": "8e023c4580f34a5fa07628eda7c731dccfb0998c",
-          "reason": "Dial crons to daily for pilot infra cost (5min/hourly propagation+graph_rebuild+reclassify \u2192 daily; lets Neon autosuspend)"
+          "reason": "Dial crons to daily for pilot infra cost (5min/hourly propagation+graph_rebuild+reclassify → daily; lets Neon autosuspend)"
         },
         {
           "path": "src/workers/__tests__/operations-queue-consumer.test.ts",
           "target_blob": "2f571922579f59d3ba3bf23665b05f19da3b5136",
-          "reason": "Dial crons to daily for pilot infra cost (5min/hourly propagation+graph_rebuild+reclassify \u2192 daily; lets Neon autosuspend)"
+          "reason": "Dial crons to daily for pilot infra cost (5min/hourly propagation+graph_rebuild+reclassify → daily; lets Neon autosuspend)"
         },
         {
           "path": "src/workers/__tests__/reclassify-unattributed.test.ts",
@@ -3354,6 +3354,106 @@
           "path": "scripts/rls-shadow-soak.mjs",
           "target_blob": "0a8393f140cd656a7a54bdc0681a3c2df054f3e9",
           "reason": "makes an unexercised database refuse instead of certify. The loop skipped every spine table with zero rows and then fell through to the GREEN line, so on an EMPTY database the proof printed 'xlooop_app enforces tenant isolation with zero divergence' and exited 0 - measured directly against a fresh schema-91 database on 260728, where the unfixed script at main 01aad69 returned exit 0 and the fixed script returned exit 2. That zero was structural, not measured, and produce-pilot-shadow-live-rls-evidence.mjs copied it into a readiness artifact whose leakage_count and cross_tenant_read_count checks therefore could never fail. Adds a per-run machine-readable summary (tables_with_rows, workspaces_sampled, leak_probes, divergence_count, leakage_count, sufficient_sample) so the producer derives those counts instead of hardcoding them, and refuses in strict mode when no table held rows or no table held 2+ workspaces, since a single-tenant database never runs the cross-tenant assertion at all."
+        }
+      ]
+    },
+    {
+      "delta_id": "header-parity-gate-wired-and-failable-20260728",
+      "generated_at": "2026-07-28T10:27:24.248Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "4305120e6b4d7ca92671415f09f537034fe3858c",
+      "target_base_commit": "4305120e6b4d7ca92671415f09f537034fe3858c",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "scripts/ci-local.mjs",
+          "target_blob": "9a261a54af9804b95eb5b58d5d02d1a1b67d1e5d",
+          "reason": "PR 101 cf1ff2e wired the app security header parity gate into ci-local and made it able to fail - it was previously unwired AND structurally incapable of failing, two false greens. The manifest change removes preload and aligns the header set to what the app actually serves."
+        },
+        {
+          "path": "data/security-headers.manifest.json",
+          "target_blob": "99dd9b99d4f75a84feed74c76f0ae4342b526335",
+          "reason": "PR 101 cf1ff2e wired the app security header parity gate into ci-local and made it able to fail - it was previously unwired AND structurally incapable of failing, two false greens. The manifest change removes preload and aligns the header set to what the app actually serves."
+        },
+        {
+          "path": "scripts/verify-app-security-header-parity.mjs",
+          "target_blob": "6970aedfab76984e761a82748902335d7829a9be",
+          "reason": "PR 101 cf1ff2e wired the app security header parity gate into ci-local and made it able to fail - it was previously unwired AND structurally incapable of failing, two false greens. The manifest change removes preload and aligns the header set to what the app actually serves."
+        }
+      ]
+    },
+    {
+      "delta_id": "rls-binding-observable-on-health-20260728",
+      "generated_at": "2026-07-28T10:27:24.383Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "4305120e6b4d7ca92671415f09f537034fe3858c",
+      "target_base_commit": "4305120e6b4d7ca92671415f09f537034fe3858c",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/routes/health.ts",
+          "target_blob": "858d9dd619453835684e2e7336d6cb33a81bed00",
+          "reason": "PR 102 8982ebd exposes bindings.rls_binding on the health route and pins both rls_binding directions in the health test, so the RLS parity gate observes the value it scores instead of measuring one role of four and reporting PASS."
+        },
+        {
+          "path": "src/workers/__tests__/health.test.ts",
+          "target_blob": "2b94f922860e1f5fdababeac9a9819a0cbb8338b",
+          "reason": "PR 102 8982ebd exposes bindings.rls_binding on the health route and pins both rls_binding directions in the health test, so the RLS parity gate observes the value it scores instead of measuring one role of four and reporting PASS."
+        }
+      ]
+    },
+    {
+      "delta_id": "soak-records-failures-and-frontend-20260728",
+      "generated_at": "2026-07-28T10:27:24.498Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "4305120e6b4d7ca92671415f09f537034fe3858c",
+      "target_base_commit": "4305120e6b4d7ca92671415f09f537034fe3858c",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "scripts/pilot-shadow-soak-sampler.mjs",
+          "target_blob": "ead7db360298737b7503ddf2531b89849199edc8",
+          "reason": "PR 103 227aba9 records failed probes and probes the frontend in the pilot-shadow soak sampler, so the soak can observe downtime instead of dropping the failed samples and never looking at the frontend at all."
+        }
+      ]
+    },
+    {
+      "delta_id": "same-domain-invite-server-side-20260728",
+      "generated_at": "2026-07-28T10:27:24.597Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "4305120e6b4d7ca92671415f09f537034fe3858c",
+      "target_base_commit": "4305120e6b4d7ca92671415f09f537034fe3858c",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/routes/customer.ts",
+          "target_blob": "99b558a004dff3329a9d4afd06b2238545076e29",
+          "reason": "PR 104 64ae885 decides the same-domain invite role server-side and pins both invite-role directions in the customer test, so a colleague at the tenant own domain no longer arrives read-only."
+        },
+        {
+          "path": "src/workers/__tests__/customer.test.ts",
+          "target_blob": "1e5f8e6c0fab8edbb61771493b984b200a8041ca",
+          "reason": "PR 104 64ae885 decides the same-domain invite role server-side and pins both invite-role directions in the customer test, so a colleague at the tenant own domain no longer arrives read-only."
+        }
+      ]
+    },
+    {
+      "delta_id": "scripts-block-pairing-gate-20260728",
+      "generated_at": "2026-07-28T10:27:24.716Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "4305120e6b4d7ca92671415f09f537034fe3858c",
+      "target_base_commit": "4305120e6b4d7ca92671415f09f537034fe3858c",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "package.json",
+          "target_blob": "17b6e45eb46e8bb0a090fc1220ae1c58a05a35d5",
+          "reason": "PRs 101, 102 and 105 added verify scripts and the frontend/API pairing gate to the scripts block. The earlier 98 change to package.json at 01aad69 was already recorded by that same commit, so the residual drift is these three PRs alone."
         }
       ]
     }
