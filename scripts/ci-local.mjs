@@ -21,6 +21,7 @@ const gates = [
   ['deploy schema-head contract', 'npm', ['run', 'verify:deploy-schema-head:self-test']],
   ['authority decision truth', 'npm', ['run', 'verify:authority-decision']],
   ['deployment authorization replay protection', 'npm', ['run', 'verify:deployment-authorization-store']],
+  ['deployment authorization gate repo containment', 'npm', ['run', 'verify:deployment-authorization-store:self-test']],
   ['packet completion contract', 'npm', ['run', 'verify:packet-completion-contract']],
   ['typed work relationships', 'npm', ['run', 'verify:typed-work-relationships']],
   ['action intent shadow', 'npm', ['run', 'verify:action-intent-shadow']],

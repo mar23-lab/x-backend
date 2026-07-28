@@ -7,6 +7,7 @@ import {
   writeFileSync,
 } from 'node:fs';
 import path from 'node:path';
+import { gitEnv } from './git-env.mjs';
 
 const SAFE_SEGMENT = /^[a-z0-9][a-z0-9._-]{0,119}$/i;
 
@@ -16,11 +17,15 @@ function assertSegment(value, name) {
   }
 }
 
+// SECURITY: the store root decides WHERE deploy replay-protection receipts are reserved.
+// Resolved under an inherited GIT_DIR this returns the common dir of whatever repository the
+// invoking hook belonged to, not `repoRoot` — so receipts get reserved in the wrong repo and
+// the replay check silently stops protecting anything. `gitEnv()` makes `cwd` authoritative.
 export function deploymentAuthorizationStoreRoot(repoRoot) {
   const commonDir = execFileSync(
     'git',
     ['rev-parse', '--path-format=absolute', '--git-common-dir'],
-    { cwd: repoRoot, encoding: 'utf8' },
+    { cwd: repoRoot, encoding: 'utf8', env: gitEnv() },
   ).trim();
   if (!path.isAbsolute(commonDir)) {
     throw new Error('git common directory must resolve to an absolute path');

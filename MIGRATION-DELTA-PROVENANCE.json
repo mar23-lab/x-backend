@@ -3472,6 +3472,27 @@
           "reason": "package.json gains the prepare script that binds core.hooksPath for the pre-push gate"
         }
       ]
+    },
+    {
+      "delta_id": "fix-git-env-leak-in-verifiers-260728",
+      "generated_at": "2026-07-28T11:07:14.202Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "f9ea407cb64906c03036a024e919d50196d1a793",
+      "target_base_commit": "f9ea407cb64906c03036a024e919d50196d1a793",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "package.json",
+          "target_blob": "78121767ade711dea47a638a49dd6901a4bb0df6",
+          "reason": "gate repo-containment self-test wiring: GIT_DIR-inherited writes into the enclosing repo"
+        },
+        {
+          "path": "scripts/ci-local.mjs",
+          "target_blob": "9158a483427583dc6b51b59bd37b7836ab08d37a",
+          "reason": "gate repo-containment self-test wiring: GIT_DIR-inherited writes into the enclosing repo"
+        }
+      ]
     }
   ]
 }
