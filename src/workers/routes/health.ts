@@ -21,6 +21,7 @@ healthRoute.get('/health', (ctx) => {
     ENVIRONMENT?: string;
     XLOOOP_SCHEMA_HEAD?: string;
     XLOOOP_AUTHORITY_MODE?: string;
+    XLOOOP_RLS_APP_DATABASE_URL?: string;
     SINGLE_INTAKE_ENABLED?: string;
     ROLE_SKILL_CATALOG_ENABLED?: string;
     CONTEXT_PACKET_PERSISTENCE_ENABLED?: string;
@@ -54,6 +55,21 @@ healthRoute.get('/health', (ctx) => {
     },
     bindings: {
       tenant_projection_queue: Boolean(env.TENANT_PROJECTION_QUEUE),
+      // rls_binding — 'app' when reads route through the NOBYPASSRLS role, 'owner' when they
+      // silently fall back to the owner connection, which BYPASSES RLS.
+      //
+      // WHY THIS IS EXPOSED (260728). index.ts:170/363/432 select the connection with
+      //   env.XLOOOP_RLS_APP_DATABASE_URL ? neonClient(env.XLOOOP_RLS_APP_DATABASE_URL) : sql
+      // — a silent fail-OPEN. If that secret is ever unbound or rotated away, every read that
+      // believed it was tenant-scoped runs as owner, no error is raised, no log is written, and
+      // NOTHING observable changes. An audit this session could not tell from outside whether
+      // production was enforcing RLS at all; it took `wrangler secret list` to find out. That is
+      // an unobservable security-critical state, which is the defect — independent of whether the
+      // secret happens to be bound today (it is).
+      //
+      // This publishes the state without changing behaviour, so the pairing can be asserted from
+      // outside. Deliberately a boolean-derived label, never the DSN.
+      rls_binding: env.XLOOOP_RLS_APP_DATABASE_URL ? 'app' : 'owner',
     },
     capabilities: {
       sign_offs: true,
