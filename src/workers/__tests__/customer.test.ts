@@ -437,6 +437,45 @@ describe('POST /customer/invites', () => {
     expect(json.message).toMatch(/alice@acme.com/);
   });
 
+  // 260728 · same-domain colleagues arrive as operators, not read-only viewers.
+  //
+  // The cockpit's inviteClassify compares against a HARDCODED 'xlooop.com', so for every customer
+  // tenant a colleague at their own company domain classified EXTERNAL and the client sent
+  // role:'client' -> org:member -> viewer -> allowed_actions [] + operating_mode 'watch' -> denied on
+  // all 18 governed actions. Only @xlooop.com ever became operator. The decision now happens here,
+  // from the JWT-trusted inviter email, so it cannot be spoofed by the caller and cannot be undone by
+  // a design-tool re-export.
+  //
+  // Both directions are pinned. A test asserting only the same-domain case would still pass if the
+  // expression were hardcoded to 'org:admin' — which would silently grant write to every invitee.
+  it('201 same-domain colleague maps to org:admin (the tenant-relative fix)', async () => {
+    const res = await post(
+      appFor(
+        { user_id: 'u1', workspace_id: 'org_acme', role: 'owner', email: 'boss@acme.com' },
+        unlockedDal()
+      ),
+      '/customer/invites',
+      { email: 'Colleague@Acme.com' }
+    );
+    expect(res.status).toBe(201);
+    const json = (await res.json()) as Record<string, any>;
+    expect(json.invited.role).toBe('org:admin');
+  });
+
+  it('201 DIFFERENT-domain invitee stays org:member (external stays conservative)', async () => {
+    const res = await post(
+      appFor(
+        { user_id: 'u1', workspace_id: 'org_acme', role: 'owner', email: 'boss@acme.com' },
+        unlockedDal()
+      ),
+      '/customer/invites',
+      { email: 'outsider@somewhere-else.com' }
+    );
+    expect(res.status).toBe(201);
+    const json = (await res.json()) as Record<string, any>;
+    expect(json.invited.role).toBe('org:member');
+  });
+
   it('201 admin role maps to org:admin (operator caller)', async () => {
     const res = await post(
       appFor({ user_id: 'u2', workspace_id: 'org_acme', role: 'operator' }, unlockedDal()),
