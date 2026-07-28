@@ -94,10 +94,24 @@ async function readLiveHealth(apiBase) {
 }
 
 export function buildPacket({ candidate, live, approver, approvalReference, rollbackSha,
-  rollbackVersionId, rollbackEvidence, ttlMinutes, now }) {
+  rollbackVersionId, rollbackEvidence, ttlMinutes, now, cutoverId }) {
   const approvedAt = new Date(now);
   const expiresAt = new Date(approvedAt.getTime() + ttlMinutes * 60 * 1000);
   return {
+    // cutover_id · 260728 · makes "atomic" PROVABLE rather than remembered.
+    //
+    // The API and Pages deploys are two independent scripts holding two independent single-use
+    // authorisations with two independent 30-minute TTLs, and NOTHING tied them together. "Deploy
+    // both or neither" was an instruction in a runbook, not a property of the artifacts — so a
+    // half-executed cutover (API deployed, Pages not) was indistinguishable, after the fact, from
+    // two unrelated deploys that happened to be close in time. That half-execution is exactly what
+    // stranded the pilot on 260728 and what the pairing gate (#105) now refuses in advance.
+    //
+    // Stamping the SAME cutover_id into both packets makes the pairing checkable from the receipts
+    // alone, after the fact, without re-deriving intent from timestamps. Pass --cutover-id <uuid>
+    // when minting the second packet of a pair; omit it and a fresh one is generated, which is the
+    // correct default for a standalone API deploy.
+    cutover_id: cutoverId,
     schema_id: 'xlooop.authority_decision_packet.v2',
     status: 'approved_to_deploy',
     candidate_commit_sha: candidate,
@@ -174,6 +188,9 @@ async function main() {
     candidate, live, approver, approvalReference, rollbackSha, rollbackVersionId,
     rollbackEvidence: arg('rollback-evidence', 'wrangler:versions-list:' + new Date().toISOString().slice(0, 10)),
     ttlMinutes, now: Date.now(),
+    // Omitted => a fresh id, which is correct for a standalone API deploy. Pass the FIRST packet's
+    // id when minting the second half of a pair so the two receipts are provably one cutover.
+    cutoverId: arg('cutover-id', randomUUID()),
   });
 
   const out = arg('out', path.join(ROOT, 'docs/deployment/evidence/authority-decision-' + candidate.slice(0, 7) + '.json'));
@@ -185,6 +202,8 @@ async function main() {
   console.log('  live now       ' + live.build + ' (schema ' + live.schema_head + ')');
   console.log('  rollback to    ' + rollbackSha + ' / ' + rollbackVersionId);
   console.log('  approver       ' + approver);
+  console.log('  cutover_id     ' + packet.cutover_id);
+  console.log('                 ^ pass this to the Pages packet with --cutover-id to prove one cutover');
   console.log('  expires        ' + packet.decision.expires_at + '  (' + ttlMinutes + ' min — the clock is RUNNING)');
   console.log('');
   console.log('Verify before use:');
@@ -206,6 +225,7 @@ function selfTest() {
     approvalReference: 'conversation:selftest', rollbackSha: 'd'.repeat(40),
     rollbackVersionId: '5c20d49c-957b-4a89-8379-7e4bb1bde936',
     rollbackEvidence: 'wrangler:versions-list:selftest', ttlMinutes: 25, now: Date.parse('2026-07-28T00:00:00Z'),
+    cutoverId: '11111111-2222-3333-4444-555555555555',
   };
   const checks = [];
   const p = buildPacket(base);
@@ -219,6 +239,14 @@ function selfTest() {
     buildPacket(base).decision.authorization_id !== p.decision.authorization_id]);
   checks.push(['ttl <= 30 min', (Date.parse(p.decision.expires_at) - Date.parse(p.decision.approved_at)) <= 30 * 60 * 1000]);
   checks.push(['rollback target differs from candidate', p.rollback.target_sha !== p.candidate_commit_sha]);
+  // cutover_id is the ONLY field that must survive verbatim across two independently-minted packets.
+  // Everything else (authorization_id, timestamps) is deliberately unique per packet — so asserting
+  // both directions is what proves the field can actually correlate a pair rather than just exist.
+  checks.push(['cutover_id is carried verbatim, not regenerated', p.cutover_id === base.cutoverId]);
+  checks.push(['a SECOND packet given the same cutover_id matches (a pair is correlatable)',
+    buildPacket(base).cutover_id === p.cutover_id]);
+  checks.push(['…while its authorization_id still differs (they remain separate authorisations)',
+    buildPacket(base).decision.authorization_id !== p.decision.authorization_id]);
   // The refusal paths are argument-level and exercised by the child-process cases in the PR body;
   // buildPacket() itself is the shape contract, so that is what is asserted here.
   let bad = 0;
