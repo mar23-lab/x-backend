@@ -17,6 +17,7 @@ const gates = [
   ['Pages release artifact contract', 'npm', ['run', 'verify:app-pages-release:self-test']],
   ['Pages deployment decision contract', 'npm', ['run', 'verify:app-pages-decision:self-test']],
   ['deployed surface registry', 'npm', ['run', 'verify:deployed-surfaces']],
+  ['app security header parity', 'npm', ['run', 'verify:app-security-headers']],
   ['deploy schema-head contract', 'npm', ['run', 'verify:deploy-schema-head:self-test']],
   ['authority decision truth', 'npm', ['run', 'verify:authority-decision']],
   ['deployment authorization replay protection', 'npm', ['run', 'verify:deployment-authorization-store']],
