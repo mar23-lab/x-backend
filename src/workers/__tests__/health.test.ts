@@ -36,6 +36,34 @@ describe('GET /api/v1/health', () => {
     expect(() => new Date(body.timestamp as string).toISOString()).not.toThrow();
   });
 
+  // 260728 — rls_binding must be OBSERVABLE from outside the Worker.
+  //
+  // index.ts:170/363/432 pick the DB connection with
+  //   env.XLOOOP_RLS_APP_DATABASE_URL ? neonClient(...) : sql
+  // which is a silent fail-OPEN: if that secret is unbound or rotated away, reads that believed
+  // they were tenant-scoped run on the OWNER connection, which bypasses RLS — with no error, no
+  // log, and no externally visible difference. An audit could not determine from outside whether
+  // production was enforcing RLS at all.
+  //
+  // These two cases pin BOTH directions, so the field can never regress into a constant. A test
+  // that only asserted the healthy value would pass even if the expression were hardcoded to 'app'
+  // — which would be a false green of exactly the kind this field exists to prevent.
+  it('reports rls_binding=owner when the RLS DSN is UNBOUND (the fail-open state)', async () => {
+    const res = await app.fetch(new Request('http://localhost/api/v1/health'), stubEnv());
+    const body = (await res.json()) as { bindings: Record<string, unknown> };
+    expect(body.bindings.rls_binding).toBe('owner');
+  });
+
+  it('reports rls_binding=app when the RLS DSN IS bound', async () => {
+    const env = {
+      ...(stubEnv() as unknown as Record<string, unknown>),
+      XLOOOP_RLS_APP_DATABASE_URL: 'postgres://xlooop_app@example.invalid/db',
+    };
+    const res = await app.fetch(new Request('http://localhost/api/v1/health'), env as never);
+    const body = (await res.json()) as { bindings: Record<string, unknown> };
+    expect(body.bindings.rls_binding).toBe('app');
+  });
+
   it('reports pilot-shadow feature and binding posture without claiming authority', async () => {
     const env = {
       ...(stubEnv() as unknown as Record<string, unknown>),
