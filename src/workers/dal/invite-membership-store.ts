@@ -17,6 +17,8 @@
 //     DO NOTHING is the race backstop for the same invariant.
 //   - NEVER un-bans: a rejected/suspended user is left untouched (pre-checked AND a conditional ON CONFLICT
 //     WHERE on the users upsert).
+//   - FAILS CLOSED on ambiguous identity: if more than one `users` row shares the invitee's email, refuse
+//     (reason 'identity_ambiguous') rather than guess which row the inviting operator meant.
 //   - invitation-is-approval: the users row is approved (the org owner vouched — global "may use the
 //     product"), which is NOT cross-workspace access (that still requires a member row per workspace).
 //   - the call site is flag-gated born-OFF (INVITE_MEMBERSHIP_MATERIALIZATION_ENABLED); byte-inert until on.
@@ -30,12 +32,25 @@ export interface MaterializeInvitedMembershipInput {
   userId: string;
   /** Already mapped from the Clerk org role by the caller. MUST be 'viewer' or 'operator'. */
   role: WorkspaceRole;
+  /**
+   * The invitee's email claim, when the caller has one. Used ONLY by the fail-closed identity-ambiguity
+   * guard (guard 4) — never for binding, which is always by the Clerk-signed `userId`. Omitted → there is
+   * no email to be ambiguous about, so the guard has nothing to evaluate and is skipped.
+   */
+  email?: string | null;
 }
 
 export interface MaterializeInvitedMembershipResult {
   materialized: boolean;
   role: WorkspaceRole | null;
-  reason: 'ok' | 'role_not_joinable' | 'invalid_input' | 'workspace_not_found' | 'member_exists' | 'user_banned';
+  reason:
+    | 'ok'
+    | 'role_not_joinable'
+    | 'invalid_input'
+    | 'workspace_not_found'
+    | 'member_exists'
+    | 'user_banned'
+    | 'identity_ambiguous';
 }
 
 export async function materializeInvitedMembershipRow(
@@ -65,6 +80,25 @@ export async function materializeInvitedMembershipRow(
   const u = (await sql/*sql*/`SELECT status FROM users WHERE id = ${userId} LIMIT 1`) as Array<{ status: string }>;
   if (u.length && (u[0].status === 'rejected' || u[0].status === 'suspended')) {
     return { materialized: false, role: null, reason: 'user_banned' };
+  }
+
+  // Guard 4 — FAIL CLOSED on ambiguous identity. If more than one `users` row shares the invitee's email,
+  // our own identity table holds two rows for one human and we cannot say which one an operator meant when
+  // they typed that address into the invite form. Binding is by the Clerk-signed `userId`, so this is not a
+  // wrong-binding today — it is the precondition for one, and this is the tenant-access boundary, so the
+  // ambiguity is refused rather than resolved by guesswork. Production (260729) carries exactly this shape:
+  // 4 users rows, 1 duplicated email (marat@xlooop.com, 2 rows created 26 + 27 May; the orphan has 0
+  // workspace_members and 0 session_preferences, i.e. runtime-inert — a latent trap, not an active fault).
+  //
+  // Runs LAST of the read guards so the cheaper refusals short-circuit first, and only when the caller
+  // supplied an email — with no email there is nothing to be ambiguous about (callers that omit it are
+  // byte-identical to pre-guard behaviour, which is what keeps the existing store tests honest).
+  const inviteeEmail = String(input.email || '').trim().toLowerCase();
+  if (inviteeEmail) {
+    const sharing = (await sql/*sql*/`
+      SELECT id FROM users WHERE lower(email) = ${inviteeEmail} LIMIT 2
+    `) as Array<{ id: string }>;
+    if (sharing.length > 1) return { materialized: false, role: null, reason: 'identity_ambiguous' };
   }
 
   const actor = 'invite-materialization';
