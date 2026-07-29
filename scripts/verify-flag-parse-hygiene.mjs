@@ -14,17 +14,37 @@
 // `.toLowerCase() === 'true'`. Route every flag read through envFlagTrue(...). env-flag.ts itself and
 // test files are exempt (the reader's own definition + tests that assert the tolerant behavior).
 //
-//   node scripts/verify-flag-parse-hygiene.mjs             # gate
-//   node scripts/verify-flag-parse-hygiene.mjs --self-test  # prove the teeth bite
+// P-2 REMEDIATION (260729). Two defects:
+//
+//   1. THE SELF-TEST TESTED THIS FILE'S REGEX, NOT THE GATE. Five of nine assertion callsites were
+//      `expect('…', scanLine('<string literal defined right here>'))`. `scanLine` and the strings are
+//      both defined in this file, so the test proved a regex matches a string. It proved nothing
+//      about whether a real offending line in a real `src/workers` tree drives a non-zero exit. The
+//      self-test now seeds .ts files into a temp tree, SPAWNS this gate at it, and OBSERVES the exit.
+//   2. AN EMPTY SCAN TREE READ AS CLEAN. `tsFiles()` returning zero files left `offenders` empty and
+//      the gate printed "all *_ENABLED flag reads route through envFlagTrue" — a false zero on a
+//      moved or mis-resolved src/workers. The denominator is now asserted and printed.
+//
+// EXIT CODES.  0 = measured clean   1 = quote-intolerant read(s) found   2 = COULD NOT MEASURE
+//
+//   node scripts/verify-flag-parse-hygiene.mjs
+//   node scripts/verify-flag-parse-hygiene.mjs --self-test         # OBSERVES a red
+//   node scripts/verify-flag-parse-hygiene.mjs --scan-root=<dir>   # aim it elsewhere
 
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
+import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..');
-const SCAN_ROOT = 'src/workers';
+const DEFAULT_SCAN_ROOT = 'src/workers';
 const READER = 'src/workers/lib/env-flag.ts';
+const argv = process.argv.slice(2);
+const selfTest = argv.includes('--self-test');
+const scanArg = argv.find((a) => a.startsWith('--scan-root='));
+const SCAN_ROOT = scanArg ? path.resolve(scanArg.slice('--scan-root='.length)) : path.join(repoRoot, DEFAULT_SCAN_ROOT);
 
 // A line offends if it reads a *_ENABLED flag with a strict/lowercase comparison to 'true'.
 // Comments are allowed to describe the historical form; we only flag executable code, so lines whose
@@ -42,10 +62,10 @@ function tsFiles(dir) {
     for (const e of fs.readdirSync(d, { withFileTypes: true })) {
       const p = path.join(d, e.name);
       if (e.isDirectory()) walk(p);
-      else if (e.name.endsWith('.ts')) out.push(path.relative(repoRoot, p));
+      else if (e.name.endsWith('.ts')) out.push(p);
     }
   };
-  walk(path.join(repoRoot, dir));
+  walk(dir);
   return out.sort();
 }
 
@@ -54,56 +74,118 @@ export function scanLine(line) {
   return OFFENDER.test(line);
 }
 
-export function runChecks({ files, read }) {
+export function runChecks(files) {
   const offenders = [];
-  for (const f of files) {
-    if (f === READER || f.includes('__tests__')) continue;
-    const src = read(f);
-    src.split('\n').forEach((line, i) => {
-      if (scanLine(line)) offenders.push(`${f}:${i + 1}  ${line.trim().slice(0, 100)}`);
+  for (const abs of files) {
+    const shown = path.relative(repoRoot, abs);
+    if (shown === READER || shown.includes('__tests__')) continue;
+    fs.readFileSync(abs, 'utf8').split('\n').forEach((line, i) => {
+      if (scanLine(line)) offenders.push(`${shown}:${i + 1}  ${line.trim().slice(0, 100)}`);
     });
   }
   return offenders;
 }
 
-function loadInputs() {
-  return {
-    files: tsFiles(SCAN_ROOT),
-    read: (f) => fs.readFileSync(path.join(repoRoot, f), 'utf8'),
+// =================================================================================================
+// SELF-TEST — the SUBJECT is this gate as a PROCESS; exit codes are OBSERVED from a child
+// =================================================================================================
+if (selfTest) {
+  const rows = [];
+  const problems = [];
+  const record = (label, ok) => { rows.push('  ' + (ok ? 'PASS' : 'FAIL').padEnd(6) + '  ' + label); if (!ok) problems.push(label); };
+  const run = (root) => spawnSync(process.execPath, [fileURLToPath(import.meta.url), '--scan-root=' + root], { encoding: 'utf8' });
+  const seedTree = (name, body) => {
+    const root = path.join(tmp, name);
+    fs.mkdirSync(path.join(root, 'routes'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'routes', 'flags.ts'), body);
+    return root;
   };
-}
 
-function selfTest() {
-  let failures = 0;
-  const expect = (name, cond) => { if (!cond) { failures++; console.log(`  ✗ self-test ${name}`); } else console.log(`  ☑ self-test ${name}`); };
-  // real tree is clean
-  expect('tree-clean', runChecks(loadInputs()).length === 0);
-  // a strict === 'true' bites
-  expect('strict-eq-bites', scanLine(`  if (String(ctx.env.FOO_ENABLED || '') === 'true') {`) === true);
-  // a !== 'true' bites
-  expect('strict-neq-bites', scanLine(`  if (ctx.env.BAR_ENABLED !== 'true') return;`) === true);
-  // a lowercase === 'true' bites
-  expect('lowercase-bites', scanLine(`  const on = String(env.BAZ_ENABLED || '').toLowerCase() === 'true';`) === true);
-  // envFlagTrue does NOT bite
-  expect('tolerant-clean', scanLine(`  if (envFlagTrue(ctx.env.FOO_ENABLED)) {`) === false);
-  // a comment describing the old form does NOT bite
-  expect('comment-clean', scanLine(`  // true only when FOO_ENABLED === 'true' (route-read)`) === false);
-  console.log(failures === 0 ? '\n☑ self-test all teeth bite' : `\n✗ ${failures} self-test failure(s)`);
-  return failures === 0 ? 0 : 1;
-}
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'xl-flagparse-selftest-'));
 
-function main() {
-  console.log("verify-flag-parse-hygiene · J-W0 (FGH-1/2)");
-  if (process.argv.includes('--self-test')) process.exit(selfTest());
-  const offenders = runChecks(loadInputs());
-  if (offenders.length > 0) {
-    console.log(`\n✗ ${offenders.length} flag read(s) use a quote-intolerant strict/lowercase comparison — route through envFlagTrue (src/workers/lib/env-flag.ts):`);
-    for (const o of offenders) console.log(`  ${o}`);
+  // (1) CANNOT MEASURE — a scan root that does not exist must exit 2, never 0.
+  const goneRun = run(path.join(tmp, 'no-such-root'));
+  record(`MISSING SCAN ROOT exits 2 "cannot measure" (observed exit=${goneRun.status})`, goneRun.status === 2);
+
+  // (2) CANNOT MEASURE — a scan root holding zero .ts files must exit 2. This is the false zero the
+  //     remediation closes: before it, an empty tree printed the hygiene claim.
+  const emptyRoot = path.join(tmp, 'empty'); fs.mkdirSync(emptyRoot, { recursive: true });
+  const emptyRun = run(emptyRoot);
+  record(`EMPTY INPUT SET exits 2 "cannot measure" (observed exit=${emptyRun.status})`, emptyRun.status === 2);
+
+  // (3) CONTROL — the REAL src/workers tree must be MEASURABLE: a verdict (0 or 1), never 2.
+  //     NOTE, stated rather than hidden: on 260729 the real tree exits 1. Two pre-existing
+  //     quote-intolerant reads remain — src/workers/crons/tenant-projection-dispatch.ts:8 and
+  //     src/workers/index.ts:447 — and the ORIGINAL gate at the production checkout
+  //     (e40bf927fe90d8b557858c86ac30eb5256a3d7ba) exits 1 on them too, so this is not a regression
+  //     introduced by the rewrite. This gate is not wired into any npm script, which is how a red
+  //     gate stayed invisible. Asserting exit 0 here would be asserting a repo state that is false;
+  //     the clean-tree proof is case (7) instead.
+  const controlRun = run(path.join(repoRoot, DEFAULT_SCAN_ROOT));
+  record(`CONTROL: the real src/workers tree is MEASURABLE, verdict not "cannot measure" (observed exit=${controlRun.status})`,
+    controlRun.status === 0 || controlRun.status === 1);
+
+  // (4)-(6) MUTANTS — each offending FORM must bite on its own, in a real file, through a real run.
+  const forms = [
+    ['strict ===', "export const on = String(ctx.env.FOO_ENABLED || '') === 'true';\n"],
+    ['strict !==', "export function guard(env) { if (env.BAR_ENABLED !== 'true') return null; return 1; }\n"],
+    ['lowercase ===', "export const on = String(env.BAZ_ENABLED || '').toLowerCase() === 'true';\n"],
+  ];
+  forms.forEach(([name, body], i) => {
+    const r = run(seedTree(`mutant-${i}`, body));
+    const out = (r.stdout || '') + (r.stderr || '');
+    record(`MUTANT: ${name} comparison drives exit 1 (observed exit=${r.status})`, r.status === 1);
+    record(`MUTANT: the offending file and line are NAMED (${name})`, /routes\/flags\.ts:1/.test(out));
+  });
+
+  // (7) CONTROL — the sanctioned reader must NOT bite, or "route through envFlagTrue" is unfollowable.
+  const tolerantRun = run(seedTree('control-tolerant', 'export const on = envFlagTrue(ctx.env.FOO_ENABLED);\n'));
+  record(`CONTROL: envFlagTrue(...) exits 0 (observed exit=${tolerantRun.status})`, tolerantRun.status === 0);
+
+  // (8) CONTROL — a COMMENT describing the historical form must NOT bite. This is the exemption the
+  //     rule text promises; without a proof it is only a claim.
+  const commentRun = run(seedTree('control-comment', "// true only when FOO_ENABLED === 'true' (route-read)\nexport const on = envFlagTrue(ctx.env.FOO_ENABLED);\n"));
+  record(`CONTROL: a comment describing the old form exits 0 (observed exit=${commentRun.status})`, commentRun.status === 0);
+
+  fs.rmSync(tmp, { recursive: true, force: true });
+  console.log('\n  SELF-TEST · verify-flag-parse-hygiene (J-W0 · FGH-1/2)');
+  console.log('  ' + '-'.repeat(84));
+  for (const r of rows) console.log(r);
+  console.log('  ' + '-'.repeat(84));
+  if (problems.length) {
+    console.error(`  SELF-TEST FAIL — ${problems.length} case(s) wrong; this gate is a false-green.\n`);
     process.exit(1);
   }
-  console.log('  ☑ all *_ENABLED flag reads route through envFlagTrue (quote-tolerant)');
-  console.log('\n☑ flag-parse-hygiene holds');
+  console.log(`  SELF-TEST PASS — ${rows.length}/${rows.length}, every case an OBSERVED exit code from a spawned run of this gate.\n`);
   process.exit(0);
 }
 
-main();
+// =================================================================================================
+// THE GATE
+// =================================================================================================
+console.log('verify-flag-parse-hygiene · J-W0 (FGH-1/2)');
+
+if (!fs.existsSync(SCAN_ROOT)) {
+  console.error(`  ✗ CANNOT MEASURE — scan root missing: ${SCAN_ROOT}`);
+  console.error('  A vanished root must not silently shrink the subject. Re-point this gate, then re-run.');
+  process.exit(2);
+}
+
+const files = tsFiles(SCAN_ROOT);
+
+// EXIT 2 — EMPTY INPUT SET. `files` is the denominator of the hygiene claim below.
+if (!files.length) {
+  console.error(`  ✗ CANNOT MEASURE — ${SCAN_ROOT} exists but holds ZERO .ts files.`);
+  console.error('  A gate that inspected nothing has measured nothing; that is a false zero, not hygiene.');
+  process.exit(2);
+}
+
+const offenders = runChecks(files);
+if (offenders.length > 0) {
+  console.error(`\n✗ ${offenders.length} flag read(s) use a quote-intolerant strict/lowercase comparison — route through envFlagTrue (${READER}):`);
+  for (const o of offenders) console.error(`  ${o}`);
+  process.exit(1);
+}
+console.log(`  ☑ ${files.length} .ts file(s) scanned; all *_ENABLED flag reads route through envFlagTrue (quote-tolerant)`);
+console.log('\n☑ flag-parse-hygiene holds');
+process.exit(0);

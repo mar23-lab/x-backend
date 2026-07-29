@@ -10,16 +10,38 @@
 // KEY appears as data in the archetype module. Comments (which legitimately say "NEVER carries goals…")
 // are exempt — only executable/data lines are scanned.
 //
-//   node scripts/verify-domain-scaffold-honest-empty.mjs             # gate
-//   node scripts/verify-domain-scaffold-honest-empty.mjs --self-test  # prove the teeth bite
+// P-2 REMEDIATION (260729). Two defects:
+//
+//   1. THE SELF-TEST TESTED THIS FILE'S REGEXES, NOT THE GATE. Seven of eleven assertion callsites
+//      were `expect('…', scanLine('<string literal defined right here>'))`. `scanLine` is defined in
+//      this file; the strings were defined in this file. That proves a regex matches a string — it
+//      says nothing about whether running this gate on a polluted archetype module produces a
+//      non-zero exit. The self-test now writes MUTATED COPIES of the REAL archetype module into a
+//      temp directory, SPAWNS this gate against each, and OBSERVES the exit code.
+//   2. A MISSING TARGET EXITED 0. `if (!existsSync(target)) { console.log('☑ … absent — nothing to
+//      scan'); process.exit(0); }` — a deleted, renamed or moved archetype module read as an honest
+//      scaffold. That is the P-1 false-zero class inside a P-2 gate. Absence is now exit 2.
+//
+// EXIT CODES.  0 = honest-empty   1 = fabricated content found   2 = COULD NOT MEASURE
+//
+//   node scripts/verify-domain-scaffold-honest-empty.mjs
+//   node scripts/verify-domain-scaffold-honest-empty.mjs --self-test      # OBSERVES a red
+//   node scripts/verify-domain-scaffold-honest-empty.mjs --target=<path>  # aim it elsewhere
 
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
+import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..');
-const TARGET = 'src/workers/services/domain-archetypes.ts';
+const DEFAULT_TARGET = 'src/workers/services/domain-archetypes.ts';
+const argv = process.argv.slice(2);
+const selfTest = argv.includes('--self-test');
+const targetArg = argv.find((a) => a.startsWith('--target='));
+const TARGET_PATH = targetArg ? path.resolve(targetArg.slice('--target='.length)) : path.join(repoRoot, DEFAULT_TARGET);
+const TARGET_SHOWN = path.relative(repoRoot, TARGET_PATH) || TARGET_PATH;
 
 // Forbidden fabricated-content KEYS (as object keys `key:`), never allowed in the archetype seed data.
 // binding/metadata/slug/label/kind/visibility/owner_user_id/workspace_id/filters/values are all fine.
@@ -43,51 +65,122 @@ export function scanLine(line) {
   return FORBIDDEN.filter((b) => b.pattern.test(line)).map((b) => ({ id: b.id, label: b.label }));
 }
 
-export function runChecks(src) {
+export function runChecks(src, shown = TARGET_SHOWN) {
   const offenders = [];
   src.split('\n').forEach((line, i) => {
     for (const hit of scanLine(line)) {
-      offenders.push(`${TARGET}:${i + 1}  [${hit.id}] ${line.trim().slice(0, 100)}`);
+      offenders.push(`${shown}:${i + 1}  [${hit.id}] ${line.trim().slice(0, 100)}`);
     }
   });
   return offenders;
 }
 
-function selfTest() {
-  let failures = 0;
-  const expect = (name, cond) => { if (!cond) { failures++; console.log(`  ✗ self-test ${name}`); } else console.log(`  ☑ self-test ${name}`); };
-  const realSrc = fs.readFileSync(path.join(repoRoot, TARGET), 'utf8');
-  expect('real-module-clean', runChecks(realSrc).length === 0);
-  expect('goal-count-bites', scanLine(`      { slug: 'career', label: 'Career', kind: 'life', goal_count: 3 },`).length > 0);
-  expect('metrics-bites', scanLine(`      metrics: [{ metric_name: 'ARR', target_value: 100000 }],`).length > 0);
-  expect('roadmap-bites', scanLine(`      has_roadmap: true,`).length > 0);
-  expect('timestamp-bites', scanLine(`      created_at: '2026-07-13',`).length > 0);
-  // structural keys are clean
-  expect('slug-clean', scanLine(`      { slug: 'operations', label: 'Operations', kind: 'company' },`).length === 0);
-  expect('metadata-clean', scanLine(`    metadata: { scaffolded_by: 'domain-archetype-scaffold', archetype: archetypeKey },`).length === 0);
-  // a comment mentioning goals/metrics does NOT bite
-  expect('comment-clean', scanLine(`  // NEVER carries goals, metrics, roadmaps, or recommendations.`).length === 0);
-  console.log(failures === 0 ? '\n☑ self-test all teeth bite' : `\n✗ ${failures} self-test failure(s)`);
-  return failures === 0 ? 0 : 1;
-}
+// =================================================================================================
+// SELF-TEST — the SUBJECT is this gate as a PROCESS; exit codes are OBSERVED from a child
+// =================================================================================================
+if (selfTest) {
+  const rows = [];
+  const problems = [];
+  const record = (label, ok) => { rows.push('  ' + (ok ? 'PASS' : 'FAIL').padEnd(6) + '  ' + label); if (!ok) problems.push(label); };
+  const run = (target) => spawnSync(process.execPath, [fileURLToPath(import.meta.url), '--target=' + target], { encoding: 'utf8' });
 
-function main() {
-  console.log('verify-domain-scaffold-honest-empty · ABS-P3');
-  if (process.argv.includes('--self-test')) process.exit(selfTest());
-  const target = path.join(repoRoot, TARGET);
-  if (!fs.existsSync(target)) {
-    console.log(`  ☑ ${TARGET} absent — nothing to scan (scaffold not yet built)`);
-    process.exit(0);
-  }
-  const offenders = runChecks(fs.readFileSync(target, 'utf8'));
-  if (offenders.length > 0) {
-    console.log(`\n✗ ${offenders.length} fabricated-content key(s) in the archetype registry — skeletons must be STRUCTURE ONLY (slug/label/kind):`);
-    for (const o of offenders) console.log(`  ${o}`);
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'xl-scaffold-selftest-'));
+  const realTarget = path.join(repoRoot, DEFAULT_TARGET);
+  const donor = fs.existsSync(realTarget) ? fs.readFileSync(realTarget, 'utf8') : '';
+  // Inject after the first line so the mutation lands in real module context, not in a bare file.
+  const mutate = (name, injected) => {
+    const p = path.join(tmp, name);
+    const lines = donor.split('\n');
+    lines.splice(Math.min(lines.length, 1), 0, injected);
+    fs.writeFileSync(p, lines.join('\n'));
+    return p;
+  };
+
+  // (1) CANNOT MEASURE — the archetype module missing must exit 2. Before this remediation it
+  //     printed "absent — nothing to scan" and exited 0: a deleted subject read as a clean subject.
+  const goneRun = run(path.join(tmp, 'no-such-module.ts'));
+  record(`MISSING TARGET exits 2 "cannot measure" (observed exit=${goneRun.status})`, goneRun.status === 2);
+
+  // (2) CANNOT MEASURE — an EMPTY INPUT SET. A zero-line module cannot be scanned for anything.
+  const emptyTarget = path.join(tmp, 'empty-module.ts'); fs.writeFileSync(emptyTarget, '');
+  const emptyRun = run(emptyTarget);
+  record(`EMPTY TARGET exits 2 "cannot measure" (observed exit=${emptyRun.status})`, emptyRun.status === 2);
+
+  // (3) CONTROL — the REAL archetype module, unmutated, must exit 0.
+  const controlRun = run(realTarget);
+  record(`CONTROL: the real archetype module exits 0 (observed exit=${controlRun.status})`, controlRun.status === 0);
+
+  // (4)-(7) MUTANTS — one per forbidden CLASS, each proved to bite independently. A single mutant
+  //         would let three dead patterns hide behind one live one.
+  const mutants = [
+    ['goal count', "  { slug: 'career', label: 'Career', kind: 'life', goal_count: 3 },", 'goal-content'],
+    ['metrics/targets', "  metrics: [{ metric_name: 'ARR', target_value: 100000 }],", 'metric-content'],
+    ['roadmap flag', '  has_roadmap: true,', 'roadmap-content'],
+    ['baked-in timestamp', "  created_at: '2026-07-13',", 'fabricated-timestamp'],
+  ];
+  mutants.forEach(([name, injected, id], i) => {
+    const p = mutate(`mutant-${i}.ts`, injected);
+    const r = run(p);
+    const out = (r.stdout || '') + (r.stderr || '');
+    record(`MUTANT: ${name} injected into the real module drives exit 1 (observed exit=${r.status})`, r.status === 1);
+    record(`MUTANT: the blocker id [${id}] is NAMED in the output`, out.includes(`[${id}]`));
+  });
+
+  // (8) CONTROL — a structural key must NOT bite, or the gate would fail the honest scaffold and
+  //     be deleted rather than fixed.
+  const structural = mutate('control-structural.ts', "  { slug: 'operations', label: 'Operations', kind: 'company' },");
+  const structuralRun = run(structural);
+  record(`CONTROL: a structural slug/label/kind row exits 0 (observed exit=${structuralRun.status})`, structuralRun.status === 0);
+
+  // (9) CONTROL — a COMMENT naming the forbidden keys must NOT bite. This is the exemption the
+  //     rule text promises; without a proof it is only a comment about a comment.
+  const commented = mutate('control-comment.ts', '  // NEVER carries goals, metrics, roadmaps, or recommendations.');
+  const commentedRun = run(commented);
+  record(`CONTROL: a comment naming goals/metrics/roadmaps exits 0 (observed exit=${commentedRun.status})`, commentedRun.status === 0);
+
+  fs.rmSync(tmp, { recursive: true, force: true });
+  console.log('\n  SELF-TEST · verify-domain-scaffold-honest-empty (ABS-P3)');
+  console.log('  ' + '-'.repeat(84));
+  for (const r of rows) console.log(r);
+  console.log('  ' + '-'.repeat(84));
+  if (problems.length) {
+    console.error(`  SELF-TEST FAIL — ${problems.length} case(s) wrong; this gate is a false-green.\n`);
     process.exit(1);
   }
-  console.log('  ☑ archetype domain skeletons are honest-empty (no goals/metrics/roadmaps/timestamps baked in)');
-  console.log('\n☑ domain-scaffold-honest-empty holds');
+  console.log(`  SELF-TEST PASS — ${rows.length}/${rows.length}, every case an OBSERVED exit code from a spawned run of this gate.\n`);
   process.exit(0);
 }
 
-main();
+// =================================================================================================
+// THE GATE
+// =================================================================================================
+console.log('verify-domain-scaffold-honest-empty · ABS-P3');
+
+// EXIT 2 — CANNOT MEASURE. An absent archetype module is not an honest scaffold; it is an unread
+// subject. Reporting it as clean is the false-zero class this gate exists to prevent downstream.
+if (!fs.existsSync(TARGET_PATH)) {
+  console.error(`  ✗ CANNOT MEASURE — ${TARGET_SHOWN} does not exist.`);
+  console.error('  A gate that inspected nothing has measured nothing; that is a false zero, not an honest-empty scaffold.');
+  process.exit(2);
+}
+
+const src = fs.readFileSync(TARGET_PATH, 'utf8');
+const scannedLines = src.split('\n').filter((l) => l.trim().length);
+
+// EXIT 2 — EMPTY INPUT SET. `scannedLines` is the denominator of the claim below.
+if (!scannedLines.length) {
+  console.error(`  ✗ CANNOT MEASURE — ${TARGET_SHOWN} exists but holds ZERO non-blank lines.`);
+  console.error('  A gate that inspected nothing has measured nothing; that is a false zero, not a pass.');
+  process.exit(2);
+}
+
+const offenders = runChecks(src);
+if (offenders.length > 0) {
+  console.error(`\n✗ ${offenders.length} fabricated-content key(s) in the archetype registry — skeletons must be STRUCTURE ONLY (slug/label/kind):`);
+  for (const o of offenders) console.error(`  ${o}`);
+  process.exit(1);
+}
+console.log(`  ☑ archetype domain skeletons are honest-empty across ${scannedLines.length} scanned line(s) in ${TARGET_SHOWN}`);
+console.log('    (no goals/metrics/roadmaps/recommendations/review-cadence/timestamps baked in)');
+console.log('\n☑ domain-scaffold-honest-empty holds');
+process.exit(0);

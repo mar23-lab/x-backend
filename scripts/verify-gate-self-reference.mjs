@@ -534,6 +534,17 @@ const violations = results.filter(isViolation);
 const unparseable = results.filter((r) => r.unparseable);
 
 if (writeBaseline) {
+  // A baseline entry is DEBT, not an exemption — except where the violation is a DELIBERATE design,
+  // in which case the reason belongs in the entry so the next reader does not re-litigate it.
+  // --write-baseline must therefore CARRY FORWARD `retained_because` and `diagnosis`; regenerating
+  // without them would silently strip the arguments and turn reasoned entries back into anonymous
+  // debt, which is exactly how a ratchet rots upward.
+  const carried = new Map();
+  if (existsSync(BASELINE_PATH)) {
+    for (const v of JSON.parse(readFileSync(BASELINE_PATH, 'utf8')).violations ?? []) {
+      if (v.retained_because || v.diagnosis) carried.set(v.file, { retained_because: v.retained_because, diagnosis: v.diagnosis });
+    }
+  }
   mkdirSync(dirname(BASELINE_PATH), { recursive: true });
   writeFileSync(BASELINE_PATH, JSON.stringify({
     schema_id: 'gate_self_reference_baseline.v1',
@@ -541,9 +552,15 @@ if (writeBaseline) {
     self_ref_ratio_max: SELF_REF_RATIO_MAX,
     captured_at: new Date().toISOString().slice(0, 10),
     gates_scanned: results.length,
-    violations: violations.map((v) => ({
-      file: v.file, checks: v.checks, self_referential: v.self_referential, ratio: v.ratio, external_subject: v.external_subject,
-    })),
+    violations: violations.map((v) => {
+      const row = {
+        file: v.file, checks: v.checks, self_referential: v.self_referential, ratio: v.ratio, external_subject: v.external_subject,
+      };
+      const prior = carried.get(v.file);
+      if (prior && prior.retained_because) row.retained_because = prior.retained_because;
+      if (prior && prior.diagnosis) row.diagnosis = prior.diagnosis;
+      return row;
+    }),
   }, null, 2) + '\n');
   console.log(`  baseline written: ${violations.length} violation(s) frozen across ${results.length} gate(s) -> ${relative(REPO, BASELINE_PATH)}`);
   process.exit(0);
