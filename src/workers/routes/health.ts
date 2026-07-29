@@ -4,6 +4,7 @@
 
 import { Hono } from 'hono';
 import { isSentryActive } from '../sentry';
+import { envFlagTrue } from '../lib/env-flag';
 import apiContract from '../../../docs/contracts/api-contract.v1.json';
 
 export const healthRoute = new Hono();
@@ -30,7 +31,6 @@ healthRoute.get('/health', (ctx) => {
     CURRENT_WORK_PROJECTION_ENABLED?: string;
     TENANT_PROJECTION_QUEUE?: unknown;
   };
-  const enabled = (value?: string) => value?.trim().toLowerCase() === 'true';
   const authority = env.XLOOOP_AUTHORITY_MODE === 'production' ? 'production' : 'shadow';
   const configuredSchemaHead = Number(env.XLOOOP_SCHEMA_HEAD);
   const schemaHead = Number.isSafeInteger(configuredSchemaHead) && configuredSchemaHead > 0
@@ -45,13 +45,20 @@ healthRoute.get('/health', (ctx) => {
     authority,
     contract_hash: apiContract.contract_hash,
     schema_head: schemaHead,
+    // Read via the ONE sanctioned reader, `envFlagTrue`. Until 260729 these six went through a
+    // LOCAL helper defined in this file — `(v?: string) => v?.trim().toLowerCase() === 'true'` —
+    // which was quote-INTOLERANT: a Cloudflare dashboard value entered as `"true"` (with the
+    // quote characters) read as false, so the feature stayed off while /health reported it off
+    // too, i.e. the posture surface agreed with the bug instead of exposing it.
+    // verify-flag-parse-hygiene matched `_ENABLED` per LINE, so a read behind a local helper was
+    // invisible to it; the gate now also detects the helper shape.
     feature_posture: {
-      single_intake: enabled(env.SINGLE_INTAKE_ENABLED),
-      role_skill_catalog: enabled(env.ROLE_SKILL_CATALOG_ENABLED),
-      context_packet_persistence: enabled(env.CONTEXT_PACKET_PERSISTENCE_ENABLED),
-      chat_history_persistence_required: enabled(env.CHAT_HISTORY_PERSISTENCE_REQUIRED),
-      tenant_projection_queue: enabled(env.TENANT_PROJECTION_QUEUE_ENABLED),
-      current_work_projection: enabled(env.CURRENT_WORK_PROJECTION_ENABLED),
+      single_intake: envFlagTrue(env.SINGLE_INTAKE_ENABLED),
+      role_skill_catalog: envFlagTrue(env.ROLE_SKILL_CATALOG_ENABLED),
+      context_packet_persistence: envFlagTrue(env.CONTEXT_PACKET_PERSISTENCE_ENABLED),
+      chat_history_persistence_required: envFlagTrue(env.CHAT_HISTORY_PERSISTENCE_REQUIRED),
+      tenant_projection_queue: envFlagTrue(env.TENANT_PROJECTION_QUEUE_ENABLED),
+      current_work_projection: envFlagTrue(env.CURRENT_WORK_PROJECTION_ENABLED),
     },
     bindings: {
       tenant_projection_queue: Boolean(env.TENANT_PROJECTION_QUEUE),

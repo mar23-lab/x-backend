@@ -74,14 +74,160 @@ export function scanLine(line) {
   return OFFENDER.test(line);
 }
 
+// =================================================================================================
+// HELPER-SHAPED READS — the per-LINE blind spot (FGH-3, 260729)
+// =================================================================================================
+// OFFENDER above matches `_ENABLED` and `'true'` ON THE SAME LINE. A flag read behind a LOCAL helper
+// splits those two facts across two lines and is therefore invisible to it:
+//
+//     const enabled = (v?: string) => v?.trim().toLowerCase() === 'true';   // names no flag
+//     ...
+//     single_intake: enabled(env.SINGLE_INTAKE_ENABLED),                    // names no 'true'
+//
+// `src/workers/routes/health.ts` shipped exactly this and read SIX flags through it — the same
+// quote-intolerant class this gate exists to prevent, fully invisible to the gate.
+//
+// DETECTION RULE — two conjuncts, BOTH required:
+//   (1) DEFINITION SHAPE. A locally-defined arrow or `function` whose body compares one of its OWN
+//       PARAMETERS against the literal 'true' using === / == / !== / !=.
+//   (2) APPLICATION. That same helper is called at least once IN THE SAME FILE with an argument
+//       naming an env var — a SCREAMING_SNAKE token, which is how every flag in this worker is named
+//       (this is what catches CHAT_HISTORY_PERSISTENCE_REQUIRED, which has no `_ENABLED` suffix).
+//
+// Requiring BOTH is what keeps the rule from firing on a query-string read such as
+// `ctx.req.query('cause_only') === 'true'` (no helper definition, and no env-shaped argument).
+//
+// WHAT THIS STILL CANNOT SEE — stated because a gate that silently misses a shape is the very defect
+// being fixed here. All of the following remain INVISIBLE:
+//   - a helper IMPORTED from another module (the comparison and the callsite are in different files;
+//     this scan is per-file and does no cross-module dataflow);
+//   - an ALIASED helper (`const f = enabled;` then `f(env.X_ENABLED)`) — the alias's definition is a
+//     bare identifier, not a comparison;
+//   - a helper reached through an object or array (`FLAGS.read(env.X_ENABLED)`, `handlers[k](...)`);
+//   - a comparison against a non-literal (`=== TRUE_LITERAL`, `=== someConst`);
+//   - a destructured read (`const { X_ENABLED } = env;` then `X_ENABLED === 'true'` on a later line
+//     WITHOUT the flag name — the per-line rule catches it only when the name is on the line);
+//   - helper-calling-helper indirection of depth > 1.
+// The sanctioned fix is unchanged and unambiguous: call envFlagTrue directly.
+
+const ENV_TOKEN = /\b[A-Z][A-Z0-9]*(?:_[A-Z0-9]+)+\b/;
+const TRUE_COMPARE = /[!=]==?\s*'true'/;
+
+function matchParenAt(s, open) {
+  let depth = 0;
+  for (let i = open; i < s.length; i++) {
+    if (s[i] === '(') depth++;
+    else if (s[i] === ')') { depth--; if (depth === 0) return i; }
+  }
+  return -1;
+}
+
+function matchBraceAt(s, open) {
+  let depth = 0;
+  for (let i = open; i < s.length; i++) {
+    if (s[i] === '{') depth++;
+    else if (s[i] === '}') { depth--; if (depth === 0) return i; }
+  }
+  return -1;
+}
+
+// Parameter identifiers from a raw parameter list: `value?: string`, `v = ''`, `{ a }` -> names.
+function paramNames(raw) {
+  return raw.split(',')
+    .map((p) => (p.trim().match(/^[A-Za-z_$][\w$]*/) || [''])[0])
+    .filter(Boolean);
+}
+
+// The body text of a helper defined at `defEnd` (offset just past its parameter list).
+function helperBody(src, defEnd) {
+  const win = src.slice(defEnd, defEnd + 600);
+  const arrowRel = win.indexOf('=>');
+  const braceRel = win.indexOf('{');
+  // `function name(p) { ... }` — braced body, no arrow before it.
+  if (braceRel !== -1 && (arrowRel === -1 || braceRel < arrowRel)) {
+    const close = matchBraceAt(src, defEnd + braceRel);
+    if (close !== -1) return src.slice(defEnd + braceRel, close + 1);
+  }
+  if (arrowRel === -1) return '';
+  const afterArrow = defEnd + arrowRel + 2;
+  const rest = src.slice(afterArrow, afterArrow + 600);
+  const braced = rest.match(/^\s*\{/);
+  if (braced) {
+    const open = afterArrow + rest.indexOf('{');
+    const close = matchBraceAt(src, open);
+    if (close !== -1) return src.slice(open, close + 1);
+  }
+  // Concise arrow body: to the first `;` or newline at depth 0.
+  let end = afterArrow, depth = 0;
+  while (end < src.length) {
+    const c = src[end];
+    if (c === '(' || c === '[' || c === '{') depth++;
+    else if (c === ')' || c === ']' || c === '}') { if (depth === 0) break; depth--; }
+    else if (c === ';' && depth === 0) break;
+    else if (c === '\n' && depth === 0) break;
+    end++;
+  }
+  return src.slice(afterArrow, end);
+}
+
+// Locally-defined helpers whose body compares a PARAMETER to 'true'.
+export function trueComparingHelpers(src) {
+  const found = [];
+  const defRe = /(?:(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*(?::[^=\n]*)?=\s*(?:async\s+)?\(([^)]*)\)|(?:async\s+)?function\s+([A-Za-z_$][\w$]*)\s*\(([^)]*)\))/g;
+  for (const m of src.matchAll(defRe)) {
+    const name = m[1] || m[3];
+    const params = paramNames(m[2] !== undefined ? m[2] : m[4] || '');
+    if (!name || !params.length) continue;
+    const body = helperBody(src, m.index + m[0].length);
+    if (!body || !TRUE_COMPARE.test(body)) continue;
+    // The comparison must involve one of the helper's OWN parameters.
+    if (!params.some((p) => new RegExp('\\b' + p + '\\b').test(body))) continue;
+    found.push({ name, line: src.slice(0, m.index).split('\n').length, params });
+  }
+  return found;
+}
+
+// Callsites of `name(...)` whose argument names an env var, excluding the definition itself.
+export function envShapedCallsites(src, name) {
+  const sites = [];
+  const callRe = new RegExp('(?:^|[^A-Za-z0-9_$.])' + name + '\\s*\\(', 'g');
+  for (const m of src.matchAll(callRe)) {
+    const open = m.index + m[0].length - 1;
+    // Skip the definition: `const name = (` / `function name(`.
+    const before = src.slice(Math.max(0, m.index - 30), m.index + m[0].length);
+    if (/(?:const|let|var)\s+[A-Za-z_$][\w$]*\s*(?::[^=\n]*)?=\s*(?:async\s+)?\($/.test(before)) continue;
+    if (/function\s+[A-Za-z_$][\w$]*\s*\($/.test(before)) continue;
+    const close = matchParenAt(src, open);
+    if (close === -1) continue;
+    const arg = src.slice(open + 1, close);
+    if (ENV_TOKEN.test(arg)) {
+      sites.push({ line: src.slice(0, m.index).split('\n').length, arg: arg.trim().slice(0, 60) });
+    }
+  }
+  return sites;
+}
+
+export function helperOffenders(src, shown) {
+  const out = [];
+  for (const h of trueComparingHelpers(src)) {
+    const sites = envShapedCallsites(src, h.name);
+    for (const s of sites) {
+      out.push(`${shown}:${s.line}  ${h.name}(${s.arg})  <- local helper defined at line ${h.line} compares a parameter to 'true' (quote-intolerant)`);
+    }
+  }
+  return out;
+}
+
 export function runChecks(files) {
   const offenders = [];
   for (const abs of files) {
     const shown = path.relative(repoRoot, abs);
     if (shown === READER || shown.includes('__tests__')) continue;
-    fs.readFileSync(abs, 'utf8').split('\n').forEach((line, i) => {
+    const src = fs.readFileSync(abs, 'utf8');
+    src.split('\n').forEach((line, i) => {
       if (scanLine(line)) offenders.push(`${shown}:${i + 1}  ${line.trim().slice(0, 100)}`);
     });
+    offenders.push(...helperOffenders(src, shown));
   }
   return offenders;
 }
@@ -149,8 +295,46 @@ if (selfTest) {
   const commentRun = run(seedTree('control-comment', "// true only when FOO_ENABLED === 'true' (route-read)\nexport const on = envFlagTrue(ctx.env.FOO_ENABLED);\n"));
   record(`CONTROL: a comment describing the old form exits 0 (observed exit=${commentRun.status})`, commentRun.status === 0);
 
+  // (9)-(11) MUTANTS — the HELPER-SHAPED class (FGH-3). Each is the health.ts defect reproduced: the
+  //     comparison and the flag name are on DIFFERENT lines, so the per-line rule cannot see them.
+  //     These must bite through a real spawned run, or the extension is a claim rather than a gate.
+  const helperForms = [
+    ['arrow helper + _ENABLED flag (the exact health.ts shape)',
+      "const enabled = (v?: string) => v?.trim().toLowerCase() === 'true';\n"
+      + 'export const posture = { single_intake: enabled(env.SINGLE_INTAKE_ENABLED) };\n'],
+    ['function-declaration helper + _ENABLED flag',
+      "function isOn(value) { return String(value).toLowerCase() === 'true'; }\n"
+      + 'export const on = isOn(ctx.env.TENANT_PROJECTION_QUEUE_ENABLED);\n'],
+    ['helper applied to a flag with NO _ENABLED suffix (CHAT_HISTORY_PERSISTENCE_REQUIRED)',
+      "const enabled = (v?: string) => v?.trim().toLowerCase() === 'true';\n"
+      + 'export const strict = enabled(env.CHAT_HISTORY_PERSISTENCE_REQUIRED);\n'],
+  ];
+  helperForms.forEach(([name, body], i) => {
+    const r = run(seedTree(`helper-mutant-${i}`, body));
+    const out = (r.stdout || '') + (r.stderr || '');
+    record(`MUTANT (helper-shaped): ${name} drives exit 1 (observed exit=${r.status})`, r.status === 1);
+    record(`MUTANT (helper-shaped): the local helper is NAMED as the cause (${name})`,
+      /local helper defined at line/.test(out));
+  });
+
+  // (12) CONTROL — a query-string read is NOT a flag read. `ctx.req.query('cause_only') === 'true'`
+  //      ships in graph.ts / events.ts / customer-lineage.ts today. If the new rule fired on it the
+  //      gate would be unfollowable, because there is no envFlagTrue to route a query param through.
+  const queryRun = run(seedTree('control-query-param',
+    "export const causeOnly = ctx.req.query('cause_only') === 'true';\n"));
+  record(`CONTROL: a query-string 'true' comparison does NOT bite (observed exit=${queryRun.status})`,
+    queryRun.status === 0);
+
+  // (13) CONTROL — a local 'true'-comparing helper that is NEVER applied to an env-shaped value is
+  //      not a flag-parse defect. Both conjuncts of the rule are required; this proves the second.
+  const nonFlagRun = run(seedTree('control-helper-no-flag',
+    "const isYes = (v?: string) => v?.trim().toLowerCase() === 'true';\n"
+    + "export const answer = isYes(body.userAnswer);\n"));
+  record(`CONTROL: a 'true'-comparing helper never applied to an env var does NOT bite (observed exit=${nonFlagRun.status})`,
+    nonFlagRun.status === 0);
+
   fs.rmSync(tmp, { recursive: true, force: true });
-  console.log('\n  SELF-TEST · verify-flag-parse-hygiene (J-W0 · FGH-1/2)');
+  console.log('\n  SELF-TEST · verify-flag-parse-hygiene (J-W0 · FGH-1/2/3)');
   console.log('  ' + '-'.repeat(84));
   for (const r of rows) console.log(r);
   console.log('  ' + '-'.repeat(84));
