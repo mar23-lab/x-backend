@@ -41,6 +41,13 @@ const gates = [
   ['operation-event source-tool constraint controls', 'npm', ['run', 'verify:operation-event-source-tool-constraint:self-test']],
   ['pilot live RLS evidence producer', 'npm', ['run', 'produce:pilot-shadow-live-rls-evidence:self-test']],
   ['predeploy migration fail-closed classifier', 'npm', ['run', 'verify:predeploy-migration-gate:self-test']],
+  // META-GATE P-2 and the three estate self-tests that actually OBSERVE a red. The meta-gate is a
+  // ratchet over docs/contracts/GATE_SELF_REFERENCE_BASELINE.json: known violations are frozen, new
+  // ones fail. verify:frontend-pair:self-test was the only x-backend self-test proven to observe a
+  // red and NOTHING triggered it — the gate ran on deploy:api, its controls ran nowhere.
+  ['gate self-reference meta-gate', 'npm', ['run', 'verify:gate-self-reference']],
+  ['gate self-reference meta-gate controls', 'npm', ['run', 'verify:gate-self-reference:self-test']],
+  ['frontend/API pair deploy gate controls', 'npm', ['run', 'verify:frontend-pair:self-test']],
   ['typecheck', 'npm', ['run', 'typecheck']],
   ['worker suite', 'npm', ['test']],
 ];

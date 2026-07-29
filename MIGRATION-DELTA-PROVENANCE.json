@@ -3493,6 +3493,27 @@
           "reason": "gate repo-containment self-test wiring: GIT_DIR-inherited writes into the enclosing repo"
         }
       ]
+    },
+    {
+      "delta_id": "meta-gate-self-reference-260729",
+      "generated_at": "2026-07-29T08:17:56.964Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "62c1ff0f133e1ebc9d33b734c2e7542c6a8c6778",
+      "target_base_commit": "62c1ff0f133e1ebc9d33b734c2e7542c6a8c6778",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "package.json",
+          "target_blob": "022e15fab09b12bdc55066f394b016ed9a64a811",
+          "reason": "wire META-GATE P-2 (verify-gate-self-reference) and verify:frontend-pair:self-test into ci-local"
+        },
+        {
+          "path": "scripts/ci-local.mjs",
+          "target_blob": "05e4da1c7026d254a7f790047a7e866b92ba4c33",
+          "reason": "wire META-GATE P-2 (verify-gate-self-reference) and verify:frontend-pair:self-test into ci-local"
+        }
+      ]
     }
   ]
 }
