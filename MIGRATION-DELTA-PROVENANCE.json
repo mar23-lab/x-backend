@@ -1757,32 +1757,6 @@
       ]
     },
     {
-      "delta_id": "ai-exec-2-invite-membership-seam-20260721",
-      "generated_at": "2026-07-21T10:05:00Z",
-      "source_repo": "mar23-lab/x-backend",
-      "source_commit": "a773654f02728b02952ca90f01dd9f2f2f507e1d",
-      "target_base_commit": "a773654f02728b02952ca90f01dd9f2f2f507e1d",
-      "authority": "shadow_only_no_production_cutover",
-      "copied_files": [],
-      "transformed_files": [
-        {
-          "path": "src/workers/dal/DalAdapter.ts",
-          "target_blob": "e6078a181eb4ea0b5b1033667f8a3c297a255459",
-          "reason": "AI-EXEC-2: materializeInvitedMembership interface method"
-        },
-        {
-          "path": "src/workers/dal/WorkersDalAdapter.ts",
-          "target_blob": "75b3a6abbf0610deb135a57892304b62008902af",
-          "reason": "AI-EXEC-2: materializeInvitedMembership delegates to invite-membership-store (owner connection)"
-        },
-        {
-          "path": "src/workers/routes/session.ts",
-          "target_blob": "7cf22071cf955c2fd9a975ec7a864414839e9ffb",
-          "reason": "AI-EXEC-2: invite-accept membership-materialization orchestration (flag-gated born-OFF, after auto-provision)"
-        }
-      ]
-    },
-    {
       "delta_id": "ai-provtool-package-json-20260721",
       "generated_at": "2026-07-21T00:39:11.134Z",
       "source_repo": "mar23-lab/x-backend",
@@ -3512,6 +3486,38 @@
           "path": "scripts/ci-local.mjs",
           "target_blob": "05e4da1c7026d254a7f790047a7e866b92ba4c33",
           "reason": "wire META-GATE P-2 (verify-gate-self-reference) and verify:frontend-pair:self-test into ci-local"
+        }
+      ]
+    },
+    {
+      "delta_id": "invite-materialization-per-pair-260729-wrangler",
+      "generated_at": "2026-07-29T08:35:08.015Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "1eabcf7aed57a97ff4c6e985ebacebfbfb0fbfba",
+      "target_base_commit": "1eabcf7aed57a97ff4c6e985ebacebfbfb0fbfba",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "wrangler.toml",
+          "target_blob": "f290efb775253a660c38df5cab681895b0d98018",
+          "reason": "flag comment now describes the per-(user,orgId) precondition; the old clause documented the defect"
+        }
+      ]
+    },
+    {
+      "delta_id": "ai-exec-2-invite-membership-seam-20260721",
+      "generated_at": "2026-07-29T09:13:41.233Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "c6af6ecd3012fb3a85d85bd63b31da504c6540f7",
+      "target_base_commit": "c6af6ecd3012fb3a85d85bd63b31da504c6540f7",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/routes/session.ts",
+          "target_blob": "c3f5c5770d4987a03eb6f1a6c064b8fbe8d5b81e",
+          "reason": "per-pair precondition fix: materialization now keyed on (user, orgId) membership rather than global entitlement.state; see PR #114"
         }
       ]
     }

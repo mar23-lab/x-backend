@@ -291,20 +291,40 @@ sessionRoute.get('/session', async (ctx) => {
       (entitlement as unknown as { operator_bootstrapped?: typeof bootstrapped }).operator_bootstrapped = bootstrapped;
     }
 
-    // AI-EXEC-2 · invite-accept → membership seam (flag-gated born-OFF). An invited teammate (a Clerk org
-    // member/admin) who accepts + signs in otherwise DEAD-ENDS in authenticated_no_access — the session
-    // flow only ever writes `owner` rows. When the workspace already EXISTS and the invitee has no member
-    // row, materialize their membership at the Clerk-mapped role. The org_id/org_role claims are Clerk's
-    // SIGNED proof of an accepted invitation, so no webhook is needed. Owner/client are never materialized
+    // AI-EXEC-2 · invite-accept → membership seam (flag-gated). An invited teammate (a Clerk org
+    // member/admin) who accepts + signs in otherwise DEAD-ENDS with no membership — the session flow only
+    // ever writes `owner` rows. When the workspace already EXISTS and the invitee has no member row,
+    // materialize their membership at the Clerk-mapped role. The org_id/org_role claims are Clerk's SIGNED
+    // proof of an accepted invitation (Clerk signs them only for accepted members), so no webhook is needed
+    // and those claims remain the ONLY authority for the invitation. Owner/client are never materialized
     // this way (the store refuses any role but viewer/operator). Runs AFTER auto-provision (which handles
     // the create-a-new-workspace/owner case); this handles the join-an-existing-workspace/member case.
+    //
+    // 260729 FIX — the precondition asked the WRONG QUESTION. It gated on `entitlement.state`, a per-user
+    // GLOBAL summary ("does this user have access to ANYTHING?"), when materialization is a per-(user,
+    // workspace) question ("does this user have a member row for THIS orgId?"). Those two agree only for a
+    // user who owns no workspace — and every design partner already owns one. marat@xlooop.com owns 8
+    // workspaces (all owner:active), so getSessionEntitlement's trusted-platform fallback resolves
+    // `approved_workspace` against his FIRST workspace, never the invited org → the branch was UNREACHABLE
+    // and production had ZERO materialized memberships (workspace_members where
+    // activated_by='invite-materialization' → 0) despite the flag being ON at the deployed SHA.
+    //
+    // Re-keyed on the per-pair question. `entitlement.workspace.id === orgId` is the in-memory answer to
+    // "already an active member of THIS org?" (the gate just resolved it), so the common case still costs
+    // no extra query; every other signed-org session defers to the store, whose guards are the real
+    // authority (workspace must exist, no existing member row of ANY status, no un-ban, no ambiguous
+    // identity). access_denied is excluded here as well as in the store: a platform-level ban outranks an
+    // org invitation, and that refusal should not depend on a single layer.
+    const alreadyActiveMemberOfThisOrg =
+      entitlement.state === 'approved_workspace' && entitlement.workspace?.id === orgId;
     const canTryInviteMaterialization =
-      (entitlement.state === 'authenticated_no_access' || entitlement.state === 'pending_access') &&
-      !!orgId && !!orgRole;
+      !!orgId && !!orgRole &&
+      entitlement.state !== 'access_denied' &&
+      !alreadyActiveMemberOfThisOrg;
     if (canTryInviteMaterialization && envFlagTrue(ctx.env.INVITE_MEMBERSHIP_MATERIALIZATION_ENABLED)) {
       try {
         const outcome = await dal.materializeInvitedMembership({
-          workspaceId: orgId, userId, role: clerkRoleToWorkspaceRole(orgRole),
+          workspaceId: orgId, userId, role: clerkRoleToWorkspaceRole(orgRole), email,
         });
         if (outcome.materialized) {
           entitlement = await dal.getSessionEntitlement(userId, orgId, email);
