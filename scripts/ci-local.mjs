@@ -17,7 +17,14 @@ const gates = [
   ['Pages release artifact contract', 'npm', ['run', 'verify:app-pages-release:self-test']],
   ['Pages deployment decision contract', 'npm', ['run', 'verify:app-pages-decision:self-test']],
   ['deployed surface registry', 'npm', ['run', 'verify:deployed-surfaces']],
+  // Until 260729 this line ran `verify:app-security-headers`, which was DEFINED as the script's own
+  // `--self-test`. ci-local's only security-header gate was therefore the comparator's controls; the
+  // real manifest/artifact check had no caller anywhere, and neither did the live check. Now the
+  // real check runs here (manifest sanity + HSTS ramp policy + artifact parity when a release is
+  // built), the controls run alongside it, `--require-artifact` runs fail-closed on the app deploy
+  // chain where the artifact provably exists, and `--live` runs post-deploy.
   ['app security header parity', 'npm', ['run', 'verify:app-security-headers']],
+  ['app security header parity controls', 'npm', ['run', 'verify:app-security-headers:self-test']],
   ['deploy schema-head contract', 'npm', ['run', 'verify:deploy-schema-head:self-test']],
   ['authority decision truth', 'npm', ['run', 'verify:authority-decision']],
   ['deployment authorization replay protection', 'npm', ['run', 'verify:deployment-authorization-store']],
@@ -30,6 +37,10 @@ const gates = [
   ['model execution callsite coverage', 'npm', ['run', 'verify:model-execution-callsites']],
   ['shadow observability storage', 'npm', ['run', 'verify:shadow-observability-storage']],
   ['backend trust proofs (static)', 'npm', ['run', 'verify:trust-proofs']],
+  // The cross-tenant RLS proof needs a live disposable Postgres, so it cannot run here — but its
+  // RUNNER can be proven offline. This entry asserts the runner still refuses to call a skipped
+  // vitest run a pass and still exits 2 (not 0) when the DSNs are absent.
+  ['cross-tenant RLS proof runner controls', 'npm', ['run', 'verify:cross-tenant-rls-proof:self-test']],
   ['rls grant parity', 'npm', ['run', 'verify:rls-grant-parity']],
   ['data schemas', 'npm', ['run', 'verify:data-schemas']],
   ['orphan tests', 'npm', ['run', 'verify:no-orphan-worker-tests']],

@@ -29,6 +29,22 @@ const verifyRelease = spawnSync(process.execPath, [path.join(root, 'scripts/veri
 });
 if (verifyRelease.status !== 0) fail(verifyRelease.stderr || verifyRelease.stdout);
 
+// F2 · SECURITY-HEADER PARITY AGAINST THE ARTIFACT WE ARE ABOUT TO UPLOAD.
+//
+// verify-app-security-header-parity.mjs has had an artifact mode and a live mode since it was
+// written, and until 260729 NEITHER had a caller: `ci-local` invoked the script's own `--self-test`,
+// so the only thing that ever ran was the comparator's controls. The header check against a real
+// artifact and against app.xlooop.com had never executed once.
+//
+// This is the right place for the artifact assertion: the release directory provably exists here, so
+// `--require-artifact` cannot degrade into "nothing to check, PASS". Fail-closed before upload.
+const verifyHeaders = spawnSync(
+  process.execPath,
+  [path.join(root, 'scripts/verify-app-security-header-parity.mjs'), '--require-artifact'],
+  { cwd: root, env: { ...process.env, XLOOOP_APP_PAGES_RELEASE_DIR: releaseDir }, encoding: 'utf8' },
+);
+if (verifyHeaders.status !== 0) fail(verifyHeaders.stderr || verifyHeaders.stdout);
+
 const manifest = JSON.parse(readFileSync(path.join(releaseDir, 'release-manifest.json'), 'utf8'));
 const packet = JSON.parse(readFileSync(path.resolve(packetPath), 'utf8'));
 const backendSha = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim();
@@ -91,6 +107,24 @@ const deploy = spawnSync(
   { cwd: root, stdio: 'inherit' },
 );
 if (deploy.status !== 0) fail(`wrangler pages deploy exited ${String(deploy.status)}`);
+
+// F2 · LIVE header parity — "the live check is the teeth" (that gate's own header). Reported, not
+// fail-closed: the upload has already happened, so exiting non-zero here would only hide the deploy
+// result. Cloudflare edge propagation is not instantaneous, which is exactly why this is advisory
+// and why it prints the drift instead of pretending nothing ran.
+const liveHeaders = spawnSync(
+  process.execPath,
+  [path.join(root, 'scripts/verify-app-security-header-parity.mjs'), '--live', 'https://app.xlooop.com'],
+  { cwd: root, encoding: 'utf8' },
+);
+if (liveHeaders.status !== 0) {
+  console.error('deploy-app-prod · LIVE HEADER PARITY DRIFT (advisory — the deploy already landed):');
+  console.error((liveHeaders.stdout || '') + (liveHeaders.stderr || ''));
+  console.error('  re-run after edge propagation: npm run verify:app-security-headers:live');
+} else {
+  console.log('deploy-app-prod · live security-header parity PASS');
+}
+
 console.log(
   `deploy-app-prod · DEPLOYED · frontend=${manifest.frontend_sha} backend=${manifest.backend_sha}`
   + ' · post-deploy ratification and live probes are still required',

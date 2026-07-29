@@ -457,8 +457,18 @@ if (selfTest) {
   record('MUTANT: the injected gate is NAMED in the failure output', /verify-mutant-selfref\.mjs/.test(mutantOut));
   record('MUTANT: the self-asserted symbol is NAMED (authorizeMutant)', /authorizeMutant/.test(mutantOut));
 
-  // (5) THE NAMED TARGET — the detector must flag the real gate it was built against. If this fails
-  //     the detector is wrong; the threshold must NOT be tuned to make it pass.
+  // (5) THE NAMED TARGET — the detector must flag the real gate it was built against, FOR AS LONG AS
+  //     THAT GATE EXISTS. If it flags it wrongly the detector is wrong; the threshold must NOT be
+  //     tuned to make it pass.
+  //
+  //     260729: the named target was REMEDIATED — verify-customer-revocation-end-to-end.mjs was
+  //     replaced by verify-customer-revocation-authority.mjs, which imports and executes the shipped
+  //     store and spine authority instead of asserting its own authorize(). This branch used to
+  //     `record(..., false)` when the file was absent, which meant fixing the defect broke the
+  //     meta-gate's own self-test: a control that requires the defect to persist is a control that
+  //     punishes the repair. The load-bearing proof of this detector is case (4) — a synthetic
+  //     mutant injected into a real gate, which drives a real exit 1 — and that is unaffected.
+  //     Absence is now recorded as the remediation it is, and the successor is checked for relapse.
   const target = resolve(REPO, 'scripts/verify-customer-revocation-end-to-end.mjs');
   if (existsSync(target)) {
     const r = analyseGate(target, 'scripts/verify-customer-revocation-end-to-end.mjs');
@@ -467,7 +477,15 @@ if (selfTest) {
     record('NAMED TARGET: its self-defined authorize() is named as the asserted symbol',
       r.sites.some((s) => s.symbols.includes('authorize')));
   } else {
-    record('NAMED TARGET present in repo', false);
+    const successor = resolve(REPO, 'scripts/verify-customer-revocation-authority.mjs');
+    record('NAMED TARGET remediated: verify-customer-revocation-end-to-end.mjs no longer exists', true);
+    if (existsSync(successor)) {
+      const r = analyseGate(successor, 'scripts/verify-customer-revocation-authority.mjs');
+      record(`SUCCESSOR verify-customer-revocation-authority.mjs does NOT relapse `
+        + `(${r.self_referential}/${r.checks} checks, ratio ${r.ratio})`, !isViolation(r));
+    } else {
+      record('SUCCESSOR verify-customer-revocation-authority.mjs present (the remediation was not silently dropped)', false);
+    }
   }
 
   rmSync(dir, { recursive: true, force: true });
