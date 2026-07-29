@@ -74,6 +74,15 @@ const gates = [
   ['domain scaffold honest-empty controls', 'npm', ['run', 'verify:domain-scaffold-honest-empty:self-test']],
   ['flag parse hygiene', 'npm', ['run', 'verify:flag-parse-hygiene']],
   ['flag parse hygiene controls', 'npm', ['run', 'verify:flag-parse-hygiene:self-test']],
+  // 260730: verify-customer-onboarding-composed-gate exited 1 at b84d815 and was referenced by
+  // NOTHING — no npm script, no entry here — so its red was invisible. Three of its eleven
+  // sub-gates were donor-only paths that had never been ported (MODULE_NOT_FOUND on every run).
+  // Fixed first, wired second: the gate is green on the real tree before this line exists. Its
+  // self-test spawns the gate as a child process and observes a real red, so it is a control
+  // rather than an assertion about its own fixtures.
+  ['customer onboarding composed gate', 'npm', ['run', 'verify:customer-onboarding-composed-gate']],
+  ['customer onboarding composed gate controls', 'npm', ['run', 'verify:customer-onboarding-composed-gate:self-test']],
+  ['customer authority gates controls', 'npm', ['run', 'verify:customer-authority-gates:self-test']],
   ['typecheck', 'npm', ['run', 'typecheck']],
   ['worker suite', 'npm', ['test']],
 ];

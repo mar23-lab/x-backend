@@ -312,10 +312,17 @@ async function verifyPromptInjectionRegression() {
 }
 
 async function verifyDeleteExportExecution() {
-  const customerDelete = requireFile('scripts/verify-customer-delete-export.mjs');
+  // 260730: this check used to `requireFile('scripts/verify-customer-delete-export.mjs')` and fold
+  // that VERIFIER's own source into the marker corpus below. That path is a donor-only artifact
+  // (Xlooop-XCP-demo) that was never ported into x-backend — `git log -- <path>` is empty here — so
+  // the check sat permanently red on a missing input while every real assertion passed. It was also
+  // a gate-self-reference: the donor script merely *names* these markers as string literals, so its
+  // presence could have satisfied the corpus even if the product code lost one. Dropping it is
+  // strictly stronger; the markers must now come from the route + store themselves. Measured at
+  // b84d815: markers satisfied by route+store alone = 7/7, markers lost by the removal = 0.
   const route = requireFile('src/workers/routes/operational-spine.ts');
   const store = requireFile('src/workers/dal/operational-spine-store.ts');
-  requireIncludes('delete_export_execution_markers_present', `${customerDelete}\n${route}\n${store}`, [
+  requireIncludes('delete_export_execution_markers_present', `${route}\n${store}`, [
     '/customer-data/export-requests/:approval_id/execute',
     '/customer-data/delete-requests/:approval_id/execute',
     'executeCustomerDataLifecycleRequest',
