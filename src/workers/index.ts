@@ -444,7 +444,7 @@ const tenantProjectionQueueHandler = async (
       markDeadLettered: (workspaceId, outboxId, nowIso, errorCode) => markProjectionOutboxDeadLettered(sql, workspaceId, outboxId, nowIso, errorCode),
     },
     now: () => new Date(),
-    includeDocuments: String(env.GRAPH_DOCUMENT_NODES_ENABLED || '').toLowerCase() === 'true',
+    includeDocuments: envFlagTrue(env.GRAPH_DOCUMENT_NODES_ENABLED),
   });
   console.log('[tenant-projection-queue]', JSON.stringify({
     queue: batch.queue,
