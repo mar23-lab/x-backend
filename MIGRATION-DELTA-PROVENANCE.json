@@ -3514,6 +3514,22 @@
           "reason": "wire META-GATE P-2 (verify-gate-self-reference) and verify:frontend-pair:self-test into ci-local"
         }
       ]
+    },
+    {
+      "delta_id": "invite-materialization-per-pair-260729-wrangler",
+      "generated_at": "2026-07-29T08:35:08.015Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "1eabcf7aed57a97ff4c6e985ebacebfbfb0fbfba",
+      "target_base_commit": "1eabcf7aed57a97ff4c6e985ebacebfbfb0fbfba",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "wrangler.toml",
+          "target_blob": "f290efb775253a660c38df5cab681895b0d98018",
+          "reason": "flag comment now describes the per-(user,orgId) precondition; the old clause documented the defect"
+        }
+      ]
     }
   ]
 }
