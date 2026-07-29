@@ -3683,6 +3683,37 @@
           "reason": "P-2 baseline paydown rebased onto c4defb02; all three drifted files re-recorded in one call after ledger conflict resolution"
         }
       ]
+    },
+    {
+      "delta_id": "composed-gate-rebase-260730",
+      "generated_at": "2026-07-29T23:15:39.288Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "366ba8398f2ecc3bbdebad765c9dd984d599d2e9",
+      "target_base_commit": "366ba8398f2ecc3bbdebad765c9dd984d599d2e9",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "scripts/verify-customer-onboarding-composed-gate.mjs",
+          "target_blob": "98c78ed14d41dd4256b0ccbdadcfe58344da261a",
+          "reason": "composed-gate fix rebased onto 00cdcf98; all drifted blobs re-recorded in ONE call after ledger conflict resolution (a reused id replaces its file set, it does not append)"
+        },
+        {
+          "path": "scripts/verify-template-policy-suite.mjs",
+          "target_blob": "b38faf92c1bf868c7e2c1a5b6a6b804d573a07e4",
+          "reason": "composed-gate fix rebased onto 00cdcf98; all drifted blobs re-recorded in ONE call after ledger conflict resolution (a reused id replaces its file set, it does not append)"
+        },
+        {
+          "path": "package.json",
+          "target_blob": "eca6599807e64aef3200e719a8ee9b0b2b4377b9",
+          "reason": "composed-gate fix rebased onto 00cdcf98; all drifted blobs re-recorded in ONE call after ledger conflict resolution (a reused id replaces its file set, it does not append)"
+        },
+        {
+          "path": "scripts/ci-local.mjs",
+          "target_blob": "931ac097eb784c3e3a7c343f0d1cc3207d541875",
+          "reason": "composed-gate fix rebased onto 00cdcf98; all drifted blobs re-recorded in ONE call after ledger conflict resolution (a reused id replaces its file set, it does not append)"
+        }
+      ]
     }
   ]
 }
