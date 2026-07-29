@@ -1,0 +1,29 @@
+{
+  "schema_id": "customer_ecosystem_template_contract.v1",
+  "rule": "Every path listed in required_files must exist in templates/customer-ecosystem-template. This list is the CONTRACT the template must satisfy; it lives here, outside scripts/verify-customer-ecosystem-template.mjs, so it is reviewable and diffable without reading the gate — and so the gate asserts an EXTERNAL subject rather than its own const-array literal (GATE_SELF_REFERENCE_BASELINE, P-2).",
+  "captured_at": "2026-07-29",
+  "required_files": [
+    "README.md",
+    "ONBOARDING.md",
+    "identity/authority-and-consent.md",
+    "identity/owner-and-roles.md",
+    "sources/SOURCE_REGISTER.yml",
+    "sources/DO_NOT_INGEST.yml",
+    "domains/DOMAIN_REGISTRY.yml",
+    "workflows/workflow-opportunity-radar.md",
+    "goals/GOALS.md",
+    "roadmap/ROADMAP.md",
+    "todos/TODOS.md",
+    "governance/PRIVACY_AND_CONSENT.md",
+    "governance/ROLE_AND_INVITE_POLICY.md",
+    "governance/AI_TOOL_READINESS.md",
+    "activities/ACTIVITY_LOG.md",
+    "retrospectives/ONBOARDING_LEARNINGS.md"
+  ],
+  "internal_detail_leak_pattern": "MB-P hard-rule|HR-[A-Z0-9-]+-\\d+|engine weights?|prompt chain|architecture dependency map",
+  "authority_consent_visible_in": [
+    "sources/SOURCE_REGISTER.yml",
+    "sources/DO_NOT_INGEST.yml",
+    "identity/authority-and-consent.md"
+  ]
+}

@@ -3657,6 +3657,32 @@
           "reason": "health.ts routes six feature-posture flag reads through envFlagTrue (was a local quote-intolerant helper); verify-flag-parse-hygiene gains helper-shape detection + 8 self-test cases"
         }
       ]
+    },
+    {
+      "delta_id": "gate-selfref-p2-debt-rebase-260730",
+      "generated_at": "2026-07-29T23:05:57.350Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "cabf83767e67715a2a3edf817335b2037a502fa7",
+      "target_base_commit": "cabf83767e67715a2a3edf817335b2037a502fa7",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "scripts/verify-customer-ecosystem-template.mjs",
+          "target_blob": "622bd28f348a3c47e4e052055b2d7840b1cf7c56",
+          "reason": "P-2 baseline paydown rebased onto c4defb02; all three drifted files re-recorded in one call after ledger conflict resolution"
+        },
+        {
+          "path": "package.json",
+          "target_blob": "9021b432393d1b6ed53b108ba87ebc1b754aa7fb",
+          "reason": "P-2 baseline paydown rebased onto c4defb02; all three drifted files re-recorded in one call after ledger conflict resolution"
+        },
+        {
+          "path": "scripts/ci-local.mjs",
+          "target_blob": "10d5d5e6a93b74156bc0e55cfecb9984937a5e53",
+          "reason": "P-2 baseline paydown rebased onto c4defb02; all three drifted files re-recorded in one call after ledger conflict resolution"
+        }
+      ]
     }
   ]
 }

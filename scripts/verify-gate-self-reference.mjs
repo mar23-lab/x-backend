@@ -539,16 +539,25 @@ if (writeBaseline) {
   // --write-baseline must therefore CARRY FORWARD `retained_because` and `diagnosis`; regenerating
   // without them would silently strip the arguments and turn reasoned entries back into anonymous
   // debt, which is exactly how a ratchet rots upward.
+  //
+  // 260729: the carry-forward preserved `retained_because` and `diagnosis` but SILENTLY DROPPED
+  // `known_gap`, and it rewrote `rule` with a shorter hardcoded string that omitted the sentence
+  // explaining what those fields mean. Paying down two entries therefore destroyed the recorded
+  // weaknesses of the two that remain — the ratchet rotting in the one direction it was built to
+  // prevent. `known_gap` is now carried too, and the rule text below is the full one.
+  const CARRIED_FIELDS = ['retained_because', 'diagnosis', 'known_gap'];
   const carried = new Map();
   if (existsSync(BASELINE_PATH)) {
     for (const v of JSON.parse(readFileSync(BASELINE_PATH, 'utf8')).violations ?? []) {
-      if (v.retained_because || v.diagnosis) carried.set(v.file, { retained_because: v.retained_because, diagnosis: v.diagnosis });
+      if (CARRIED_FIELDS.some((f) => v[f])) {
+        carried.set(v.file, Object.fromEntries(CARRIED_FIELDS.filter((f) => v[f]).map((f) => [f, v[f]])));
+      }
     }
   }
   mkdirSync(dirname(BASELINE_PATH), { recursive: true });
   writeFileSync(BASELINE_PATH, JSON.stringify({
     schema_id: 'gate_self_reference_baseline.v1',
-    rule: 'A verification gate may not assert a function or constant it itself defines. Entries below are PRE-EXISTING violations, frozen so the class cannot grow. NEW violations fail the gate. Entries that stop violating are reported STALE and must be removed (run --write-baseline) so the list cannot rot upward.',
+    rule: 'A verification gate may not assert a function or constant it itself defines. Entries below are PRE-EXISTING violations, frozen so the class cannot grow. NEW violations fail the gate. Entries that stop violating are reported STALE and must be removed (run --write-baseline) so the list cannot rot upward. An entry carrying `retained_because` is a DELIBERATE, argued exception rather than unpaid debt; an entry carrying `diagnosis` is unpaid debt whose cause has been measured but not yet fixed; `known_gap` records a separate weakness of that gate. All three are preserved across re-baselines.',
     self_ref_ratio_max: SELF_REF_RATIO_MAX,
     captured_at: new Date().toISOString().slice(0, 10),
     gates_scanned: results.length,
@@ -557,8 +566,9 @@ if (writeBaseline) {
         file: v.file, checks: v.checks, self_referential: v.self_referential, ratio: v.ratio, external_subject: v.external_subject,
       };
       const prior = carried.get(v.file);
-      if (prior && prior.retained_because) row.retained_because = prior.retained_because;
-      if (prior && prior.diagnosis) row.diagnosis = prior.diagnosis;
+      for (const f of CARRIED_FIELDS) {
+        if (prior && prior[f]) row[f] = prior[f];
+      }
       return row;
     }),
   }, null, 2) + '\n');

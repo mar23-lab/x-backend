@@ -1,6 +1,6 @@
 {
   "schema_id": "gate_self_reference_baseline.v1",
-  "rule": "A verification gate may not assert a function or constant it itself defines. Entries below are PRE-EXISTING violations, frozen so the class cannot grow. NEW violations fail the gate. Entries that stop violating are reported STALE and must be removed (run --write-baseline) so the list cannot rot upward. An entry carrying `retained_because` is a DELIBERATE, argued exception rather than unpaid debt; an entry carrying `diagnosis` is unpaid debt whose cause has been measured but not yet fixed. Both fields are preserved across re-baselines.",
+  "rule": "A verification gate may not assert a function or constant it itself defines. Entries below are PRE-EXISTING violations, frozen so the class cannot grow. NEW violations fail the gate. Entries that stop violating are reported STALE and must be removed (run --write-baseline) so the list cannot rot upward. An entry carrying `retained_because` is a DELIBERATE, argued exception rather than unpaid debt; an entry carrying `diagnosis` is unpaid debt whose cause has been measured but not yet fixed; `known_gap` records a separate weakness of that gate. All three are preserved across re-baselines.",
   "self_ref_ratio_max": 0.5,
   "captured_at": "2026-07-29",
   "gates_scanned": 171,
@@ -22,22 +22,6 @@
       "external_subject": true,
       "retained_because": "EXPECTATION LISTS, NOT FIXTURES, reviewed 260729. Each of the seven `gate(...)` closures reads a REAL artifact (migrations 009/010/011 SQL, dal/types.ts, dal/types/inference.ts, DalAdapter.ts, WorkersDalAdapter.ts) and checks it against a hard-coded list of required markers — `required`, `alterCols`, `signals`, `thresholds`, `stubMethods`. Those arrays are the CONTRACT the migration must satisfy, not a fixture the gate then asserts about itself; the subject under test is the file on disk. The available clear is to move the marker lists into an external JSON contract so the detector sees `const required = JSON.parse(read(...))`. That is a genuine improvement (the expectation becomes reviewable and diffable outside the gate) and is the recommended follow-up, but it was not done in this pass and the entry is NOT being cleared by relabelling.",
       "known_gap": "No --self-test, and the assertions are string-greps over SQL/TS text, which is the weakest gate class in the estate. Both are real; neither is the P-2 violation."
-    },
-    {
-      "file": "scripts/verify-backend-boundary.mjs",
-      "checks": 2,
-      "self_referential": 1,
-      "ratio": 0.5,
-      "external_subject": true,
-      "diagnosis": "UNPAID DEBT — cause measured 260729, fix NOT applied. The single self-referential callsite is in the --self-test: `validateEntryContracts(staleAgent, staleClaude)` where `validateEntryContracts` is defined in this file and both fixtures are string literals defined in this file. It proves a function returns the strings it was written to return; it never runs this gate as a process and never observes an exit code. The fix is the same shape applied to verify-tenant-source-isolation / verify-domain-scaffold-honest-empty / verify-flag-parse-hygiene in this pass: add a `--root=` override, have the self-test write AGENTS.md + CLAUDE.md carrying the stale shadow-only claims (plus a minimal src/workers so only the intended detector fires) into a temp root, SPAWN this gate at it, and assert exit 1; control = the real repo root at exit 0."
-    },
-    {
-      "file": "scripts/verify-customer-ecosystem-template.mjs",
-      "checks": 2,
-      "self_referential": 1,
-      "ratio": 0.5,
-      "external_subject": false,
-      "diagnosis": "UNPAID DEBT — cause measured 260729, fix NOT applied. The flagged callsite is `emit('verify-customer-ecosystem-template', failures, { required_files: required.length })`; `required` is a 16-entry const-array literal of required template paths. Strictly this is a METRIC in the emit payload rather than an assertion subject — the asserted subject is `failures` — so the detector is partly over-matching here. The honest clear is nevertheless available and worth doing: move the 16-path required list into an external contract (e.g. docs/contracts/CUSTOMER_ECOSYSTEM_TEMPLATE_CONTRACT.json) so the template's contract is reviewable outside the gate and the gate reads it, add a `--template-root=` override, add a denominator guard (a contract listing zero required files must exit 2, not pass vacuously), and add a --self-test that spawns this gate against a temp template root with one required file deleted and observes exit 1. This gate currently has NO self-test and is the only baseline entry with external_subject=false."
     }
   ]
 }

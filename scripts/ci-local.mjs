@@ -10,6 +10,14 @@ const gates = [
   ['MCP server tests', 'npm', ['--prefix', 'packages/xlooop-mcp-server', 'test']],
   ['provenance', 'npm', ['run', 'verify:provenance']],
   ['boundary', 'npm', ['run', 'verify:boundary']],
+  // 260729: the last two P-2 baseline entries carrying a `diagnosis` were paid down. Both gates now
+  // SPAWN themselves at a seeded temp root and OBSERVE the exit code instead of asserting their own
+  // in-file fixtures. A control that nothing triggers is not a control, so they are wired here.
+  // verify:customer-ecosystem-template had NO npm script at all before this — its only caller was
+  // verify-customer-onboarding-composed-gate.mjs, which is itself wired nowhere.
+  ['backend boundary controls', 'npm', ['run', 'verify:boundary:self-test']],
+  ['customer ecosystem template', 'npm', ['run', 'verify:customer-ecosystem-template']],
+  ['customer ecosystem template controls', 'npm', ['run', 'verify:customer-ecosystem-template:self-test']],
   ['runtime independence', 'npm', ['run', 'verify:no-mbp-runtime-dependency']],
   ['API contract', 'npm', ['run', 'verify:contract']],
   ['deploy provenance wiring', 'npm', ['run', 'verify:deploy-provenance']],
