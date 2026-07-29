@@ -30,7 +30,17 @@ if (!Array.isArray(receipt.deltas) || receipt.deltas.length === 0) {
   failures.push('at least one delta is required');
 }
 
+// RETIREMENT (260729). A delta-managed file that is legitimately DELETED had no expressible state
+// here: `latestByPath` went on expecting it and reported `missing` forever. The only two ways out
+// were to hand-edit this receipt (forbidden) or to abandon the deletion — which is how a gate proven
+// worthless can outlive its own replacement. A `seed_exclusions` entry in a LATER delta now RETIRES
+// the path: the blob expectation is dropped, and the pre-existing "seed exclusion became tracked"
+// assertion below becomes the standing invariant that it stays deleted. Order matters — a path that
+// is retired and later re-introduced keeps the newer expectation, so the index comparison is not
+// decoration.
+let deltaOrdinal = 0;
 for (const delta of receipt.deltas ?? []) {
+  deltaOrdinal += 1;
   if (!/^[0-9a-f]{40}$/.test(delta.source_commit ?? '')) {
     failures.push(`invalid source_commit for ${String(delta.delta_id)}`);
   }
@@ -43,14 +53,20 @@ for (const delta of receipt.deltas ?? []) {
     failures.push(`unsafe authority for ${String(delta.delta_id)}`);
   }
   for (const entry of delta.copied_files ?? []) {
-    latestByPath.set(entry.path, { expected: entry.source_blob, mode: 'copied' });
+    latestByPath.set(entry.path, { expected: entry.source_blob, mode: 'copied', ordinal: deltaOrdinal });
   }
   for (const entry of delta.transformed_files ?? []) {
-    latestByPath.set(entry.path, { expected: entry.target_blob, mode: 'transformed' });
+    latestByPath.set(entry.path, { expected: entry.target_blob, mode: 'transformed', ordinal: deltaOrdinal });
   }
   for (const entry of delta.seed_exclusions ?? []) {
-    seedExclusions.set(entry.path, entry);
+    seedExclusions.set(entry.path, { ...entry, ordinal: deltaOrdinal });
   }
+}
+
+// Drop the blob expectation for any path retired by a LATER delta than the one that registered it.
+for (const [relativePath, exclusion] of seedExclusions) {
+  const expectation = latestByPath.get(relativePath);
+  if (expectation && expectation.ordinal < exclusion.ordinal) latestByPath.delete(relativePath);
 }
 
 let copied = 0;
