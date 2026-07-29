@@ -59,6 +59,12 @@ const gates = [
   ['gate self-reference meta-gate', 'npm', ['run', 'verify:gate-self-reference']],
   ['gate self-reference meta-gate controls', 'npm', ['run', 'verify:gate-self-reference:self-test']],
   ['frontend/API pair deploy gate controls', 'npm', ['run', 'verify:frontend-pair:self-test']],
+  // 260729: three P-2 baseline entries were cleared by replacing in-file fixture assertions with
+  // self-tests that SPAWN the gate and OBSERVE its exit code. A control that nothing triggers is not
+  // a control, so they are wired here rather than left as an unrun flag.
+  ['tenant source isolation controls', 'npm', ['run', 'verify:tenant-source-isolation:self-test']],
+  ['domain scaffold honest-empty controls', 'npm', ['run', 'verify:domain-scaffold-honest-empty:self-test']],
+  ['flag parse hygiene controls', 'npm', ['run', 'verify:flag-parse-hygiene:self-test']],
   ['typecheck', 'npm', ['run', 'typecheck']],
   ['worker suite', 'npm', ['test']],
 ];

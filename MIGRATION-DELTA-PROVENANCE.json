@@ -3553,6 +3553,53 @@
           "reason": "Stage 2 (260729): verify-customer-revocation-end-to-end.mjs asserted its own authorize() over its own fixtures (META-GATE P-2 named instance, 20 of 24 checks self-referential). Replaced by verify-customer-revocation-authority.mjs, which imports and executes the shipped customer-token store and spine authority. run-trust-proofs.mjs rewired to the successor plus the executed-assertions cross-tenant runner; ci-local.mjs gained the real security-header check and the cross-tenant runner controls."
         }
       ]
+    },
+    {
+      "delta_id": "metagate-p2-baseline-debt-260729",
+      "generated_at": "2026-07-29T10:57:40.974Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "1d2dbe27f0b0a7f8ff0d4267911e98bb38f85012",
+      "target_base_commit": "1d2dbe27f0b0a7f8ff0d4267911e98bb38f85012",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "scripts/verify-domain-scaffold-honest-empty.mjs",
+          "target_blob": "5f27624a07de73567062aa32032ea7d19afd757d",
+          "reason": "P-2 baseline paydown: three gates rewritten so their self-tests spawn the gate and observe exit codes instead of re-running in-file functions on in-file fixtures; each also gained a missing empty-input/absent-subject guard exiting 2. Evidence: node scripts/verify-gate-self-reference.mjs --json -> violations 7 (origin/main f4233b5c279bc783985dc847a542c24c6d0b3f45) then 4; each gate's --self-test exits 0 with observed mutant exit 1 and observed cannot-measure exit 2."
+        },
+        {
+          "path": "scripts/verify-flag-parse-hygiene.mjs",
+          "target_blob": "c519b89353f8061bb09c80cba4f0866c4dda49f2",
+          "reason": "P-2 baseline paydown: three gates rewritten so their self-tests spawn the gate and observe exit codes instead of re-running in-file functions on in-file fixtures; each also gained a missing empty-input/absent-subject guard exiting 2. Evidence: node scripts/verify-gate-self-reference.mjs --json -> violations 7 (origin/main f4233b5c279bc783985dc847a542c24c6d0b3f45) then 4; each gate's --self-test exits 0 with observed mutant exit 1 and observed cannot-measure exit 2."
+        },
+        {
+          "path": "scripts/verify-tenant-source-isolation.mjs",
+          "target_blob": "68aa7f115e435555681a76ab9f1b6c1f4819e52f",
+          "reason": "P-2 baseline paydown: three gates rewritten so their self-tests spawn the gate and observe exit codes instead of re-running in-file functions on in-file fixtures; each also gained a missing empty-input/absent-subject guard exiting 2. Evidence: node scripts/verify-gate-self-reference.mjs --json -> violations 7 (origin/main f4233b5c279bc783985dc847a542c24c6d0b3f45) then 4; each gate's --self-test exits 0 with observed mutant exit 1 and observed cannot-measure exit 2."
+        }
+      ]
+    },
+    {
+      "delta_id": "metagate-p2-controls-wiring-260729",
+      "generated_at": "2026-07-29T10:57:59.635Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "1d2dbe27f0b0a7f8ff0d4267911e98bb38f85012",
+      "target_base_commit": "1d2dbe27f0b0a7f8ff0d4267911e98bb38f85012",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "package.json",
+          "target_blob": "5feb609a62aa150d6397032a4ae861de24d5a9da",
+          "reason": "P-2 baseline paydown, wiring half: the three rewritten gates' self-tests are exposed as npm scripts and triggered from ci-local.mjs. A control that nothing runs is not a control — the same finding that put verify:frontend-pair:self-test into ci-local. Evidence: npm run verify:tenant-source-isolation:self-test / verify:domain-scaffold-honest-empty:self-test / verify:flag-parse-hygiene:self-test each > /dev/null 2>&1; echo $? -> 0."
+        },
+        {
+          "path": "scripts/ci-local.mjs",
+          "target_blob": "8aa80a2f972c7a54d25ed0e4afa3f55d456d4b3b",
+          "reason": "P-2 baseline paydown, wiring half: the three rewritten gates' self-tests are exposed as npm scripts and triggered from ci-local.mjs. A control that nothing runs is not a control — the same finding that put verify:frontend-pair:self-test into ci-local. Evidence: npm run verify:tenant-source-isolation:self-test / verify:domain-scaffold-honest-empty:self-test / verify:flag-parse-hygiene:self-test each > /dev/null 2>&1; echo $? -> 0."
+        }
+      ]
     }
   ]
 }
