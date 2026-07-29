@@ -64,6 +64,7 @@ const gates = [
   // a control, so they are wired here rather than left as an unrun flag.
   ['tenant source isolation controls', 'npm', ['run', 'verify:tenant-source-isolation:self-test']],
   ['domain scaffold honest-empty controls', 'npm', ['run', 'verify:domain-scaffold-honest-empty:self-test']],
+  ['flag parse hygiene', 'npm', ['run', 'verify:flag-parse-hygiene']],
   ['flag parse hygiene controls', 'npm', ['run', 'verify:flag-parse-hygiene:self-test']],
   ['typecheck', 'npm', ['run', 'typecheck']],
   ['worker suite', 'npm', ['test']],

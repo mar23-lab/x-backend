@@ -1,11 +1,12 @@
 import type { CronHandler } from './types';
 import { dispatchTenantProjectionOutbox } from '../services/tenant-projection-queue';
+import { envFlagTrue } from '../lib/env-flag';
 
 const LOOP_NAME = 'tenant_projection_dispatch';
 
 export const tenantProjectionDispatchCron: CronHandler = async (ctx) => {
   const startedAt = ctx.now();
-  const enabled = String(ctx.env?.TENANT_PROJECTION_QUEUE_ENABLED || '').toLowerCase() === 'true';
+  const enabled = envFlagTrue(ctx.env?.TENANT_PROJECTION_QUEUE_ENABLED);
   if (!ctx.projectionOutbox) {
     return {
       loop_name: LOOP_NAME,

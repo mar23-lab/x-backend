@@ -3600,6 +3600,42 @@
           "reason": "P-2 baseline paydown, wiring half: the three rewritten gates' self-tests are exposed as npm scripts and triggered from ci-local.mjs. A control that nothing runs is not a control — the same finding that put verify:frontend-pair:self-test into ci-local. Evidence: npm run verify:tenant-source-isolation:self-test / verify:domain-scaffold-honest-empty:self-test / verify:flag-parse-hygiene:self-test each > /dev/null 2>&1; echo $? -> 0."
         }
       ]
+    },
+    {
+      "delta_id": "flag-parse-hygiene-wire-260729",
+      "generated_at": "2026-07-29T12:19:45.084Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "be0b8365ed941169cd1eeea25a5255e832fd66db",
+      "target_base_commit": "be0b8365ed941169cd1eeea25a5255e832fd66db",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/crons/tenant-projection-dispatch.ts",
+          "target_blob": "be77aa9e14c8ccc5255d59058e61c27a1745d80b",
+          "reason": "route TENANT_PROJECTION_QUEUE_ENABLED and GRAPH_DOCUMENT_NODES_ENABLED through envFlagTrue; wire verify:flag-parse-hygiene into ci-local"
+        },
+        {
+          "path": "src/workers/index.ts",
+          "target_blob": "56025819867ecce0905290ae9f7f227d534b8b83",
+          "reason": "route TENANT_PROJECTION_QUEUE_ENABLED and GRAPH_DOCUMENT_NODES_ENABLED through envFlagTrue; wire verify:flag-parse-hygiene into ci-local"
+        },
+        {
+          "path": "scripts/verify-flag-parse-hygiene.mjs",
+          "target_blob": "79a6f15ce638a42f61395294b71b2da64bc8d4a4",
+          "reason": "route TENANT_PROJECTION_QUEUE_ENABLED and GRAPH_DOCUMENT_NODES_ENABLED through envFlagTrue; wire verify:flag-parse-hygiene into ci-local"
+        },
+        {
+          "path": "scripts/ci-local.mjs",
+          "target_blob": "05ca762b151f8706e729e60860ba06857ef02757",
+          "reason": "route TENANT_PROJECTION_QUEUE_ENABLED and GRAPH_DOCUMENT_NODES_ENABLED through envFlagTrue; wire verify:flag-parse-hygiene into ci-local"
+        },
+        {
+          "path": "package.json",
+          "target_blob": "6bee7dbb3bc75faf846a01004938c0290fe126fa",
+          "reason": "route TENANT_PROJECTION_QUEUE_ENABLED and GRAPH_DOCUMENT_NODES_ENABLED through envFlagTrue; wire verify:flag-parse-hygiene into ci-local"
+        }
+      ]
     }
   ]
 }

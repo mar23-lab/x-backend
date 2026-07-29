@@ -114,13 +114,15 @@ if (selfTest) {
   record(`EMPTY INPUT SET exits 2 "cannot measure" (observed exit=${emptyRun.status})`, emptyRun.status === 2);
 
   // (3) CONTROL — the REAL src/workers tree must be MEASURABLE: a verdict (0 or 1), never 2.
-  //     NOTE, stated rather than hidden: on 260729 the real tree exits 1. Two pre-existing
-  //     quote-intolerant reads remain — src/workers/crons/tenant-projection-dispatch.ts:8 and
-  //     src/workers/index.ts:447 — and the ORIGINAL gate at the production checkout
-  //     (e40bf927fe90d8b557858c86ac30eb5256a3d7ba) exits 1 on them too, so this is not a regression
-  //     introduced by the rewrite. This gate is not wired into any npm script, which is how a red
-  //     gate stayed invisible. Asserting exit 0 here would be asserting a repo state that is false;
-  //     the clean-tree proof is case (7) instead.
+  //     HISTORY, stated rather than hidden: until 260729 the real tree exited 1 on two
+  //     quote-intolerant reads — src/workers/crons/tenant-projection-dispatch.ts:8 and
+  //     src/workers/index.ts:447. The ORIGINAL gate at the production checkout
+  //     (e40bf927fe90d8b557858c86ac30eb5256a3d7ba) exited 1 on them too, so that red was never a
+  //     regression introduced by the rewrite — it was a latent defect nothing was watching,
+  //     because this gate was referenced by no npm script. Both reads now route through
+  //     envFlagTrue, and the gate runs in ci-local as verify:flag-parse-hygiene, which is what
+  //     makes a future red visible. This case still accepts 0 OR 1 deliberately: it asserts
+  //     MEASURABILITY, not a verdict — the clean-tree proof is case (7).
   const controlRun = run(path.join(repoRoot, DEFAULT_SCAN_ROOT));
   record(`CONTROL: the real src/workers tree is MEASURABLE, verdict not "cannot measure" (observed exit=${controlRun.status})`,
     controlRun.status === 0 || controlRun.status === 1);

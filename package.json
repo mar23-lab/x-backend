@@ -79,6 +79,7 @@
     "verify:tenant-source-isolation:self-test": "node scripts/verify-tenant-source-isolation.mjs --self-test",
     "verify:domain-scaffold-honest-empty": "node scripts/verify-domain-scaffold-honest-empty.mjs",
     "verify:domain-scaffold-honest-empty:self-test": "node scripts/verify-domain-scaffold-honest-empty.mjs --self-test",
+    "verify:flag-parse-hygiene": "node scripts/verify-flag-parse-hygiene.mjs",
     "verify:flag-parse-hygiene:self-test": "node scripts/verify-flag-parse-hygiene.mjs --self-test",
     "verify:cross-tenant-rls-proof": "node scripts/verify-cross-tenant-rls-proof.mjs",
     "verify:cross-tenant-rls-proof:self-test": "node scripts/verify-cross-tenant-rls-proof.mjs --self-test",
