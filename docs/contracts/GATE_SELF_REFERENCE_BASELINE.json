@@ -1,0 +1,65 @@
+{
+  "schema_id": "gate_self_reference_baseline.v1",
+  "rule": "A verification gate may not assert a function or constant it itself defines. Entries below are PRE-EXISTING violations, frozen so the class cannot grow. NEW violations fail the gate. Entries that stop violating are reported STALE and must be removed (run --write-baseline) so the list cannot rot upward.",
+  "self_ref_ratio_max": 0.5,
+  "captured_at": "2026-07-29",
+  "gates_scanned": 170,
+  "violations": [
+    {
+      "file": "scripts/verify-governance-manifests.mjs",
+      "checks": 5,
+      "self_referential": 4,
+      "ratio": 0.8,
+      "external_subject": true
+    },
+    {
+      "file": "scripts/verify-domain-scaffold-honest-empty.mjs",
+      "checks": 11,
+      "self_referential": 7,
+      "ratio": 0.6364,
+      "external_subject": true
+    },
+    {
+      "file": "scripts/verify-lem-v4-migrations.mjs",
+      "checks": 10,
+      "self_referential": 6,
+      "ratio": 0.6,
+      "external_subject": true
+    },
+    {
+      "file": "scripts/verify-tenant-source-isolation.mjs",
+      "checks": 5,
+      "self_referential": 3,
+      "ratio": 0.6,
+      "external_subject": true
+    },
+    {
+      "file": "scripts/verify-flag-parse-hygiene.mjs",
+      "checks": 9,
+      "self_referential": 5,
+      "ratio": 0.5556,
+      "external_subject": true
+    },
+    {
+      "file": "scripts/verify-backend-boundary.mjs",
+      "checks": 2,
+      "self_referential": 1,
+      "ratio": 0.5,
+      "external_subject": true
+    },
+    {
+      "file": "scripts/verify-customer-ecosystem-template.mjs",
+      "checks": 2,
+      "self_referential": 1,
+      "ratio": 0.5,
+      "external_subject": false
+    },
+    {
+      "file": "scripts/verify-customer-revocation-end-to-end.mjs",
+      "checks": 8,
+      "self_referential": 4,
+      "ratio": 0.5,
+      "external_subject": true
+    }
+  ]
+}

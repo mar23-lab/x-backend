@@ -26,6 +26,8 @@
     "verify:deploy-schema-head:self-test": "node scripts/verify-deploy-schema-head.mjs --self-test",
     "verify:frontend-pair": "node scripts/verify-frontend-pair-before-api-deploy.mjs",
     "verify:frontend-pair:self-test": "node scripts/verify-frontend-pair-before-api-deploy.mjs --self-test",
+    "verify:gate-self-reference": "node scripts/verify-gate-self-reference.mjs",
+    "verify:gate-self-reference:self-test": "node scripts/verify-gate-self-reference.mjs --self-test",
     "verify:authority-decision": "node scripts/verify-authority-decision-packet.mjs",
     "verify:authority-decision:self-test": "node scripts/verify-authority-decision-packet.mjs --self-test",
     "verify:authority-decision:deploy": "node scripts/verify-authority-decision-packet.mjs --require-approved-to-deploy",
