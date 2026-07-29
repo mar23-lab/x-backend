@@ -3520,6 +3520,39 @@
           "reason": "per-pair precondition fix: materialization now keyed on (user, orgId) membership rather than global entitlement.state; see PR #114"
         }
       ]
+    },
+    {
+      "delta_id": "stage2-real-assurance-20260729",
+      "generated_at": "2026-07-29T10:01:41.160Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "e40bf927fe90d8b557858c86ac30eb5256a3d7ba",
+      "target_base_commit": "e40bf927fe90d8b557858c86ac30eb5256a3d7ba",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "scripts/run-trust-proofs.mjs",
+          "target_blob": "573a727dea6d85f80f9454536bab94453254f3dd",
+          "reason": "Stage 2 (260729): verify-customer-revocation-end-to-end.mjs asserted its own authorize() over its own fixtures (META-GATE P-2 named instance, 20 of 24 checks self-referential). Replaced by verify-customer-revocation-authority.mjs, which imports and executes the shipped customer-token store and spine authority. run-trust-proofs.mjs rewired to the successor plus the executed-assertions cross-tenant runner; ci-local.mjs gained the real security-header check and the cross-tenant runner controls."
+        },
+        {
+          "path": "scripts/ci-local.mjs",
+          "target_blob": "8eb88e999991a80babc52c7bb0425e38d3b0a6a9",
+          "reason": "Stage 2 (260729): verify-customer-revocation-end-to-end.mjs asserted its own authorize() over its own fixtures (META-GATE P-2 named instance, 20 of 24 checks self-referential). Replaced by verify-customer-revocation-authority.mjs, which imports and executes the shipped customer-token store and spine authority. run-trust-proofs.mjs rewired to the successor plus the executed-assertions cross-tenant runner; ci-local.mjs gained the real security-header check and the cross-tenant runner controls."
+        },
+        {
+          "path": "package.json",
+          "target_blob": "aba7011bbff32e02e6bdfdd89f82c4467125ae53",
+          "reason": "Stage 2 (260729): verify-customer-revocation-end-to-end.mjs asserted its own authorize() over its own fixtures (META-GATE P-2 named instance, 20 of 24 checks self-referential). Replaced by verify-customer-revocation-authority.mjs, which imports and executes the shipped customer-token store and spine authority. run-trust-proofs.mjs rewired to the successor plus the executed-assertions cross-tenant runner; ci-local.mjs gained the real security-header check and the cross-tenant runner controls."
+        }
+      ],
+      "seed_exclusions": [
+        {
+          "path": "scripts/verify-customer-revocation-end-to-end.mjs",
+          "source_blob": "ba5894e273f1d0f9b4fd0577ab2bc7b397cc2309",
+          "reason": "Stage 2 (260729): verify-customer-revocation-end-to-end.mjs asserted its own authorize() over its own fixtures (META-GATE P-2 named instance, 20 of 24 checks self-referential). Replaced by verify-customer-revocation-authority.mjs, which imports and executes the shipped customer-token store and spine authority. run-trust-proofs.mjs rewired to the successor plus the executed-assertions cross-tenant runner; ci-local.mjs gained the real security-header check and the cross-tenant runner controls."
+        }
+      ]
     }
   ]
 }
