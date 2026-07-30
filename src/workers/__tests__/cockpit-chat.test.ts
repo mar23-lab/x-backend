@@ -47,6 +47,21 @@ const FACTS = (over: Partial<CockpitChatFacts> = {}): CockpitChatFacts => ({
   ...over,
 });
 
+const SEMANTIC_PLAN = {
+  project_id: 'org_3EG82-cockpit-ux',
+  project_name: 'Cockpit & Workspace UX',
+  project_status: 'active',
+  project_updated_at: '2026-07-30T07:15:00.000Z',
+  entities: [
+    { id: 'goal_1', kind: 'goal' as const, title: 'Make every pilot write durable', status: 'active', position: 0, updated_at: '2026-07-30T07:10:00.000Z' },
+    { id: 'goal_2', kind: 'goal' as const, title: 'Simplify the project workspace', status: 'open', position: 1, updated_at: '2026-07-30T07:11:00.000Z' },
+    { id: 'milestone_1', kind: 'milestone' as const, title: 'Owner journeys accepted', status: 'open', position: 2, updated_at: '2026-07-30T07:12:00.000Z' },
+    { id: 'todo_1', kind: 'todo' as const, title: 'Verify project fact recall', status: 'open', position: 3, updated_at: '2026-07-30T07:13:00.000Z' },
+    { id: 'todo_2', kind: 'todo' as const, title: 'Prove reload continuity', status: 'blocked', position: 4, updated_at: '2026-07-30T07:14:00.000Z' },
+    { id: 'intent_1', kind: 'intent' as const, title: 'Complete the pilot safely', status: 'open', position: 5, updated_at: '2026-07-30T07:15:00.000Z' },
+  ],
+};
+
 describe('compileChatFacts — grounding extraction', () => {
   it('extracts real counts, statuses, top sources, and named recent items', () => {
     const g = compileChatFacts(FACTS());
@@ -124,6 +139,47 @@ describe('project requested-fact semantic corpus', () => {
     for (const { fact, prompt } of cases) {
       expect(classifyRequestedProjectFacts(prompt), prompt).toContain(fact);
     }
+  });
+
+  it('returns the named canonical fact in all 60 project responses', async () => {
+    const cases = corpus.flatMap(({ fact, prompts }) => prompts.map((prompt) => ({ fact, prompt })));
+    const expected = {
+      project_name: ['Cockpit & Workspace UX', 'org_3EG82-cockpit-ux'],
+      goals: ['Goals (2):', 'Make every pilot write durable', 'Simplify the project workspace'],
+      milestones: ['Milestones (1):', 'Owner journeys accepted'],
+      todos: ['Todos (2):', 'Verify project fact recall', 'Prove reload continuity'],
+      counts: ['2 goals', '1 milestone', '2 todos', '1 intent'],
+      freshness: ['2026-07-30T07:15:00.000Z'],
+    } satisfies Record<(typeof corpus)[number]['fact'], string[]>;
+
+    for (const { fact, prompt } of cases) {
+      const result = await answerCockpitChat(prompt, FACTS({ plan: SEMANTIC_PLAN }));
+      expect(result.generated_by, prompt).toBe('deterministic');
+      expect(result.grounded_on.requested_facts.required, prompt).toContain(fact);
+      expect(result.grounded_on.requested_facts.satisfied, prompt).toContain(fact);
+      expect(result.grounded_on.requested_facts.unavailable, prompt).not.toContain(fact);
+      for (const value of expected[fact]) expect(result.answer, `${prompt} -> ${value}`).toContain(value);
+      expect(result.answer, prompt).not.toContain('Another Project');
+    }
+  });
+
+  it('answers the exact production multi-fact diagnostic from the selected project only', async () => {
+    const prompt = '[PROD OWNER DIAGNOSTIC 2026-07-30 READ-ONLY] For this selected project only, return the exact project name, every current goal, milestone count, todo count, and each fact source/freshness. Do not create, edit, approve, connect, sync, or execute anything.';
+    const result = await answerCockpitChat(prompt, FACTS({ plan: SEMANTIC_PLAN }));
+
+    expect(result.generated_by).toBe('deterministic');
+    expect(result.grounded_on.requested_facts).toEqual({
+      required: ['project_name', 'goals', 'milestones', 'todos', 'counts', 'freshness'],
+      satisfied: ['project_name', 'goals', 'milestones', 'todos', 'counts', 'freshness'],
+      unavailable: [],
+    });
+    expect(result.answer).toContain('Project: Cockpit & Workspace UX (org_3EG82-cockpit-ux)');
+    expect(result.answer).toContain('Goals (2):');
+    expect(result.answer).toContain('Milestones (1):');
+    expect(result.answer).toContain('Todos (2):');
+    expect(result.answer).toContain('Counts: 2 goals · 1 milestone · 2 todos · 1 intent.');
+    expect(result.answer).toContain('Plan last updated: 2026-07-30T07:15:00.000Z.');
+    expect(result.answer).not.toMatch(/approval request|operator mode/i);
   });
 
   it('does not convert workspace charter goals into project-plan requirements without project scope', () => {
