@@ -476,6 +476,46 @@ describe('POST /customer/invites', () => {
     expect(json.invited.role).toBe('org:member');
   });
 
+  // 260730 · THE CASE THE TWO TESTS ABOVE COULD NOT SEE.
+  //
+  // Both use corporate-shaped domains (acme.com), so the public-provider case was never in the
+  // matrix. The negative test written to prevent a hardcoded 'org:admin' therefore could not catch
+  // a predicate that is unconditionally true for every Gmail tenant. Production audit_logs row
+  // 16798: a mistyped Gmail address received a live org:admin invitation to a customer tenant.
+  //
+  // Both of Xlooop's external design-partner tenants are owned by gmail.com addresses, so for them
+  // "same domain" carried zero information about employer.
+  it('201 same PUBLIC-provider domain stays org:member (gmail is not a company)', async () => {
+    const res = await post(
+      appFor(
+        { user_id: 'u1', workspace_id: 'org_acme', role: 'owner', email: 'owner@gmail.com' },
+        unlockedDal()
+      ),
+      '/customer/invites',
+      { email: 'Someone.Else@Gmail.com' }
+    );
+    expect(res.status).toBe(201);
+    const json = (await res.json()) as Record<string, any>;
+    expect(json.invited.role).toBe('org:member');
+  });
+
+  // The escape hatch must survive: an owner who deliberately asks for operator still gets it, even
+  // on a public provider. Otherwise this fix would strand every Gmail tenant's real colleague at
+  // read-only — the exact 260728 defect, reintroduced from the other side.
+  it('201 explicit operator on a public provider is still honoured', async () => {
+    const res = await post(
+      appFor(
+        { user_id: 'u1', workspace_id: 'org_acme', role: 'owner', email: 'owner@gmail.com' },
+        unlockedDal()
+      ),
+      '/customer/invites',
+      { email: 'colleague@gmail.com', role: 'operator' }
+    );
+    expect(res.status).toBe(201);
+    const json = (await res.json()) as Record<string, any>;
+    expect(json.invited.role).toBe('org:admin');
+  });
+
   it('201 admin role maps to org:admin (operator caller)', async () => {
     const res = await post(
       appFor({ user_id: 'u2', workspace_id: 'org_acme', role: 'operator' }, unlockedDal()),
