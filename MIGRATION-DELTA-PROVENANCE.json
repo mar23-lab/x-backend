@@ -3730,6 +3730,27 @@
           "reason": "backend 30s smoke tier: scripts/smoke.mjs added, package.json gains smoke + smoke:self-test"
         }
       ]
+    },
+    {
+      "delta_id": "public-provider-elevation-260730",
+      "generated_at": "2026-07-30T10:49:20.440Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "352053e16ed3348c6c7372f767365f28752b4278",
+      "target_base_commit": "352053e16ed3348c6c7372f767365f28752b4278",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/routes/customer.ts",
+          "target_blob": "518f1af4ee8c6afcb15393b45422bb605c880ed2",
+          "reason": "reconcile public-provider-elevation-260730"
+        },
+        {
+          "path": "src/workers/__tests__/customer.test.ts",
+          "target_blob": "f1dcd168e3148ff1661f53bb8bba11e80de2bb5f",
+          "reason": "reconcile public-provider-elevation-260730"
+        }
+      ]
     }
   ]
 }

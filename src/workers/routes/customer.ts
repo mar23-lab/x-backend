@@ -37,6 +37,28 @@ export const customerRoute = new Hono<{
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+// Domains where a shared suffix says nothing about a shared employer. Used ONLY to disqualify the
+// same-domain colleague inference in POST /customer/invites — see the block at its use site for the
+// production audit rows that made this necessary. Never used to reject an address: a Gmail invitee
+// is perfectly valid, they simply arrive at the conservative 'client' role instead of operator.
+//
+// A denylist ages, and a missed provider silently restores the elevation. That is why this is the
+// FIRST of three steps, not the fix: the durable answer is a verified per-workspace domain
+// (workspaces.config, already jsonb and empty for both external tenants), with this list retired.
+const PUBLIC_EMAIL_DOMAINS = new Set([
+  'gmail.com', 'googlemail.com',
+  'outlook.com', 'hotmail.com', 'hotmail.co.uk', 'live.com', 'live.co.uk', 'msn.com',
+  'yahoo.com', 'yahoo.co.uk', 'yahoo.com.au', 'ymail.com', 'rocketmail.com',
+  'icloud.com', 'me.com', 'mac.com',
+  'aol.com', 'proton.me', 'protonmail.com', 'pm.me',
+  'gmx.com', 'gmx.net', 'gmx.de', 'mail.com', 'mail.ru', 'inbox.com',
+  'zoho.com', 'yandex.com', 'yandex.ru', 'fastmail.com', 'fastmail.fm',
+  'tutanota.com', 'tuta.io', 'hey.com', 'hushmail.com', 'zohomail.com',
+  'qq.com', '163.com', '126.com', 'sina.com', 'naver.com', 'daum.net',
+  'web.de', 't-online.de', 'orange.fr', 'free.fr', 'laposte.net',
+  'bigpond.com', 'optusnet.com.au', 'iinet.net.au', 'tpg.com.au',
+]);
+
 customerRoute.post('/customer/authority-consent', async (ctx) => {
   try {
     const auth = ctx.get('auth');
@@ -321,9 +343,41 @@ customerRoute.post('/customer/invites', async (ctx) => {
     // owner can already set any role via PATCH /api/v1/members/:userId/role, so same-domain elevation is
     // a default they could apply by hand anyway. An EXTERNAL domain still defaults to 'client' — the
     // conservative path is unchanged, and an explicit body.role still wins.
+    //
+    // 260730 — A PUBLIC MAIL PROVIDER IS NOT A COMPANY DOMAIN.
+    //
+    // The rule above infers "colleague" from a matching domain. That inference holds only for a
+    // domain an organisation actually controls. For gmail.com it holds for nobody: every Gmail
+    // address is same-domain with every other, so the predicate loses all discriminating power
+    // exactly where it is doing its most dangerous work.
+    //
+    // Measured in production audit_logs, workspace org_3EI0xhBsYKWHbLmtjdvNVY6Yqhz — a real customer
+    // tenant whose owner is on gmail.com. The operator selected "client" in the UI every time:
+    //   16798  2026-07-29 19:38  xloooop23@gmail.com  -> operator   <- typo, THREE o's
+    //   16799  2026-07-29 19:45  xlooop23@gmail.com   -> operator
+    //   16812  2026-07-30 08:54  xlooop23@gmail.com   -> operator
+    //   16813  2026-07-30 09:56  marat@xooop.com      -> client     <- control: domain differed
+    // Row 16798 is the finding: a mistyped Gmail address received a live org:admin invitation to a
+    // customer tenant. Nobody controls that mailbox.
+    //
+    // D5 rejected "default the invitee to operator" in these words: "silently grants full write to
+    // anyone invited by email ... a mistyped address gets write access to a tenant." For a tenant
+    // principal'd on a public provider, the same-domain rule IS that default. The rejected outcome
+    // arrived by another route.
+    //
+    // The two tests added on 260728 to stop a hardcoded 'org:admin' both use corporate-shaped
+    // domains, so the public-provider case was never in the matrix — the negative test written to
+    // catch this could not see it. A third case now pins it.
+    //
+    // This NARROWS the 260728 fix rather than reverting it: a colleague at a domain the tenant
+    // really owns still arrives as operator, which is the read-only defect that fix exists to
+    // prevent. Only public-provider addresses fall back to the conservative 'client' path.
     const inviterDomain = String(auth.email || '').split('@')[1]?.trim().toLowerCase() || '';
     const inviteeDomain = email.split('@')[1]?.trim().toLowerCase() || '';
-    const sameDomainAsInviter = !!inviterDomain && inviterDomain === inviteeDomain;
+    const sameDomainAsInviter =
+      !!inviterDomain &&
+      inviterDomain === inviteeDomain &&
+      !PUBLIC_EMAIL_DOMAINS.has(inviterDomain);
     const explicitElevated =
       body.role === 'owner' || body.role === 'operator' || body.role === 'admin';
     const clerkRole = explicitElevated || sameDomainAsInviter ? 'org:admin' : 'org:member';
