@@ -3855,6 +3855,27 @@
           "reason": "atomic customer authority consent and revocation with top-level serving-client receipt contract, event, audit, outbox, readback, and operator identity hardening"
         }
       ]
+    },
+    {
+      "delta_id": "pilot-core-integration-20260730",
+      "generated_at": "2026-07-30T11:38:24.712Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "f2adead2139ac33caf4bf062d173429b4aadd69c",
+      "target_base_commit": "f2adead2139ac33caf4bf062d173429b4aadd69c",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/routes/customer.ts",
+          "target_blob": "73103a52e4d9d5c8f35b582930a279a105cda461",
+          "reason": "reconciles atomic authority consent lineage with current-main public-provider invite hardening"
+        },
+        {
+          "path": "src/workers/__tests__/customer.test.ts",
+          "target_blob": "80c565adf045d3924b3fdb35f84c1eb99f7ae5fe",
+          "reason": "reconciles atomic authority consent lineage with current-main public-provider invite hardening"
+        }
+      ]
     }
   ]
 }
