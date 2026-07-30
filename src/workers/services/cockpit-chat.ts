@@ -1150,8 +1150,11 @@ export async function answerCockpitChat(
   const staleNote = grounded.data_freshness.is_stale
     ? `Note: this record's newest activity is ${grounded.data_freshness.staleness_minutes} minutes old — treat the below as a snapshot, not live status.\n\n`
     : '';
-  const projectInventoryQuestion = isProjectInventoryQuestion(message);
   const projectPlanQuestion = grounded.requested_facts.required.length > 0;
+  // A phrase such as "Name of this project" resembles a workspace project-list request to the
+  // broad inventory heuristic. The selected project's canonical plan facts are more specific and
+  // must win; otherwise a fully grounded project answer is replaced by "inventory unavailable".
+  const projectInventoryQuestion = !projectPlanQuestion && isProjectInventoryQuestion(message);
   const deterministic = (projectInventoryQuestion ? '' : staleNote)
     + (projectInventoryQuestion
       ? buildDeterministicChatAnswer(message, grounded, facts.scope, mode, facts.companyContext)

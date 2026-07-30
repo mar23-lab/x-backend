@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { appendChatExchangeRow } from '../dal/chat-store';
 import { saveWorkspaceReadinessAssessmentRow } from '../dal/customer-readiness-store';
 import { createIntakeResolutionRow, executeIntakeResolutionRow } from '../dal/intake-store';
+import { recordCustomerConsentAckRow, revokeCustomerAuthorityRow } from '../dal/customer-authority-store';
 import type { Sql } from '../db/client';
 
 type DeferredQuery = QueryConfig<unknown[]>;
@@ -396,6 +397,154 @@ describePostgres('schema 91 PostgreSQL authority', () => {
       await client.query('DELETE FROM workspaces WHERE id = $1', [workspaceId]);
       await client.query('DELETE FROM closing_attestations WHERE workspace_id = $1', [workspaceId]);
       await client.query('DELETE FROM intents WHERE workspace_id = $1', [workspaceId]);
+      await client.query('DELETE FROM users WHERE id = $1', [userId]);
+      await client.end();
+    }
+  });
+
+  it('atomically records and revokes customer authority with complete lineage', async () => {
+    const client = new Client({ connectionString: databaseUrl });
+    await client.connect();
+
+    const suffix = crypto.randomUUID().replaceAll('-', '');
+    const workspaceId = `ws_authority_pg91_${suffix}`;
+    const userId = `user_authority_pg91_${suffix}`;
+    const consentEventId = `event_authority_consent_${suffix}`;
+    const consentOutboxId = `outbox_authority_consent_${suffix}`;
+    const revokeEventId = `event_authority_revoke_${suffix}`;
+    const revokeOutboxId = `outbox_authority_revoke_${suffix}`;
+
+    try {
+      await client.query(
+        `INSERT INTO users (id, email, status, approved_at)
+         VALUES ($1, $2, 'approved', now())`,
+        [userId, `${suffix}@example.test`],
+      );
+      await client.query(
+        `INSERT INTO workspaces (id, name, owner_user_id, workspace_type, relationship_status)
+         VALUES ($1, 'Authority schema 91 integration', $2, 'company', 'internal_dogfood')`,
+        [workspaceId, userId],
+      );
+      await client.query(
+        `INSERT INTO workspace_members (workspace_id, user_id, role, status, activated_at)
+         VALUES ($1, $2, 'owner', 'active', now())`,
+        [workspaceId, userId],
+      );
+
+      const sql = postgresSql(client);
+      const consent = await recordCustomerConsentAckRow(sql, {
+        workspace_id: workspaceId,
+        user_id: userId,
+        full_name_typed: 'Schema Test Owner',
+        scopes_confirmed: { private_sources: true },
+        auto_approve_operator_user_id: userId,
+        operation_event_id: consentEventId,
+        projection_outbox_id: consentOutboxId,
+        request_id: `request_authority_consent_${suffix}`,
+      });
+      expect(consent).toMatchObject({
+        operation_event_id: consentEventId,
+        projection_outbox_id: consentOutboxId,
+        consent: {
+          workspace_id: workspaceId,
+          operator_approved_by: userId,
+          consent_acked_by: userId,
+        },
+      });
+
+      const consentReferences = await client.query(
+        `SELECT
+           EXISTS (
+             SELECT 1 FROM customer_authority_consents
+              WHERE id = $1 AND workspace_id = $2 AND revoked_at IS NULL
+           ) AS consent,
+           EXISTS (
+             SELECT 1 FROM operation_events
+              WHERE id = $3 AND workspace_id = $2
+           ) AS event,
+           EXISTS (
+             SELECT 1 FROM audit_logs
+              WHERE id::text = $4 AND workspace_id = $2
+                AND action = 'customer_authority_consent_ack'
+           ) AS audit,
+           EXISTS (
+             SELECT 1 FROM projection_outbox
+              WHERE id = $5 AND workspace_id = $2
+           ) AS outbox`,
+        [
+          consent.consent.id,
+          workspaceId,
+          consent.operation_event_id,
+          consent.audit_event_id,
+          consent.projection_outbox_id,
+        ],
+      );
+      expect(consentReferences.rows[0]).toEqual({
+        consent: true,
+        event: true,
+        audit: true,
+        outbox: true,
+      });
+
+      const revoked = await revokeCustomerAuthorityRow(sql, {
+        workspace_id: workspaceId,
+        revoked_by: userId,
+        revoked_reason: 'schema integration proof',
+        re_attest_name: 'Schema Test Owner',
+        operation_event_id: revokeEventId,
+        projection_outbox_id: revokeOutboxId,
+        request_id: `request_authority_revoke_${suffix}`,
+      });
+      expect(revoked).toMatchObject({
+        operation_event_id: revokeEventId,
+        projection_outbox_id: revokeOutboxId,
+        consent: {
+          id: consent.consent.id,
+          workspace_id: workspaceId,
+          revoked_by: userId,
+        },
+      });
+
+      const revokeReferences = await client.query(
+        `SELECT
+           EXISTS (
+             SELECT 1 FROM customer_authority_consents
+              WHERE id = $1 AND workspace_id = $2 AND revoked_at IS NOT NULL
+           ) AS revoked,
+           EXISTS (
+             SELECT 1 FROM operation_events
+              WHERE id = $3 AND workspace_id = $2
+           ) AS event,
+           EXISTS (
+             SELECT 1 FROM audit_logs
+              WHERE id::text = $4 AND workspace_id = $2
+                AND action = 'customer_authority_revoke'
+           ) AS audit,
+           EXISTS (
+             SELECT 1 FROM projection_outbox
+              WHERE id = $5 AND workspace_id = $2
+           ) AS outbox`,
+        [
+          revoked.consent.id,
+          workspaceId,
+          revoked.operation_event_id,
+          revoked.audit_event_id,
+          revoked.projection_outbox_id,
+        ],
+      );
+      expect(revokeReferences.rows[0]).toEqual({
+        revoked: true,
+        event: true,
+        audit: true,
+        outbox: true,
+      });
+    } finally {
+      await client.query('DELETE FROM projection_outbox WHERE workspace_id = $1', [workspaceId]);
+      await client.query('DELETE FROM audit_logs WHERE workspace_id = $1', [workspaceId]);
+      await client.query('DELETE FROM operation_events WHERE workspace_id = $1', [workspaceId]);
+      await client.query('DELETE FROM customer_authority_consents WHERE workspace_id = $1', [workspaceId]);
+      await client.query('DELETE FROM workspace_members WHERE workspace_id = $1', [workspaceId]);
+      await client.query('DELETE FROM workspaces WHERE id = $1', [workspaceId]);
       await client.query('DELETE FROM users WHERE id = $1', [userId]);
       await client.end();
     }
