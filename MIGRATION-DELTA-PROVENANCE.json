@@ -3876,6 +3876,22 @@
           "reason": "reconciles atomic authority consent lineage with current-main public-provider invite hardening"
         }
       ]
+    },
+    {
+      "delta_id": "rls23-tenant-bearing-enable-20260731",
+      "generated_at": "2026-07-30T23:50:12.356Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "045fb09e3f59d10f10035fae7fc5a0edead368fc",
+      "target_base_commit": "045fb09e3f59d10f10035fae7fc5a0edead368fc",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "docs/governance/OPERATOR_AXIS_AUTHORITY.md",
+          "target_blob": "5545d439b92dc9bc083a19233786417beed94420",
+          "reason": "ADR-0110 step 1: record the 092 prod apply in the APPLIED-STATE SSOT block"
+        }
+      ]
     }
   ]
 }
