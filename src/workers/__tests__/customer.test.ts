@@ -41,6 +41,17 @@ function authorityState(overrides: Record<string, unknown> = {}) {
   };
 }
 
+function authorityWriteReceipt(kind: 'consent' | 'revoke' = 'consent') {
+  return {
+    consent: { id: 'cac1', revoked_at: kind === 'revoke' ? 'now' : null },
+    authority_receipt_id: `customer-authority-${kind}:cac1:audit_authority_1`,
+    audit_event_id: 'audit_authority_1',
+    operation_event_id: 'event_authority_1',
+    projection_outbox_id: 'outbox_authority_1',
+    read_model_watermark: '2026-07-30T00:00:00.000Z',
+  };
+}
+
 function appFor(auth: Record<string, unknown>, dal: Record<string, unknown>) {
   const app = new Hono();
   app.use('*', async (ctx, next) => {
@@ -88,7 +99,7 @@ describe('POST /customer/authority-consent', () => {
   });
 
   it('202 records consent; awaiting-operator message when operator side absent', async () => {
-    const recordCustomerConsentAck = vi.fn(async () => ({ id: 'cac1' }));
+    const recordCustomerConsentAck = vi.fn(async () => authorityWriteReceipt());
     const getCustomerAuthorityState = vi.fn(async () =>
       authorityState({ consent_acked: true, operator_approved: false, unlocked: false })
     );
@@ -104,6 +115,11 @@ describe('POST /customer/authority-consent', () => {
     const json = (await res.json()) as Record<string, any>;
     expect(json.acknowledged).toBe(true);
     expect(json.authority.unlocked).toBe(false);
+    expect(json.authority_receipt_id).toBe('customer-authority-consent:cac1:audit_authority_1');
+    expect(json.audit_event_id).toBe('audit_authority_1');
+    expect(json.operation_event_id).toBe('event_authority_1');
+    expect(json.projection_outbox_id).toBe('outbox_authority_1');
+    expect(json.read_model_watermark).toBe('2026-07-30T00:00:00.000Z');
     expect(json.message).toMatch(/awaiting operator/i);
     expect(recordCustomerConsentAck).toHaveBeenCalledOnce();
     const arg = recordCustomerConsentAck.mock.calls[0][0] as Record<string, unknown>;
@@ -117,7 +133,7 @@ describe('POST /customer/authority-consent', () => {
       appFor(
         { user_id: 'u1', workspace_id: 'org_acme' },
         {
-          recordCustomerConsentAck: vi.fn(async () => ({ id: 'cac1' })),
+          recordCustomerConsentAck: vi.fn(async () => authorityWriteReceipt()),
           getCustomerAuthorityState: vi.fn(async () =>
             authorityState({ consent_acked: true, operator_approved: true, unlocked: true })
           ),
@@ -134,14 +150,16 @@ describe('POST /customer/authority-consent', () => {
 
   it('W1b: auto-records operator approval for the operator OWN org + captures identity bundle', async () => {
     let unlocked = false;
-    const recordCustomerConsentAck = vi.fn(async () => ({ id: 'cac1' }));
-    const recordOperatorAuthority = vi.fn(async () => { unlocked = true; return { id: 'cac1' }; });
+    const recordCustomerConsentAck = vi.fn(async (input: Record<string, unknown>) => {
+      unlocked = input.auto_approve_operator_user_id === 'user_op';
+      return authorityWriteReceipt();
+    });
     const getCustomerAuthorityState = vi.fn(async () =>
       authorityState({ workspace_id: 'org_mine', consent_acked: true, operator_approved: unlocked, unlocked })
     );
     const app = appFor(
       { user_id: 'user_op', workspace_id: 'org_mine', email: 'op@xlooop.com' },
-      { recordCustomerConsentAck, recordOperatorAuthority, getCustomerAuthorityState }
+      { recordCustomerConsentAck, getCustomerAuthorityState }
     );
     const res = await app.request(
       '/api/v1/customer/authority-consent',
@@ -149,22 +167,23 @@ describe('POST /customer/authority-consent', () => {
       { CLERK_SECRET_KEY: 'sk_test_x', DATABASE_URL: 'x', MBP_OWNER_USER_ID: 'user_op' } as never
     );
     expect(res.status).toBe(202);
-    expect(recordOperatorAuthority).toHaveBeenCalledOnce();
-    expect(recordOperatorAuthority.mock.calls[0][0]).toMatchObject({ workspace_id: 'org_mine', operator_user_id: 'user_op' });
     const ackArg = recordCustomerConsentAck.mock.calls[0][0] as Record<string, unknown>;
     expect(ackArg.email).toBe('op@xlooop.com');
     expect(ackArg.company).toBe('Xlooop');
+    expect(ackArg.auto_approve_operator_user_id).toBe('user_op');
+    expect(ackArg.operation_event_id).toEqual(expect.any(String));
+    expect(ackArg.projection_outbox_id).toEqual(expect.any(String));
+    expect(ackArg.request_id).toBe('test');
     const json = (await res.json()) as Record<string, any>;
     expect(json.authority.unlocked).toBe(true);
   });
 
   it('W1b: does NOT auto-approve a CUSTOMER org (consenter is not the operator)', async () => {
-    const recordOperatorAuthority = vi.fn();
+    const recordCustomerConsentAck = vi.fn(async () => authorityWriteReceipt());
     const app = appFor(
       { user_id: 'user_customer', workspace_id: 'org_cust', email: 'c@cust.com' },
       {
-        recordCustomerConsentAck: vi.fn(async () => ({ id: 'cac1' })),
-        recordOperatorAuthority,
+        recordCustomerConsentAck,
         getCustomerAuthorityState: vi.fn(async () =>
           authorityState({ workspace_id: 'org_cust', consent_acked: true, operator_approved: false, unlocked: false })
         ),
@@ -176,16 +195,17 @@ describe('POST /customer/authority-consent', () => {
       { CLERK_SECRET_KEY: 'sk_test_x', DATABASE_URL: 'x', MBP_OWNER_USER_ID: 'user_op' } as never
     );
     expect(res.status).toBe(202);
-    expect(recordOperatorAuthority).not.toHaveBeenCalled();
+    expect(recordCustomerConsentAck.mock.calls[0][0]).toMatchObject({
+      auto_approve_operator_user_id: null,
+    });
   });
 
-  it('W4: auto-approves an org in OPERATOR_WORKSPACE_IDS (allowlist is org-keyed, not consenter-keyed)', async () => {
-    const recordOperatorAuthority = vi.fn(async () => ({ id: 'cac1' }));
+  it('W4: allowlisted operator workspace is auto-approved only for a trusted operator identity', async () => {
+    const recordCustomerConsentAck = vi.fn(async () => authorityWriteReceipt());
     const app = appFor(
-      { user_id: 'user_anyone', workspace_id: 'org_mine', email: 'x@x.com' }, // consenter is NOT the operator
+      { user_id: 'user_op', workspace_id: 'org_mine', email: 'x@x.com' },
       {
-        recordCustomerConsentAck: vi.fn(async () => ({ id: 'cac1' })),
-        recordOperatorAuthority,
+        recordCustomerConsentAck,
         getCustomerAuthorityState: vi.fn(async () =>
           authorityState({ workspace_id: 'org_mine', consent_acked: true, operator_approved: true, unlocked: true })
         ),
@@ -194,19 +214,25 @@ describe('POST /customer/authority-consent', () => {
     const res = await app.request(
       '/api/v1/customer/authority-consent',
       { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ full_name_typed: 'A Person' }) },
-      { CLERK_SECRET_KEY: 'sk_test_x', DATABASE_URL: 'x', OPERATOR_WORKSPACE_IDS: 'org_mine,org_other' } as never
+      {
+        CLERK_SECRET_KEY: 'sk_test_x',
+        DATABASE_URL: 'x',
+        MBP_OWNER_USER_ID: 'user_op',
+        OPERATOR_WORKSPACE_IDS: 'org_mine,org_other',
+      } as never
     );
     expect(res.status).toBe(202);
-    expect(recordOperatorAuthority).toHaveBeenCalledOnce(); // org in allowlist → auto-approve regardless of who consented
+    expect(recordCustomerConsentAck.mock.calls[0][0]).toMatchObject({
+      auto_approve_operator_user_id: 'user_op',
+    });
   });
 
-  it('W4: allowlist OVERRIDES the heuristic — an org NOT in OPERATOR_WORKSPACE_IDS is not auto-approved even if the consenter is the operator', async () => {
-    const recordOperatorAuthority = vi.fn();
+  it('W4: allowlist blocks auto-approval for an operator in a workspace outside the allowlist', async () => {
+    const recordCustomerConsentAck = vi.fn(async () => authorityWriteReceipt());
     const app = appFor(
       { user_id: 'user_op', workspace_id: 'org_customer', email: 'x@x.com' }, // consenter IS the operator…
       {
-        recordCustomerConsentAck: vi.fn(async () => ({ id: 'cac1' })),
-        recordOperatorAuthority,
+        recordCustomerConsentAck,
         getCustomerAuthorityState: vi.fn(async () =>
           authorityState({ workspace_id: 'org_customer', consent_acked: true, operator_approved: false, unlocked: false })
         ),
@@ -218,8 +244,36 @@ describe('POST /customer/authority-consent', () => {
       { CLERK_SECRET_KEY: 'sk_test_x', DATABASE_URL: 'x', MBP_OWNER_USER_ID: 'user_op', OPERATOR_WORKSPACE_IDS: 'org_mine' } as never
     );
     expect(res.status).toBe(202);
-    // …but org_customer is NOT in the allowlist, so the precise allowlist path blocks auto-approval.
-    expect(recordOperatorAuthority).not.toHaveBeenCalled();
+    expect(recordCustomerConsentAck.mock.calls[0][0]).toMatchObject({
+      auto_approve_operator_user_id: null,
+    });
+  });
+
+  it('W4: an untrusted member cannot self-approve merely because the workspace is allowlisted', async () => {
+    const recordCustomerConsentAck = vi.fn(async () => authorityWriteReceipt());
+    const app = appFor(
+      { user_id: 'user_member', workspace_id: 'org_mine', email: 'member@x.com' },
+      {
+        recordCustomerConsentAck,
+        getCustomerAuthorityState: vi.fn(async () =>
+          authorityState({ workspace_id: 'org_mine', consent_acked: true, operator_approved: false, unlocked: false })
+        ),
+      }
+    );
+    const res = await app.request(
+      '/api/v1/customer/authority-consent',
+      { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ full_name_typed: 'Workspace Member' }) },
+      {
+        CLERK_SECRET_KEY: 'sk_test_x',
+        DATABASE_URL: 'x',
+        MBP_OWNER_USER_ID: 'user_op',
+        OPERATOR_WORKSPACE_IDS: 'org_mine',
+      } as never
+    );
+    expect(res.status).toBe(202);
+    expect(recordCustomerConsentAck.mock.calls[0][0]).toMatchObject({
+      auto_approve_operator_user_id: null,
+    });
   });
 });
 
@@ -279,7 +333,7 @@ describe('POST /customer/authority-consent/revoke', () => {
   // The DAL records the audit_logs entry transactionally inside revokeCustomerAuthority — the route
   // no longer calls appendAuditLog, so the mock does not need it.
   const lockedAfterRevoke = () => ({
-    revokeCustomerAuthority: vi.fn(async () => ({ id: 'cac1', revoked_at: 'now' })),
+    revokeCustomerAuthority: vi.fn(async () => authorityWriteReceipt('revoke')),
     getCustomerAuthorityState: vi.fn(async () =>
       authorityState({ unlocked: false, operator_approved: false, consent_acked: false })
     ),
@@ -328,6 +382,8 @@ describe('POST /customer/authority-consent/revoke', () => {
     const json = (await res.json()) as Record<string, any>;
     expect(json.revoked).toBe(true);
     expect(json.authority.unlocked).toBe(false);
+    expect(json.authority_receipt_id).toBe('customer-authority-revoke:cac1:audit_authority_1');
+    expect(json.audit_event_id).toBe('audit_authority_1');
     expect(json.message).toMatch(/re-authorize/i);
     expect(dal.revokeCustomerAuthority).toHaveBeenCalledOnce();
     // The DAL writes the audit_logs entry transactionally; the route forwards actor + re-attestation.
@@ -336,6 +392,9 @@ describe('POST /customer/authority-consent/revoke', () => {
       revoked_by: 'owner1',
       revoked_reason: 'no longer using Drive',
       re_attest_name: 'Jane Smith',
+      operation_event_id: expect.any(String),
+      projection_outbox_id: expect.any(String),
+      request_id: 'test',
     });
   });
 
