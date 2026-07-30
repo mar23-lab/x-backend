@@ -179,6 +179,17 @@ As-of snapshot (live-verified 260710, schema head **61**): **054–061 APPLIED**
 An external report citing "056 staged / Gate-1 RED / 0 session-pref rows" read a pre-apply tip (444d89c3), not
 the live DB — reconcile against `schema_head`, never against a doc line.
 
+**092 APPLIED to prod 2026-07-31 (ADR-0110 step 1, operator-approved), head 61 → 92.** Enabled RLS on the
+23 tenant-bearing tables that carried `workspace_id` with RLS off. No policies and no FORCE by design —
+the worker connects as owner on 69 of 75 DAL modules, so this is inert at runtime today and stays inert
+until step 3 routes a module through the RLS connection. Live-verified after apply: tenant-bearing tables
+without RLS **23 → 0**, RLS-enabled total **50 → 73**, FORCE **0** (unchanged), policies **50** (unchanged),
+`xlooop_app` grants **30 tables** (unchanged), reads unaffected (10 `workspace_members`, 16,799 `audit_logs`).
+Proven first on disposable branch `br-snowy-wind-a7wq01ct` (auto-expiring), where the migration's fail-closed
+precondition was **observed red** against an injected `pmf_responses → xlooop_graph_ro` grant and changed
+nothing, then observed green and idempotent on re-run. Note the snapshot line above is a dated 260710 event
+record at head 61; it is not a current-state claim and has not been current since.
+
 **C1 dry-run evidence (260709, Design-greenlit, §164 con C1 CLOSED):** the four staged migrations were
 replayed in order against a throwaway Neon branch of PROD (`dryrun-057-060-260709`, deleted after): schema
 head 56→60 · the 041-recipe CHECK drop/re-add on `operation_events.source_tool` validated all **5,395**
