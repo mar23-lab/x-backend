@@ -3767,6 +3767,32 @@
           "reason": "reconcile entitlement-live-membership-260730"
         }
       ]
+    },
+    {
+      "delta_id": "readonly-comma-guard-20260730",
+      "generated_at": "2026-07-30T08:02:03.982Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "2b217adf5c56103a3837fe5b613b8ae8b465934e",
+      "target_base_commit": "2b217adf5c56103a3837fe5b613b8ae8b465934e",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/lib/action-intent.ts",
+          "target_blob": "d0feee8abf101b9e27769cdba1d93341a5d511af",
+          "reason": "Keep comma-separated prohibited actions on the read-only intake path while preserving explicit affirmative decisions"
+        },
+        {
+          "path": "src/workers/__tests__/action-intent.test.ts",
+          "target_blob": "28db621d4732dcc705047ac1f14371a65a5fa89d",
+          "reason": "Keep comma-separated prohibited actions on the read-only intake path while preserving explicit affirmative decisions"
+        },
+        {
+          "path": "src/workers/__tests__/intake-resolution.test.ts",
+          "target_blob": "bfd56ffc7d9add9f31bf18458903957563b22b17",
+          "reason": "Keep comma-separated prohibited actions on the read-only intake path while preserving explicit affirmative decisions"
+        }
+      ]
     }
   ]
 }

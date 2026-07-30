@@ -17,20 +17,28 @@ const RULES: Array<{ intent: Exclude<ActionIntent, 'unresolved'>; id: string; pa
   { intent: 'answer', id: 'answer', pattern: /(^|\b)(what|why|how|when|where|who|explain|summari[sz]e|tell me|describe|do i|is there|are there)\b/i },
 ];
 
-const EXPLICIT_READ_ONLY = /\bread[- ]only\s*(?=[:;,.!?]|$)|(?:\bdo\s+not\b|\bdon't\b|\bnever\b|\bwithout\b)\s+(?:\w+\s+){0,2}(?:creat(?:e|ing)|open(?:ing)?|start(?:ing)?|add(?:ing)?|implement(?:ing)?|build(?:ing)?|fix(?:ing)?|repair(?:ing)?|writ(?:e|ing)|generat(?:e|ing)|set(?:ting)?\s+up|approv(?:e|ing)|reject(?:ing)?|delet(?:e|ing)|edit(?:ing)?|modif(?:y|ying)|chang(?:e|ing))\b/i;
+const EXPLICIT_READ_ONLY = /\bread[- ]only\s*(?=[:;,.!?\]]|$)|(?:\bdo\s+not\b|\bdon't\b|\bnever\b|\bwithout\b)\s+(?:\w+\s+){0,2}(?:creat(?:e|ing)|open(?:ing)?|start(?:ing)?|add(?:ing)?|implement(?:ing)?|build(?:ing)?|fix(?:ing)?|repair(?:ing)?|writ(?:e|ing)|generat(?:e|ing)|set(?:ting)?\s+up|approv(?:e|ing)|reject(?:ing)?|delet(?:e|ing)|edit(?:ing)?|modif(?:y|ying)|chang(?:e|ing))\b/i;
 const READ_ONLY_INTENTS = new Set<ActionIntent>(['inspect', 'answer']);
 const CONTINUE_CUES = /\b(continue|resume|carry on|pick up|proceed with|finish|complete the remaining|next remaining)\b/gi;
 const DECISION_CUES = /\b(decide|choose|select|approve|reject|go\/no-go|go or no-go|make the call|final call)\b/gi;
 
+function cueIsNegated(text: string, index: number): boolean {
+  const before = text.slice(Math.max(0, index - 180), index);
+  const clause = before.split(/[.;:!?]/).at(-1) ?? before;
+  const prohibition = clause.match(/\b(?:do\s+not|don't|never)\b([\s\S]*)$/i);
+  if (prohibition) {
+    const tail = prohibition[1] ?? '';
+    if (!/\b(?:but|however|instead|then)\b/i.test(tail)) return true;
+  }
+  if (/\bwithout\b[^,]*$/i.test(clause)) return true;
+  return /\bnot\s+(?:to\s+)?$/i.test(clause);
+}
+
 function hasAffirmativeCue(text: string, cues: RegExp): boolean {
   for (const cue of text.matchAll(cues)) {
-    const before = text.slice(Math.max(0, (cue.index ?? 0) - 80), cue.index ?? 0);
-    const clause = before.split(/[.;:!?]/).at(-1) ?? before;
     // A decision/continuation word inside an explicit negative guardrail describes what must not
     // happen. It is not the requested operation ("create this, but do not approve it").
-    const negated = /\b(?:do\s+not|don't|never|without)\b[^,]*$/i.test(clause)
-      || /\bnot\s+(?:to\s+)?$/i.test(clause);
-    if (!negated) return true;
+    if (!cueIsNegated(text, cue.index ?? 0)) return true;
   }
   return false;
 }
@@ -50,11 +58,19 @@ function hasAffirmativeWriteCue(text: string): boolean {
 export function classifyActionIntent(raw: unknown): ActionIntentClassification {
   const text = typeof raw === 'string' ? raw.trim().replace(/\s+/g, ' ') : '';
   if (!text) return { action_intent: 'unresolved', confidence: 0, matched_rule: 'empty' };
-  if (EXPLICIT_READ_ONLY.test(text)) {
+  const explicitReadOnly = EXPLICIT_READ_ONLY.test(text);
+  if (explicitReadOnly) {
     for (const rule of RULES) {
       if (READ_ONLY_INTENTS.has(rule.intent) && rule.pattern.test(text)) {
         return { action_intent: rule.intent, confidence: 0.98, matched_rule: rule.id };
       }
+    }
+    if (
+      !hasAffirmativeCue(text, CONTINUE_CUES)
+      && !hasAffirmativeCue(text, DECISION_CUES)
+      && !hasAffirmativeWriteCue(text)
+    ) {
+      return { action_intent: 'inspect', confidence: 0.98, matched_rule: 'explicit_read_only' };
     }
   }
   for (const rule of RULES) {

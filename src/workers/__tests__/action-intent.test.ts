@@ -27,12 +27,15 @@ describe('action-intent shadow classifier', () => {
     expect(classifyActionIntent('Inspect the current state without creating anything.')).toMatchObject({ action_intent: 'inspect' });
     expect(classifyActionIntent('Live verification 2026-07-24: summarize the current workspace status and identify any blocked work. Do not create, approve, edit, or delete governed work.')).toMatchObject({ action_intent: 'inspect', matched_rule: 'inspect' });
     expect(classifyActionIntent('What is the current status of Honest & Young Operations? Summarize active work and blockers using workspace records. Read only: do not create or modify work.')).toMatchObject({ action_intent: 'inspect', matched_rule: 'inspect' });
+    expect(classifyActionIntent('[PROD OWNER DIAGNOSTIC 2026-07-30 READ-ONLY] For this selected project only, return the exact project name, every current goal, milestone count, todo count, and each fact source/freshness. Do not create, edit, approve, connect, sync, or execute anything.')).toMatchObject({ action_intent: 'inspect', matched_rule: 'explicit_read_only' });
+    expect(classifyActionIntent('Return the exact project facts. Do not create, edit, approve, reject, or execute anything.')).toMatchObject({ action_intent: 'inspect', matched_rule: 'explicit_read_only' });
     expect(classifyActionIntent('Create a task and do not duplicate existing work.')).toMatchObject({ action_intent: 'create_work' });
     expect(classifyActionIntent('Create a read-only report showing current status.')).toMatchObject({ action_intent: 'create_work' });
     expect(classifyActionIntent('Do not wait; create a task now.')).toMatchObject({ action_intent: 'create_work' });
     expect(classifyActionIntent('Create one reversible test task. Do not approve it or complete it.')).toMatchObject({ action_intent: 'create_work', matched_rule: 'create' });
     expect(classifyActionIntent('Create a task and do not finish the remaining work.')).toMatchObject({ action_intent: 'create_work', matched_rule: 'create' });
     expect(classifyActionIntent('Do not wait; approve the pending item.')).toMatchObject({ action_intent: 'decide', matched_rule: 'decide' });
+    expect(classifyActionIntent('Do not create anything, but approve the pending item.')).toMatchObject({ action_intent: 'decide', matched_rule: 'decide' });
     expect(classifyActionIntent('Do not stop; continue the current work.')).toMatchObject({ action_intent: 'continue_work', matched_rule: 'continue' });
   });
 });

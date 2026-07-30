@@ -46,6 +46,7 @@ describe('canonical intake resolution', () => {
   it.each([
     'Live verification 2026-07-24: summarize the current workspace status and identify any blocked work. Do not create, approve, edit, or delete governed work.',
     'What is the current status of Honest & Young Operations? Summarize active work and blockers using workspace records. Read only: do not create or modify work.',
+    '[PROD OWNER DIAGNOSTIC 2026-07-30 READ-ONLY] For this selected project only, return the exact project name, every current goal, milestone count, todo count, and each fact source/freshness. Do not create, edit, approve, connect, sync, or execute anything.',
   ])('keeps live read-only reproduction text on the answer-now path: %s', (text) => {
     const row = buildIntakeResolution({ text, client_request_id: 'c-live-readonly' }, '2'.repeat(64), inventory());
     expect(row).toMatchObject({
