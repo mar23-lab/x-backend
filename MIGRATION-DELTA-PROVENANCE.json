@@ -3714,6 +3714,22 @@
           "reason": "composed-gate fix rebased onto 00cdcf98; all drifted blobs re-recorded in ONE call after ledger conflict resolution (a reused id replaces its file set, it does not append)"
         }
       ]
+    },
+    {
+      "delta_id": "smoke-tier-be-260730",
+      "generated_at": "2026-07-30T01:31:56.954Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "aae4b76b553f5020acf75bf67508c792a463037b",
+      "target_base_commit": "aae4b76b553f5020acf75bf67508c792a463037b",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "package.json",
+          "target_blob": "ec75ee556fff94b112ad1747daa5bb42cc79dd73",
+          "reason": "backend 30s smoke tier: scripts/smoke.mjs added, package.json gains smoke + smoke:self-test"
+        }
+      ]
     }
   ]
 }
