@@ -3751,6 +3751,22 @@
           "reason": "reconcile public-provider-elevation-260730"
         }
       ]
+    },
+    {
+      "delta_id": "entitlement-live-membership-260730",
+      "generated_at": "2026-07-30T11:07:02.026Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "26749e60ee028dd2bb24729f1560564e2b8b8817",
+      "target_base_commit": "26749e60ee028dd2bb24729f1560564e2b8b8817",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/dal/entitlement-store.ts",
+          "target_blob": "35c2873b54cbabed41a15f160457fc84f15f9a61",
+          "reason": "reconcile entitlement-live-membership-260730"
+        }
+      ]
     }
   ]
 }
