@@ -352,6 +352,11 @@ export interface CustomerConsentAckInput {
   // Transactions Act best practice). Persisted into the `metadata` jsonb (no schema change).
   email?: string | null;
   company?: string | null;
+  /** Trusted operator identity when this consent may atomically unlock an operator-owned workspace. */
+  auto_approve_operator_user_id?: UserId | null;
+  operation_event_id: string;
+  projection_outbox_id: string;
+  request_id?: string | null;
 }
 
 export interface OperatorAuthorityInput {
@@ -372,6 +377,15 @@ export interface CustomerInviteAuditReceipt {
   audit_event_id: string;
 }
 
+export interface CustomerAuthorityWriteReceipt {
+  consent: CustomerAuthorityConsent;
+  authority_receipt_id: string;
+  audit_event_id: string;
+  operation_event_id: string;
+  projection_outbox_id: string;
+  read_model_watermark: string;
+}
+
 // Lifecycle L1 (2026-06-15) · in-app withdrawal of authority/consent. Sets revoked_at on the
 // ACTIVE row (immutable supersede — never hard-deletes). getCustomerAuthorityState filters
 // revoked_at IS NULL, so a revoke re-locks connectors + invites for free; a later consent ack
@@ -383,6 +397,9 @@ export interface RevokeCustomerAuthorityInput {
   // The typed-name re-attestation captured at revoke time (recorded in the audit_logs metadata,
   // transactionally with the revoke — symmetric with the consent e-signature provenance).
   re_attest_name?: string | null;
+  operation_event_id: string;
+  projection_outbox_id: string;
+  request_id?: string | null;
 }
 
 // Lifecycle L2 (2026-06-15) · the operator approval inbox row — a workspace that has CONSENTED

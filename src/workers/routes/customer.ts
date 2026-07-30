@@ -14,6 +14,7 @@ import type { AuthEnv, AuthVariables } from '../middleware/auth';
 import type { DalAdapter } from '../dal/DalAdapter';
 import { createTeamInvitation } from '../services/clerk-org';
 import { authorizeGovernedWrite } from '../lib/spine-authority';
+import { withIdempotency } from '../lib/idempotency';
 
 export interface CustomerRoutesEnv extends AuthEnv {
   DATABASE_URL: string;
@@ -59,19 +60,20 @@ const PUBLIC_EMAIL_DOMAINS = new Set([
   'bigpond.com', 'optusnet.com.au', 'iinet.net.au', 'tpg.com.au',
 ]);
 
-customerRoute.post('/customer/authority-consent', async (ctx) => {
-  try {
-    const auth = ctx.get('auth');
-    if (!auth?.user_id) {
-      return errorEnvelope(ctx, { status: 401, code: 'UNAUTHORIZED', message: 'auth required' });
-    }
-    if (!auth.workspace_id) {
-      return errorEnvelope(ctx, {
-        status: 400,
-        code: 'VALIDATION_ERROR',
-        message: 'a workspace (organization) is required to record authority consent',
-      });
-    }
+customerRoute.post('/customer/authority-consent', (ctx) =>
+  withIdempotency(ctx, 'POST /customer/authority-consent', async () => {
+    try {
+      const auth = ctx.get('auth');
+      if (!auth?.user_id) {
+        return errorEnvelope(ctx, { status: 401, code: 'UNAUTHORIZED', message: 'auth required' });
+      }
+      if (!auth.workspace_id) {
+        return errorEnvelope(ctx, {
+          status: 400,
+          code: 'VALIDATION_ERROR',
+          message: 'a workspace (organization) is required to record authority consent',
+        });
+      }
 
     const body = (await ctx.req.json().catch(() => ({}))) as {
       full_name_typed?: string;
@@ -94,8 +96,26 @@ customerRoute.post('/customer/authority-consent', async (ctx) => {
       null;
     const userAgent = ctx.req.header('user-agent') || null;
 
+    // W1b/W4 · auto-approve the operator-approval side for OPERATOR-OWNED orgs. The operator IS the
+    // authority for their own workspaces, so a separate manual approval (DR-11) there is friction with
+    // no IP-boundary value — connecting your own Drive to your own org shouldn't dead-end. Real
+    // CUSTOMER orgs are NEVER auto-approved: they require explicit operator approval
+    // (POST /admin/customer/:id/approve). The workspace allowlist never confers operator identity:
+    // the caller must also match the trusted MBP owner identity set.
+    const operatorIds = [
+      String(ctx.env.MBP_OWNER_USER_ID || '').trim(),
+      ...String(ctx.env.MBP_OWNER_LINKED_USER_IDS || '').split(',').map((s) => s.trim()),
+    ].filter(Boolean);
+    const operatorWorkspaceIds = String(ctx.env.OPERATOR_WORKSPACE_IDS || '')
+      .split(',').map((s) => s.trim()).filter(Boolean);
+    const callerIsOperator = operatorIds.includes(auth.user_id);
+    const operatorWorkspaceAllowed = operatorWorkspaceIds.length === 0
+      || operatorWorkspaceIds.includes(auth.workspace_id);
+    const autoApproveOperatorUserId =
+      callerIsOperator && operatorWorkspaceAllowed ? auth.user_id : null;
+
     const dal = ctx.get('dal');
-    await dal.recordCustomerConsentAck({
+    const receipt = await dal.recordCustomerConsentAck({
       workspace_id: auth.workspace_id,
       user_id: auth.user_id,
       full_name_typed: fullName,
@@ -107,34 +127,11 @@ customerRoute.post('/customer/authority-consent', async (ctx) => {
       // W1b · identity bundle: trusted email from the JWT + optional self-reported company.
       email: auth.email ?? null,
       company: typeof body.company === 'string' && body.company.trim() ? body.company.trim() : null,
+      auto_approve_operator_user_id: autoApproveOperatorUserId,
+      operation_event_id: crypto.randomUUID(),
+      projection_outbox_id: crypto.randomUUID(),
+      request_id: ctx.get('request_id') || null,
     });
-
-    // W1b/W4 · auto-approve the operator-approval side for OPERATOR-OWNED orgs. The operator IS the
-    // authority for their own workspaces, so a separate manual approval (DR-11) there is friction with
-    // no IP-boundary value — connecting your own Drive to your own org shouldn't dead-end. Real
-    // CUSTOMER orgs are NEVER auto-approved: they require explicit operator approval
-    // (POST /admin/customer/:id/approve). W4/G2 tightens the scope: prefer the explicit
-    // OPERATOR_WORKSPACE_IDS allowlist (the org ids the operator owns); fall back to the W1b
-    // consenter-is-operator heuristic only when the allowlist is unset (backwards-compat).
-    const operatorIds = [
-      String(ctx.env.MBP_OWNER_USER_ID || '').trim(),
-      ...String(ctx.env.MBP_OWNER_LINKED_USER_IDS || '').split(',').map((s) => s.trim()),
-    ].filter(Boolean);
-    const operatorWorkspaceIds = String(ctx.env.OPERATOR_WORKSPACE_IDS || '')
-      .split(',').map((s) => s.trim()).filter(Boolean);
-    const autoApproveOwnOrg = operatorWorkspaceIds.length
-      ? operatorWorkspaceIds.includes(auth.workspace_id)   // explicit allowlist (precise; W4)
-      : operatorIds.includes(auth.user_id);                // consenter-is-operator fallback (W1b)
-    if (autoApproveOwnOrg && typeof dal.recordOperatorAuthority === 'function') {
-      try {
-        await dal.recordOperatorAuthority({
-          workspace_id: auth.workspace_id,
-          operator_user_id: auth.user_id,
-        });
-      } catch (_) {
-        // best-effort; the customer-side consent is already recorded
-      }
-    }
 
     const state = await dal.getCustomerAuthorityState(auth.workspace_id);
     ctx.status(202);
@@ -145,14 +142,19 @@ customerRoute.post('/customer/authority-consent', async (ctx) => {
         operator_approved: state.operator_approved,
         consent_acked: state.consent_acked,
       },
+      authority_receipt_id: receipt.authority_receipt_id,
+      audit_event_id: receipt.audit_event_id,
+      operation_event_id: receipt.operation_event_id,
+      projection_outbox_id: receipt.projection_outbox_id,
+      read_model_watermark: receipt.read_model_watermark,
       message: state.unlocked
         ? 'Consent recorded. Connectors and team invites are now unlocked.'
         : 'Consent recorded. Awaiting operator approval before connectors and team invites unlock.',
     });
-  } catch (err) {
-    return errorEnvelope(ctx, err);
-  }
-});
+    } catch (err) {
+      return errorEnvelope(ctx, err);
+    }
+  }));
 
 // Lifecycle L1 · GET /api/v1/customer/authority-consent · workspace-scoped (requires org)
 //
@@ -210,28 +212,29 @@ customerRoute.get('/customer/authority-consent', async (ctx) => {
 // Electronic Transactions Act provenance pattern used on the consent ack). Owner/operator only —
 // a viewer cannot revoke. NEVER hard-deletes: sets revoked_at on the active row (immutable
 // supersede); a later connect re-routes to the consent screen (403 AUTHORITY_REQUIRED → W1a),
-// which upserts a fresh active row. Audit-logged best-effort (the consent row itself is the
-// primary durable record via revoked_by/revoked_at/revoked_reason).
-customerRoute.post('/customer/authority-consent/revoke', async (ctx) => {
-  try {
-    const auth = ctx.get('auth');
-    if (!auth?.user_id) {
-      return errorEnvelope(ctx, { status: 401, code: 'UNAUTHORIZED', message: 'auth required' });
-    }
-    if (!auth.workspace_id) {
-      return errorEnvelope(ctx, {
-        status: 400,
-        code: 'VALIDATION_ERROR',
-        message: 'a workspace (organization) is required to revoke authority consent',
-      });
-    }
-    if (!(await authorizeGovernedWrite(ctx, 'authority:revoke')).allowed) {
-      return errorEnvelope(ctx, {
-        status: 403,
-        code: 'FORBIDDEN',
-        message: 'only the workspace owner or an operator can revoke workspace authority',
-      });
-    }
+// which upserts a fresh active row. The consent update, operation event, audit, and projection
+// outbox are one fail-closed authority statement.
+customerRoute.post('/customer/authority-consent/revoke', (ctx) =>
+  withIdempotency(ctx, 'POST /customer/authority-consent/revoke', async () => {
+    try {
+      const auth = ctx.get('auth');
+      if (!auth?.user_id) {
+        return errorEnvelope(ctx, { status: 401, code: 'UNAUTHORIZED', message: 'auth required' });
+      }
+      if (!auth.workspace_id) {
+        return errorEnvelope(ctx, {
+          status: 400,
+          code: 'VALIDATION_ERROR',
+          message: 'a workspace (organization) is required to revoke authority consent',
+        });
+      }
+      if (!(await authorizeGovernedWrite(ctx, 'authority:revoke')).allowed) {
+        return errorEnvelope(ctx, {
+          status: 403,
+          code: 'FORBIDDEN',
+          message: 'only the workspace owner or an operator can revoke workspace authority',
+        });
+      }
 
     const body = (await ctx.req.json().catch(() => ({}))) as {
       full_name_typed?: string;
@@ -250,11 +253,14 @@ customerRoute.post('/customer/authority-consent/revoke', async (ctx) => {
     const dal = ctx.get('dal');
     // The DAL records the revoke + the audit_logs entry transactionally in one atomic statement
     // (the audit can't silently fail post-revoke, and never logs a no-op). 404 if no active row.
-    await dal.revokeCustomerAuthority({
+    const receipt = await dal.revokeCustomerAuthority({
       workspace_id: auth.workspace_id,
       revoked_by: auth.user_id,
       revoked_reason: reason,
       re_attest_name: fullName,
+      operation_event_id: crypto.randomUUID(),
+      projection_outbox_id: crypto.randomUUID(),
+      request_id: ctx.get('request_id') || null,
     });
 
     const state = await dal.getCustomerAuthorityState(auth.workspace_id);
@@ -265,13 +271,18 @@ customerRoute.post('/customer/authority-consent/revoke', async (ctx) => {
         operator_approved: state.operator_approved,
         consent_acked: state.consent_acked,
       },
+      authority_receipt_id: receipt.authority_receipt_id,
+      audit_event_id: receipt.audit_event_id,
+      operation_event_id: receipt.operation_event_id,
+      projection_outbox_id: receipt.projection_outbox_id,
+      read_model_watermark: receipt.read_model_watermark,
       message:
         'Workspace authority revoked. Connectors and team invites are locked. Reconnecting a source will ask you to re-authorize.',
     });
-  } catch (err) {
-    return errorEnvelope(ctx, err);
-  }
-});
+    } catch (err) {
+      return errorEnvelope(ctx, err);
+    }
+  }));
 
 // POST /api/v1/customer/invites · workspace-scoped (requires org) · R55 Phase 4b
 // Invite a teammate to the workspace's Clerk organization. Hard-gated on the IP-boundary

@@ -9,6 +9,7 @@ import type { Sql } from '../db/client';
 import type {
   CustomerAuthorityConsent,
   CustomerAuthorityState,
+  CustomerAuthorityWriteReceipt,
   CustomerConsentAckInput,
   CustomerInviteAuditInput,
   CustomerInviteAuditReceipt,
@@ -51,9 +52,19 @@ export async function recordOperatorAuthorityRow(
 export async function recordCustomerConsentAckRow(
   sql: Sql,
   input: CustomerConsentAckInput
-): Promise<CustomerAuthorityConsent> {
-  if (!input?.workspace_id || !input?.user_id || !input?.full_name_typed?.trim()) {
-    throw makeError('VALIDATION_ERROR', 'workspace_id, user_id and full_name_typed are required', 400);
+): Promise<CustomerAuthorityWriteReceipt> {
+  if (
+    !input?.workspace_id
+    || !input?.user_id
+    || !input?.full_name_typed?.trim()
+    || !input.operation_event_id
+    || !input.projection_outbox_id
+  ) {
+    throw makeError(
+      'VALIDATION_ERROR',
+      'workspace_id, user_id, full_name_typed, operation_event_id and projection_outbox_id are required',
+      400,
+    );
   }
   assertWorkspaceScope(input.workspace_id);
   const id = `auth_${randomNanoid()}`;
@@ -64,33 +75,135 @@ export async function recordCustomerConsentAckRow(
     ...(input.email ? { email: input.email } : {}),
     ...(input.company ? { company: input.company } : {}),
   });
+  const operatorUserId = input.auto_approve_operator_user_id || null;
   const rows = (await sql/*sql*/`
-    INSERT INTO customer_authority_consents (
-      id, workspace_id, access_request_id, consent_acked_at, consent_acked_by,
-      full_name_typed, scopes_confirmed, consent_version, ip_address, user_agent, metadata
-    ) VALUES (
-      ${id}, ${input.workspace_id}, ${input.access_request_id ?? null}, now(), ${input.user_id},
-      ${input.full_name_typed.trim()}, ${JSON.stringify(input.scopes_confirmed ?? {})}::jsonb, ${version},
-      ${input.ip_address ?? null}, ${input.user_agent ?? null}, ${identityMeta}::jsonb
+    WITH consent_written AS (
+      INSERT INTO customer_authority_consents (
+        id, workspace_id, access_request_id, operator_approved_at, operator_approved_by,
+        consent_acked_at, consent_acked_by, full_name_typed, scopes_confirmed,
+        consent_version, ip_address, user_agent, metadata
+      ) VALUES (
+        ${id}, ${input.workspace_id}, ${input.access_request_id ?? null},
+        CASE WHEN ${operatorUserId}::text IS NULL THEN NULL ELSE now() END, ${operatorUserId},
+        now(), ${input.user_id}, ${input.full_name_typed.trim()},
+        ${JSON.stringify(input.scopes_confirmed ?? {})}::jsonb, ${version},
+        ${input.ip_address ?? null}, ${input.user_agent ?? null}, ${identityMeta}::jsonb
+      )
+      ON CONFLICT (workspace_id) WHERE revoked_at IS NULL DO UPDATE SET
+        operator_approved_at = CASE
+          WHEN ${operatorUserId}::text IS NULL THEN customer_authority_consents.operator_approved_at
+          ELSE COALESCE(customer_authority_consents.operator_approved_at, now())
+        END,
+        operator_approved_by = CASE
+          WHEN ${operatorUserId}::text IS NULL THEN customer_authority_consents.operator_approved_by
+          ELSE COALESCE(customer_authority_consents.operator_approved_by, EXCLUDED.operator_approved_by)
+        END,
+        consent_acked_at  = now(),
+        consent_acked_by  = EXCLUDED.consent_acked_by,
+        full_name_typed   = EXCLUDED.full_name_typed,
+        scopes_confirmed  = EXCLUDED.scopes_confirmed,
+        consent_version   = EXCLUDED.consent_version,
+        ip_address        = EXCLUDED.ip_address,
+        user_agent        = EXCLUDED.user_agent,
+        metadata          = customer_authority_consents.metadata || EXCLUDED.metadata,
+        access_request_id = COALESCE(EXCLUDED.access_request_id, customer_authority_consents.access_request_id),
+        updated_at        = now()
+      RETURNING id, workspace_id, access_request_id, operator_approved_at, operator_approved_by,
+                allowed_modes, allowed_apps, consent_acked_at, consent_acked_by, full_name_typed,
+                scopes_confirmed, consent_version, ip_address, user_agent, revoked_at, revoked_by,
+                revoked_reason, metadata, created_at, updated_at
+    ), event_written AS (
+      INSERT INTO operation_events (
+        id, workspace_id, project_id, source_tool, agent_id, status, summary,
+        visibility, occurred_at, authorized_by_user_id, instrument_kind,
+        authority_source, request_id
+      )
+      SELECT
+        ${input.operation_event_id}, consent_written.workspace_id, NULL, 'xlooop',
+        ${input.user_id}, 'completed',
+        CASE WHEN consent_written.operator_approved_at IS NULL
+          THEN 'Workspace authority consent recorded'
+          ELSE 'Workspace authority consent recorded and approved'
+        END,
+        'internal_owner_only', now(), ${input.user_id}, 'human', 'role', ${input.request_id ?? null}
+      FROM consent_written
+      RETURNING id
+    ), audit_written AS (
+      INSERT INTO audit_logs (
+        actor_user_id, action, target_type, target_id, workspace_id, reason,
+        causation_id, metadata
+      )
+      SELECT
+        ${input.user_id}, 'customer_authority_consent_ack'::text, 'workspace',
+        consent_written.workspace_id, consent_written.workspace_id,
+        'typed-name workspace authority consent',
+        event_written.id,
+        jsonb_build_object(
+          'consent_id', consent_written.id,
+          'operation_event_id', event_written.id,
+          'operator_auto_approved', consent_written.operator_approved_at IS NOT NULL,
+          'request_id', ${input.request_id ?? null}::text
+        )
+      FROM consent_written
+      JOIN event_written ON TRUE
+      RETURNING id::text AS audit_event_id
+    ), outbox_written AS (
+      INSERT INTO projection_outbox (
+        id, workspace_id, event_type, aggregate_type, aggregate_id, payload
+      )
+      SELECT
+        ${input.projection_outbox_id}, consent_written.workspace_id,
+        'customer.authority.consent.recorded', 'customer_authority', consent_written.id,
+        jsonb_build_object(
+          'consent_id', consent_written.id,
+          'operation_event_id', event_written.id,
+          'audit_event_id', audit_written.audit_event_id,
+          'operator_approved', consent_written.operator_approved_at IS NOT NULL
+        )
+      FROM consent_written
+      JOIN event_written ON TRUE
+      JOIN audit_written ON TRUE
+      RETURNING id
     )
-    ON CONFLICT (workspace_id) WHERE revoked_at IS NULL DO UPDATE SET
-      consent_acked_at  = now(),
-      consent_acked_by  = EXCLUDED.consent_acked_by,
-      full_name_typed   = EXCLUDED.full_name_typed,
-      scopes_confirmed  = EXCLUDED.scopes_confirmed,
-      consent_version   = EXCLUDED.consent_version,
-      ip_address        = EXCLUDED.ip_address,
-      user_agent        = EXCLUDED.user_agent,
-      metadata          = customer_authority_consents.metadata || EXCLUDED.metadata,
-      access_request_id = COALESCE(EXCLUDED.access_request_id, customer_authority_consents.access_request_id),
-      updated_at        = now()
-    RETURNING id, workspace_id, access_request_id, operator_approved_at, operator_approved_by,
-              allowed_modes, allowed_apps, consent_acked_at, consent_acked_by, full_name_typed,
-              scopes_confirmed, consent_version, ip_address, user_agent, revoked_at, revoked_by,
-              revoked_reason, metadata, created_at, updated_at
-  `) as CustomerAuthorityConsent[];
-  if (!rows[0]) throw makeError('INTERNAL_ERROR', 'failed to record customer consent', 500);
-  return rows[0];
+    SELECT
+      consent_written.*,
+      event_written.id AS operation_event_id,
+      audit_written.audit_event_id,
+      outbox_written.id AS projection_outbox_id,
+      consent_written.updated_at::text AS read_model_watermark
+    FROM consent_written
+    JOIN event_written ON TRUE
+    JOIN audit_written ON TRUE
+    JOIN outbox_written ON TRUE
+  `) as Array<CustomerAuthorityConsent & {
+    operation_event_id: string;
+    audit_event_id: string;
+    projection_outbox_id: string;
+    read_model_watermark: string;
+  }>;
+  const row = rows[0];
+  if (!row?.operation_event_id || !row.audit_event_id || !row.projection_outbox_id) {
+    throw makeError(
+      'CUSTOMER_AUTHORITY_LINEAGE_MISSING',
+      'customer authority consent did not produce a complete authority receipt',
+      409,
+    );
+  }
+  const {
+    operation_event_id,
+    audit_event_id,
+    projection_outbox_id,
+    read_model_watermark,
+    ...consent
+  } = row;
+  return {
+    consent,
+    authority_receipt_id: `customer-authority-consent:${consent.id}:${audit_event_id}`,
+    operation_event_id,
+    audit_event_id,
+    projection_outbox_id,
+    read_model_watermark,
+  };
 }
 
 export async function getCustomerAuthorityStateRow(
@@ -156,9 +269,18 @@ export async function recordCustomerInviteAuditRow(
 export async function revokeCustomerAuthorityRow(
   sql: Sql,
   input: RevokeCustomerAuthorityInput
-): Promise<CustomerAuthorityConsent> {
-  if (!input?.workspace_id || !input?.revoked_by) {
-    throw makeError('VALIDATION_ERROR', 'workspace_id and revoked_by are required', 400);
+): Promise<CustomerAuthorityWriteReceipt> {
+  if (
+    !input?.workspace_id
+    || !input?.revoked_by
+    || !input.operation_event_id
+    || !input.projection_outbox_id
+  ) {
+    throw makeError(
+      'VALIDATION_ERROR',
+      'workspace_id, revoked_by, operation_event_id and projection_outbox_id are required',
+      400,
+    );
   }
   assertWorkspaceScope(input.workspace_id);
   const reason = input.revoked_reason?.trim() || null;
@@ -171,7 +293,7 @@ export async function revokeCustomerAuthorityRow(
   // setUserStatusRow precedent), not best-effort at the route. The final SELECT returns the row (or
   // 0 rows → 404 below). audit_logs.action/target_type are TEXT (cast ::text); never hard-deletes.
   const rows = (await sql/*sql*/`
-    WITH upd AS (
+    WITH consent_updated AS (
       UPDATE customer_authority_consents SET
         revoked_at     = now(),
         revoked_by     = ${input.revoked_by},
@@ -182,18 +304,94 @@ export async function revokeCustomerAuthorityRow(
                 allowed_modes, allowed_apps, consent_acked_at, consent_acked_by, full_name_typed,
                 scopes_confirmed, consent_version, ip_address, user_agent, revoked_at, revoked_by,
                 revoked_reason, metadata, created_at, updated_at
-    ), aud AS (
-      INSERT INTO audit_logs (actor_user_id, action, target_type, target_id, workspace_id, reason, metadata)
-      SELECT ${input.revoked_by}, 'customer_authority_revoke'::text, 'workspace', upd.workspace_id,
-             upd.workspace_id, ${reason}, ${auditMeta}::jsonb
-      FROM upd
+    ), event_written AS (
+      INSERT INTO operation_events (
+        id, workspace_id, project_id, source_tool, agent_id, status, summary,
+        visibility, occurred_at, authorized_by_user_id, instrument_kind,
+        authority_source, request_id
+      )
+      SELECT
+        ${input.operation_event_id}, consent_updated.workspace_id, NULL, 'xlooop',
+        ${input.revoked_by}, 'completed', 'Workspace authority revoked',
+        'internal_owner_only', now(), ${input.revoked_by}, 'human', 'role', ${input.request_id ?? null}
+      FROM consent_updated
+      RETURNING id
+    ), audit_written AS (
+      INSERT INTO audit_logs (
+        actor_user_id, action, target_type, target_id, workspace_id, reason,
+        causation_id, metadata
+      )
+      SELECT
+        ${input.revoked_by}, 'customer_authority_revoke'::text, 'workspace',
+        consent_updated.workspace_id, consent_updated.workspace_id, ${reason},
+        event_written.id,
+        ${auditMeta}::jsonb || jsonb_build_object(
+          'consent_id', consent_updated.id,
+          'operation_event_id', event_written.id,
+          'request_id', ${input.request_id ?? null}::text
+        )
+      FROM consent_updated
+      JOIN event_written ON TRUE
+      RETURNING id::text AS audit_event_id
+    ), outbox_written AS (
+      INSERT INTO projection_outbox (
+        id, workspace_id, event_type, aggregate_type, aggregate_id, payload
+      )
+      SELECT
+        ${input.projection_outbox_id}, consent_updated.workspace_id,
+        'customer.authority.revoked', 'customer_authority', consent_updated.id,
+        jsonb_build_object(
+          'consent_id', consent_updated.id,
+          'operation_event_id', event_written.id,
+          'audit_event_id', audit_written.audit_event_id
+        )
+      FROM consent_updated
+      JOIN event_written ON TRUE
+      JOIN audit_written ON TRUE
+      RETURNING id
     )
-    SELECT * FROM upd
-  `) as CustomerAuthorityConsent[];
-  if (!rows[0]) {
+    SELECT
+      consent_updated.*,
+      event_written.id AS operation_event_id,
+      audit_written.audit_event_id,
+      outbox_written.id AS projection_outbox_id,
+      consent_updated.updated_at::text AS read_model_watermark
+    FROM consent_updated
+    JOIN event_written ON TRUE
+    JOIN audit_written ON TRUE
+    JOIN outbox_written ON TRUE
+  `) as Array<CustomerAuthorityConsent & {
+    operation_event_id: string;
+    audit_event_id: string;
+    projection_outbox_id: string;
+    read_model_watermark: string;
+  }>;
+  const row = rows[0];
+  if (!row) {
     throw makeError('NOT_FOUND', 'no active authority/consent to revoke for this workspace', 404);
   }
-  return rows[0];
+  if (!row.operation_event_id || !row.audit_event_id || !row.projection_outbox_id) {
+    throw makeError(
+      'CUSTOMER_AUTHORITY_LINEAGE_MISSING',
+      'customer authority revocation did not produce a complete authority receipt',
+      409,
+    );
+  }
+  const {
+    operation_event_id,
+    audit_event_id,
+    projection_outbox_id,
+    read_model_watermark,
+    ...consent
+  } = row;
+  return {
+    consent,
+    authority_receipt_id: `customer-authority-revoke:${consent.id}:${audit_event_id}`,
+    operation_event_id,
+    audit_event_id,
+    projection_outbox_id,
+    read_model_watermark,
+  };
 }
 
 // Lifecycle L2 · the operator approval inbox. Lists workspaces where the CUSTOMER side is recorded

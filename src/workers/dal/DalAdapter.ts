@@ -39,6 +39,7 @@ import {
   ReadinessAssessmentInput,
   CustomerAuthorityConsent,
   CustomerAuthorityState,
+  CustomerAuthorityWriteReceipt,
   CustomerConsentAckInput,
   CustomerInviteAuditInput,
   CustomerInviteAuditReceipt,
@@ -646,8 +647,8 @@ export interface DalAdapter {
    */
   recordOperatorAuthority(input: OperatorAuthorityInput): Promise<CustomerAuthorityConsent>;
 
-  /** Records the CUSTOMER side (in-app typed-name consent ack). Upserts the active row. */
-  recordCustomerConsentAck(input: CustomerConsentAckInput): Promise<CustomerAuthorityConsent>;
+  /** Records consent, authority event, audit, and projection outbox in one fail-closed statement. */
+  recordCustomerConsentAck(input: CustomerConsentAckInput): Promise<CustomerAuthorityWriteReceipt>;
 
   /** Records the customer invite audit receipt before the external Clerk invite side effect. */
   recordCustomerInviteAudit(input: CustomerInviteAuditInput): Promise<CustomerInviteAuditReceipt>;
@@ -660,7 +661,7 @@ export interface DalAdapter {
    * supersede). Re-locks connectors + invites (getCustomerAuthorityState filters revoked rows).
    * Rejects with NOT_FOUND when there is no active row to revoke.
    */
-  revokeCustomerAuthority(input: RevokeCustomerAuthorityInput): Promise<CustomerAuthorityConsent>;
+  revokeCustomerAuthority(input: RevokeCustomerAuthorityInput): Promise<CustomerAuthorityWriteReceipt>;
 
   /**
    * Lifecycle L2 · the operator approval inbox — workspaces that consented (customer side) but are

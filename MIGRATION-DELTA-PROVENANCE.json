@@ -3814,6 +3814,47 @@
           "reason": "Make selected-project fact answers deterministic across the fixed 60-prompt response corpus and give plan facts precedence over workspace inventory heuristics"
         }
       ]
+    },
+    {
+      "delta_id": "authority-consent-lineage-260730",
+      "generated_at": "2026-07-30T09:53:38.083Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "2b217adf5c56103a3837fe5b613b8ae8b465934e",
+      "target_base_commit": "2b217adf5c56103a3837fe5b613b8ae8b465934e",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/dal/DalAdapter.ts",
+          "target_blob": "d6a47cf7e8053d9e0fa9d8be9d7a60d48454c965",
+          "reason": "atomic customer authority consent and revocation with top-level serving-client receipt contract, event, audit, outbox, readback, and operator identity hardening"
+        },
+        {
+          "path": "src/workers/dal/WorkersDalAdapter.ts",
+          "target_blob": "4442da8d60e0673c732fb2867afe096430c8bca7",
+          "reason": "atomic customer authority consent and revocation with top-level serving-client receipt contract, event, audit, outbox, readback, and operator identity hardening"
+        },
+        {
+          "path": "src/workers/__tests__/customer.test.ts",
+          "target_blob": "89ece7e1390f122a38ba6ba4ac8216afefaee505",
+          "reason": "atomic customer authority consent and revocation with top-level serving-client receipt contract, event, audit, outbox, readback, and operator identity hardening"
+        },
+        {
+          "path": "src/workers/dal/customer-authority-store.ts",
+          "target_blob": "0c123bdd4f62ce87ff1fb164338236cd40b4d626",
+          "reason": "atomic customer authority consent and revocation with top-level serving-client receipt contract, event, audit, outbox, readback, and operator identity hardening"
+        },
+        {
+          "path": "src/workers/dal/types/access.ts",
+          "target_blob": "a08151838aaf0a6cc4ede90dc030f5a4f8ed4261",
+          "reason": "atomic customer authority consent and revocation with top-level serving-client receipt contract, event, audit, outbox, readback, and operator identity hardening"
+        },
+        {
+          "path": "src/workers/routes/customer.ts",
+          "target_blob": "fe0b5b1e54e14465e0c3fd2658755dc8299b9625",
+          "reason": "atomic customer authority consent and revocation with top-level serving-client receipt contract, event, audit, outbox, readback, and operator identity hardening"
+        }
+      ]
     }
   ]
 }
