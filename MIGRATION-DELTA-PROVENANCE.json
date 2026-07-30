@@ -3756,6 +3756,27 @@
           "reason": "Keep comma-separated prohibited actions on the read-only intake path while preserving explicit affirmative decisions"
         }
       ]
+    },
+    {
+      "delta_id": "project-fact-response-corpus-20260730",
+      "generated_at": "2026-07-30T08:28:46.349Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "47ec3430539d5ea6cca8a7131936040a06530343",
+      "target_base_commit": "47ec3430539d5ea6cca8a7131936040a06530343",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/services/cockpit-chat.ts",
+          "target_blob": "9ad59ce7a955637cc40efb5e43f7f0014dbcda7b",
+          "reason": "Make selected-project fact answers deterministic across the fixed 60-prompt response corpus and give plan facts precedence over workspace inventory heuristics"
+        },
+        {
+          "path": "src/workers/__tests__/cockpit-chat.test.ts",
+          "target_blob": "1da3b07b03912aa4fcfac54e49fce57fa3f48b37",
+          "reason": "Make selected-project fact answers deterministic across the fixed 60-prompt response corpus and give plan facts precedence over workspace inventory heuristics"
+        }
+      ]
     }
   ]
 }
