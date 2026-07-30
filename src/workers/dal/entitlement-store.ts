@@ -30,11 +30,35 @@ export async function getAppEntitlementRow(sql: Sql, userId: string, workspaceId
   if (!userId || !workspaceId) return null;
   try {
     const rows = (await sql/*sql*/`
-      SELECT id, user_id, workspace_id, app_id, allowed_modes, allowed_actions, denied_actions,
-             authority_ref, revoked_at, expires_at, review_due, metadata, created_at, updated_at
-      FROM customer_entitlements
-      WHERE user_id = ${userId} AND workspace_id = ${workspaceId} AND app_id = ${PRODUCT_APP_ID}
-      ORDER BY granted_at DESC NULLS LAST
+      SELECT ce.id, ce.user_id, ce.workspace_id, ce.app_id,
+             ce.allowed_modes, ce.allowed_actions, ce.denied_actions,
+             ce.authority_ref, ce.revoked_at, ce.expires_at, ce.review_due,
+             ce.metadata, ce.created_at, ce.updated_at
+      FROM customer_entitlements ce
+      -- 260730 · DISCHARGES THE TRANCHE-C OBLIGATION.
+      --
+      -- workspace-member-store.ts:267-275 deliberately does NOT revoke entitlements when a member is
+      -- soft-removed, and says why: "enforcement is flag-off today (inert), and the
+      -- ENTITLEMENT_ENFORCEMENT flip (Tranche C) re-derives authority from LIVE membership; that
+      -- derivation must exclude soft-removed members (removed_at IS NOT NULL) — tracked as the
+      -- flip's responsibility, not this membership write's."
+      --
+      -- That was the correct seam. ENTITLEMENT_ENFORCEMENT flipped to "on" on 260720
+      -- (wrangler.toml) and this derivation was never updated, so the obligation the comment
+      -- assigned has been outstanding since. Until now the grant outlived the membership: a
+      -- soft-removed member kept allowed_actions ['*'] and operating_mode 'operator', and removal —
+      -- the first thing an owner reaches for — closed nothing.
+      --
+      -- Joining here rather than revoking at the removal write is deliberate and stronger: it binds
+      -- authority to LIVE membership for every caller and every future removal path, including ones
+      -- that do not exist yet. A revoke-on-write fix would have to be repeated at each new site.
+      JOIN workspace_members wm
+        ON wm.user_id = ce.user_id
+       AND wm.workspace_id = ce.workspace_id
+       AND wm.removed_at IS NULL
+       AND wm.status = 'active'
+      WHERE ce.user_id = ${userId} AND ce.workspace_id = ${workspaceId} AND ce.app_id = ${PRODUCT_APP_ID}
+      ORDER BY ce.granted_at DESC NULLS LAST
       LIMIT 1
     `) as Record<string, unknown>[];
     const r = rows[0];
