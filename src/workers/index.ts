@@ -36,6 +36,8 @@ import { WorkersDalAdapter } from './dal/WorkersDalAdapter';
 import type { DalAdapter } from './dal/DalAdapter';
 import { listGoalsWithReviewDueRow, updateGoalReviewDueRow } from './dal/propagation-store';
 import { listWorkspaceIdsForCensusRow, countIntakeResolutionsRow, recordCustomerCensusObservationRow } from './dal/customer-census-store';
+import { listWorkspaceMembersRow } from './dal/workspace-member-store'; // P10 · parity gateway (read-only)
+import { listOrgMembers } from './services/clerk-org'; // P10 · parity gateway (read-only, null on outage)
 import { listActiveLearningSignalsForMaterializationRow, upsertUserPersonalizationProfileRow } from './dal/personalization-materialize-store';
 import { healthRoute } from './routes/health';
 import { sessionRoute } from './routes/session';
@@ -386,6 +388,18 @@ const scheduledHandler = async (
         listWorkspaceIds: (limit: number) => listWorkspaceIdsForCensusRow(sql, limit),
         countIntakeResolutions: (workspaceId: string) => countIntakeResolutionsRow(sql, workspaceId),
         recordObservation: (row) => recordCustomerCensusObservationRow(sql, row),
+      },
+      // P10 (260731) · Clerk↔DB parity gateway. Reuses the EXISTING enumeration and member readers —
+      // no new SQL — because the comparator's value is in comparing what already exists, and a
+      // detector that introduces its own reads can diverge from the thing it claims to observe.
+      // Only clerkDbParityCron reads this, and only when CLERK_DB_PARITY_ENABLED is on.
+      parity: {
+        listWorkspaceIds: (limit: number) => listWorkspaceIdsForCensusRow(sql, limit),
+        listClerkMembers: (secretKey: string, workspaceId: string) => listOrgMembers(secretKey, workspaceId),
+        listDbMembers: async (workspaceId: string) => {
+          const rows = await listWorkspaceMembersRow(sql, workspaceId as never);
+          return rows.map((r) => ({ userId: String(r.user_id), role: String(r.role) }));
+        },
       },
       // Y-wave MATERIALIZE (ADR-XB-012) · personalization materializer gateway, bound from store functions
       // here (owner-connected `sql`, not the FROZEN WorkersDalAdapter). Only personalizationMaterializeCron
