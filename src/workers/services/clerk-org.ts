@@ -23,6 +23,78 @@ function clerkOrgError(code: string, message: string, status: number): ClerkOrgE
   return err;
 }
 
+/**
+ * One accepted Clerk organization membership for a user.
+ *
+ * A5 Option B (260731). The invite→membership seam is driven by the `org_id`/`org_role` JWT claims,
+ * which Clerk emits ONLY when the session has an ACTIVE organization. A user who belongs to several
+ * organizations therefore has exactly one of them represented in any given token — every other
+ * accepted membership is invisible to the session route, and its `workspace_members` row is never
+ * written.
+ *
+ * Measured on production 2026-07-31: Clerk showed Honest & Young with 3 members and one operator
+ * account ACCEPTED since 07-29, while `workspace_members` held ONE row and
+ * `activated_by='invite-materialization'` was 0 across the whole table. The operator signed out and
+ * back in twice; the client-side auto-activate (most-recently-joined) shipped and still produced no
+ * row, because for a user with 8 other organizations "most recently joined" is not reliably the one
+ * they were invited to. The client path cannot close this on its own.
+ *
+ * This is the server-side backstop the plan named as Option B: ask Clerk directly which
+ * organizations the authenticated user actually belongs to, instead of depending on which one
+ * happened to be active when the token was minted.
+ */
+export interface UserOrgMembership {
+  organizationId: string;
+  role: string; // Clerk org role, e.g. 'org:member' | 'org:admin'
+}
+
+/**
+ * List the authenticated user's accepted organization memberships.
+ *
+ * FAIL-OPEN BY CONTRACT. Every caller is on a session hot path whose current behaviour is "no
+ * membership materialized". If Clerk is unreachable, slow, or returns an unexpected shape, the
+ * right outcome is that same current behaviour — never a failed sign-in. So this returns an EMPTY
+ * LIST on any error rather than throwing: a degraded Clerk must not be able to lock users out of a
+ * product they are already entitled to use.
+ *
+ * That is a deliberate inversion of the usual fail-closed rule in this repo, and it is safe here
+ * for one specific reason: this function only ever ADDS a membership the user has already accepted
+ * in Clerk. It cannot grant access Clerk has not already granted, so an empty result is strictly
+ * less privilege, never more.
+ */
+export async function listUserOrgMemberships(
+  secretKey: string,
+  userId: string,
+  opts: { limit?: number } = {}
+): Promise<UserOrgMembership[]> {
+  if (!secretKey || typeof secretKey !== 'string') return [];
+  if (!userId || typeof userId !== 'string') return [];
+
+  const limit = opts.limit ?? 50;
+
+  try {
+    const clerk = createClerkClient({ secretKey });
+    const res = await clerk.users.getOrganizationMembershipList({ userId, limit });
+    // The SDK has returned both a bare array and a paginated { data } envelope across versions;
+    // accept either rather than pinning to one and silently reading zero memberships after an
+    // upgrade — a silent zero here reproduces exactly the defect this function exists to fix.
+    const rows = Array.isArray(res) ? res : ((res as { data?: unknown[] } | null)?.data ?? []);
+    const out: UserOrgMembership[] = [];
+    for (const m of rows as Array<{ organization?: { id?: unknown }; role?: unknown }>) {
+      const organizationId = m?.organization?.id;
+      const role = m?.role;
+      if (typeof organizationId === 'string' && organizationId && typeof role === 'string' && role) {
+        out.push({ organizationId, role });
+      }
+    }
+    return out;
+  } catch {
+    // Intentionally swallowed — see the fail-open contract above. The caller records the skip
+    // reason on the session envelope so the absence is observable without being fatal.
+    return [];
+  }
+}
+
 export interface TeamInvitationInput {
   organizationId: string;
   inviterUserId: string;

@@ -3971,6 +3971,27 @@
           "reason": "A7 step 3 slice: prior-version document read on the RLS-subject client"
         }
       ]
+    },
+    {
+      "delta_id": "a5-server-materialization-260731",
+      "generated_at": "2026-07-31T07:08:25.263Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "a85435fc378e9161ee4f91356bbd91e28b07e79d",
+      "target_base_commit": "a85435fc378e9161ee4f91356bbd91e28b07e79d",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/services/clerk-org.ts",
+          "target_blob": "5550a8fe8f023e6f83fac1d036cb225f1ff3a8c3",
+          "reason": "A5 Option B: server-side Clerk membership sweep backstop — listUserOrgMemberships added to clerk-org.ts; session route sweeps accepted memberships the token could not name"
+        },
+        {
+          "path": "src/workers/routes/session.ts",
+          "target_blob": "edc7f046174e2b820b6c1f64916a5b59a6e24a5e",
+          "reason": "A5 Option B: server-side Clerk membership sweep backstop — listUserOrgMemberships added to clerk-org.ts; session route sweeps accepted memberships the token could not name"
+        }
+      ]
     }
   ]
 }

@@ -35,6 +35,15 @@ import { Hono } from 'hono';
 const clerk = vi.hoisted(() => ({ claims: {} as Record<string, unknown> }));
 vi.mock('@clerk/backend', () => ({
   verifyToken: vi.fn(async () => clerk.claims),
+  // createClerkClient is stubbed to report NO memberships because case 3 below (no org claims) now
+  // also reaches the A5 Option B sweep. Stubbing it explicitly keeps that case honest: without this
+  // the module mock would leave createClerkClient undefined, the sweep would throw a TypeError, and
+  // the assertion would pass through the fail-open catch — green for the wrong reason, which is the
+  // exact class this suite exists to catch. The sweep has its own suite:
+  // session-clerk-membership-sweep.test.ts.
+  createClerkClient: vi.fn(() => ({
+    users: { getOrganizationMembershipList: vi.fn(async () => ({ data: [] })) },
+  })),
 }));
 
 import { sessionRoute } from '../routes/session';
