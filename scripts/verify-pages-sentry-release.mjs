@@ -2,10 +2,13 @@
 
 import { readFileSync } from 'node:fs';
 import { join as joinPath } from 'node:path';
+import vm from 'node:vm';
 import {
   extractFrontendSha,
   resolveSentryRelease,
   sentryBootstrap,
+  SENTRY_SDK_URL,
+  SENTRY_SDK_SRI,
 } from '../functions/_lib/frontend-release-provenance.js';
 
 /**
@@ -19,6 +22,47 @@ import {
  * deliberately NOT consumers — `SENTRY_DSN`, `SENTRY_TRACES_SAMPLE_RATE` and friends must all
  * read false here, which is what the self-test below pins.
  */
+/**
+ * Is the SDK loaded by a real, executing <script src=…> — not merely MENTIONED?
+ *
+ * `sentryConsumerPresent` matches the CDN host anywhere in the text, so a mutant that turned the
+ * script tag into a <span> carrying the same src SURVIVED it (observed 260731). A detector that
+ * cannot distinguish an executing element from an inert mention is the same false-positive shape
+ * this estate keeps finding — so the structural check exists alongside the textual one.
+ */
+export function sdkScriptTagPresent(html, url) {
+  const tags = String(html || '').match(/<script\b[^>]*>/gi) || [];
+  return tags.some((tag) => tag.includes(`src="${url}"`) || tag.includes(`src='${url}'`));
+}
+
+/**
+ * EXECUTE the emitted init script and count real `Sentry.init` calls across two invocations.
+ *
+ * The double-init guard was previously asserted by grepping for `__XLOOP_SENTRY_STARTED` — a token
+ * that still appears when the guard is broken, so that mutant SURVIVED too. Running the code is the
+ * only way to tell a guard that works from a guard that is merely spelled.
+ */
+export function initCallsAcrossTwoRuns(bootstrapHtml) {
+  const match = String(bootstrapHtml || '').match(/<script data-xlooop-sentry-init>([\s\S]*?)<\/script>/);
+  if (!match) return -1;
+  let calls = 0;
+  const win = {
+    SENTRY_DSN: 'https://public@example.ingest.sentry.io/1',
+    SENTRY_ENVIRONMENT: 'production',
+    SENTRY_RELEASE: 'a'.repeat(40),
+    SENTRY_SAMPLE_RATE: '0.25',
+    SENTRY_TRACES_SAMPLE_RATE: '0.05',
+  };
+  win.Sentry = { init: () => { calls += 1; } };
+  const sandbox = { window: win, Sentry: win.Sentry };
+  vm.createContext(sandbox);
+  vm.runInContext(match[1], sandbox);
+  if (typeof win.__xlooopSentryInit !== 'function') return -1;
+  win.__xlooopSentryInit();
+  win.__xlooopSentryInit();
+  return calls;
+}
+
 export function sentryConsumerPresent(html) {
   const text = String(html || '');
   return (
@@ -50,12 +94,32 @@ const checks = [
   ['missing DSN emits no bootstrap', sentryBootstrap({}, exactHtml) === ''],
   ['bootstrap carries exact artifact release', sentryBootstrap(env, exactHtml).includes(`window.SENTRY_RELEASE="${exactSha}"`)],
   ['bootstrap excludes stale release', !sentryBootstrap(env, exactHtml).includes(legacyRelease)],
-  ['malformed declaration excludes stale release', !sentryBootstrap(env, invalidHtml).includes('SENTRY_RELEASE')],
+  // Asserts the ASSIGNMENT, not the bare token. The init script now references the global by name
+  // (`release:window.SENTRY_RELEASE||undefined`), so a substring test for 'SENTRY_RELEASE' would
+  // match the reader and report a leak that is not there. The invariant is unchanged: a malformed
+  // SHA declaration must never cause the stale configured release to be ASSIGNED.
+  ['malformed declaration assigns no stale release', !/window\.SENTRY_RELEASE\s*=/.test(sentryBootstrap(env, invalidHtml))],
+  ['malformed declaration leaks no stale release VALUE', !sentryBootstrap(env, invalidHtml).includes(legacyRelease)],
 
   // The detector itself is blocking: a consumer check that cannot tell config from an SDK would
   // make the advisory below worse than absent. The first of these is the load-bearing one — it
   // asserts that everything the eight checks above verify is NOT evidence Sentry runs.
-  ['bootstrap config alone is not a consumer', sentryConsumerPresent(sentryBootstrap(env, exactHtml)) === false],
+  // INVERTED 260731, deliberately, when the SDK shipped. This check used to assert that bootstrap
+  // emitted config and nothing that reads it — it was the finding. Now it asserts the fix, and it
+  // is the regression guard: delete the SDK from sentryBootstrap and this goes red immediately
+  // instead of degrading quietly back to a configured-but-dark Sentry.
+  ['bootstrap now ships an SDK consumer', sentryConsumerPresent(sentryBootstrap(env, exactHtml)) === true],
+  ['bare config globals are still not a consumer', sentryConsumerPresent('<script>window.SENTRY_DSN="x";window.SENTRY_TRACES_SAMPLE_RATE="0.1";</script>') === false],
+  ['SDK is version-pinned, not floating', /\/\d+\.\d+\.\d+\//.test(SENTRY_SDK_URL) && !/@latest|\/latest\//.test(SENTRY_SDK_URL)],
+  ['SDK carries subresource integrity', /^sha(256|384|512)-[A-Za-z0-9+/]+={0,2}$/.test(SENTRY_SDK_SRI)],
+  ['emitted SDK tag carries the integrity attribute', sentryBootstrap(env, exactHtml).includes(`integrity="${SENTRY_SDK_SRI}"`)],
+  // EXECUTED, not grepped — see initCallsAcrossTwoRuns. Two invocations must yield exactly one init.
+  ['init runs exactly once across two invocations', initCallsAcrossTwoRuns(sentryBootstrap(env, exactHtml)) === 1],
+  // STRUCTURAL, not substring — the SDK must be loaded by a real <script src=…>, not just mentioned.
+  ['SDK arrives via a real script tag', sdkScriptTagPresent(sentryBootstrap(env, exactHtml), SENTRY_SDK_URL) === true],
+  ['a mere mention is not a script tag', sdkScriptTagPresent(`<span src="${SENTRY_SDK_URL}"></span>`, SENTRY_SDK_URL) === false],
+  ['init cannot throw into the page', sentryBootstrap(env, exactHtml).includes('catch(e)')],
+  ['PII is explicitly off, not inherited', sentryBootstrap(env, exactHtml).includes('sendDefaultPii:false')],
   ['no html has no consumer', sentryConsumerPresent('') === false],
   ['Sentry.init counts as a consumer', sentryConsumerPresent('<script>Sentry.init({ dsn: window.SENTRY_DSN });</script>') === true],
   ['npm sdk import counts as a consumer', sentryConsumerPresent('import * as S from "@sentry/browser";') === true],
