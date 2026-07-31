@@ -28,6 +28,7 @@ import { buildPrincipal } from '../dal/principal-adapter';
 import { projectSpineAuthority } from '../lib/spine-authority';
 import { stripInternalProvisioning, customerSafeSerializerEnabled } from '../lib/customer-safe-decision'; // AR-0.2 · customer-safe projection (P3 260714: default-SAFE)
 import { provisionCustomerFromAccessRequest } from '../services/onboarding-provisioner';
+import { listUserOrgMemberships } from '../services/clerk-org'; // A5 Option B · server-side membership backstop
 import type { AiRunner } from '../services/agent-digest';
 import type { AuthEnv } from '../middleware/auth';
 import type { DalAdapter } from '../dal/DalAdapter';
@@ -336,6 +337,83 @@ sessionRoute.get('/session', async (ctx) => {
         if (typeof console !== 'undefined' && console.warn) {
           const m = inviteErr instanceof Error ? inviteErr.message : String(inviteErr);
           console.warn('[session] invite-membership materialization skipped:', m);
+        }
+      }
+    }
+
+    // ---- A5 Option B · SERVER-SIDE MEMBERSHIP BACKSTOP (260731) ----------------------------
+    //
+    // THE GAP THE CLAIM PATH CANNOT CLOSE. Everything above is driven by `org_id`/`org_role`, and
+    // Clerk emits those ONLY for the organization that is ACTIVE in the token. A user in several
+    // organizations therefore has exactly ONE of them represented per session; every other accepted
+    // membership is invisible here and its workspace_members row is never written.
+    //
+    // Measured on production 260731 — both sides, same moment:
+    //   Clerk    Honest & Young: 3 members; the operator ACCEPTED since 07-29
+    //   Xlooop   workspace_members for that org: 1 row; activated_by='invite-materialization': 0
+    // The operator signed out and back in twice. The client-side auto-activate shipped (it picks
+    // most-recently-joined) and STILL produced no row, because for someone who already owns 8
+    // organizations "most recently joined" is not reliably the one they were invited to. The client
+    // cannot answer this; only Clerk can, and only if we ask it.
+    //
+    // WHY IT IS KEYED THIS WAY. The 260729 defect was gating a per-(user, organization) question on
+    // `entitlement.state`, a per-USER global summary. That is why the branch was unreachable for
+    // every design partner who already owned a workspace. This sweep repeats none of that: it runs
+    // whenever the TOKEN could not answer (no usable org claim) and asks Clerk per organization.
+    //
+    // COST AND SAFETY. One Clerk call on sessions that carry no org claim; nothing on the common
+    // path where the claim is present and already matched. `listUserOrgMemberships` is fail-open by
+    // contract (empty list on any error), so a degraded Clerk yields exactly today's behaviour
+    // rather than a failed sign-in. It can only ADD a membership the user has ALREADY accepted in
+    // Clerk, so it never grants access Clerk has not granted. The store remains the authority: it
+    // refuses owner/client roles, refuses to resurrect a soft-removed member, refuses on ambiguous
+    // identity, and is idempotent — so re-running this every session is a no-op once the row exists.
+    //
+    // SCALE NOTE, stated rather than discovered later: at design-partner scale (single-digit users)
+    // one extra Clerk call on a claim-less session is negligible. If this ever runs at self-serve
+    // volume it wants a short-lived negative cache keyed on user_id; it is not needed now and
+    // building it now would be speculative.
+    const tokenCouldNotAnswer = !orgId || !orgRole;
+    const canSweepClerkMemberships =
+      tokenCouldNotAnswer &&
+      entitlement.state !== 'access_denied' &&
+      envFlagTrue(ctx.env.INVITE_MEMBERSHIP_MATERIALIZATION_ENABLED) &&
+      !!ctx.env.CLERK_SECRET_KEY;
+
+    if (canSweepClerkMemberships) {
+      const swept: string[] = [];
+      try {
+        const memberships = await listUserOrgMemberships(ctx.env.CLERK_SECRET_KEY, userId);
+        for (const m of memberships) {
+          try {
+            const outcome = await dal.materializeInvitedMembership({
+              workspaceId: m.organizationId,
+              userId,
+              role: clerkRoleToWorkspaceRole(m.role),
+              email,
+            });
+            if (outcome.materialized) swept.push(m.organizationId);
+          } catch {
+            // One organization failing must not abandon the rest — a single bad row should not
+            // strand a user from every other workspace they legitimately belong to.
+          }
+        }
+        if (swept.length > 0) {
+          // Re-read so this response reflects what the sweep just created rather than the pre-sweep
+          // view. Stated precisely, because the value differs by population: for a user with NO
+          // workspace this flips the state from no_workspace to approved_workspace inside the SAME
+          // response, so they land in the product on this sign-in rather than the next. For a user
+          // who already owns workspaces the resolved entitlement will not change — their new
+          // membership becomes visible through the workspace-list endpoint, which reads the row the
+          // sweep just wrote. The re-read is correct in both cases; only in the first is it decisive.
+          entitlement = await dal.getSessionEntitlement(userId, orgId, email);
+          (entitlement as unknown as { clerk_membership_sweep_materialized?: string[] })
+            .clerk_membership_sweep_materialized = swept;
+        }
+      } catch (sweepErr) {
+        if (typeof console !== 'undefined' && console.warn) {
+          const m = sweepErr instanceof Error ? sweepErr.message : String(sweepErr);
+          console.warn('[session] clerk membership sweep skipped:', m);
         }
       }
     }
