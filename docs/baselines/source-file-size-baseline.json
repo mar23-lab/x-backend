@@ -1,0 +1,27 @@
+{
+  "_comment": "Files already over the 500-line guideline when the ratchet landed. NEW entries are a regression and fail the gate. Entries that drop under the limit are removed on --update so the ratchet only tightens. Do not hand-add paths to silence a failure.",
+  "limit": 500,
+  "generated_from": "scripts/verify-source-file-size-ratchet.mjs --update",
+  "over_limit": [
+    "src/workers/dal/DalAdapter.ts",
+    "src/workers/dal/WorkersDalAdapter.ts",
+    "src/workers/dal/context-resolver.ts",
+    "src/workers/dal/event-store.ts",
+    "src/workers/dal/operational-spine-store.ts",
+    "src/workers/dal/project-store.ts",
+    "src/workers/dal/propagation-store.ts",
+    "src/workers/dal/source-store.ts",
+    "src/workers/dal/synthetic-domain-store.ts",
+    "src/workers/dal/template-policy-store.ts",
+    "src/workers/dal/types/access.ts",
+    "src/workers/inference/detector-engine.ts",
+    "src/workers/routes/customer-chat.ts",
+    "src/workers/routes/operational-spine.ts",
+    "src/workers/routes/projects.ts",
+    "src/workers/routes/session.ts",
+    "src/workers/routes/sources.ts",
+    "src/workers/routes/synthetic-domains.ts",
+    "src/workers/routes/workspaces.ts",
+    "src/workers/services/cockpit-chat.ts"
+  ]
+}

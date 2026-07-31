@@ -3992,6 +3992,27 @@
           "reason": "A5 Option B: server-side Clerk membership sweep backstop — listUserOrgMemberships added to clerk-org.ts; session route sweeps accepted memberships the token could not name"
         }
       ]
+    },
+    {
+      "delta_id": "ratchets-260731",
+      "generated_at": "2026-07-31T08:31:36.519Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "084e1536772af922b2980cabe74f3cc91ee26aa9",
+      "target_base_commit": "084e1536772af922b2980cabe74f3cc91ee26aa9",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "package.json",
+          "target_blob": "68efddf8d7632d947f0b795fd4c8a56646809b4b",
+          "reason": "Two monotonic ratchets wired: source-file-size (baseline 20 of 255) and proven-red gate count (floor 33 of 230)"
+        },
+        {
+          "path": "scripts/ci-local.mjs",
+          "target_blob": "cd87c1d5fb2bc8ff274a986ec905a2ee1cb649ff",
+          "reason": "Two monotonic ratchets wired: source-file-size (baseline 20 of 255) and proven-red gate count (floor 33 of 230)"
+        }
+      ]
     }
   ]
 }
