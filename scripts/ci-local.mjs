@@ -9,6 +9,12 @@ const gates = [
   ['MCP server build', 'npm', ['--prefix', 'packages/xlooop-mcp-server', 'run', 'build']],
   ['MCP server tests', 'npm', ['--prefix', 'packages/xlooop-mcp-server', 'test']],
   ['provenance', 'npm', ['run', 'verify:provenance']],
+  // Two ratchets, both monotonic. They exist because the estate measured which numbers actually
+  // predicted its failures: 1,577 green unit tests coexisted with every customer-facing outage,
+  // while "gates proven able to fail" sat at 3 of 200. Neither ratchet demands improvement; both
+  // forbid regression, which is the only shape that survives contact with a real backlog.
+  ['source-file-size ratchet', 'npm', ['run', 'verify:source-file-size-ratchet']],
+  ['proven-red ratchet', 'npm', ['run', 'verify:proven-red-ratchet']],
   ['boundary', 'npm', ['run', 'verify:boundary']],
   // 260729: the last two P-2 baseline entries carrying a `diagnosis` were paid down. Both gates now
   // SPAWN themselves at a seeded temp root and OBSERVE the exit code instead of asserting their own
