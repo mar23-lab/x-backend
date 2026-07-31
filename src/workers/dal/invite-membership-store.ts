@@ -95,8 +95,28 @@ export async function materializeInvitedMembershipRow(
   // byte-identical to pre-guard behaviour, which is what keeps the existing store tests honest).
   const inviteeEmail = String(input.email || '').trim().toLowerCase();
   if (inviteeEmail) {
+    // 260731 · ALIGNED WITH A6. This counted EVERY row sharing the email, including ones A6 had
+    // already suspended — so the guard stayed permanently tripped for exactly the identity A6 was
+    // built to disambiguate.
+    //
+    // A6 shipped `users_email_ci_unique_active`: a PARTIAL unique index on `lower(email)` WHERE
+    // `suspended_at IS NULL`. Its whole premise is that uniqueness holds over ACTIVE rows, and that
+    // a suspended row is retained for audit provenance rather than as a candidate identity. The
+    // orphan was deliberately suspended instead of deleted because it holds 8 `audit_logs` rows as
+    // actor; deleting it would have destroyed that history.
+    //
+    // Measured on production 260731, after the sweep shipped and A5 still would not close:
+    //   marat@xlooop.com  user_3EG6…  suspended_at 2026-07-30  0 memberships   <- A6 suspended this
+    //                     user_3EIN…  suspended_at NULL        8 memberships   <- the real identity
+    // Unfiltered, `sharing.length` is 2 and every materialization for that human is refused
+    // `identity_ambiguous` forever. There is no ambiguity: exactly one row is active, and the
+    // database's own unique index guarantees that.
+    //
+    // The guard's PURPOSE is unchanged and still fail-closed: if two ACTIVE rows ever share an
+    // email, refuse rather than guess. The partial index makes that state unreachable going forward,
+    // so this now refuses only on the condition it was written for.
     const sharing = (await sql/*sql*/`
-      SELECT id FROM users WHERE lower(email) = ${inviteeEmail} LIMIT 2
+      SELECT id FROM users WHERE lower(email) = ${inviteeEmail} AND suspended_at IS NULL LIMIT 2
     `) as Array<{ id: string }>;
     if (sharing.length > 1) return { materialized: false, role: null, reason: 'identity_ambiguous' };
   }

@@ -70,4 +70,60 @@ describe('materializeInvitedMembershipRow · access-boundary guards', () => {
     expect(r.role).toBe('operator');
     expect(sql.transaction).toHaveBeenCalledTimes(1);
   });
+
+  // ── AMBIGUITY, ALIGNED WITH A6 (260731) ──────────────────────────────────────────────────────
+  //
+  // The guard used to count EVERY row sharing the email, including ones A6 had already suspended —
+  // so it stayed permanently tripped for exactly the identity A6 was built to disambiguate. Measured
+  // on production: marat@xlooop.com had one SUSPENDED row (0 memberships, retained because it holds
+  // 8 audit_logs rows as actor) and one ACTIVE row (8 memberships). No ambiguity existed, and the
+  // guard refused every materialization for that human anyway.
+  //
+  // The query now filters `suspended_at IS NULL`, matching the premise of A6's PARTIAL unique index
+  // `users_email_ci_unique_active`. Both directions are pinned below, because relaxing a fail-closed
+  // guard is only safe if the case it exists for still fails.
+
+  it('AMBIGUITY still refuses when TWO ACTIVE rows share the email (the guard is not weakened)', async () => {
+    // ws exists, no member row, user not banned, TWO active rows for the email
+    const sql = mockSql([[{ id: WS }], [], [{ status: 'approved' }], [{ id: 'user_a' }, { id: 'user_b' }]]);
+    const r = await materializeInvitedMembershipRow(sql as never, {
+      workspaceId: WS, userId: USER, role: 'viewer', email: 'dup@example.com',
+    });
+    expect(r.reason).toBe('identity_ambiguous');
+    expect(sql.transaction).not.toHaveBeenCalled();
+  });
+
+  it('a SUSPENDED duplicate no longer blocks — the production marat@xlooop.com shape', async () => {
+    // The query now excludes suspended rows, so the driver returns ONE row and materialization runs.
+    const sql = mockSql([[{ id: WS }], [], [{ status: 'approved' }], [{ id: 'user_3EIN_active' }]]);
+    const r = await materializeInvitedMembershipRow(sql as never, {
+      workspaceId: WS, userId: USER, role: 'viewer', email: 'marat@xlooop.com',
+    });
+    expect(r.materialized).toBe(true);
+    expect(r.reason).toBe('ok');
+    expect(sql.transaction).toHaveBeenCalledTimes(1);
+  });
+
+  it('the ambiguity query FILTERS suspended rows — asserted on the SQL, not just the outcome', async () => {
+    // The two tests above pass on driver-shaped fixtures and would keep passing if the filter were
+    // removed, because the mock returns whatever it is queued with. This one reads the emitted SQL,
+    // which is the only thing that can distinguish "the filter is there" from "the fixture was kind".
+    const seen: string[] = [];
+    // Same queued-result contract as mockSql, but it also RECORDS the SQL text of each call so the
+    // assertion can read the query rather than infer it from the outcome.
+    const queued: unknown[][] = [[{ id: WS }], [], [{ status: 'approved' }], [{ id: 'only_one' }]];
+    const sql = Object.assign(
+      (strings: TemplateStringsArray) => {
+        seen.push(Array.from(strings).join('?'));
+        return Promise.resolve(queued.length ? queued.shift() : []);
+      },
+      { transaction: vi.fn(async () => {}) },
+    );
+    await materializeInvitedMembershipRow(sql as never, {
+      workspaceId: WS, userId: USER, role: 'viewer', email: 'x@example.com',
+    }).catch(() => {});
+    const ambiguityQuery = seen.find((q) => /FROM users WHERE lower\(email\)/i.test(q));
+    expect(ambiguityQuery).toBeDefined();
+    expect(ambiguityQuery).toMatch(/suspended_at IS NULL/i);
+  });
 });
