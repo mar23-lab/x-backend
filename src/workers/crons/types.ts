@@ -46,6 +46,25 @@ export interface ReviewScheduleGateway {
  * themselves come from the EXISTING dal.assembleDataGraphFacts — this gateway carries only the census-specific
  * enumeration/read/write the frozen adapter must not grow.
  */
+/**
+ * P10 (260731) · Clerk↔DB membership parity gateway. Injected like `census` rather than added to the
+ * FROZEN WorkersDalAdapter facade (S-R1). Only clerkDbParityCron reads it, and only when
+ * CLERK_DB_PARITY_ENABLED is on.
+ *
+ * `listClerkMembers` returns null — NOT an empty array — when Clerk cannot be reached. That
+ * distinction is the whole safety property of the loop: an empty array is a parity verdict
+ * ("Clerk has no members here"), and returning one on an outage would render the 260731 incident
+ * (Clerk 3, DB 1) as clean.
+ */
+export interface ClerkDbParityGateway {
+  /** Bounded, deterministic enumeration of workspace ids to compare. */
+  listWorkspaceIds(limit: number): Promise<string[]>;
+  /** Clerk's members for this org, or NULL when Clerk could not be asked. */
+  listClerkMembers(secretKey: string, workspaceId: string): Promise<Array<{ userId: string; role: string }> | null>;
+  /** The product's active members (soft-removed excluded) for this workspace. */
+  listDbMembers(workspaceId: string): Promise<Array<{ userId: string; role: string }>>;
+}
+
 export interface CustomerCensusGateway {
   /** Bounded, deterministic enumeration of workspace ids to observe. */
   listWorkspaceIds(limit: number): Promise<string[]>;
@@ -102,6 +121,11 @@ export interface CronHandlerContext {
     // 05:00 slot. BORN-OFF: only the exact string "true" (case-insensitive) enables it — flag-off performs
     // ZERO DB reads/writes (byte-inert). OBSERVE-only; it never remediates.
     CUSTOMER_CENSUS_ENABLED?: string;
+    // P10 · born-OFF. Without this exactly "true" the parity arm makes zero reads and zero Clerk calls.
+    CLERK_DB_PARITY_ENABLED?: string;
+    // Read by the parity arm only. Absent ⇒ the arm reports `clerk_secret_absent` and SKIPS; it must
+    // never report parity it could not measure.
+    CLERK_SECRET_KEY?: string;
     // Whether document nodes (mig 051) are tracked in the data graph. The census counts documents toward
     // population only when this is on (same flag customer-lineage.ts honours); off ⇒ documents=0.
     GRAPH_DOCUMENT_NODES_ENABLED?: string;
@@ -117,6 +141,8 @@ export interface CronHandlerContext {
   // J-E TASK 2 (260719) · customer census data gateway (bound from store functions in the dispatcher).
   // Optional + additive: only customerCensusCron reads it, and only when CUSTOMER_CENSUS_ENABLED is on.
   readonly census?: CustomerCensusGateway;
+  // P10 (260731) · Clerk↔DB parity gateway (bound from store + Clerk service in the dispatcher).
+  readonly parity?: ClerkDbParityGateway;
   // Y-wave MATERIALIZE (ADR-XB-012) · personalization materializer gateway (bound from store functions in
   // the dispatcher). Optional + additive: only personalizationMaterializeCron reads it, and only when
   // PERSONALIZATION_MATERIALIZE_ENABLED is on.

@@ -47,6 +47,7 @@ import { reclassifyUnattributedCron } from './reclassify-unattributed';
 import { graphRebuildCron } from './graph-rebuild';
 import { tenantProjectionDispatchCron } from './tenant-projection-dispatch';
 import { customerCensusCron } from './customer-census';
+import { clerkDbParityCron } from './clerk-db-parity';
 import { personalizationMaterializeCron } from './personalization-materialize';
 import { runOperationsQueueConsumer, type QueueConsumerResult } from '../services/operations-queue-consumer';
 import type { CronHandler, CronHandlerResult, CronRegistryEntry } from './types';
@@ -63,6 +64,7 @@ export { reclassifyUnattributedCron } from './reclassify-unattributed';
 export { graphRebuildCron } from './graph-rebuild';
 export { tenantProjectionDispatchCron } from './tenant-projection-dispatch';
 export { customerCensusCron } from './customer-census';
+export { clerkDbParityCron } from './clerk-db-parity';
 export { personalizationMaterializeCron } from './personalization-materialize';
 
 // Commercial single-intake projection dispatch shares the existing five-minute trigger. Both loops
@@ -271,13 +273,21 @@ const calibrationRetrainThenReviewThenShadowEvalThenCensus: CronHandler = async 
   let materializeFailed = false;
   try { const m = await personalizationMaterializeCron(ctx); materializeMeta = { status: m.status, actions_taken: m.actions_taken, ...(m.metadata ?? {}) }; materializeFailed = m.status === 'failed' || m.status === 'degraded'; }
   catch (e) { materializeErr = e instanceof Error ? e.message : String(e); materializeFailed = true; }
+  // P10 (260731) · Clerk-DB membership parity arm. CHAINED, not a sixth trigger: the Cloudflare
+  // account cap is 5 cron triggers and adding one returns "code: 10072". Independent best-effort,
+  // BORN-OFF, observe-only — it compares and reports, it never reconciles.
+  let parityMeta: Record<string, unknown> | null = null;
+  let parityErr: string | null = null;
+  let parityFailed = false;
+  try { const p = await clerkDbParityCron(ctx); parityMeta = { status: p.status, notes: p.notes, ...(p.metadata ?? {}) }; parityFailed = p.status === 'failed' || p.status === 'degraded'; }
+  catch (e) { parityErr = e instanceof Error ? e.message : String(e); parityFailed = true; }
   const base: CronHandlerResult = primary ?? {
     loop_name: 'calibration_retrain+review_schedule+shadow_eval+customer_census', run_id: `composite_${ctx.now().toISOString()}`,
     actions_taken: 0, cost_ms: 0, status: 'failed', error: calibErr ?? undefined,
   };
   // OBS-1 (J-W3): a failed secondary arm (review-scheduler, shadow_eval, or census) escalates to 'degraded'.
-  const status = base.status === 'failed' ? 'failed' : ((reviewFailed || shadowFailed || censusFailed || materializeFailed) ? 'degraded' : base.status);
-  return { ...base, status, metadata: { ...(base.metadata ?? {}), calibration_retrain_error: calibErr, review_schedule: reviewMeta, review_schedule_error: reviewErr, shadow_eval: shadowMeta, shadow_eval_error: shadowErr, customer_census: censusMeta, customer_census_error: censusErr, personalization_materialize: materializeMeta, personalization_materialize_error: materializeErr } };
+  const status = base.status === 'failed' ? 'failed' : ((reviewFailed || shadowFailed || censusFailed || materializeFailed || parityFailed) ? 'degraded' : base.status);
+  return { ...base, status, metadata: { ...(base.metadata ?? {}), calibration_retrain_error: calibErr, review_schedule: reviewMeta, review_schedule_error: reviewErr, shadow_eval: shadowMeta, shadow_eval_error: shadowErr, customer_census: censusMeta, customer_census_error: censusErr, personalization_materialize: materializeMeta, personalization_materialize_error: materializeErr, clerk_db_parity: parityMeta, clerk_db_parity_error: parityErr } };
 };
 
 /**

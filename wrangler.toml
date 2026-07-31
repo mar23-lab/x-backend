@@ -181,6 +181,12 @@ SAFETY_FLOOR_RATELIMIT_ENABLED = "true"
 # flip, per the PR ordering contract. The census never remediates; reclassify stays the only
 # remediation arm.
 CUSTOMER_CENSUS_ENABLED = "true"
+# P10 (260731) · Clerk<->DB membership parity arm, chained into the 05:00 composite (NOT a sixth cron
+# trigger — the account cap is 5 and a sixth returns code 10072). BORN-OFF: with this anything other
+# than exactly "true" the arm makes zero reads and zero Clerk calls. Observe-only when armed — it
+# compares and reports, it never materializes or removes. Flip it on only after the paired cutover
+# that carries it, so the first run is observed rather than discovered.
+CLERK_DB_PARITY_ENABLED = "false"
 # OS-3 UX Wave-2.1 · the execution-pipeline executor (services/operations-queue-consumer.ts, chained
 # into the hourly :45 reclassify slot). Default OFF ("disabled") — deploying the worker is INERT: the
 # executor makes ZERO DB calls until this flips. The keystone trust fix: WRITE-mode chat actions log

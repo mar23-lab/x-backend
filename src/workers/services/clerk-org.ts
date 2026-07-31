@@ -95,6 +95,53 @@ export async function listUserOrgMemberships(
   }
 }
 
+/**
+ * List an ORGANIZATION's accepted members. The mirror of listUserOrgMemberships: that one asks
+ * "which orgs does this user belong to", this one asks "who belongs to this org".
+ *
+ * FAIL-CLOSED HERE, unlike its sibling — and the asymmetry is deliberate. listUserOrgMemberships
+ * fails OPEN because an empty result there only ever means "materialize nothing", which is strictly
+ * less privilege. This function feeds a COMPARATOR, and an empty result there would read as "Clerk
+ * has no members", which is a false parity verdict in the most dangerous direction: it would render
+ * the 260731 incident (Clerk 3, DB 1) as clean. So it returns null on failure, and the caller must
+ * treat null as CANNOT MEASURE rather than as an empty set.
+ */
+export interface OrgMember {
+  userId: string;
+  /** Clerk org role, e.g. 'org:member' | 'org:admin'. Mapped by the caller, not here. */
+  role: string;
+}
+
+export async function listOrgMembers(
+  secretKey: string,
+  organizationId: string,
+  opts: { limit?: number } = {}
+): Promise<OrgMember[] | null> {
+  if (!secretKey || typeof secretKey !== 'string') return null;
+  if (!organizationId || typeof organizationId !== 'string') return null;
+  try {
+    const clerk = createClerkClient({ secretKey });
+    const res = await clerk.organizations.getOrganizationMembershipList({
+      organizationId,
+      limit: opts.limit ?? 100,
+    });
+    // Same dual-shape tolerance as listUserOrgMemberships: the SDK has returned a bare array and a
+    // { data } envelope across versions, and pinning one would silently read zero after an upgrade.
+    const rows = Array.isArray(res) ? res : ((res as { data?: unknown[] } | null)?.data ?? []);
+    const out: OrgMember[] = [];
+    for (const m of rows as Array<{ publicUserData?: { userId?: unknown }; role?: unknown }>) {
+      const userId = m?.publicUserData?.userId;
+      const role = m?.role;
+      if (typeof userId === 'string' && userId && typeof role === 'string' && role) {
+        out.push({ userId, role });
+      }
+    }
+    return out;
+  } catch {
+    return null; // CANNOT MEASURE — never an empty set, see the contract above.
+  }
+}
+
 export interface TeamInvitationInput {
   organizationId: string;
   inviterUserId: string;

@@ -4013,6 +4013,42 @@
           "reason": "Two monotonic ratchets wired: source-file-size (baseline 20 of 255) and proven-red gate count (floor 33 of 230)"
         }
       ]
+    },
+    {
+      "delta_id": "parity-arm-260731",
+      "generated_at": "2026-07-31T10:25:43.056Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "381077a7a69e20f105c01e815c2adfefc6faacce",
+      "target_base_commit": "381077a7a69e20f105c01e815c2adfefc6faacce",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/crons/types.ts",
+          "target_blob": "95ce20660fc5c41db637863b2087db741c5aba94",
+          "reason": "P10 cron arm: ctx.parity gateway + clerkDbParityCron chained into the 05:00 composite, born-OFF observe-only"
+        },
+        {
+          "path": "src/workers/crons/index.ts",
+          "target_blob": "d695383a4c27c177b370afc2fb563d5ccc003b5f",
+          "reason": "P10 cron arm: ctx.parity gateway + clerkDbParityCron chained into the 05:00 composite, born-OFF observe-only"
+        },
+        {
+          "path": "src/workers/index.ts",
+          "target_blob": "04cd61aae85b777be78ecb635f680266e20571b6",
+          "reason": "P10 cron arm: ctx.parity gateway + clerkDbParityCron chained into the 05:00 composite, born-OFF observe-only"
+        },
+        {
+          "path": "src/workers/services/clerk-org.ts",
+          "target_blob": "5a213866da61928235b50058eba888e7fafa8786",
+          "reason": "P10 cron arm: ctx.parity gateway + clerkDbParityCron chained into the 05:00 composite, born-OFF observe-only"
+        },
+        {
+          "path": "wrangler.toml",
+          "target_blob": "a5ea739f5f079a97e338de77caa5dbeb5e494e20",
+          "reason": "P10 cron arm: ctx.parity gateway + clerkDbParityCron chained into the 05:00 composite, born-OFF observe-only"
+        }
+      ]
     }
   ]
 }
