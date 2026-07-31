@@ -21,6 +21,13 @@ function jsString(value) {
   return JSON.stringify(String(value ?? ''));
 }
 
+// Pinned by exact version AND subresource integrity. The hash was computed from the fetched bytes
+// (74296 B, `@sentry/browser 8.55.0 (134fcf3)`), never transcribed from documentation — a wrong
+// integrity value fails CLOSED (the browser refuses the script, Sentry stays dark, the app is
+// unaffected), which is the right direction to fail but silent, so the value must be real.
+export const SENTRY_SDK_URL = 'https://browser.sentry-cdn.com/8.55.0/bundle.min.js';
+export const SENTRY_SDK_SRI = 'sha384-BlRl+vkcjdIA/AKRb8zWtiqlVVXepUsSv0+vho7ZMUTsNudEyQjGUKo9W86Hc1EC';
+
 export function sentryBootstrap(env, html) {
   const dsn = String(env?.SENTRY_DSN || '').trim();
   if (!dsn) return '';
@@ -35,6 +42,29 @@ export function sentryBootstrap(env, html) {
     release ? `window.SENTRY_RELEASE=${jsString(release)};` : '',
     `window.SENTRY_SAMPLE_RATE=${jsString(sampleRate)};`,
     `window.SENTRY_TRACES_SAMPLE_RATE=${jsString(tracesSampleRate)};`,
+    '</script>',
+    // The SDK ships from the SAME function that emits the config, so the two can never diverge
+    // again — which is exactly the gap verify-pages-sentry-release was written to detect.
+    // `defer` keeps it off the critical path; onload init means no polling and no race.
+    `<script data-xlooop-sentry-sdk defer crossorigin="anonymous" integrity="${SENTRY_SDK_SRI}" src="${SENTRY_SDK_URL}" onerror="window.__XLOOP_SENTRY_SDK_FAILED=true" onload="window.__xlooopSentryInit&amp;&amp;window.__xlooopSentryInit()"></script>`,
+    '<script data-xlooop-sentry-init>',
+    'window.__xlooopSentryInit=function(){',
+    'try{',
+    'if(!window.Sentry||!window.Sentry.init||window.__XLOOP_SENTRY_STARTED)return;',
+    'window.__XLOOP_SENTRY_STARTED=true;',
+    'Sentry.init({',
+    'dsn:window.SENTRY_DSN,',
+    'environment:window.SENTRY_ENVIRONMENT,',
+    'release:window.SENTRY_RELEASE||undefined,',
+    'sampleRate:parseFloat(window.SENTRY_SAMPLE_RATE)||1.0,',
+    'tracesSampleRate:parseFloat(window.SENTRY_TRACES_SAMPLE_RATE)||0.0,',
+    // Customer workspaces carry real business content. Default-PII OFF is the conservative
+    // choice and is stated here rather than inherited, so a future reader sees it was decided.
+    'sendDefaultPii:false',
+    '});',
+    // Never let telemetry break the cockpit. A failed init must stay silent to the user.
+    '}catch(e){window.__XLOOP_SENTRY_INIT_ERROR=String(e&&e.message||e);}',
+    '};',
     '</script>',
   ].join('');
 }
