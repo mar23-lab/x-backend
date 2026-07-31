@@ -373,9 +373,27 @@ sessionRoute.get('/session', async (ctx) => {
     // one extra Clerk call on a claim-less session is negligible. If this ever runs at self-serve
     // volume it wants a short-lived negative cache keyed on user_id; it is not needed now and
     // building it now would be speculative.
-    const tokenCouldNotAnswer = !orgId || !orgRole;
+    // CORRECTED 260731, after the fix failed to close A5 on a real sign-in.
+    //
+    // The first version gated this on `!orgId || !orgRole` — "the token could not answer". That is
+    // wrong, and it is wrong in exactly the way the defect it was written for is wrong.
+    //
+    // A token that names ONE active org has answered for THAT org and for nothing else. A user with
+    // eight memberships who signs in with any one of them active sets `orgId`, so the old guard read
+    // "the token answered" and skipped the sweep — leaving every OTHER accepted membership exactly as
+    // invisible as before. `marat@xlooop.com` has 8 memberships, none of them Honest & Young; under
+    // the old guard no sign-in of theirs could ever have materialized it.
+    //
+    // Measured after the paired cutover shipped the first version:
+    //   workspace_members WHERE activated_by='invite-materialization'   0
+    //   Honest & Young members                                          1 (the owner)
+    //
+    // So the sweep runs on every authenticated session where the flag is on. Only Clerk knows the
+    // full membership set; the token structurally cannot, whatever it contains. Cost is one Clerk
+    // call per session — at design-partner scale (single digits) that is negligible, and the
+    // negative-cache note below is the path if this ever runs at self-serve volume. Paying one call
+    // to make the seam actually work beats a guard that is cheap and cannot.
     const canSweepClerkMemberships =
-      tokenCouldNotAnswer &&
       entitlement.state !== 'access_denied' &&
       envFlagTrue(ctx.env.INVITE_MEMBERSHIP_MATERIALIZATION_ENABLED) &&
       !!ctx.env.CLERK_SECRET_KEY;
