@@ -99,13 +99,26 @@ documentsRoute.post('/documents', async (ctx) => {
     }
 
     const sql = neonClient(ctx.env.DATABASE_URL);
+    // A7 step 3 (260731) · the prior-version LOOKUP is a workspace-scoped READ, so it belongs on the
+    // RLS-subject client — the same client the enumeration surface below already uses, and what
+    // migration 046 said this surface should use. The WRITE on the next statement stays on the owner
+    // connection deliberately: insertDocumentWithAuthorityRow touches more than `documents`, and
+    // moving writes is step 3's later half, not this slice.
+    //
+    // Provably behaviour-identical rather than hoped: getLatestDocumentVersionRow reads ONLY
+    // `documents`; that table is RLS-enabled with exactly one policy,
+    // `workspace_id = xlooop_rls_workspace_id()`; withWorkspaceRlsContext sets that GUC to the same
+    // workspace_id the query already filters on. Same predicate, same rows. The `|| DATABASE_URL`
+    // fallback matches the sibling call sites so an environment without the RLS secret bound keeps
+    // working instead of silently reading zero rows.
+    const readSql = neonClient(ctx.env.XLOOOP_RLS_APP_DATABASE_URL || ctx.env.DATABASE_URL);
     const filename = (file.name || 'document').slice(0, 255);
     // A-W5 · version chain: content_hash = SHA-256 of the bytes (the immutable version identity an evidence
     // content_hash matches); if a prior version of this logical document (same project + filename) exists,
     // this upload chains to it (version+1, supersedes_id). Best-effort lookup — a failure yields a fresh v1.
     const contentHash = await sha256Hex(bytes);
     let priorVersion: { id: string; version: number } | null = null;
-    try { priorVersion = await getLatestDocumentVersionRow(sql, auth.workspace_id, projectId, filename); }
+    try { priorVersion = await getLatestDocumentVersionRow(readSql, auth.workspace_id, projectId, filename); }
     catch (err) { console.warn('[documents] prior-version lookup failed (best-effort; fresh v1)', { error: (err as Error)?.message }); }
     const write = await insertDocumentWithAuthorityRow(sql, {
       id: crypto.randomUUID(),

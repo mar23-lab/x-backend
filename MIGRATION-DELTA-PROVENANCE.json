@@ -3955,6 +3955,22 @@
           "reason": "Stage 5 lineage: getEventRow selects intent_id; DalAdapter type widened to match"
         }
       ]
+    },
+    {
+      "delta_id": "dal-rls-documents-read-20260731",
+      "generated_at": "2026-07-31T03:43:12.053Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "149a8596dd6743d2e5d38485f2d927e81ed8c41b",
+      "target_base_commit": "149a8596dd6743d2e5d38485f2d927e81ed8c41b",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/routes/documents.ts",
+          "target_blob": "dcda0d8bbafa306ab42056d8a7392b67dfcdecf7",
+          "reason": "A7 step 3 slice: prior-version document read on the RLS-subject client"
+        }
+      ]
     }
   ]
 }
