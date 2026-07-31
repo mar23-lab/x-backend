@@ -3913,6 +3913,48 @@
           "reason": "Clerk<->DB membership parity gate: new verify script wired into ci-local"
         }
       ]
+    },
+    {
+      "delta_id": "digest-intent-lineage-20260731",
+      "generated_at": "2026-07-31T01:57:58.609Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "662b28a0c67d92832ea1b39215e6a22a52435644",
+      "target_base_commit": "662b28a0c67d92832ea1b39215e6a22a52435644",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/services/agent-digest.ts",
+          "target_blob": "414939c1fd9b9f9d75c200619e2d7360ad8208e5",
+          "reason": "Stage 5 forward lineage: digest receipt inherits intent_id; tests pin both directions"
+        },
+        {
+          "path": "src/workers/__tests__/digest-posting.test.ts",
+          "target_blob": "f71806604a7424f724300cd8cf7be86b5da2adcc",
+          "reason": "Stage 5 forward lineage: digest receipt inherits intent_id; tests pin both directions"
+        }
+      ]
+    },
+    {
+      "delta_id": "digest-intent-lineage-types-20260731",
+      "generated_at": "2026-07-31T02:00:48.471Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "5d4db46c343001adbf44d286e031644e75b00440",
+      "target_base_commit": "5d4db46c343001adbf44d286e031644e75b00440",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/dal/DalAdapter.ts",
+          "target_blob": "73ae8b107050efcb5cdbc3408f217768a178f777",
+          "reason": "Stage 5 lineage: getEventRow selects intent_id; DalAdapter type widened to match"
+        },
+        {
+          "path": "src/workers/dal/event-store.ts",
+          "target_blob": "6d84e45b7c800e76a8eafc8d2fc947e32c0f3ae0",
+          "reason": "Stage 5 lineage: getEventRow selects intent_id; DalAdapter type widened to match"
+        }
+      ]
     }
   ]
 }

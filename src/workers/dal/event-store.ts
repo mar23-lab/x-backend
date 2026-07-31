@@ -323,12 +323,16 @@ export async function getEventRow(
   sql: Sql,
   workspaceId: string,
   eventId: string,
-): Promise<{ id: string; status: string | null; approval_state: string | null; next_action: string | null; summary: string | null; body: string | null; agent_id: string | null } | null> {
+): Promise<{ id: string; status: string | null; approval_state: string | null; next_action: string | null; summary: string | null; body: string | null; agent_id: string | null; intent_id: string | null } | null> {
   if (!workspaceId || !eventId) return null;
   // Wrapped in the workspace-RLS GUC transaction (043); byte-identical for the owner client.
-  const [rows] = await withWorkspaceRlsContext<[Array<{ id: string; status: string | null; approval_state: string | null; next_action: string | null; summary: string | null; body: string | null; agent_id: string | null }>]>(sql, workspaceId, (tx) => [
+  // `intent_id` added 260731 for Stage 5 forward lineage: postApprovedDigest reads this row to
+  // thread the proposal's intent onto the receipt that closes it. listEvents already returned the
+  // column; this single-row read did not, so the field was unreachable to a caller holding an
+  // event id. One extra column on a LIMIT 1 lookup.
+  const [rows] = await withWorkspaceRlsContext<[Array<{ id: string; status: string | null; approval_state: string | null; next_action: string | null; summary: string | null; body: string | null; agent_id: string | null; intent_id: string | null }>]>(sql, workspaceId, (tx) => [
     tx/*sql*/`
-    SELECT id, status, approval_state, next_action, summary, body, agent_id
+    SELECT id, status, approval_state, next_action, summary, body, agent_id, intent_id
     FROM operation_events
     WHERE id = ${eventId} AND workspace_id = ${workspaceId}
     LIMIT 1

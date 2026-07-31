@@ -323,6 +323,19 @@ export async function postApprovedDigest(
       summary: `[digest posted] ${String(event.summary || eventId).slice(0, 480)}`.slice(0, 512),
       body: 'Approved digest posted as the official record (sign-off -> post).',
       parent_event_id: eventId,
+      // Stage 5 forward lineage. The receipt IS the closure of the proposal, so it serves the same
+      // intent — inheriting is a statement of fact about causation, not an invention. When the
+      // proposal carries no intent the receipt carries none either: `?? null` deliberately does NOT
+      // substitute a placeholder. Backfilling absent intents is the fabrication class this
+      // programme exists to remove (an honest 1 row beats a manufactured 5,560), and the same logic
+      // applies at write time — an intent that did not exist must not be conjured because a column
+      // looks empty.
+      //
+      // Only THIS writer inherits. The scheduled sweep drafts a proposal from cron with no parent
+      // and no originating intent, and the source translators ingest external GitHub/Gmail/Drive
+      // activity that never had one — 5,504 of 5,563 production events are external ingestion, so
+      // their NULL is correct rather than missing.
+      intent_id: event.intent_id ?? null,
       visibility: 'internal_workspace',
       occurred_at: now().toISOString(),
     });

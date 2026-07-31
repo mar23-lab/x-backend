@@ -42,6 +42,32 @@ describe('OS-5 W2 · postApprovedDigest', () => {
     expect(receipt.agent_id).toBe('xlooop:digest-agent');
   });
 
+  // Stage 5 forward lineage. BOTH directions are pinned, because a test that only proved
+  // inheritance would still pass if the code hardcoded an id, and a test that only proved the null
+  // case would still pass if inheritance were dropped entirely.
+  it('forward lineage: the receipt INHERITS intent_id from the proposal it closes', async () => {
+    const { dal, calls } = makeDal({
+      getEvent: vi.fn(async () => ({ ...PROPOSAL, intent_id: 'int_weekly_ops_review' })),
+    });
+    const out = await postApprovedDigest(dal, ENV, 'ws1', 'evt_exec_digest_req1', NOW);
+    expect(out).toEqual({ posted: true, reason: 'posted' });
+    const receipt = calls.upsertEvent[0]![1] as Record<string, unknown>;
+    // The receipt IS the closure of the proposal, so it serves the same intent. Inheriting is a
+    // statement of fact about causation, not an invention.
+    expect(receipt.intent_id).toBe('int_weekly_ops_review');
+    expect(receipt.parent_event_id).toBe('evt_exec_digest_req1');
+  });
+
+  it('forward lineage: a proposal with NO intent yields a receipt with NO intent (never fabricated)', async () => {
+    const { dal, calls } = makeDal();   // PROPOSAL carries no intent_id
+    await postApprovedDigest(dal, ENV, 'ws1', 'evt_exec_digest_req1', NOW);
+    const receipt = calls.upsertEvent[0]![1] as Record<string, unknown>;
+    // Deliberately null, not a placeholder and not the event id. Manufacturing an intent that never
+    // existed is the fabrication class this programme exists to remove — an honest empty column
+    // beats an invented chain, at write time exactly as much as in a backfill.
+    expect(receipt.intent_id).toBeNull();
+  });
+
   it('non-digest event: no-op (every other sign-off is unchanged)', async () => {
     const { dal, calls } = makeDal({
       getEvent: vi.fn(async () => ({ ...PROPOSAL, next_action: null })),

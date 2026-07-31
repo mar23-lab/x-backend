@@ -170,7 +170,11 @@ export interface DalAdapter {
   getEvent(
     workspaceId: WorkspaceId,
     eventId: string,
-  ): Promise<{ id: string; status: string | null; approval_state: string | null; next_action: string | null; summary: string | null; body: string | null; agent_id: string | null } | null>;
+    // `intent_id` added 260731 for Stage 5 forward lineage. listEvents already returned it, but
+    // this single-row lookup did not select it at all, so a caller holding an event id could not
+    // read the field. getEventRow now selects it; the digest receipt needs it to inherit lineage
+    // from the proposal it closes.
+  ): Promise<{ id: string; status: string | null; approval_state: string | null; next_action: string | null; summary: string | null; body: string | null; agent_id: string | null; intent_id: string | null } | null>;
 
   /** OS-5 W2 · workspace-scoped status re-point (ia-001 status-class only) with the same optional
    *  atomic expectedStatus claim as updateEventStatusForOperator. The caller must have ALREADY
