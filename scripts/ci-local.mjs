@@ -28,6 +28,7 @@ const gates = [
   ['API contract', 'npm', ['run', 'verify:contract']],
   ['deploy provenance wiring', 'npm', ['run', 'verify:deploy-provenance']],
   ['Pages artifact-owned Sentry release', 'npm', ['run', 'verify:pages-sentry-release']],
+  ['rate-limit buckets bound to real limiters', 'npm', ['run', 'verify:rate-limit-binding-parity']],
   ['Pages release artifact contract', 'npm', ['run', 'verify:app-pages-release:self-test']],
   ['Pages deployment decision contract', 'npm', ['run', 'verify:app-pages-decision:self-test']],
   ['deployed surface registry', 'npm', ['run', 'verify:deployed-surfaces']],

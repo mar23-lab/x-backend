@@ -106,6 +106,30 @@ type = "ratelimit"
 namespace_id = "2003"
 simple = { limit = 10, period = 60 }
 
+# The three DEFAULT_CONFIG buckets (rate-limit.ts). These were referenced on EVERY mount and bound
+# to nothing until 260801, because rateLimit() merges DEFAULT_CONFIG over each mount's config — so a
+# mount that sets only `routeBucket` still evaluates ip/user/tenant. Unbound, checkBucket falls back
+# to a per-isolate Map the source labels "for local dev only", making the real cap
+# (limit x isolate count) with no signal. Limits match DEFAULT_CONFIG exactly; declaring them
+# changes the ENFORCEMENT, not the intent. verify-rate-limit-binding-parity now blocks regression.
+[[unsafe.bindings]]
+name = "RATE_LIMITER_IP"
+type = "ratelimit"
+namespace_id = "2004"
+simple = { limit = 100, period = 60 }
+
+[[unsafe.bindings]]
+name = "RATE_LIMITER_USER"
+type = "ratelimit"
+namespace_id = "2005"
+simple = { limit = 1000, period = 60 }
+
+[[unsafe.bindings]]
+name = "RATE_LIMITER_TENANT"
+type = "ratelimit"
+namespace_id = "2006"
+simple = { limit = 5000, period = 60 }
+
 # Stage 3.5 (2026-06-08) · Cloudflare Workers AI — powers the LLM-richer governed digest agent
 # (services/agent-digest.ts buildWorkspaceDigestLLM). Native platform binding, NO API keys/secrets;
 # Cloudflare provides the inference (free-tier neuron allowance). Safe-by-default: the LLM draft is

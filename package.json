@@ -21,6 +21,7 @@
     "verify:app-pages-decision": "node scripts/verify-app-pages-decision-packet.mjs",
     "verify:app-pages-decision:self-test": "node scripts/verify-app-pages-decision-packet.mjs --self-test",
     "verify:pages-sentry-release": "node scripts/verify-pages-sentry-release.mjs",
+    "verify:rate-limit-binding-parity": "node scripts/verify-rate-limit-binding-parity.mjs",
     "verify:deployed-surfaces": "node scripts/verify-deployed-surfaces.mjs",
     "verify:deploy-provenance": "node scripts/verify-deploy-provenance-wiring.mjs",
     "verify:deploy-schema-head": "node scripts/verify-deploy-schema-head.mjs",
