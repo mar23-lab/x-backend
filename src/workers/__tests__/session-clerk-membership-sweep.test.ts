@@ -235,19 +235,36 @@ describe('session route · Clerk membership SWEEP (A5 Option B backstop)', () =>
     expect(r.body.state).toBe('approved_workspace'); // exactly what today's code returns
   });
 
-  it('5 · the token DID answer -> claim path only, NO redundant Clerk call', async () => {
-    // Cost control, and it is the difference between one extra call on a rare path and one extra
-    // call on every authenticated session in the product.
+  it('5 · THE TOKEN NAMING ONE ORG MUST NOT SUPPRESS THE OTHERS (the 260731 correction)', async () => {
+    // This test previously asserted the OPPOSITE — that a token carrying org_id meant "answered", so
+    // the sweep should be skipped. That was wrong, and it is why the first shipped version of this
+    // fix did not close A5: a user with eight memberships signs in with one active, `orgId` is set,
+    // and every other accepted membership stays as invisible as before.
+    //
+    // A token that names ONE org has answered for THAT org and for nothing else. Only Clerk knows the
+    // full set. So: the claim path materializes ORG_A, AND the sweep still runs and picks up ORG_B.
     const r = await callSession({
       claims: { sub: USER, email: EMAIL, org_id: ORG_A, org_role: 'org:member' },
       entitlements: [OWNS_OTHER_WORKSPACE],
       clerkMemberships: () => ({ data: [membership(ORG_B, 'org:member')] }),
     });
     expect(r.status).toBe(200);
-    expect(r.listCalls).toBe(0);
-    // ORG_A only, via the existing claim-driven path — ORG_B is NOT swept on this session.
-    expect(r.materializeCalls).toHaveLength(1);
-    expect(r.materializeCalls[0]).toMatchObject({ workspaceId: ORG_A });
+    expect(r.listCalls).toBe(1); // Clerk IS asked, even though the token named an org
+    const swept = r.materializeCalls.map((c) => c.workspaceId);
+    expect(swept).toContain(ORG_A); // claim path
+    expect(swept).toContain(ORG_B); // sweep — the membership the token could never have named
+  });
+
+  it('5b · a multi-org user whose active org is already materialized still gets the others', async () => {
+    // The literal production shape: marat@xlooop.com holds 8 memberships, none of them Honest & Young.
+    // Signing in with any one active must still surface the missing one.
+    const r = await callSession({
+      claims: { sub: USER, email: EMAIL, org_id: OWN_WS, org_role: 'org:admin' },
+      entitlements: [OWNS_OTHER_WORKSPACE],
+      clerkMemberships: () => ({ data: [membership(OWN_WS, 'org:admin'), membership(ORG_A, 'org:member')] }),
+    });
+    expect(r.listCalls).toBe(1);
+    expect(r.materializeCalls.map((c) => c.workspaceId)).toContain(ORG_A);
   });
 
   it('6 · flag OFF -> no sweep', async () => {

@@ -4049,6 +4049,22 @@
           "reason": "P10 cron arm: ctx.parity gateway + clerkDbParityCron chained into the 05:00 composite, born-OFF observe-only"
         }
       ]
+    },
+    {
+      "delta_id": "a5-sweep-fix-260731",
+      "generated_at": "2026-07-31T11:41:50.127Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "9ac577a50d2ae45f3d14f6c9a4e78c0f1843bb30",
+      "target_base_commit": "9ac577a50d2ae45f3d14f6c9a4e78c0f1843bb30",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/routes/session.ts",
+          "target_blob": "b70de5e2c1a016d8cc143ca13af366964eab05a7",
+          "reason": "A5 correction: a token naming ONE org must not suppress the sweep for the others"
+        }
+      ]
     }
   ]
 }
