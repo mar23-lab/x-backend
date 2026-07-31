@@ -4065,6 +4065,32 @@
           "reason": "A5 correction: a token naming ONE org must not suppress the sweep for the others"
         }
       ]
+    },
+    {
+      "delta_id": "ratelimit-binding-parity-260801",
+      "generated_at": "2026-07-31T14:27:53.568Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "3e30fc9b00704478241be23f71619cff37dd6f26",
+      "target_base_commit": "3e30fc9b00704478241be23f71619cff37dd6f26",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "package.json",
+          "target_blob": "3cfe3a7e7468cf0e5734a5627556e11fca54ac88",
+          "reason": "declare the three DEFAULT_CONFIG rate-limit buckets (ip/user/tenant) as real Cloudflare limiters and gate the parity; they were referenced on every mount and silently served by a per-isolate dev-only fallback"
+        },
+        {
+          "path": "scripts/ci-local.mjs",
+          "target_blob": "c7c1d258d710919d1f0658b7da08276e3ce0e8a2",
+          "reason": "declare the three DEFAULT_CONFIG rate-limit buckets (ip/user/tenant) as real Cloudflare limiters and gate the parity; they were referenced on every mount and silently served by a per-isolate dev-only fallback"
+        },
+        {
+          "path": "wrangler.toml",
+          "target_blob": "c707efbb2146b4aa1b9ac5617bc3d063cdac8e74",
+          "reason": "declare the three DEFAULT_CONFIG rate-limit buckets (ip/user/tenant) as real Cloudflare limiters and gate the parity; they were referenced on every mount and silently served by a per-isolate dev-only fallback"
+        }
+      ]
     }
   ]
 }
