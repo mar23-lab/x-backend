@@ -50,6 +50,12 @@ const gates = [
   // vitest run a pass and still exits 2 (not 0) when the DSNs are absent.
   ['cross-tenant RLS proof runner controls', 'npm', ['run', 'verify:cross-tenant-rls-proof:self-test']],
   ['rls grant parity', 'npm', ['run', 'verify:rls-grant-parity']],
+  // Clerk↔DB membership parity needs a live Clerk secret + DSN, so the LIVE run belongs to
+  // `verify:clerk-db-parity:live` (same split as rls-grant-parity). What runs here is the
+  // comparator's own controls — including the observed exit 2 when credentials are absent, because
+  // the failure this gate exists to catch (two systems disagreeing for two days in silence) would be
+  // reproduced inside the detector by any version of it that goes quiet without secrets.
+  ['clerk↔db membership parity controls', 'npm', ['run', 'verify:clerk-db-parity:self-test']],
   ['data schemas', 'npm', ['run', 'verify:data-schemas']],
   ['orphan tests', 'npm', ['run', 'verify:no-orphan-worker-tests']],
   ['prod-migration object-probe classifier', 'npm', ['run', 'verify:prod-migrations:self-test']],

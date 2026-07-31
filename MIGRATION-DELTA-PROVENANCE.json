@@ -3892,6 +3892,27 @@
           "reason": "ADR-0110 step 1: record the 092 prod apply in the APPLIED-STATE SSOT block"
         }
       ]
+    },
+    {
+      "delta_id": "clerk-db-membership-parity-20260731",
+      "generated_at": "2026-07-31T00:04:35.349Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "8c764be0d993d04120dee78f3b6a6f34a0ab9402",
+      "target_base_commit": "8c764be0d993d04120dee78f3b6a6f34a0ab9402",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "package.json",
+          "target_blob": "c0bf6952f44cdbf851afba5a57b2d015ca4c8534",
+          "reason": "Clerk<->DB membership parity gate: new verify script wired into ci-local"
+        },
+        {
+          "path": "scripts/ci-local.mjs",
+          "target_blob": "d20659c2a096c9c327d34c64e1828a2e62936123",
+          "reason": "Clerk<->DB membership parity gate: new verify script wired into ci-local"
+        }
+      ]
     }
   ]
 }
