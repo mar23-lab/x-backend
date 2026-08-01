@@ -4091,6 +4091,42 @@
           "reason": "declare the three DEFAULT_CONFIG rate-limit buckets (ip/user/tenant) as real Cloudflare limiters and gate the parity; they were referenced on every mount and silently served by a per-isolate dev-only fallback"
         }
       ]
+    },
+    {
+      "delta_id": "mounted-route-authorization-authority-260801",
+      "generated_at": "2026-08-01T12:41:53.557Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "9f4a03bf06ad0b28fa7b403990f541c90b2501dc",
+      "target_base_commit": "9f4a03bf06ad0b28fa7b403990f541c90b2501dc",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "scripts/emit-routes-manifest.mjs",
+          "target_blob": "714b2d202f0d0cd090714755277be6a9a1becfe5",
+          "reason": "Bind the mounted route contract to AST-discovered factory routes, source-verified entry middleware and route guards, duplicate and cycle refusal, fail-closed mutations, and the regenerated 219-route producer artifact"
+        },
+        {
+          "path": "scripts/emit-api-contract.mjs",
+          "target_blob": "e869c7856a770a589f83f081aa63225886a16c11",
+          "reason": "Bind the mounted route contract to AST-discovered factory routes, source-verified entry middleware and route guards, duplicate and cycle refusal, fail-closed mutations, and the regenerated 219-route producer artifact"
+        },
+        {
+          "path": "scripts/ci-local.mjs",
+          "target_blob": "561a862e8aa04bea5b196b7dcbac52f3cbf6df9a",
+          "reason": "Bind the mounted route contract to AST-discovered factory routes, source-verified entry middleware and route guards, duplicate and cycle refusal, fail-closed mutations, and the regenerated 219-route producer artifact"
+        },
+        {
+          "path": "package.json",
+          "target_blob": "fe3b0bdecdbb17335739545f31702a2d4c8ae3a5",
+          "reason": "Bind the mounted route contract to AST-discovered factory routes, source-verified entry middleware and route guards, duplicate and cycle refusal, fail-closed mutations, and the regenerated 219-route producer artifact"
+        },
+        {
+          "path": "docs/contracts/api-contract.v1.json",
+          "target_blob": "5a2ab4cc094046103c1bb52d3b580451a134b1aa",
+          "reason": "Bind the mounted route contract to AST-discovered factory routes, source-verified entry middleware and route guards, duplicate and cycle refusal, fail-closed mutations, and the regenerated 219-route producer artifact"
+        }
+      ]
     }
   ]
 }

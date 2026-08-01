@@ -25,6 +25,7 @@ const gates = [
   ['customer ecosystem template', 'npm', ['run', 'verify:customer-ecosystem-template']],
   ['customer ecosystem template controls', 'npm', ['run', 'verify:customer-ecosystem-template:self-test']],
   ['runtime independence', 'npm', ['run', 'verify:no-mbp-runtime-dependency']],
+  ['mounted-route authorization manifest controls', 'npm', ['run', 'verify:route-manifest']],
   ['API contract', 'npm', ['run', 'verify:contract']],
   ['deploy provenance wiring', 'npm', ['run', 'verify:deploy-provenance']],
   ['Pages artifact-owned Sentry release', 'npm', ['run', 'verify:pages-sentry-release']],
