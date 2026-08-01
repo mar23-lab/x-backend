@@ -301,6 +301,59 @@ export async function createProjectWithAuthorityRow(
         updated_at timestamptz
       )
     ),
+    source_connections_locked AS MATERIALIZED (
+      SELECT connection.id, connection.user_id, connection.workspace_id,
+             connection.provider, connection.status
+      FROM user_source_connections connection
+      WHERE connection.user_id = ${actor}
+        AND connection.workspace_id = ${input.workspace_id}
+        AND connection.id IN (
+          SELECT source_input.user_source_connection_id
+          FROM source_input
+          WHERE source_input.user_source_connection_id IS NOT NULL
+        )
+      FOR SHARE
+    ),
+    source_eligibility AS (
+      SELECT source_input.*
+      FROM source_input
+      WHERE (
+          source_input.source_kind IN ('manual', 'desktop_folder')
+          AND source_input.user_source_connection_id IS NULL
+        )
+        OR (
+          source_input.source_kind = 'github_repo'
+          AND (
+            (
+              source_input.user_source_connection_id IS NULL
+              AND source_input.status <> 'connected'
+            )
+            OR EXISTS (
+              SELECT 1
+              FROM source_connections_locked connection
+              WHERE connection.id = source_input.user_source_connection_id
+                AND connection.provider = 'github'
+                AND (source_input.status <> 'connected' OR connection.status = 'connected')
+            )
+          )
+        )
+        OR (
+          source_input.source_kind = 'google_drive_folder'
+          AND (
+            (
+              source_input.user_source_connection_id IS NULL
+              AND source_input.status <> 'connected'
+            )
+            OR EXISTS (
+              SELECT 1
+              FROM source_connections_locked connection
+              WHERE connection.id = source_input.user_source_connection_id
+                AND connection.provider = 'google_drive'
+                AND (source_input.status <> 'connected' OR connection.status = 'connected')
+            )
+          )
+        )
+    ),
     sources_written AS (
       INSERT INTO project_source_bindings (
         id, workspace_id, project_id, source_kind, domain_id,
@@ -309,15 +362,15 @@ export async function createProjectWithAuthorityRow(
         reconnect_required_reason, metadata, created_at, updated_at
       )
       SELECT
-        source_input.id, project_written.workspace_id, project_written.id,
-        source_input.source_kind, source_input.domain_id,
-        source_input.user_source_connection_id, source_input.source_ref,
-        source_input.status, source_input.read_policy, source_input.connected_by,
-        source_input.connected_at, source_input.last_verified_at,
-        source_input.reconnect_required_reason, source_input.metadata,
-        source_input.created_at, source_input.updated_at
+        source_eligibility.id, project_written.workspace_id, project_written.id,
+        source_eligibility.source_kind, source_eligibility.domain_id,
+        source_eligibility.user_source_connection_id, source_eligibility.source_ref,
+        source_eligibility.status, source_eligibility.read_policy, source_eligibility.connected_by,
+        source_eligibility.connected_at, source_eligibility.last_verified_at,
+        source_eligibility.reconnect_required_reason, source_eligibility.metadata,
+        source_eligibility.created_at, source_eligibility.updated_at
       FROM project_written
-      CROSS JOIN source_input
+      CROSS JOIN source_eligibility
       RETURNING id, workspace_id, project_id, source_kind, domain_id,
                 user_source_connection_id, source_ref, status, read_policy,
                 connected_by, connected_at, last_verified_at,

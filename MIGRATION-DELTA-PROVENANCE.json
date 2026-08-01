@@ -4168,6 +4168,27 @@
           "reason": "Add actor-route-digest strict idempotency and atomic project framing with real PostgreSQL rollback, replay, and concurrency proof"
         }
       ]
+    },
+    {
+      "delta_id": "schema93-replay-source-eligibility-20260802",
+      "generated_at": "2026-08-01T20:28:04.384Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "6a2a6f9be014f79cf60c493463d74a048b32a499",
+      "target_base_commit": "6a2a6f9be014f79cf60c493463d74a048b32a499",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "package.json",
+          "target_blob": "49c41ff49a9166e3003c866ac69b07aaf6121317",
+          "reason": "bind schema-93 source replay and fail-closed project source eligibility"
+        },
+        {
+          "path": "scripts/ci-local.mjs",
+          "target_blob": "c5f90a36a6fa50b6de10f77f9e20e7ce17b3cbad",
+          "reason": "bind schema-93 source replay and fail-closed project source eligibility"
+        }
+      ]
     }
   ]
 }

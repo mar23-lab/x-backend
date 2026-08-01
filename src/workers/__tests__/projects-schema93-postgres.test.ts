@@ -41,6 +41,9 @@ describePostgres('schema 93 strict project authority', () => {
     const missingParentProjectId = `proj_missing_parent_pg93_${suffix}`;
     const missingParentChildId = `proj_missing_parent_child_pg93_${suffix}`;
     const rollbackProjectId = `proj_rollback_pg93_${suffix}`;
+    const sourceMismatchProjectId = `proj_source_mismatch_pg93_${suffix}`;
+    const sourceWorkspaceId = `ws_source_mismatch_pg93_${suffix}`;
+    const sourceConnectionId = `usc_source_mismatch_pg93_${suffix}`;
     const request = {
       key: `project_pg93_${suffix}`,
       request_sha256: 'a'.repeat(64),
@@ -81,6 +84,17 @@ describePostgres('schema 93 strict project authority', () => {
         `INSERT INTO workspace_members (workspace_id, user_id, role, status, activated_at)
          VALUES ($1, $2, 'owner', 'active', now())`,
         [workspaceId, userId],
+      );
+      await client.query(
+        `INSERT INTO workspaces (id, name, owner_user_id, workspace_type, relationship_status)
+         VALUES ($1, 'Source mismatch schema 93 integration', $2, 'company', 'internal_dogfood')`,
+        [sourceWorkspaceId, userId],
+      );
+      await client.query(
+        `INSERT INTO user_source_connections (
+           id, workspace_id, user_id, provider, status, connected_at
+         ) VALUES ($1, $2, $3, 'github', 'connected', now())`,
+        [sourceConnectionId, sourceWorkspaceId, userId],
       );
 
       const sql = postgresSql(client);
@@ -183,6 +197,27 @@ describePostgres('schema 93 strict project authority', () => {
         ],
       }, userId, rollbackRequest)).rejects.toThrow(/uq_project_source_bindings_active_ref|duplicate key/i);
 
+      const sourceMismatchRequest = {
+        ...request,
+        key: `project_source_mismatch_pg93_${suffix}`,
+        request_sha256: 'f'.repeat(64),
+      };
+      await expect(createProjectWithAuthorityRow(sql, {
+        id: sourceMismatchProjectId,
+        workspace_id: workspaceId,
+        name: 'Must reject a cross-workspace source',
+        source_bindings: [{
+          source_kind: 'github_repo',
+          user_source_connection_id: sourceConnectionId,
+          source_ref: { repository: 'owner/repo' },
+          status: 'connected',
+          read_policy: 'read_only',
+        }],
+      }, userId, sourceMismatchRequest)).rejects.toMatchObject({
+        code: 'PROJECT_ATOMICITY_FAILED',
+        status: 500,
+      });
+
       const absentAuthority = await client.query(
         `SELECT
            (SELECT count(*)::integer FROM projects WHERE id = ANY($1::text[])) AS project_count,
@@ -194,9 +229,9 @@ describePostgres('schema 93 strict project authority', () => {
            (SELECT count(*)::integer FROM idempotency_keys
              WHERE workspace_id = $2 AND idempotency_key = ANY($3::text[])) AS replay_count`,
         [
-          [missingParentChildId, rollbackProjectId],
+          [missingParentChildId, rollbackProjectId, sourceMismatchProjectId],
           workspaceId,
-          [missingParentRequest.key, rollbackRequest.key],
+          [missingParentRequest.key, rollbackRequest.key, sourceMismatchRequest.key],
         ],
       );
       expect(absentAuthority.rows[0]).toEqual({
@@ -216,7 +251,10 @@ describePostgres('schema 93 strict project authority', () => {
       await client.query('DELETE FROM project_source_bindings WHERE workspace_id = $1', [workspaceId]);
       await client.query('DELETE FROM plan_entities WHERE workspace_id = $1', [workspaceId]);
       await client.query('DELETE FROM projects WHERE workspace_id = $1', [workspaceId]);
+      await client.query('DELETE FROM user_source_connections WHERE id = $1', [sourceConnectionId]);
       await client.query('DELETE FROM access_requests WHERE invited_to_workspace_id = $1', [workspaceId]);
+      await client.query('DELETE FROM access_requests WHERE invited_to_workspace_id = $1', [sourceWorkspaceId]);
+      await client.query('DELETE FROM workspaces WHERE id = $1', [sourceWorkspaceId]);
       await client.query('DELETE FROM workspaces WHERE id = $1', [workspaceId]);
       await client.query('DELETE FROM users WHERE id = $1', [userId]);
       await client.end();

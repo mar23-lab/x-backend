@@ -144,7 +144,8 @@ describe('atomic project command store', () => {
     const statement = statements[0]!;
     for (const cte of [
       'existing_replay', 'command_envelope', 'strict_claim', 'project_written',
-      'goal_written', 'sources_written', 'event_written', 'audit_written',
+      'goal_written', 'source_connections_locked', 'source_eligibility', 'sources_written',
+      'event_written', 'audit_written',
       'outbox_written', 'authority_result',
     ]) expect(statement).toContain(cte);
     expect(statement).toContain("mode = 'authority_strict'");
@@ -154,6 +155,13 @@ describe('atomic project command store', () => {
       'project_written', 'goal_written', 'sources_written', 'event_written',
       'audit_written', 'outbox_written',
     ]) expect(statement).toContain(`count(*) FROM ${authority}`);
+    expect(statement).toContain('source_connections_locked AS MATERIALIZED');
+    expect(statement).toContain('FROM user_source_connections connection');
+    expect(statement).toContain('FOR SHARE');
+    expect(statement).toContain("connection.provider = 'github'");
+    expect(statement).toContain("connection.provider = 'google_drive'");
+    expect(statement).toContain('connection.workspace_id =');
+    expect(statement).toContain('connection.user_id =');
   });
 
   it('replays a completed matching digest without a second business write', async () => {
