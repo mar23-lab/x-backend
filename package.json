@@ -62,6 +62,7 @@
     "test": "node scripts/run-worker-test-batches.mjs",
     "test:watch": "vitest --config vitest.workers.config.ts",
     "contract:emit": "node scripts/emit-api-contract.mjs",
+    "verify:route-manifest": "node scripts/emit-routes-manifest.mjs --self-test",
     "verify:contract": "node scripts/verify-api-contract-artifact.mjs",
     "verify:provenance": "node scripts/verify-shadow-seed-provenance.mjs && node scripts/verify-backend-delta-provenance.mjs",
     "verify:source-file-size-ratchet": "node scripts/verify-source-file-size-ratchet.mjs",

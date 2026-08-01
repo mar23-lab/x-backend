@@ -4,8 +4,8 @@
 // pin by version + hash.
 //
 // Assembles docs/contracts/api-contract.v1.json from FOUR code-derived sections (never hand-written):
-//   routes   — the deterministic /api/v1 surface via scripts/emit-routes-manifest.mjs (169 templates,
-//              contract_version + contract_hash stamped by the emitter itself);
+//   routes   — the deterministic mounted /api/v1 surface and entry-authorization policy via
+//              scripts/emit-routes-manifest.mjs (contract + authorization hashes stamped there);
 //   envelope — the DataClass vocabulary from src/workers/lib/response-envelope.ts (M3) + the
 //              authority-envelope field names (M4);
 //   errors   — the wire error envelope shape + the CODE_TO_STATUS table from
@@ -61,7 +61,7 @@ const contract = {
   contract_version: routesJson._provenance.contract_version,
   contract_hash: routesJson._provenance.contract_hash,
   sources: {
-    routes: 'scripts/emit-routes-manifest.mjs (src/workers/index.ts + routes/*.ts)',
+    routes: 'scripts/emit-routes-manifest.mjs (mounted graph from src/workers/index.ts + local TypeScript modules)',
     envelope: 'src/workers/lib/response-envelope.ts (M3) + lib/allowed-actions.ts (M4)',
     errors: 'src/workers/middleware/error.ts (EE wave)',
     cors: 'src/workers/middleware/cors.ts',
@@ -70,6 +70,12 @@ const contract = {
   routes: {
     route_count: routesJson._provenance.route_count,
     backed_count: routesJson._provenance.backed_count,
+    factory_mount_count: routesJson._provenance.factory_mount_count,
+    auth_classified_count: routesJson._provenance.auth_classified_count,
+    auth_unknown_count: routesJson._provenance.auth_unknown_count,
+    authorization_hash: routesJson._provenance.authorization_hash,
+    authorization_evidence_scope: routesJson._provenance.authorization_evidence_scope,
+    auth_policy_counts: routesJson._provenance.auth_policy_counts,
     backed: routesJson.backed,
     routes: routesJson.routes,
   },
