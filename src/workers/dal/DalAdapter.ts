@@ -214,6 +214,16 @@ export interface DalAdapter {
   createProject(input: import('./types').ProjectCreateInput, actorUserId: UserId): Promise<Project>;
 
   /**
+   * Authority-grade POST /projects command. Project, optional initial framing,
+   * authority lineage, and strict replay response commit atomically.
+   */
+  createProjectWithAuthority(
+    input: import('./types').ProjectCreateAuthorityInput,
+    actorUserId: UserId,
+    idempotency: import('./types').ProjectCreateIdempotencyInput,
+  ): Promise<import('./types').ProjectCreateAuthorityReceipt>;
+
+  /**
    * R54-Stage3-C · POST /api/v1/workspaces · operator creates a top-level
    * workspace owned by ownerUserId. id defaults to a slug of name. Idempotent
    * by id (ON CONFLICT updates name/slug/config). Returns the row.

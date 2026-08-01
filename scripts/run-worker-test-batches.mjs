@@ -14,6 +14,8 @@ const nodeEnvironmentTests = new Set([
   'src/workers/__tests__/migration-091-conversation-lineage.test.ts',
   // Opt-in real PostgreSQL schema/transaction proof; skipped unless XLOOOP_SCHEMA91_PG_URL is set.
   'src/workers/__tests__/intake-schema91-postgres.test.ts',
+  // Opt-in strict project command proof; skipped unless XLOOOP_SCHEMA93_PG_URL is set.
+  'src/workers/__tests__/projects-schema93-postgres.test.ts',
   // J-E TASK 1 (260719) · reads wrangler.toml + crons/index.ts via node:fs (unavailable in the workerd pool).
   'src/workers/__tests__/cron-registry-wrangler-parity.test.ts',
 ]);

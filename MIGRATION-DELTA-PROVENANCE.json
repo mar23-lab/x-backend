@@ -4127,6 +4127,47 @@
           "reason": "Bind the mounted route contract to AST-discovered factory routes, source-verified entry middleware and route guards, duplicate and cycle refusal, fail-closed mutations, and the regenerated 219-route producer artifact"
         }
       ]
+    },
+    {
+      "delta_id": "strict-idempotency-project-framing-260801",
+      "generated_at": "2026-08-01T13:41:24.261Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "66f503fc357c7e6231daf03fe2853d32cfbdd284",
+      "target_base_commit": "66f503fc357c7e6231daf03fe2853d32cfbdd284",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "scripts/run-worker-test-batches.mjs",
+          "target_blob": "0c80ea16547a622e37c135ad853b8adae688d842",
+          "reason": "Add actor-route-digest strict idempotency and atomic project framing with real PostgreSQL rollback, replay, and concurrency proof"
+        },
+        {
+          "path": "src/workers/dal/DalAdapter.ts",
+          "target_blob": "878b3c5af078a5419aa77a25d1d9834892b97330",
+          "reason": "Add actor-route-digest strict idempotency and atomic project framing with real PostgreSQL rollback, replay, and concurrency proof"
+        },
+        {
+          "path": "src/workers/dal/WorkersDalAdapter.ts",
+          "target_blob": "df14b16fec71ae3f04ea4e296c24cc25b8564f8d",
+          "reason": "Add actor-route-digest strict idempotency and atomic project framing with real PostgreSQL rollback, replay, and concurrency proof"
+        },
+        {
+          "path": "src/workers/dal/idempotency-store.ts",
+          "target_blob": "b2e4c07fa146dfd24393aaa809a5127a01b503dc",
+          "reason": "Add actor-route-digest strict idempotency and atomic project framing with real PostgreSQL rollback, replay, and concurrency proof"
+        },
+        {
+          "path": "src/workers/dal/types/event.ts",
+          "target_blob": "ed35bb43891726d92bd2ae5f2921ea47ab9e1628",
+          "reason": "Add actor-route-digest strict idempotency and atomic project framing with real PostgreSQL rollback, replay, and concurrency proof"
+        },
+        {
+          "path": "src/workers/routes/projects.ts",
+          "target_blob": "b5d9a3a60dc294e41b19d6a1918fd2b6e53fb7d4",
+          "reason": "Add actor-route-digest strict idempotency and atomic project framing with real PostgreSQL rollback, replay, and concurrency proof"
+        }
+      ]
     }
   ]
 }

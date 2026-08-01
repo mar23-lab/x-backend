@@ -17,7 +17,8 @@ import type {
   ProjectListOpts,
   ProjectScopeBinding,
   EventListOpts,
-  ProjectCreateInput,
+  ProjectCreateAuthorityInput,
+  ProjectInitialGoalInput,
   ProjectSourceBindingInput,
   ProjectSourceBindingPatch,
   ProjectSourceKind,
@@ -50,6 +51,12 @@ const SOURCE_KIND_TO_PROVIDER: Partial<Record<ProjectSourceKind, OAuthProvider>>
   github_repo: 'github',
   google_drive_folder: 'google_drive',
 };
+
+async function sha256Text(value: string): Promise<string> {
+  const bytes = new TextEncoder().encode(value);
+  const digest = await crypto.subtle.digest('SHA-256', bytes);
+  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('');
+}
 
 projectsRoute.get('/projects', async (ctx) => {
   try {
@@ -677,8 +684,22 @@ projectsRoute.post('/projects', async (ctx) => {
       ctx.status(403);
       return ctx.json({ error: `role ${role} cannot create projects (requires owner or operator)`, code: 'FORBIDDEN', request_id: ctx.get('request_id') });
     }
-    const body = await ctx.req.json().catch(() => null) as Partial<ProjectCreateInput> | null;
-    if (!body || typeof body.name !== 'string' || body.name.length === 0) {
+    const idempotencyKey = String(ctx.req.header('Idempotency-Key') || '').trim();
+    if (!idempotencyKey || idempotencyKey.length > 200) {
+      return errorEnvelope(ctx, {
+        status: 428,
+        code: 'IDEMPOTENCY_KEY_REQUIRED',
+        message: 'Idempotency-Key is required to create a project (1-200 chars)',
+      });
+    }
+    const rawBody = await ctx.req.text();
+    let body: Partial<ProjectCreateAuthorityInput> | null = null;
+    try {
+      body = JSON.parse(rawBody) as Partial<ProjectCreateAuthorityInput>;
+    } catch {
+      body = null;
+    }
+    if (!body || typeof body.name !== 'string' || body.name.trim().length === 0 || body.name.trim().length > 200) {
       ctx.status(400);
       return ctx.json({ error: 'body.name required (1-200 chars)', code: 'VALIDATION_ERROR', request_id: ctx.get('request_id') });
     }
@@ -690,18 +711,136 @@ projectsRoute.post('/projects', async (ctx) => {
       ctx.status(400);
       return ctx.json({ error: `invalid status: ${body.status}`, code: 'VALIDATION_ERROR', request_id: ctx.get('request_id') });
     }
-    const input: ProjectCreateInput = {
+    if (body.id !== undefined && (typeof body.id !== 'string' || body.id.trim().length === 0 || body.id.length > 128)) {
+      ctx.status(400);
+      return ctx.json({ error: 'body.id must be a non-empty string up to 128 chars', code: 'VALIDATION_ERROR', request_id: ctx.get('request_id') });
+    }
+    if (body.description !== undefined && (typeof body.description !== 'string' || body.description.length > 5000)) {
+      ctx.status(400);
+      return ctx.json({ error: 'body.description must be a string up to 5000 chars', code: 'VALIDATION_ERROR', request_id: ctx.get('request_id') });
+    }
+    if (body.metadata !== undefined && (!body.metadata || typeof body.metadata !== 'object' || Array.isArray(body.metadata))) {
+      ctx.status(400);
+      return ctx.json({ error: 'body.metadata must be an object', code: 'VALIDATION_ERROR', request_id: ctx.get('request_id') });
+    }
+    if (body.parent_project_id !== undefined && body.parent_project_id !== null && (
+      typeof body.parent_project_id !== 'string'
+      || body.parent_project_id.trim().length === 0
+      || body.parent_project_id.length > 128
+    )) {
+      ctx.status(400);
+      return ctx.json({ error: 'body.parent_project_id must be a non-empty string up to 128 chars or null', code: 'VALIDATION_ERROR', request_id: ctx.get('request_id') });
+    }
+
+    let initialGoal: ProjectInitialGoalInput | null = null;
+    if (body.initial_goal !== undefined && body.initial_goal !== null) {
+      if (!body.initial_goal || typeof body.initial_goal !== 'object' || Array.isArray(body.initial_goal)) {
+        ctx.status(400);
+        return ctx.json({ error: 'body.initial_goal must be an object or null', code: 'VALIDATION_ERROR', request_id: ctx.get('request_id') });
+      }
+      const candidate = body.initial_goal as Partial<ProjectInitialGoalInput>;
+      if (typeof candidate.title !== 'string' || candidate.title.trim().length === 0 || candidate.title.trim().length > 200) {
+        ctx.status(400);
+        return ctx.json({ error: 'body.initial_goal.title required (1-200 chars)', code: 'VALIDATION_ERROR', request_id: ctx.get('request_id') });
+      }
+      if (candidate.summary !== undefined && candidate.summary !== null && typeof candidate.summary !== 'string') {
+        ctx.status(400);
+        return ctx.json({ error: 'body.initial_goal.summary must be a string or null', code: 'VALIDATION_ERROR', request_id: ctx.get('request_id') });
+      }
+      if (candidate.target_date !== undefined && candidate.target_date !== null && typeof candidate.target_date !== 'string') {
+        ctx.status(400);
+        return ctx.json({ error: 'body.initial_goal.target_date must be YYYY-MM-DD or null', code: 'VALIDATION_ERROR', request_id: ctx.get('request_id') });
+      }
+      initialGoal = {
+        title: candidate.title.trim(),
+        summary: candidate.summary ?? null,
+        target_date: candidate.target_date ?? null,
+      };
+    }
+
+    if (body.source_bindings !== undefined && !Array.isArray(body.source_bindings)) {
+      ctx.status(400);
+      return ctx.json({ error: 'body.source_bindings must be an array', code: 'VALIDATION_ERROR', request_id: ctx.get('request_id') });
+    }
+    if ((body.source_bindings?.length ?? 0) > 20) {
+      ctx.status(400);
+      return ctx.json({ error: 'body.source_bindings max length is 20', code: 'VALIDATION_ERROR', request_id: ctx.get('request_id') });
+    }
+    const sourceBindings: ProjectSourceBindingInput[] = [];
+    for (let index = 0; index < (body.source_bindings?.length ?? 0); index += 1) {
+      const validated = validateProjectSourceInput(body.source_bindings![index]);
+      if (typeof validated === 'string') {
+        ctx.status(400);
+        return ctx.json({ error: `source_bindings[${index}]: ${validated}`, code: 'VALIDATION_ERROR', request_id: ctx.get('request_id') });
+      }
+      sourceBindings.push(validated);
+    }
+
+    const dal = ctx.get('dal');
+    const parentProjectId = body.parent_project_id ?? null;
+    if (parentProjectId) {
+      if (parentProjectId === body.id) {
+        ctx.status(400);
+        return ctx.json({ error: 'parent_project_id cannot equal id (cycle)', code: 'VALIDATION_ERROR', request_id: ctx.get('request_id') });
+      }
+      const parent = await dal.getProject(workspace_id, parentProjectId);
+      if (!parent) {
+        ctx.status(404);
+        return ctx.json({ error: `parent project ${parentProjectId} not found`, code: 'NOT_FOUND', request_id: ctx.get('request_id') });
+      }
+    }
+
+    for (const source of sourceBindings) {
+      const provider = SOURCE_KIND_TO_PROVIDER[source.source_kind];
+      if (provider && source.user_source_connection_id) {
+        const userSource = await dal.getUserSource(user_id, source.user_source_connection_id);
+        if (!userSource) {
+          ctx.status(404);
+          return ctx.json({ error: 'user source connection not found for this user', code: 'NOT_FOUND', request_id: ctx.get('request_id') });
+        }
+        if (userSource.provider !== provider) {
+          ctx.status(400);
+          return ctx.json({ error: `source_kind ${source.source_kind} requires ${provider} user source`, code: 'VALIDATION_ERROR', request_id: ctx.get('request_id') });
+        }
+        if (!userSource.workspace_id) {
+          ctx.status(409);
+          return ctx.json({ error: 'source connection must be explicitly bound to this workspace before it can be attached to a project', code: 'SOURCE_WORKSPACE_BINDING_REQUIRED', request_id: ctx.get('request_id') });
+        }
+        if (userSource.workspace_id !== workspace_id) {
+          ctx.status(403);
+          return ctx.json({ error: 'source connection belongs to a different workspace', code: 'SOURCE_WORKSPACE_MISMATCH', request_id: ctx.get('request_id') });
+        }
+      }
+      if (!provider && source.user_source_connection_id) {
+        ctx.status(400);
+        return ctx.json({ error: `${source.source_kind} must not reference a Clerk OAuth source connection`, code: 'VALIDATION_ERROR', request_id: ctx.get('request_id') });
+      }
+      if (provider && source.status === 'connected' && !source.user_source_connection_id) {
+        ctx.status(400);
+        return ctx.json({ error: 'connected OAuth project source requires user_source_connection_id', code: 'VALIDATION_ERROR', request_id: ctx.get('request_id') });
+      }
+    }
+
+    const input: ProjectCreateAuthorityInput = {
       id: body.id,
       workspace_id: workspace_id,
-      name: body.name,
+      name: body.name.trim(),
       status: (body.status as ProjectStatus) ?? 'active',
       description: body.description,
       metadata: body.metadata,
-      parent_project_id: body.parent_project_id ?? null,
+      parent_project_id: parentProjectId,
+      initial_goal: initialGoal,
+      source_bindings: sourceBindings,
     };
-    const dal = ctx.get('dal');
-    const project = await dal.createProject(input, user_id);
-    return ctx.json({ project });
+    const receipt = await dal.createProjectWithAuthority(input, user_id, {
+      key: idempotencyKey,
+      request_sha256: await sha256Text(rawBody),
+      route: 'POST /api/v1/projects',
+      request_id: ctx.get('request_id'),
+    });
+    if (receipt.replayed) ctx.header('Idempotency-Replayed', 'true');
+    ctx.status(201);
+    return ctx.json(receipt);
   } catch (err) {
     return errorEnvelope(ctx, err);
   }

@@ -4,6 +4,8 @@
 
 import type { Visibility } from './auth';
 import type { CardId, EventId, ProjectId, UserId, WorkspaceId, WorkspaceRole } from './identity';
+import type { PlanEntity } from './plan-entity';
+import type { ProjectSourceBinding, ProjectSourceBindingInput } from './project-source';
 
 // ---- Event status (R35.HARNESS-FLOW) ----
 
@@ -232,6 +234,37 @@ export interface ProjectCreateInput {
   description?: string;
   metadata?: Record<string, any>;
   parent_project_id?: ProjectId | null;
+}
+
+export interface ProjectInitialGoalInput {
+  title: string;
+  summary?: string | null;
+  target_date?: string | null;
+}
+
+/** Additive POST /projects framing fields. All writes share one authority transaction. */
+export interface ProjectCreateAuthorityInput extends ProjectCreateInput {
+  initial_goal?: ProjectInitialGoalInput | null;
+  source_bindings?: ProjectSourceBindingInput[];
+}
+
+export interface ProjectCreateIdempotencyInput {
+  key: string;
+  request_sha256: string;
+  route: 'POST /api/v1/projects';
+  request_id?: string | null;
+}
+
+export interface ProjectCreateAuthorityReceipt {
+  project: Project;
+  initial_goal: PlanEntity | null;
+  source_bindings: ProjectSourceBinding[];
+  receipt_id: string;
+  operation_event_id: string;
+  audit_event_id: string;
+  projection_outbox_id: string;
+  read_model_watermark: string;
+  replayed: boolean;
 }
 
 export interface ProjectListOpts {
