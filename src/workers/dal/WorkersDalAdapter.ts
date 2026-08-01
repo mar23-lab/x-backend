@@ -26,6 +26,9 @@ import type {
   HarnessFlowEventInput,
   UpsertResult,
   Project,
+  ProjectCreateAuthorityInput,
+  ProjectCreateAuthorityReceipt,
+  ProjectCreateIdempotencyInput,
   ProjectStatus,
   ProjectListOpts,
   ProjectScopeBinding,
@@ -166,6 +169,7 @@ import {
   updateProjectSourceBindingRow,
   archiveProjectSourceBindingRow,
 } from './project-store';
+import { createProjectWithAuthorityRow } from './project-command-store';
 import {
   listEventsRow,
   listEventsForOperatorRow,
@@ -446,6 +450,14 @@ export class WorkersDalAdapter implements DalAdapter {
     actorUserId: UserId,
   ): Promise<Project> {
     return createProjectRow(this.sql, input, actorUserId);
+  }
+
+  async createProjectWithAuthority(
+    input: ProjectCreateAuthorityInput,
+    actorUserId: UserId,
+    idempotency: ProjectCreateIdempotencyInput,
+  ): Promise<ProjectCreateAuthorityReceipt> {
+    return createProjectWithAuthorityRow(this.sql, input, actorUserId, idempotency);
   }
 
   // R54-Stage3-C · operator creates a top-level workspace they own.

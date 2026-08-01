@@ -1,6 +1,6 @@
 // idempotency-store.ts · Wave Y (260711) · the reserve-first idempotency store (migration 065).
 //
-// THREE operations, all on (workspace_id, idempotency_key):
+// THREE ordinary retry-guard operations, all on (workspace_id, idempotency_key):
 //   reserveIdempotencyKey  → INSERT ... ON CONFLICT DO NOTHING RETURNING id. Winner gets {status:'owned'}
 //     and must execute the handler. On conflict, SELECT the existing row: a completed row (response_status
 //     NOT NULL) → {status:'replay', responseStatus, body}; an in-flight reservation → {status:'in_progress'}.
@@ -35,9 +35,11 @@ export async function reserveIdempotencyKey(
   if (!ws || !k) return { status: 'owned' };
   try {
     const inserted = (await sql/*sql*/`
-      INSERT INTO idempotency_keys (workspace_id, idempotency_key, route)
-      VALUES (${ws}, ${k}, ${clean(route)})
-      ON CONFLICT (workspace_id, idempotency_key) DO NOTHING
+      INSERT INTO idempotency_keys (workspace_id, idempotency_key, route, mode)
+      VALUES (${ws}, ${k}, ${clean(route)}, 'ordinary_retry_guard')
+      ON CONFLICT (workspace_id, idempotency_key)
+        WHERE mode = 'ordinary_retry_guard'
+      DO NOTHING
       RETURNING id
     `) as Array<Record<string, unknown>>;
     if (inserted.length > 0) return { status: 'owned' };
@@ -45,7 +47,9 @@ export async function reserveIdempotencyKey(
     const existing = (await sql/*sql*/`
       SELECT response_status, response_body
       FROM idempotency_keys
-      WHERE workspace_id = ${ws} AND idempotency_key = ${k}
+      WHERE workspace_id = ${ws}
+        AND idempotency_key = ${k}
+        AND mode = 'ordinary_retry_guard'
       LIMIT 1
     `) as Array<Record<string, unknown>>;
     const row = existing[0];
@@ -74,7 +78,10 @@ export async function completeIdempotencyKey(
       SET response_status = ${Math.trunc(Number(responseStatus) || 200)},
           response_body = ${JSON.stringify(body ?? null)}::jsonb,
           completed_at = now()
-      WHERE workspace_id = ${ws} AND idempotency_key = ${k} AND response_status IS NULL
+      WHERE workspace_id = ${ws}
+        AND idempotency_key = ${k}
+        AND mode = 'ordinary_retry_guard'
+        AND response_status IS NULL
     `;
   } catch { /* best-effort — the response is already being returned to the caller */ }
 }
@@ -87,7 +94,10 @@ export async function releaseIdempotencyKey(sql: Sql, workspaceId: string, key: 
   try {
     await sql/*sql*/`
       DELETE FROM idempotency_keys
-      WHERE workspace_id = ${ws} AND idempotency_key = ${k} AND response_status IS NULL
+      WHERE workspace_id = ${ws}
+        AND idempotency_key = ${k}
+        AND mode = 'ordinary_retry_guard'
+        AND response_status IS NULL
     `;
   } catch { /* best-effort */ }
 }
