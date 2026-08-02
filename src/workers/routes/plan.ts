@@ -8,28 +8,26 @@
 //   PATCH  /api/v1/plan/entity/:id    → 200 { entity }   (position re-packs siblings)
 //   DELETE /api/v1/plan/entity/:id    → 200 { deleted }  (soft-delete + re-pack)
 //
-// RBAC: workspace member + role != 'client' (mirrors members.ts fail-closed tenancy). NO spine action —
-// `plan:*` is deliberately NOT in the 18-action vocabulary (per §G1); this stays plain RBAC.
+// RBAC: workspace member + role != 'client'. Writes use the shared operation-event spine and persist
+// strict replay, audit, projection outbox, and canonical readback before returning success.
 //
 // FLAG: PLAN_ENTITIES_ENABLED (envFlagTrue, default OFF). OFF ⇒ every route returns a clean 404 so the
 // surface is INERT until the operator applies migration 066 AND flips the flag — deploying this code
-// before then is byte-identical to today. Writes carry Idempotency-Key (flag-gated, byte-identical off).
+// before then is byte-identical to today. Every write requires Idempotency-Key and schema 93.
 
 import { Hono } from 'hono';
 import type { Context } from 'hono';
 import { errorEnvelope } from '../middleware/error';
 import { withDataClass } from '../lib/response-envelope';
-import { idempotencyMiddleware } from '../lib/idempotency';
 import { envFlagTrue } from '../lib/env-flag';
 import type { AuthEnv, AuthVariables } from '../middleware/auth';
 import type { DalAdapter } from '../dal/DalAdapter';
-import type { PlanEntity, PlanEntityDeleteReceipt, PlanEntityKind, PlanEntityPatch } from '../dal/types';
+import type { PlanEntityKind, PlanEntityMutationIdempotencyInput, PlanEntityPatch } from '../dal/types';
 
 export interface PlanEnv extends AuthEnv {
   DATABASE_URL: string;
   // Default OFF — the plan surface 404s until the operator applies migration 066 AND flips this.
   PLAN_ENTITIES_ENABLED?: string;
-  IDEMPOTENCY_ENABLED?: string;
 }
 
 export interface PlanVariables extends AuthVariables {
@@ -37,8 +35,6 @@ export interface PlanVariables extends AuthVariables {
 }
 
 export const planRoute = new Hono<{ Bindings: PlanEnv; Variables: PlanVariables }>();
-
-planRoute.use('*', idempotencyMiddleware()); // Wave-Y: flag-off ⇒ passthrough (GET/DELETE always pass)
 
 const VALID_KINDS: ReadonlySet<PlanEntityKind> = new Set(['goal', 'milestone', 'todo', 'intent']);
 
@@ -71,19 +67,26 @@ function resolveActor(
   return { ok: true, userId: auth.user_id, workspaceId };
 }
 
-function planRevisionId(operation: 'create' | 'update' | 'delete', row: Pick<PlanEntity | PlanEntityDeleteReceipt, 'id' | 'updated_at'>): string {
-  if (!row.id || !row.updated_at) {
-    throw { status: 503, code: 'SERVICE_UNAVAILABLE', message: `plan ${operation} did not return a revision source` };
-  }
-  return `plan:${operation}:${row.id}:${row.updated_at}`;
+async function sha256Text(value: string): Promise<string> {
+  const bytes = new TextEncoder().encode(value);
+  const digest = await crypto.subtle.digest('SHA-256', bytes);
+  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('');
 }
 
-function planMutationResponse(operation: 'create' | 'update', entity: PlanEntity) {
+async function strictCommand(
+  ctx: PlanCtx,
+  route: string,
+  rawBody: string,
+): Promise<PlanEntityMutationIdempotencyInput> {
+  const key = String(ctx.req.header('Idempotency-Key') || '').trim();
+  if (!key || key.length > 200) {
+    throw { status: 428, code: 'IDEMPOTENCY_KEY_REQUIRED', message: 'Idempotency-Key is required (1-200 chars)' };
+  }
   return {
-    entity,
-    plan_entity_id: entity.id,
-    plan_revision_id: planRevisionId(operation, entity),
-    operation,
+    key,
+    route,
+    request_sha256: await sha256Text(rawBody),
+    request_id: ctx.get('request_id'),
   };
 }
 
@@ -117,7 +120,8 @@ planRoute.post('/plan/entity', async (ctx) => {
   try {
     const actor = resolveActor(ctx);
     if (!actor.ok) return actor.res;
-    const body = (await ctx.req.json().catch(() => null)) as Record<string, unknown> | null;
+    const rawBody = await ctx.req.text();
+    const body = (() => { try { return JSON.parse(rawBody) as Record<string, unknown>; } catch { return null; } })();
     if (!body || typeof body !== 'object') {
       return errorEnvelope(ctx, { status: 400, code: 'VALIDATION_ERROR', message: 'request body must be a JSON object' });
     }
@@ -130,7 +134,7 @@ planRoute.post('/plan/entity', async (ctx) => {
       return errorEnvelope(ctx, { status: 400, code: 'VALIDATION_ERROR', message: 'title is required (1-200 chars)' });
     }
     const dal = ctx.get('dal');
-    const entity = await dal.plan.createPlanEntity(
+    const receipt = await dal.plan.createPlanEntity(
       {
         workspace_id: actor.workspaceId,
         scope_id: typeof body.scope_id === 'string' ? body.scope_id : null,
@@ -141,8 +145,10 @@ planRoute.post('/plan/entity', async (ctx) => {
         target_date: typeof body.target_date === 'string' ? body.target_date : null,
       },
       actor.userId,
+      await strictCommand(ctx, 'POST /api/v1/plan/entity', rawBody),
     );
-    return ctx.json(planMutationResponse('create', entity), 201);
+    if (receipt.replayed) ctx.header('Idempotency-Replayed', 'true');
+    return ctx.json(receipt, 201);
   } catch (err) {
     return errorEnvelope(ctx, err);
   }
@@ -161,7 +167,8 @@ planRoute.patch('/plan/entity/:id', async (ctx) => {
     if (!id) {
       return errorEnvelope(ctx, { status: 400, code: 'INVALID_ID', message: 'id path param required' });
     }
-    const body = (await ctx.req.json().catch(() => null)) as Record<string, unknown> | null;
+    const rawBody = await ctx.req.text();
+    const body = (() => { try { return JSON.parse(rawBody) as Record<string, unknown>; } catch { return null; } })();
     if (!body || typeof body !== 'object') {
       return errorEnvelope(ctx, { status: 400, code: 'VALIDATION_ERROR', message: 'request body must be a JSON object' });
     }
@@ -188,8 +195,14 @@ planRoute.patch('/plan/entity/:id', async (ctx) => {
     if (!existing) {
       return errorEnvelope(ctx, { status: 404, code: 'NOT_FOUND', message: `plan entity ${id} not found` });
     }
-    const entity = await dal.plan.updatePlanEntity(id, patch, actor.userId);
-    return ctx.json(planMutationResponse('update', entity));
+    const receipt = await dal.plan.updatePlanEntity(
+      existing,
+      patch,
+      actor.userId,
+      await strictCommand(ctx, `PATCH /api/v1/plan/entity/${id}`, rawBody),
+    );
+    if (receipt.replayed) ctx.header('Idempotency-Replayed', 'true');
+    return ctx.json(receipt);
   } catch (err) {
     return errorEnvelope(ctx, err);
   }
@@ -213,13 +226,13 @@ planRoute.delete('/plan/entity/:id', async (ctx) => {
     if (!existing) {
       return errorEnvelope(ctx, { status: 404, code: 'NOT_FOUND', message: `plan entity ${id} not found` });
     }
-    const deleted = await dal.plan.softDeletePlanEntity(id, actor.userId);
-    return ctx.json({
-      deleted: { id: deleted.id, updated_at: deleted.updated_at },
-      plan_entity_id: deleted.id,
-      plan_revision_id: planRevisionId('delete', deleted),
-      operation: 'delete',
-    });
+    const receipt = await dal.plan.softDeletePlanEntity(
+      existing,
+      actor.userId,
+      await strictCommand(ctx, `DELETE /api/v1/plan/entity/${id}`, ''),
+    );
+    if (receipt.replayed) ctx.header('Idempotency-Replayed', 'true');
+    return ctx.json(receipt);
   } catch (err) {
     return errorEnvelope(ctx, err);
   }

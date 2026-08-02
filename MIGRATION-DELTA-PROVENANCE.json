@@ -4301,6 +4301,47 @@
           "reason": "Ground exact tenant project source bindings, requested-fact coverage, and explicit target precedence"
         }
       ]
+    },
+    {
+      "delta_id": "plan-entity-authority-20260802",
+      "generated_at": "2026-08-02T09:40:18.729Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "6809a6c381854b25e96520a8f3ac69cc920b9f46",
+      "target_base_commit": "6809a6c381854b25e96520a8f3ac69cc920b9f46",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "scripts/run-worker-test-batches.mjs",
+          "target_blob": "364d493a6e65c601e55ce8fa9dd45921427ff77e",
+          "reason": "Makes customer plan create, update, reorder, and delete strict-idempotent, atomic, receipt-backed, audited, projected, and PostgreSQL-proven."
+        },
+        {
+          "path": "src/workers/__tests__/plan-route.test.ts",
+          "target_blob": "64469e6ca0bf1128ec52c220d14183f50fd84d96",
+          "reason": "Makes customer plan create, update, reorder, and delete strict-idempotent, atomic, receipt-backed, audited, projected, and PostgreSQL-proven."
+        },
+        {
+          "path": "src/workers/dal/plan-entities-facade.ts",
+          "target_blob": "fbd5573472ed3d4c465d2d4919326e351ae0c895",
+          "reason": "Makes customer plan create, update, reorder, and delete strict-idempotent, atomic, receipt-backed, audited, projected, and PostgreSQL-proven."
+        },
+        {
+          "path": "src/workers/dal/plan-store.ts",
+          "target_blob": "f59c85b7963fc395d8b26d7b648be7c7a9a03a1e",
+          "reason": "Makes customer plan create, update, reorder, and delete strict-idempotent, atomic, receipt-backed, audited, projected, and PostgreSQL-proven."
+        },
+        {
+          "path": "src/workers/dal/types/plan-entity.ts",
+          "target_blob": "81f98a92652d7c58262b337a9380aafb68338ea3",
+          "reason": "Makes customer plan create, update, reorder, and delete strict-idempotent, atomic, receipt-backed, audited, projected, and PostgreSQL-proven."
+        },
+        {
+          "path": "src/workers/routes/plan.ts",
+          "target_blob": "9d01661659f3c356d68df66208cf3c2ee34b5b55",
+          "reason": "Makes customer plan create, update, reorder, and delete strict-idempotent, atomic, receipt-backed, audited, projected, and PostgreSQL-proven."
+        }
+      ]
     }
   ]
 }
