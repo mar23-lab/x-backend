@@ -40,6 +40,7 @@ import { recordChatGroundingReads } from '../dal/document-access-store';
 import {
   answerCockpitChat,
   classifyRequestedProjectFacts,
+  classifyRequestedWorkspaceInventoryFacts,
   isProjectInventoryQuestion,
   type ProjectPlanGrounding,
   type CockpitChatScope,
@@ -326,6 +327,18 @@ customerChatRoute.post('/customer-chat', async (ctx) => {
       }];
     }
 
+    let workspaceName: string | null = null;
+    if (classifyRequestedWorkspaceInventoryFacts(message).includes('workspace_name')) {
+      try {
+        workspaceName = (await dal.getSession(auth.user_id, workspaceId)).workspace.name;
+      } catch (err) {
+        emitEvent('chat_workspace_identity_failed', {
+          workspace_id: workspaceId,
+          error: err instanceof Error ? err.message.slice(0, 200) : String(err).slice(0, 200),
+        });
+      }
+    }
+
     let plan: ProjectPlanGrounding | null = null;
     if (selectedProject) {
       try {
@@ -534,7 +547,7 @@ customerChatRoute.post('/customer-chat', async (ctx) => {
       : undefined;
     const result = await answerCockpitChat(
       message,
-      { companyContext, events, documents, projects, plan, projectSources, sources, total: events.length, scope, charter, personalizationProfile },
+      { workspaceName, companyContext, events, documents, projects, plan, projectSources, sources, total: events.length, scope, charter, personalizationProfile },
       ai,
       mode,
       claudeKey,
@@ -659,7 +672,9 @@ customerChatRoute.post('/customer-chat', async (ctx) => {
         project_plan_fact_count: result.grounded_on.plan.entities.length,
         project_source_fact_count: result.grounded_on.project_sources.total,
         document_count: result.grounded_on.documents.total,
-        freshness: result.grounded_on.plan.updated_at ?? result.grounded_on.data_freshness.newest_event_at,
+        freshness: result.grounded_on.plan.updated_at
+          ?? result.grounded_on.projects.updated_at
+          ?? result.grounded_on.data_freshness.newest_event_at,
       },
       lineage: assistantLineage ? {
         context_receipt_id: assistantLineage.context_packet_id,

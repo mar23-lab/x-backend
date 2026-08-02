@@ -117,6 +117,8 @@ export interface ProjectGroundingFact {
 }
 
 export type RequestedProjectFact =
+  | 'workspace_name'
+  | 'project_inventory'
   | 'project_name'
   | 'goals'
   | 'milestones'
@@ -151,6 +153,8 @@ export interface ProjectSourceGroundingFact {
 }
 
 export interface CockpitChatFacts {
+  /** Canonical workspace name loaded from the tenant-scoped session record when explicitly requested. */
+  workspaceName?: string | null;
   /** S1 (260628) · the captured company context (focus/maturity/AI tools/where-work-lives) when the chat
    *  is scoped to a customer workspace — makes the chief-of-staff company-aware instead of a hardcoded
    *  stereotype. Optional; null/absent → the generic fallback preamble (unchanged behaviour). */
@@ -267,8 +271,10 @@ export interface CockpitChatResult {
     projects: {
       available: boolean;
       total: number;
+      updated_at: string | null;
       items: ProjectGroundingFact[];
     };
+    workspace: { id: string; name: string | null };
     plan: {
       available: boolean;
       project_id: string | null;
@@ -659,6 +665,11 @@ export function compileChatFacts(facts: CockpitChatFacts, message = ''): Cockpit
     plan?.project_updated_at ?? null,
     ...planEntities.map((entity) => entity.updated_at ?? null),
   ].filter((value): value is string => Boolean(value)).sort().at(-1) ?? null;
+  const newestProjectAt = projectFacts
+    .map((project) => project.updated_at ?? null)
+    .filter((value): value is string => Boolean(value))
+    .sort()
+    .at(-1) ?? null;
   // Project vocabulary is only authoritative when the request is actually project-scoped.
   // Workspace charter questions such as "how am I doing against my goals?" must continue to use
   // charter grounding rather than being misclassified as a missing project plan.
@@ -671,11 +682,17 @@ export function compileChatFacts(facts: CockpitChatFacts, message = ''): Cockpit
   const asksAboutCharterGoals = !plan
     && hasCharterContext
     && /\b(?:(?:my|our)\s+goals?|goals?\s+(?:for\s+)?(?:me|us))\b/i.test(message);
-  const requestedFacts = (facts.scope.project_id || plan) && !asksAboutCharterGoals
+  const inventoryFacts = classifyRequestedWorkspaceInventoryFacts(message);
+  const requestedFacts = inventoryFacts.length > 0
+    ? inventoryFacts
+    : (facts.scope.project_id || plan) && !asksAboutCharterGoals
     ? classifyRequestedProjectFacts(message)
     : [];
   const satisfiedFacts = requestedFacts.filter((fact) => {
+    if (fact === 'workspace_name') return Boolean(facts.workspaceName);
+    if (fact === 'project_inventory') return Array.isArray(facts.projects);
     if (fact === 'project_sources') return projectSourcesAvailable;
+    if (fact === 'freshness' && inventoryFacts.length > 0) return Boolean(newestProjectAt);
     if (!plan) return false;
     if (fact === 'freshness') return Boolean(newestPlanAt);
     return true;
@@ -714,8 +731,10 @@ export function compileChatFacts(facts: CockpitChatFacts, message = ''): Cockpit
     projects: {
       available: Array.isArray(facts.projects),
       total: projectFacts.length,
+      updated_at: newestProjectAt,
       items: projectFacts.slice(0, 50),
     },
+    workspace: { id: facts.scope.workspace_id, name: facts.workspaceName ?? null },
     plan: {
       available: Boolean(plan),
       project_id: plan?.project_id ?? null,
@@ -820,6 +839,23 @@ export function isSourceInventoryQuestion(message: string): boolean {
   return /\b(?:list|show|which|what|connected|connection|binding|bound|sync|synced)\b/.test(q);
 }
 
+export function classifyRequestedWorkspaceInventoryFacts(message: string): RequestedProjectFact[] {
+  const q = String(message || '').toLowerCase().replace(/\s+/g, ' ').trim();
+  const requested = new Set<RequestedProjectFact>();
+  const projectInventory = isProjectInventoryQuestion(message)
+    && /\b(?:projects|project\s+names|active\s+project\s+count|each\s+(?:active\s+)?project|every\s+(?:active\s+)?project)\b/.test(q);
+  if (
+    /\bworkspace\s+name\b/.test(q)
+    || /\bname\s+of\s+(?:(?:this|the|current)\s+)?workspace\b/.test(q)
+    || /\bwhich\s+workspace\b/.test(q)
+  ) requested.add('workspace_name');
+  if (projectInventory) requested.add('project_inventory');
+  if (projectInventory && /\b(?:fresh|freshness|updated|last update|current as of|as of(?: date)?)\b/.test(q)) {
+    requested.add('freshness');
+  }
+  return [...requested];
+}
+
 export function classifyRequestedProjectFacts(message: string): RequestedProjectFact[] {
   const q = String(message || '').toLowerCase().replace(/\s+/g, ' ').trim();
   const requested = new Set<RequestedProjectFact>();
@@ -882,6 +918,8 @@ function buildProjectPlanAnswer(grounded: CockpitChatResult['grounded_on']): str
     lines.push(`Plan last updated: ${grounded.plan.updated_at || 'unavailable'}.`);
   }
   const labels: Record<RequestedProjectFact, string> = {
+    workspace_name: 'workspace name',
+    project_inventory: 'project inventory',
     project_name: 'project name',
     goals: 'goals',
     milestones: 'milestones',
@@ -930,6 +968,10 @@ export function buildDeterministicChatAnswer(
     const lines: string[] = [];
     let rowsOnly = false;
 
+    if (grounded.requested_facts.required.includes('workspace_name')) {
+      lines.push(`Workspace: ${grounded.workspace.name || 'unavailable'}.`);
+    }
+
     if (asksProjectInventory) {
       if (!grounded.projects.available) {
         return 'I could not verify the current project inventory, so I will not infer project names from activity events.';
@@ -938,7 +980,9 @@ export function buildDeterministicChatAnswer(
         lines.push(`There are no active projects recorded in ${where}.`);
       } else {
         const answerOptions = projectInventoryAnswerOptions(message);
-        rowsOnly = answerOptions.rowsOnly;
+        rowsOnly = answerOptions.rowsOnly
+          && !grounded.requested_facts.required.includes('workspace_name')
+          && !grounded.requested_facts.required.includes('freshness');
         lines.push(`Current active projects in ${where} (${grounded.projects.total}):`);
         for (const project of grounded.projects.items) {
           const id = answerOptions.includeIds ? ` — ${project.id}` : '';
@@ -950,12 +994,36 @@ export function buildDeterministicChatAnswer(
       }
     }
 
+    if (grounded.requested_facts.required.includes('freshness')) {
+      lines.push(`Project inventory last updated: ${grounded.projects.updated_at || 'unavailable'}.`);
+    }
+
     if (asksSourceInventory) {
       const sourceLine = sourceStatusLine(grounded, message);
       if (sourceLine) {
         if (lines.length) lines.push('');
         lines.push(sourceLine);
       }
+    }
+
+    if (!rowsOnly && grounded.requested_facts.required.length > 0) {
+      const labels: Record<RequestedProjectFact, string> = {
+        workspace_name: 'workspace name',
+        project_inventory: 'project inventory',
+        project_name: 'project name',
+        goals: 'goals',
+        milestones: 'milestones',
+        todos: 'todos',
+        counts: 'counts',
+        project_sources: 'project sources',
+        freshness: 'freshness',
+      };
+      const listed = (facts: RequestedProjectFact[]) => facts.length
+        ? facts.map((fact) => labels[fact]).join(', ')
+        : 'none';
+      lines.push(`Requested facts: ${listed(grounded.requested_facts.required)}.`);
+      lines.push(`Satisfied: ${listed(grounded.requested_facts.satisfied)}.`);
+      lines.push(`Unavailable: ${listed(grounded.requested_facts.unavailable)}.`);
     }
 
     return (rowsOnly ? lines.slice(1) : lines).join('\n');
@@ -1211,7 +1279,12 @@ export async function answerCockpitChat(
   const staleNote = grounded.data_freshness.is_stale
     ? `Note: this record's newest activity is ${grounded.data_freshness.staleness_minutes} minutes old — treat the below as a snapshot, not live status.\n\n`
     : '';
-  const projectPlanQuestion = grounded.requested_facts.required.length > 0;
+  const workspaceInventoryQuestion = grounded.requested_facts.required.includes('project_inventory');
+  const projectPlanQuestion = grounded.requested_facts.required.some((fact) => (
+    fact !== 'workspace_name'
+    && fact !== 'project_inventory'
+    && !(workspaceInventoryQuestion && fact === 'freshness')
+  ));
   // A phrase such as "Name of this project" resembles a workspace project-list request to the
   // broad inventory heuristic. The selected project's canonical plan facts are more specific and
   // must win; otherwise a fully grounded project answer is replaced by "inventory unavailable".

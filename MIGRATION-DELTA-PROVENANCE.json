@@ -4342,6 +4342,42 @@
           "reason": "Makes customer plan create, update, reorder, and delete strict-idempotent, atomic, receipt-backed, audited, projected, and PostgreSQL-proven."
         }
       ]
+    },
+    {
+      "delta_id": "inventory-semantic-completeness-20260802",
+      "generated_at": "2026-08-02T10:55:40.970Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "f515f34a70b8752dfe05d44ba204c65df2915571",
+      "target_base_commit": "f515f34a70b8752dfe05d44ba204c65df2915571",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/services/cockpit-chat.ts",
+          "target_blob": "bb6acb71d0c60825d62a2a74c1a93fb2e406a064",
+          "reason": "Return canonical workspace inventory identity, coverage, and freshness without substituting onboarding context"
+        },
+        {
+          "path": "src/workers/routes/customer-chat.ts",
+          "target_blob": "1b87630baa2005201d02dcf36162de846a664413",
+          "reason": "Return canonical workspace inventory identity, coverage, and freshness without substituting onboarding context"
+        },
+        {
+          "path": "src/workers/lib/observability.ts",
+          "target_blob": "6d4ea583040655ac687c82703f95404f76a76e08",
+          "reason": "Return canonical workspace inventory identity, coverage, and freshness without substituting onboarding context"
+        },
+        {
+          "path": "src/workers/__tests__/cockpit-chat.test.ts",
+          "target_blob": "7b45f021063b2d2867e38f4a299bf02a60722805",
+          "reason": "Return canonical workspace inventory identity, coverage, and freshness without substituting onboarding context"
+        },
+        {
+          "path": "src/workers/__tests__/customer-chat-route.test.ts",
+          "target_blob": "74bfd4f6f640ba17a41d81c70ead4e058aea3ecf",
+          "reason": "Return canonical workspace inventory identity, coverage, and freshness without substituting onboarding context"
+        }
+      ]
     }
   ]
 }

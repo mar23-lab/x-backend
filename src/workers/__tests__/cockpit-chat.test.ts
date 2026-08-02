@@ -204,6 +204,55 @@ describe('project requested-fact semantic corpus', () => {
   });
 });
 
+describe('workspace inventory semantic completeness', () => {
+  it('returns canonical workspace identity, inventory, coverage, and project freshness', async () => {
+    const result = await answerCockpitChat(
+      'Return the current workspace name, active project count, and each active project as exact name | canonical project ID. State required, satisfied, unavailable facts and freshness.',
+      FACTS({
+        workspaceName: 'Honest & Young',
+        scope: { workspace_id: 'org_hy', project_id: null, domain_id: null },
+        projects: [
+          { id: 'project_1', name: 'Commercial proof', status: 'active', updated_at: '2026-08-02T01:00:00Z' },
+          { id: 'project_2', name: 'Customer onboarding', status: 'active', updated_at: '2026-08-02T02:00:00Z' },
+        ],
+        plan: null,
+      }),
+    );
+
+    expect(result.generated_by).toBe('deterministic');
+    expect(result.grounded_on.workspace).toEqual({ id: 'org_hy', name: 'Honest & Young' });
+    expect(result.grounded_on.projects.updated_at).toBe('2026-08-02T02:00:00Z');
+    expect(result.grounded_on.requested_facts).toEqual({
+      required: ['workspace_name', 'project_inventory', 'freshness'],
+      satisfied: ['workspace_name', 'project_inventory', 'freshness'],
+      unavailable: [],
+    });
+    expect(result.answer).toContain('Workspace: Honest & Young.');
+    expect(result.answer).toContain('Current active projects in this workspace (2):');
+    expect(result.answer).toContain('Commercial proof — project_1');
+    expect(result.answer).toContain('Customer onboarding — project_2');
+    expect(result.answer).toContain('Project inventory last updated: 2026-08-02T02:00:00Z.');
+    expect(result.answer).toContain('Requested facts: workspace name, project inventory, freshness.');
+    expect(result.answer).toContain('Unavailable: none.');
+  });
+
+  it('reports the workspace name as unavailable instead of substituting company context', async () => {
+    const result = await answerCockpitChat(
+      'List active projects and state the current workspace name.',
+      FACTS({
+        workspaceName: null,
+        scope: { workspace_id: 'org_hy', project_id: null, domain_id: null },
+        projects: [],
+        plan: null,
+      }),
+    );
+
+    expect(result.answer).toContain('Workspace: unavailable.');
+    expect(result.answer).toContain('Unavailable: workspace name.');
+    expect(result.answer).not.toContain('Honest & Young');
+  });
+});
+
 describe('compileChatFacts — data_freshness (P0.1: never imply "all clear" over stale data)', () => {
   it('flags a stale record and reports the newest-event age', () => {
     const g = compileChatFacts(FACTS()); // COCKPIT_EVENTS are dated 2026-06-09 → stale vs now
