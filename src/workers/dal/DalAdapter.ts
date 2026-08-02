@@ -639,6 +639,12 @@ export interface DalAdapter {
     limit?: number,
   ): Promise<import('./chat-store').ChatMessageRow[]>;
 
+  /** Exact tenant-scoped document metadata/extracted-text read for selected chat/intake context. */
+  listDocumentsByIds(
+    workspaceId: WorkspaceId,
+    ids: readonly string[],
+  ): Promise<import('./document-store').DocumentMeta[]>;
+
   /**
    * DAU / return-rate rollup — the "daily-active use" half of the indispensability launch
    * criterion. Read-only, NO migration: derived from operation_events.occurred_at joined to

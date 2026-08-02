@@ -125,6 +125,7 @@ import { provisionCustomerWorkspaceRow } from './customer-provisioning-store';
 import { getWorkspaceActivitySummaryRow } from './workspace-activity-store';
 import { recordPmfResponseRow, getPmfSummaryRow } from './pmf-store';
 import { appendChatExchangeRow, listChatHistoryRow } from './chat-store';
+import { listDocumentsByIdsRow } from './document-store';
 import { getEngagementRollupRow } from './engagement-store';
 import { seedStarterTemplateBindingsRow } from './template-policy-store';
 import {
@@ -977,6 +978,13 @@ export class WorkersDalAdapter implements DalAdapter {
     limit?: number,
   ): Promise<import('./chat-store').ChatMessageRow[]> {
     return listChatHistoryRow(this.sql, userId, scope, limit);
+  }
+
+  async listDocumentsByIds(
+    workspaceId: WorkspaceId,
+    ids: readonly string[],
+  ): Promise<import('./document-store').DocumentMeta[]> {
+    return listDocumentsByIdsRow(this.rlsSql, workspaceId, ids);
   }
 
   async getEngagementRollup(

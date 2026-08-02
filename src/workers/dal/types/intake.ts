@@ -22,6 +22,7 @@ export interface IntakeContextSummary {
   reference_count: number;
   source_count: number;
   evidence_count: number;
+  document_ids?: string[];
 }
 
 export interface IntakePriorWorkSummary {

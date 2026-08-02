@@ -69,7 +69,7 @@ export interface CustomerSafeChat {
   scope: { workspace_id: string | null; project_id: string | null; domain_id: string | null };
   answer: string;
   generated_by: 'assistant' | 'rule_based';
-  grounded_on: { evidence_count: number; sources?: CustomerSafeSources } | null;
+  grounded_on: { evidence_count: number; document_count: number; sources?: CustomerSafeSources } | null;
   requested_facts: {
     required: string[];
     satisfied: string[];
@@ -78,6 +78,7 @@ export interface CustomerSafeChat {
   grounding: {
     evidence_count: number;
     project_plan_fact_count: number;
+    document_count: number;
     freshness: string | null;
   };
   lineage: {
@@ -119,6 +120,9 @@ export function customerSafeChat<T extends ChatDecisionLike>(payload: T, enabled
   if (!enabled) return payload;
   const g = payload.grounded_on;
   const evidence_count = Array.isArray(g?.event_ids) ? (g!.event_ids as string[]).length : 0;
+  const document_count = g && typeof (g as { documents?: unknown }).documents === 'object'
+    ? Number(((g as { documents?: Record<string, unknown> }).documents ?? {}).total ?? 0)
+    : 0;
   const scope = payload.scope && typeof payload.scope === 'object'
     ? payload.scope as Record<string, unknown>
     : {};
@@ -143,7 +147,9 @@ export function customerSafeChat<T extends ChatDecisionLike>(payload: T, enabled
     },
     answer: payload.answer,
     generated_by: SAFE_GENERATED_BY[payload.generated_by ?? ''] ?? 'assistant',
-    grounded_on: g ? (sanitizeSources((g as { sources?: unknown }).sources) ? { evidence_count, sources: sanitizeSources((g as { sources?: unknown }).sources) } : { evidence_count }) : null,
+    grounded_on: g ? (sanitizeSources((g as { sources?: unknown }).sources)
+      ? { evidence_count, document_count, sources: sanitizeSources((g as { sources?: unknown }).sources) }
+      : { evidence_count, document_count }) : null,
     requested_facts: {
       required: Array.isArray(requestedFacts.required) ? requestedFacts.required.map(String) : [],
       satisfied: Array.isArray(requestedFacts.satisfied) ? requestedFacts.satisfied.map(String) : [],
@@ -152,6 +158,7 @@ export function customerSafeChat<T extends ChatDecisionLike>(payload: T, enabled
     grounding: {
       evidence_count: Number(grounding.evidence_count ?? evidence_count),
       project_plan_fact_count: Number(grounding.project_plan_fact_count ?? 0),
+      document_count: Number(grounding.document_count ?? document_count),
       freshness: grounding.freshness == null ? null : String(grounding.freshness),
     },
     lineage: lineage ? {

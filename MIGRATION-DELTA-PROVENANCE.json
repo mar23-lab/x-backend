@@ -4189,6 +4189,72 @@
           "reason": "bind schema-93 source replay and fail-closed project source eligibility"
         }
       ]
+    },
+    {
+      "delta_id": "document-grounding-functional-20260802",
+      "generated_at": "2026-08-02T04:23:05.881Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "a66c656a17a65397263e4c2bfd4d101a0e6786a4",
+      "target_base_commit": "a66c656a17a65397263e4c2bfd4d101a0e6786a4",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/dal/DalAdapter.ts",
+          "target_blob": "f8cd3ff3e4dd1e1655b4870f3360b20b3c4df957",
+          "reason": "Bind exact tenant document references through intake, customer chat, safe grounding counts, and DAL RLS reads"
+        },
+        {
+          "path": "src/workers/__tests__/intake-route.test.ts",
+          "target_blob": "9b06d81b926816734d0d1a89946632898750ec5e",
+          "reason": "Bind exact tenant document references through intake, reject ungrounded reference kinds, and prove fail-closed persistence behavior"
+        },
+        {
+          "path": "src/workers/dal/types/intake.ts",
+          "target_blob": "e0d24ee4c6bc78b94f03836c9c008a8bfa59968d",
+          "reason": "Bind exact tenant document references through intake, customer chat, safe grounding counts, and DAL RLS reads"
+        },
+        {
+          "path": "src/workers/lib/intake-resolution.ts",
+          "target_blob": "4c0391b21622821469304ff1078975720050c34e",
+          "reason": "Bind exact tenant document references through intake, customer chat, safe grounding counts, and DAL RLS reads"
+        },
+        {
+          "path": "src/workers/routes/customer-chat.ts",
+          "target_blob": "085f51406c07068188a8d77ea85b009b84fae0d4",
+          "reason": "Bind exact tenant document references through intake, customer chat, safe grounding counts, and DAL RLS reads"
+        },
+        {
+          "path": "src/workers/routes/intake.ts",
+          "target_blob": "c5f985e8aa98895c9e6f718da956a402cc1aabee",
+          "reason": "Bind exact tenant document references through intake and reject reference kinds without an exact grounding loader"
+        },
+        {
+          "path": "src/workers/services/cockpit-chat.ts",
+          "target_blob": "30d085de2161ff84674e5c0c1d8501995cd0551a",
+          "reason": "Bind exact tenant document references through intake, customer chat, safe grounding counts, and DAL RLS reads"
+        },
+        {
+          "path": "src/workers/dal/WorkersDalAdapter.ts",
+          "target_blob": "77995d6f524dff2c0c394b1a49822176802862b4",
+          "reason": "Bind exact tenant document references through intake, customer chat, safe grounding counts, and DAL RLS reads"
+        },
+        {
+          "path": "src/workers/__tests__/customer-chat-route.test.ts",
+          "target_blob": "851eeaea74c35daf8f721d5f87141c7808db226a",
+          "reason": "Bind exact tenant document references through intake, customer chat, safe grounding counts, and DAL RLS reads"
+        },
+        {
+          "path": "src/workers/__tests__/customer-safe-decision.test.ts",
+          "target_blob": "d27f10e1700e7cabc4785b1f981e28031fbe7ef9",
+          "reason": "Bind exact tenant document references through intake, customer chat, safe grounding counts, and DAL RLS reads"
+        },
+        {
+          "path": "src/workers/lib/customer-safe-decision.ts",
+          "target_blob": "ccf00e3426f83be7a4909812600fe0162643d382",
+          "reason": "Bind exact tenant document references through intake, customer chat, safe grounding counts, and DAL RLS reads"
+        }
+      ]
     }
   ]
 }

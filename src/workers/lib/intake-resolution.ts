@@ -8,6 +8,7 @@ import type {
   Project,
   TaskPacket,
 } from '../dal/types';
+import type { ContextReference } from './context-reference';
 
 export interface IntakeResolveRequest {
   text: string;
@@ -15,7 +16,7 @@ export interface IntakeResolveRequest {
   interaction_id?: string;
   project_id?: string | null;
   target?: { type?: string; id?: string | null } | null;
-  context_refs?: Array<{ kind?: string }>;
+  context_refs?: ContextReference[];
 }
 
 export interface IntakeResolveInventory {
@@ -85,10 +86,12 @@ function resolveCreateProject(
 
 function contextSummary(refs: IntakeResolveRequest['context_refs']): IntakeContextSummary {
   const rows = Array.isArray(refs) ? refs : [];
+  const documentIds = rows.filter((r) => r.kind === 'document').map((r) => r.id);
   return {
     reference_count: rows.length,
     source_count: rows.filter((r) => r?.kind === 'source').length,
-    evidence_count: rows.filter((r) => r?.kind === 'evidence' || r?.kind === 'document' || r?.kind === 'file').length,
+    evidence_count: rows.filter((r) => r.kind === 'evidence' || r.kind === 'document').length,
+    ...(documentIds.length ? { document_ids: documentIds } : {}),
   };
 }
 

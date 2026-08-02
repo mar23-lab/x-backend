@@ -265,6 +265,44 @@ export async function listDocumentsRow(sql: Sql, workspaceId: string, limit = 50
   }
 }
 
+/**
+ * Load an exact customer-selected document set under the workspace RLS subject.
+ * The caller compares the returned IDs with the request, so a missing or foreign
+ * ID cannot degrade into a partially grounded answer.
+ */
+export async function listDocumentsByIdsRow(
+  sql: Sql,
+  workspaceId: string,
+  ids: readonly string[],
+): Promise<DocumentMeta[]> {
+  if (ids.length === 0) return [];
+  const boundedIds = [...ids].slice(0, 8);
+  try {
+    const [rows] = await withWorkspaceRlsContext<[Record<string, unknown>[]]>(sql, workspaceId, (tx) => [
+      tx`
+      SELECT id, workspace_id, project_id, filename, content_type, size_bytes, extracted_text,
+             uploaded_by, uploaded_at, status, admissibility, content_hash, version, supersedes_id
+      FROM documents
+      WHERE workspace_id = ${workspaceId}
+        AND id = ANY(${boundedIds}::text[])
+    `,
+    ], { readOnly: true });
+    return rows.map(withDocumentDefaults);
+  } catch (err) {
+    if (!isMissingDocumentColumn(err)) throw err;
+    const [rows] = await withWorkspaceRlsContext<[Record<string, unknown>[]]>(sql, workspaceId, (tx) => [
+      tx`
+      SELECT id, workspace_id, project_id, filename, content_type, size_bytes, extracted_text,
+             uploaded_by, uploaded_at, status
+      FROM documents
+      WHERE workspace_id = ${workspaceId}
+        AND id = ANY(${boundedIds}::text[])
+    `,
+    ], { readOnly: true });
+    return rows.map(withDocumentDefaults);
+  }
+}
+
 // Single document read — scoped on id AND workspace_id, so a cross-tenant id resolves to null.
 export async function getDocumentRow(sql: Sql, workspaceId: string, id: string): Promise<DocumentMeta | null> {
   try {
