@@ -4440,6 +4440,77 @@
           "reason": "Bind strict transactional project rename/archive authority, replay, missing-target failure, and real PostgreSQL proof"
         }
       ]
+    },
+    {
+      "delta_id": "member-controls-authority-20260803",
+      "generated_at": "2026-08-02T16:10:00.000Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "be37561621bfafcad9404387e0a9436294db547c",
+      "target_base_commit": "be37561621bfafcad9404387e0a9436294db547c",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "scripts/run-worker-test-batches.mjs",
+          "target_blob": "eaa9001707197e01bc570cb775d10b98b0784f9f",
+          "reason": "Run the real schema-93 member authority proof in the Node test environment instead of the Workers runtime"
+        },
+        {
+          "path": "src/workers/__tests__/member-mutations-schema93-postgres.test.ts",
+          "target_blob": "a20526b3639e0e274f4eddcd8e79521929591661",
+          "reason": "Strict-idempotent member role/removal authority with entitlement revocation, event/audit/outbox, replay, and real PostgreSQL proof"
+        },
+        {
+          "path": "src/workers/__tests__/member-remove-route.test.ts",
+          "target_blob": "48bae0b3d31180dd48f3404e14740524e35dae41",
+          "reason": "Strict-idempotent member role/removal authority with entitlement revocation, event/audit/outbox, replay, and fail-closed tests"
+        },
+        {
+          "path": "src/workers/__tests__/members-role-mutation.test.ts",
+          "target_blob": "f0cb740ac8bee69b514f727186eb22fd215fa7cd",
+          "reason": "Strict-idempotent member role/removal authority with entitlement revocation, event/audit/outbox, replay, and fail-closed tests"
+        },
+        {
+          "path": "src/workers/dal/DalAdapter.ts",
+          "target_blob": "2121770e38ce832ed5d82c91bdd6a178e0b1399b",
+          "reason": "Strict-idempotent member role/removal authority with entitlement revocation, event/audit/outbox, replay, and fail-closed tests"
+        },
+        {
+          "path": "src/workers/dal/WorkersDalAdapter.ts",
+          "target_blob": "cafbe7b49a0fa8192f55074988ada6388240250f",
+          "reason": "Strict-idempotent member role/removal authority with entitlement revocation, event/audit/outbox, replay, and fail-closed tests"
+        },
+        {
+          "path": "src/workers/dal/types/access.ts",
+          "target_blob": "a2754022f556eaef9a6d377c29f2a863d5ac43a7",
+          "reason": "Strict-idempotent member role/removal authority with entitlement revocation, event/audit/outbox, replay, and fail-closed tests"
+        },
+        {
+          "path": "src/workers/dal/workspace-member-authority-helpers.ts",
+          "target_blob": "0ffa3617dbea05f0c793d782edf7d0562e1d9337",
+          "reason": "Share fail-closed strict replay, request-digest, and complete authority-envelope validation across member mutations"
+        },
+        {
+          "path": "src/workers/dal/workspace-member-facade.ts",
+          "target_blob": "00b2134e7489634a7ccbba3190ecdd59718193ba",
+          "reason": "Strict-idempotent member role/removal authority with entitlement revocation, event/audit/outbox, replay, and fail-closed tests"
+        },
+        {
+          "path": "src/workers/dal/workspace-member-removal-store.ts",
+          "target_blob": "c3635b8f1edfcd8ac9cffbd354b4342967d4729a",
+          "reason": "Atomically remove membership, revoke entitlement and session authority, and persist event/audit/outbox/replay evidence"
+        },
+        {
+          "path": "src/workers/dal/workspace-member-store.ts",
+          "target_blob": "d1c29daad85a19d8b8110522d3da3d238572bbe0",
+          "reason": "Strict-idempotent member role/removal authority with entitlement revocation, event/audit/outbox, replay, and fail-closed tests"
+        },
+        {
+          "path": "src/workers/routes/members.ts",
+          "target_blob": "8bc879f3c67ef1e3c56c3156fce7cc7c2b9cdc5a",
+          "reason": "Strict-idempotent member role/removal authority with entitlement revocation, event/audit/outbox, replay, and fail-closed tests"
+        }
+      ]
     }
   ]
 }

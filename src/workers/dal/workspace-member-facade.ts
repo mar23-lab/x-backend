@@ -8,7 +8,7 @@
 // to the adapter's live sql handle.
 
 import type { Sql } from '../db/client';
-import type { UserId, WorkspaceId, WorkspaceMember, WorkspaceMemberRole, WorkspaceMemberRoleMutationReceipt, WorkspaceMemberRemovalReceipt } from './types';
+import type { UserId, WorkspaceId, WorkspaceMember, WorkspaceMemberMutationIdempotencyInput, WorkspaceMemberRole, WorkspaceMemberRoleMutationReceipt, WorkspaceMemberRemovalReceipt } from './types';
 import { listWorkspaceMembersRow, listWorkspaceMembersForWorkspacesRow, setWorkspaceMemberRoleRow, removeWorkspaceMemberRow, userCanScopeWorkspaceRow, userOwnsWorkspaceRow } from './workspace-member-store';
 
 export interface WorkspaceMemberFacade {
@@ -24,12 +24,14 @@ export interface WorkspaceMemberFacade {
     targetUserId: UserId,
     role: WorkspaceMemberRole,
     actorUserId: UserId,
+    idempotency: WorkspaceMemberMutationIdempotencyInput,
   ): Promise<WorkspaceMemberRoleMutationReceipt>;
   // A1 · SOFT-remove a member (owner-only at the route; last-owner + self guards in the store).
   removeWorkspaceMember(
     workspaceId: WorkspaceId,
     targetUserId: UserId,
     actorUserId: UserId,
+    idempotency: WorkspaceMemberMutationIdempotencyInput,
   ): Promise<WorkspaceMemberRemovalReceipt>;
   // JA · authorization read: may this user scope a read to this workspace? (owner OR active member)
   userCanScopeWorkspace(userId: UserId, workspaceId: WorkspaceId): Promise<boolean>;
@@ -43,10 +45,10 @@ export function makeWorkspaceMemberFacade(getSql: () => Sql): WorkspaceMemberFac
     listWorkspaceMembers: (workspaceId) => listWorkspaceMembersRow(getSql(), workspaceId),
     listWorkspaceMembersForWorkspaces: (workspaceIds, ownerUserIds, currentWorkspaceId) =>
       listWorkspaceMembersForWorkspacesRow(getSql(), workspaceIds, ownerUserIds, currentWorkspaceId),
-    setWorkspaceMemberRole: (workspaceId, targetUserId, role, actorUserId) =>
-      setWorkspaceMemberRoleRow(getSql(), workspaceId, targetUserId, role, actorUserId),
-    removeWorkspaceMember: (workspaceId, targetUserId, actorUserId) =>
-      removeWorkspaceMemberRow(getSql(), workspaceId, targetUserId, actorUserId),
+    setWorkspaceMemberRole: (workspaceId, targetUserId, role, actorUserId, idempotency) =>
+      setWorkspaceMemberRoleRow(getSql(), workspaceId, targetUserId, role, actorUserId, idempotency),
+    removeWorkspaceMember: (workspaceId, targetUserId, actorUserId, idempotency) =>
+      removeWorkspaceMemberRow(getSql(), workspaceId, targetUserId, actorUserId, idempotency),
     userCanScopeWorkspace: (userId, workspaceId) =>
       userCanScopeWorkspaceRow(getSql(), userId, workspaceId),
     userOwnsWorkspace: (userId, workspaceId) =>

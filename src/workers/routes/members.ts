@@ -37,13 +37,27 @@ export interface MembersVariables extends AuthVariables {
 export const membersRoute = new Hono<{ Bindings: MembersEnv; Variables: MembersVariables }>();
 
 function requireMemberMutationReceipt(result: { member_mutation_receipt_id?: string; audit_event_id?: string } | null | undefined): string {
-  if (!result?.member_mutation_receipt_id || !result.audit_event_id) {
-    throw Object.assign(new Error('member mutation did not produce a durable audit receipt'), {
+  const authority = result as (typeof result & {
+    operation_event_id?: string;
+    projection_outbox_id?: string;
+    read_model_watermark?: string;
+    replayed?: boolean;
+  });
+  if (!authority?.member_mutation_receipt_id || !authority.audit_event_id
+    || !authority.operation_event_id || !authority.projection_outbox_id
+    || !authority.read_model_watermark || typeof authority.replayed !== 'boolean') {
+    throw Object.assign(new Error('member mutation did not produce a complete authority receipt'), {
       status: 500,
-      code: 'MEMBER_AUDIT_RECEIPT_MISSING',
+      code: 'MEMBER_AUTHORITY_RECEIPT_INCOMPLETE',
     });
   }
-  return result.member_mutation_receipt_id;
+  return authority.member_mutation_receipt_id;
+}
+
+async function sha256Text(value: string): Promise<string> {
+  const bytes = new TextEncoder().encode(value);
+  const digest = await crypto.subtle.digest('SHA-256', bytes);
+  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('');
 }
 
 membersRoute.get('/members', async (ctx) => {
@@ -138,7 +152,7 @@ membersRoute.get('/members/batch', async (ctx) => {
 // audits flagged: workspace_members roles were only set at provisioning/invite time).
 // OWNER-ONLY: only a caller who OWNS the target workspace may change roles (the admin:write
 // tier). TENANT-SCOPED: the change is confined to the caller's workspace (or another they
-// own). AUDITED + last-owner-guarded in the DAL. Returns the updated member.
+// own). Strict-idempotent, authority-receipted, and last-owner-guarded in the DAL.
 membersRoute.patch('/members/:userId/role', async (ctx) => {
   try {
     const auth = ctx.get('auth');
@@ -149,8 +163,16 @@ membersRoute.patch('/members/:userId/role', async (ctx) => {
     if (!targetUserId) {
       return errorEnvelope(ctx, { status: 400, code: 'BAD_REQUEST', message: 'userId required' });
     }
+    const idempotencyKey = String(ctx.req.header('Idempotency-Key') || '').trim();
+    if (!idempotencyKey || idempotencyKey.length > 200) {
+      return errorEnvelope(ctx, {
+        status: 428, code: 'IDEMPOTENCY_KEY_REQUIRED',
+        message: 'Idempotency-Key is required (1-200 chars)',
+      });
+    }
+    const rawBody = await ctx.req.text();
     let body: { role?: string } = {};
-    try { body = (await ctx.req.json()) as { role?: string }; } catch (_) { body = {}; }
+    try { body = JSON.parse(rawBody) as { role?: string }; } catch (_) { body = {}; }
     const role = String(body?.role || '').trim() as WorkspaceMemberRole;
     if (!VALID_MEMBER_ROLES.includes(role)) {
       return errorEnvelope(ctx, {
@@ -175,13 +197,15 @@ membersRoute.patch('/members/:userId/role', async (ctx) => {
         status: 403, code: 'FORBIDDEN', message: 'only a workspace owner can change member roles',
       });
     }
-    const saved = await dal.setWorkspaceMemberRole(targetWorkspaceId, targetUserId, role, auth.user_id);
-    const receiptId = requireMemberMutationReceipt(saved);
-    return ctx.json({
-      member: saved.member,
-      member_mutation_receipt_id: receiptId,
-      audit_event_id: saved.audit_event_id,
+    const saved = await dal.setWorkspaceMemberRole(targetWorkspaceId, targetUserId, role, auth.user_id, {
+      key: idempotencyKey,
+      request_sha256: await sha256Text(`PATCH\n${targetWorkspaceId}\n${targetUserId}\n${rawBody}`),
+      route: 'PATCH /api/v1/members/:userId/role',
+      request_id: ctx.get('request_id'),
     });
+    requireMemberMutationReceipt(saved);
+    if (saved.replayed) ctx.header('Idempotency-Replayed', 'true');
+    return ctx.json(saved);
   } catch (err) {
     return errorEnvelope(ctx, err);
   }
@@ -191,7 +215,8 @@ membersRoute.patch('/members/:userId/role', async (ctx) => {
 // workspace" control). Owner-only (same operatorOwnsWorkspace gate as the role PATCH). Flag-gated
 // (MEMBER_REMOVAL_ENABLED, default OFF → 409) so the route is inert until the operator flips it AND
 // migration 062 is applied. The store enforces the self-removal + last-owner guards and soft-removes
-// (removed_at) + audits in one transaction.
+// (removed_at), effective entitlement revocation, session downgrade, event, audit, outbox, and replay
+// response in one authority statement.
 membersRoute.delete('/members/:userId', async (ctx) => {
   try {
     if (!envFlagTrue(ctx.env.MEMBER_REMOVAL_ENABLED)) {
@@ -205,6 +230,13 @@ membersRoute.delete('/members/:userId', async (ctx) => {
     if (!targetUserId) {
       return errorEnvelope(ctx, { status: 400, code: 'BAD_REQUEST', message: 'userId required' });
     }
+    const idempotencyKey = String(ctx.req.header('Idempotency-Key') || '').trim();
+    if (!idempotencyKey || idempotencyKey.length > 200) {
+      return errorEnvelope(ctx, {
+        status: 428, code: 'IDEMPOTENCY_KEY_REQUIRED',
+        message: 'Idempotency-Key is required (1-200 chars)',
+      });
+    }
     const requested = String(ctx.req.query('workspace_id') || '').trim();
     const targetWorkspaceId = requested || auth.workspace_id || '';
     if (!targetWorkspaceId) {
@@ -216,13 +248,15 @@ membersRoute.delete('/members/:userId', async (ctx) => {
     if (!owns) {
       return errorEnvelope(ctx, { status: 403, code: 'FORBIDDEN', message: 'only a workspace owner can remove members' });
     }
-    const saved = await dal.removeWorkspaceMember(targetWorkspaceId, targetUserId, auth.user_id);
-    const receiptId = requireMemberMutationReceipt(saved);
-    return ctx.json({
-      removed: saved.removed,
-      member_mutation_receipt_id: receiptId,
-      audit_event_id: saved.audit_event_id,
+    const saved = await dal.removeWorkspaceMember(targetWorkspaceId, targetUserId, auth.user_id, {
+      key: idempotencyKey,
+      request_sha256: await sha256Text(`DELETE\n${targetWorkspaceId}\n${targetUserId}`),
+      route: 'DELETE /api/v1/members/:userId',
+      request_id: ctx.get('request_id'),
     });
+    requireMemberMutationReceipt(saved);
+    if (saved.replayed) ctx.header('Idempotency-Replayed', 'true');
+    return ctx.json(saved);
   } catch (err) {
     return errorEnvelope(ctx, err);
   }

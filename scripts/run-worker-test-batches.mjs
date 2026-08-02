@@ -18,6 +18,8 @@ const nodeEnvironmentTests = new Set([
   'src/workers/__tests__/projects-schema93-postgres.test.ts',
   // Opt-in strict plan create/reorder/delete proof; uses the same schema-93 disposable database.
   'src/workers/__tests__/plan-schema93-postgres.test.ts',
+  // Opt-in strict member role/removal proof; uses the same schema-93 disposable database.
+  'src/workers/__tests__/member-mutations-schema93-postgres.test.ts',
   // J-E TASK 1 (260719) · reads wrangler.toml + crons/index.ts via node:fs (unavailable in the workerd pool).
   'src/workers/__tests__/cron-registry-wrangler-parity.test.ts',
 ]);

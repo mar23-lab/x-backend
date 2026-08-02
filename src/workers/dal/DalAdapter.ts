@@ -53,6 +53,7 @@ import {
   UserListOpts,
   WorkspaceMemberRoleMutationReceipt,
   WorkspaceMemberRemovalReceipt,
+  WorkspaceMemberMutationIdempotencyInput,
   SyntheticDomain,
   SyntheticDomainId,
   SyntheticDomainCreateInput,
@@ -730,6 +731,7 @@ export interface DalAdapter {
     targetUserId: UserId,
     role: WorkspaceMemberRole,
     actorUserId: UserId,
+    idempotency: WorkspaceMemberMutationIdempotencyInput,
   ): Promise<WorkspaceMemberRoleMutationReceipt>;
 
   /**
@@ -741,6 +743,7 @@ export interface DalAdapter {
     workspaceId: WorkspaceId,
     targetUserId: UserId,
     actorUserId: UserId,
+    idempotency: WorkspaceMemberMutationIdempotencyInput,
   ): Promise<WorkspaceMemberRemovalReceipt>;
 
   /**

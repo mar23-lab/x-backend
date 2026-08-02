@@ -1055,8 +1055,8 @@ export class WorkersDalAdapter implements DalAdapter {
   private readonly _members = makeWorkspaceMemberFacade(() => this.sql);
   listWorkspaceMembers: DalAdapter['listWorkspaceMembers'] = (w) => this._members.listWorkspaceMembers(w);
   listWorkspaceMembersForWorkspaces: DalAdapter['listWorkspaceMembersForWorkspaces'] = (ids, owners, cur) => this._members.listWorkspaceMembersForWorkspaces(ids, owners, cur);
-  setWorkspaceMemberRole: DalAdapter['setWorkspaceMemberRole'] = (w, u, r, a) => this._members.setWorkspaceMemberRole(w, u, r, a);
-  removeWorkspaceMember: DalAdapter['removeWorkspaceMember'] = (w, u, a) => this._members.removeWorkspaceMember(w, u, a); userCanScopeWorkspace: DalAdapter['userCanScopeWorkspace'] = (u, w) => this._members.userCanScopeWorkspace(u, w); userOwnsWorkspace: DalAdapter['userOwnsWorkspace'] = (u, w) => this._members.userOwnsWorkspace(u, w); private readonly _sessionPrefs = makeSessionPreferencesFacade(() => this.sql); readonly plan = makePlanEntitiesFacade(() => this.sql); // G1 plan + G2 source read_policy (dal.plan.*)
+  setWorkspaceMemberRole: DalAdapter['setWorkspaceMemberRole'] = (w, u, r, a, i) => this._members.setWorkspaceMemberRole(w, u, r, a, i);
+  removeWorkspaceMember: DalAdapter['removeWorkspaceMember'] = (w, u, a, i) => this._members.removeWorkspaceMember(w, u, a, i); userCanScopeWorkspace: DalAdapter['userCanScopeWorkspace'] = (u, w) => this._members.userCanScopeWorkspace(u, w); userOwnsWorkspace: DalAdapter['userOwnsWorkspace'] = (u, w) => this._members.userOwnsWorkspace(u, w); private readonly _sessionPrefs = makeSessionPreferencesFacade(() => this.sql); readonly plan = makePlanEntitiesFacade(() => this.sql); // G1 plan + G2 source read_policy (dal.plan.*)
   getOperatingMode: DalAdapter['getOperatingMode'] = (u, w) => this._sessionPrefs.getOperatingMode(u, w);
   setOperatingMode: DalAdapter['setOperatingMode'] = (u, w, m, a) => this._sessionPrefs.setOperatingMode(u, w, m, a);
   readonly modelRuntimes = makeModelRuntimesFacade(() => this.sql); // Wave C · model-runtime sub-facade (SQL in ./model-runtime-store)
