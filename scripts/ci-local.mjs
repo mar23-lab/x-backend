@@ -104,16 +104,38 @@ const gates = [
   ['worker suite', 'npm', ['test']],
 ];
 
-let failed = 0;
+// MEASURED, NOT DECLARED (260803). This summary previously printed
+// `${gates.length}/${gates.length}` — a template over the SAME constant on both sides, so it was
+// structurally incapable of reporting anything but N/N. Combined with the `break` below, a run that
+// died on gate 3 of 64 either exited non-zero with no tally, or (on the success path) printed
+// "64/64" having genuinely executed 64. The number was therefore never evidence of coverage; it was
+// the length of an array. It was read as a pass rate in release notes and session reports, and it
+// collided with a "64/64" in PLATFORM_FACADE_SPEC.md that refers to a script which does not exist in
+// this repo, which made two unrelated constants look like corroboration.
+//
+// Now: count what actually ran, and name what did not. The break is retained — failing fast is
+// correct — but the gates it skipped are reported instead of vanishing.
+let passed = 0;
+let failedGate = null;
 for (const [name, command, args] of gates) {
   console.log(`\n=== ${name} ===`);
   const result = spawnSync(command, args, { stdio: 'inherit', env: process.env });
   if (result.status !== 0) {
-    failed += 1;
+    failedGate = { name, status: result.status };
     console.error(`FAIL ${name} (exit ${String(result.status)})`);
     break;
   }
+  passed += 1;
 }
 
-if (failed) process.exit(1);
-console.log(`\nPASS x-backend local authority stack (${gates.length}/${gates.length})`);
+const attempted = failedGate ? passed + 1 : passed;
+const skipped = gates.length - attempted;
+
+if (failedGate) {
+  console.error(
+    `\nFAIL x-backend local authority stack: ${passed}/${gates.length} passed, `
+    + `1 failed (${failedGate.name}), ${skipped} NOT RUN`,
+  );
+  process.exit(1);
+}
+console.log(`\nPASS x-backend local authority stack (${passed}/${gates.length} gates executed and passed, 0 skipped)`);
