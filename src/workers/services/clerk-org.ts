@@ -147,6 +147,7 @@ export interface TeamInvitationInput {
   inviterUserId: string;
   emailAddress: string;
   role: string; // Clerk org role, e.g. 'org:member' | 'org:admin'
+  commandId: string;
   redirectUrl?: string;
 }
 
@@ -164,8 +165,8 @@ export async function createTeamInvitation(
   if (!secretKey || typeof secretKey !== 'string') {
     throw clerkOrgError('CONFIG_ERROR', 'CLERK_SECRET_KEY is not configured', 500);
   }
-  if (!input?.organizationId || !input?.emailAddress) {
-    throw clerkOrgError('VALIDATION_ERROR', 'organizationId and emailAddress are required', 400);
+  if (!input?.organizationId || !input?.emailAddress || !input.commandId) {
+    throw clerkOrgError('VALIDATION_ERROR', 'organizationId, emailAddress and commandId are required', 400);
   }
   const clerk = createClerkClient({ secretKey });
   try {
@@ -174,6 +175,7 @@ export async function createTeamInvitation(
       inviterUserId: input.inviterUserId,
       emailAddress: input.emailAddress,
       role: input.role,
+      publicMetadata: { xlooop_command_id: input.commandId },
       ...(input.redirectUrl ? { redirectUrl: input.redirectUrl } : {}),
     });
     return {
@@ -185,6 +187,55 @@ export async function createTeamInvitation(
   } catch (err) {
     const e = err as { status?: number; errors?: Array<{ message?: string }>; message?: string };
     const message = e.errors?.[0]?.message || e.message || 'Clerk organization invitation failed';
+    const status = typeof e.status === 'number' && e.status >= 400 ? e.status : 502;
+    throw clerkOrgError('CLERK_ORG_ERROR', message, status);
+  }
+}
+
+/**
+ * Reconciles the narrow crash window between Clerk accepting an invitation and Neon persisting the
+ * delivery receipt. The command id is opaque and contains no tenant or invitee data. Clerk stores it
+ * on the invitation, so a retry can recover the provider result without sending another email.
+ */
+export async function findTeamInvitationByCommandId(
+  secretKey: string,
+  organizationId: string,
+  commandId: string,
+): Promise<TeamInvitationResult | null> {
+  if (!secretKey || typeof secretKey !== 'string') {
+    throw clerkOrgError('CONFIG_ERROR', 'CLERK_SECRET_KEY is not configured', 500);
+  }
+  if (!organizationId || !commandId) {
+    throw clerkOrgError('VALIDATION_ERROR', 'organizationId and commandId are required', 400);
+  }
+  const clerk = createClerkClient({ secretKey });
+  try {
+    const limit = 100;
+    for (let offset = 0; offset < 1_000; offset += limit) {
+      const page = await clerk.organizations.getOrganizationInvitationList({
+        organizationId,
+        status: ['pending', 'accepted', 'revoked', 'expired'],
+        limit,
+        offset,
+      });
+      const rows = Array.isArray(page?.data) ? page.data : [];
+      const invitation = rows.find((row) =>
+        String((row.publicMetadata as Record<string, unknown> | undefined)?.xlooop_command_id || '') === commandId
+      );
+      if (invitation) {
+        return {
+          invitation_id: invitation.id,
+          email: invitation.emailAddress,
+          role: invitation.role,
+          status: invitation.status || 'pending',
+        };
+      }
+      if (rows.length < limit || offset + rows.length >= Number(page.totalCount || 0)) break;
+    }
+    return null;
+  } catch (err) {
+    const e = err as { status?: number; errors?: Array<{ message?: string }>; message?: string };
+    const message = e.errors?.[0]?.message || e.message || 'Clerk organization invitation lookup failed';
     const status = typeof e.status === 'number' && e.status >= 400 ? e.status : 502;
     throw clerkOrgError('CLERK_ORG_ERROR', message, status);
   }

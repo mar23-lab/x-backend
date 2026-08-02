@@ -1,8 +1,13 @@
 import { Client, type QueryConfig } from 'pg';
 import { describe, expect, it } from 'vitest';
 import type { Sql } from '../db/client';
+import {
+  finalizeCustomerInviteRow,
+  recordCustomerInviteDeliveryFailureRow,
+  reserveCustomerInviteRow,
+} from '../dal/customer-invite-store';
 import { removeWorkspaceMemberRow, setWorkspaceMemberRoleRow } from '../dal/workspace-member-store';
-import type { WorkspaceMemberMutationIdempotencyInput } from '../dal/types';
+import type { CustomerInviteCommandInput, WorkspaceMemberMutationIdempotencyInput } from '../dal/types';
 
 type DeferredQuery = QueryConfig<unknown[]>;
 
@@ -285,6 +290,186 @@ describePostgres('schema 93 strict member authority', () => {
       await setup.query('DELETE FROM workspaces WHERE id = $1', [workspaceId]);
       await setup.query('DELETE FROM users WHERE id = ANY($1::text[])', [[ownerId, targetId]]);
       await setup.end();
+    }
+  });
+
+  it('persists invitation delivery exactly once and recovers a failed provider attempt', async () => {
+    const client = new Client({ connectionString: databaseUrl });
+    await client.connect();
+    const suffix = crypto.randomUUID().replaceAll('-', '');
+    const workspaceId = `ws_invite_pg93_${suffix}`;
+    const ownerId = `owner_invite_pg93_${suffix}`;
+    const email = `invite.${suffix}@example.test`;
+    const sql = postgresSql(client);
+    const base = {
+      workspace_id: workspaceId,
+      actor_user_id: ownerId,
+      key: `invite_pg93_${suffix}`,
+      route: 'POST /api/v1/customer/invites',
+      request_sha256: '1'.repeat(64),
+      request_id: `request_invite_${suffix}`,
+      command_id: `invite_command_${suffix}`,
+      lease_token: `invite_lease_${suffix}`,
+      email,
+      clerk_role: 'org:member',
+      workspace_role: 'client',
+      requested_workspace_role: 'client',
+      role_basis: 'conservative_default',
+    } satisfies CustomerInviteCommandInput;
+
+    try {
+      await client.query(
+        `INSERT INTO users (id, email, status, approved_at)
+         VALUES ($1, $2, 'approved', now())`,
+        [ownerId, `${ownerId}@example.test`],
+      );
+      await client.query(
+        `INSERT INTO workspaces (id, name, owner_user_id, workspace_type, relationship_status)
+         VALUES ($1, 'Invite schema 93 integration', $2, 'company', 'internal_dogfood')`,
+        [workspaceId, ownerId],
+      );
+      await client.query(
+        `INSERT INTO workspace_members (workspace_id, user_id, role, status, activated_at)
+         VALUES ($1, $2, 'owner', 'active', now())`,
+        [workspaceId, ownerId],
+      );
+
+      const reserved = await reserveCustomerInviteRow(sql, base);
+      expect(reserved).toMatchObject({
+        command_id: base.command_id,
+        lease_token: base.lease_token,
+        state: 'delivery_acquired',
+        replayed: false,
+        reconcile_provider: false,
+      });
+      await expect(reserveCustomerInviteRow(sql, base)).rejects.toMatchObject({
+        code: 'INVITE_IN_PROGRESS',
+        status: 409,
+      });
+
+      const delivered = await finalizeCustomerInviteRow(sql, {
+        ...base,
+        invitation_id: `clerk_invitation_${suffix}`,
+        provider_status: 'pending',
+        operation_event_id: `event_invite_${suffix}`,
+        projection_outbox_id: `outbox_invite_${suffix}`,
+      });
+      expect(delivered).toMatchObject({
+        invited: {
+          invitation_id: `clerk_invitation_${suffix}`,
+          email,
+          role: 'org:member',
+          status: 'pending',
+          workspace_role: 'client',
+        },
+        operation_event_id: `event_invite_${suffix}`,
+        projection_outbox_id: `outbox_invite_${suffix}`,
+        delivery_status: 'delivered',
+        replayed: false,
+      });
+      expect(delivered.audit_event_id).toBeTruthy();
+      expect(delivered.invite_receipt_id).toContain(base.command_id);
+
+      const replay = await reserveCustomerInviteRow(sql, {
+        ...base,
+        command_id: `unused_replay_command_${suffix}`,
+        lease_token: `unused_replay_lease_${suffix}`,
+      });
+      expect(replay).toMatchObject({
+        command_id: base.command_id,
+        lease_token: null,
+        state: 'delivered',
+        replayed: true,
+        reconcile_provider: false,
+        receipt: { replayed: true, delivery_status: 'delivered' },
+      });
+      expect(replay.receipt?.invited.invitation_id).toBe(`clerk_invitation_${suffix}`);
+      await expect(reserveCustomerInviteRow(sql, {
+        ...base,
+        request_sha256: '2'.repeat(64),
+      })).rejects.toMatchObject({ code: 'IDEMPOTENCY_KEY_REUSED', status: 409 });
+
+      const failedBase = {
+        ...base,
+        key: `invite_failed_pg93_${suffix}`,
+        request_sha256: '3'.repeat(64),
+        command_id: `invite_failed_command_${suffix}`,
+        lease_token: `invite_failed_lease_1_${suffix}`,
+      } satisfies CustomerInviteCommandInput;
+      await reserveCustomerInviteRow(sql, failedBase);
+      await recordCustomerInviteDeliveryFailureRow(sql, {
+        workspace_id: workspaceId,
+        actor_user_id: ownerId,
+        key: failedBase.key,
+        route: failedBase.route,
+        request_sha256: failedBase.request_sha256,
+        request_id: failedBase.request_id,
+        command_id: failedBase.command_id,
+        lease_token: failedBase.lease_token,
+        email,
+        error_code: 'CLERK_ORG_ERROR',
+        operation_event_id: `event_invite_failed_${suffix}`,
+      });
+      const recovered = await reserveCustomerInviteRow(sql, {
+        ...failedBase,
+        command_id: `unused_recovery_command_${suffix}`,
+        lease_token: `invite_failed_lease_2_${suffix}`,
+      });
+      expect(recovered).toMatchObject({
+        command_id: failedBase.command_id,
+        lease_token: `invite_failed_lease_2_${suffix}`,
+        state: 'delivery_acquired',
+        replayed: false,
+        reconcile_provider: true,
+      });
+      const recoveredDelivery = await finalizeCustomerInviteRow(sql, {
+        ...failedBase,
+        command_id: recovered.command_id,
+        lease_token: recovered.lease_token!,
+        invitation_id: `clerk_recovered_${suffix}`,
+        provider_status: 'pending',
+        operation_event_id: `event_invite_recovered_${suffix}`,
+        projection_outbox_id: `outbox_invite_recovered_${suffix}`,
+      });
+      expect(recoveredDelivery.replayed).toBe(false);
+
+      const authority = await client.query(
+        `SELECT
+           (SELECT count(*)::integer FROM operation_events
+             WHERE workspace_id = $1 AND id = $2) AS delivered_event_count,
+           (SELECT count(*)::integer FROM audit_logs
+             WHERE workspace_id = $1 AND action = 'member_invite_delivered'
+               AND target_id = $3) AS delivered_audit_count,
+           (SELECT count(*)::integer FROM projection_outbox
+             WHERE workspace_id = $1 AND event_type = 'workspace_member.invited') AS outbox_count,
+           (SELECT count(*)::integer FROM operation_events
+             WHERE workspace_id = $1 AND id = $4 AND status = 'failed') AS failed_event_count,
+           (SELECT count(*)::integer FROM audit_logs
+             WHERE workspace_id = $1 AND action = 'member_invite_delivery_failed') AS failed_audit_count,
+           (SELECT count(*)::integer FROM idempotency_keys
+             WHERE workspace_id = $1 AND mode = 'authority_strict'
+               AND response_status = 201) AS completed_command_count`,
+        [workspaceId, delivered.operation_event_id, email, `event_invite_failed_${suffix}`],
+      );
+      expect(authority.rows[0]).toEqual({
+        delivered_event_count: 1,
+        delivered_audit_count: 2,
+        outbox_count: 2,
+        failed_event_count: 1,
+        failed_audit_count: 1,
+        completed_command_count: 2,
+      });
+    } finally {
+      await client.query('DELETE FROM audit_logs WHERE workspace_id = $1', [workspaceId]);
+      await client.query('DELETE FROM operation_events WHERE workspace_id = $1', [workspaceId]);
+      await client.query('DELETE FROM projection_outbox WHERE workspace_id = $1', [workspaceId]);
+      await client.query('DELETE FROM idempotency_keys WHERE workspace_id = $1', [workspaceId]);
+      await client.query('DELETE FROM customer_entitlements WHERE workspace_id = $1', [workspaceId]);
+      await client.query('DELETE FROM user_session_preferences WHERE workspace_id = $1', [workspaceId]);
+      await client.query('DELETE FROM access_requests WHERE invited_to_workspace_id = $1', [workspaceId]);
+      await client.query('DELETE FROM workspaces WHERE id = $1', [workspaceId]);
+      await client.query('DELETE FROM users WHERE id = $1', [ownerId]);
+      await client.end();
     }
   });
 });

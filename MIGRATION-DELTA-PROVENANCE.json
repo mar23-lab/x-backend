@@ -4511,6 +4511,62 @@
           "reason": "Strict-idempotent member role/removal authority with entitlement revocation, event/audit/outbox, replay, and fail-closed tests"
         }
       ]
+    },
+    {
+      "delta_id": "invite-delivery-authority-20260803",
+      "generated_at": "2026-08-02T17:39:42.276Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "102e56db1970fc1dfdf2aafb13d3d6871f5804e3",
+      "target_base_commit": "102e56db1970fc1dfdf2aafb13d3d6871f5804e3",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/__tests__/clerk-org.test.ts",
+          "target_blob": "4973cd4678a9a5107dc96622f5171ff1480d6566",
+          "reason": "strict provider-confirmed invitation delivery with atomic receipt, retry recovery, and focused authority modules"
+        },
+        {
+          "path": "src/workers/__tests__/customer.test.ts",
+          "target_blob": "1979b450b4a6261ae31465bd3874d61cdadcbe46",
+          "reason": "strict provider-confirmed invitation delivery with atomic receipt, retry recovery, and focused authority modules"
+        },
+        {
+          "path": "src/workers/__tests__/member-mutations-schema93-postgres.test.ts",
+          "target_blob": "8804b5c7db4267799f7dc359bcdae7d1d9842984",
+          "reason": "strict provider-confirmed invitation delivery with atomic receipt, retry recovery, and focused authority modules"
+        },
+        {
+          "path": "src/workers/dal/DalAdapter.ts",
+          "target_blob": "b88c27636cc9a2267a247c810f1ef0991d0a4e37",
+          "reason": "strict provider-confirmed invitation delivery with atomic receipt, retry recovery, and focused authority modules"
+        },
+        {
+          "path": "src/workers/dal/WorkersDalAdapter.ts",
+          "target_blob": "844fc1b54f32428e2cd8f54672755460b7db70eb",
+          "reason": "strict provider-confirmed invitation delivery with atomic receipt, retry recovery, and focused authority modules"
+        },
+        {
+          "path": "src/workers/dal/customer-authority-store.ts",
+          "target_blob": "7b296490491880cfa568cd106a9a1fdaf365def9",
+          "reason": "strict provider-confirmed invitation delivery with atomic receipt, retry recovery, and focused authority modules"
+        },
+        {
+          "path": "src/workers/dal/types/access.ts",
+          "target_blob": "b0dcdf4c62b103d196d8153d3f256fb91241aea3",
+          "reason": "strict provider-confirmed invitation delivery with atomic receipt, retry recovery, and focused authority modules"
+        },
+        {
+          "path": "src/workers/routes/customer.ts",
+          "target_blob": "6379e2684715cd813093879d26eb73fdbd09e0b9",
+          "reason": "strict provider-confirmed invitation delivery with atomic receipt, retry recovery, and focused authority modules"
+        },
+        {
+          "path": "src/workers/services/clerk-org.ts",
+          "target_blob": "4b7ad58ff9981d55d0b996cc20eac7431f8a7b40",
+          "reason": "strict provider-confirmed invitation delivery with atomic receipt, retry recovery, and focused authority modules"
+        }
+      ]
     }
   ]
 }

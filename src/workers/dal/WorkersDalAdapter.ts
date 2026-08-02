@@ -57,8 +57,11 @@ import type {
   CustomerAuthorityState,
   CustomerAuthorityWriteReceipt,
   CustomerConsentAckInput,
-  CustomerInviteAuditInput,
-  CustomerInviteAuditReceipt,
+  CustomerInviteCommandInput,
+  CustomerInviteCommandReservation,
+  CustomerInviteDeliveryReceipt,
+  CustomerInviteFailureInput,
+  CustomerInviteFinalizeInput,
   OperatorAuthorityInput,
   RevokeCustomerAuthorityInput,
   PendingCustomerAuthorityApproval,
@@ -109,11 +112,15 @@ import {
 import {
   getCustomerAuthorityStateRow,
   recordCustomerConsentAckRow,
-  recordCustomerInviteAuditRow,
   recordOperatorAuthorityRow,
   revokeCustomerAuthorityRow,
   listPendingCustomerAuthorityApprovalsRow,
 } from './customer-authority-store';
+import {
+  finalizeCustomerInviteRow,
+  recordCustomerInviteDeliveryFailureRow,
+  reserveCustomerInviteRow,
+} from './customer-invite-store';
 import {
   createReadinessAssessmentRow,
   getReadinessAssessmentRow,
@@ -1018,8 +1025,16 @@ export class WorkersDalAdapter implements DalAdapter {
     return recordCustomerConsentAckRow(this.sql, input);
   }
 
-  async recordCustomerInviteAudit(input: CustomerInviteAuditInput): Promise<CustomerInviteAuditReceipt> {
-    return recordCustomerInviteAuditRow(this.sql, input);
+  async reserveCustomerInvite(input: CustomerInviteCommandInput): Promise<CustomerInviteCommandReservation> {
+    return reserveCustomerInviteRow(this.sql, input);
+  }
+
+  async finalizeCustomerInvite(input: CustomerInviteFinalizeInput): Promise<CustomerInviteDeliveryReceipt> {
+    return finalizeCustomerInviteRow(this.sql, input);
+  }
+
+  async recordCustomerInviteDeliveryFailure(input: CustomerInviteFailureInput): Promise<void> {
+    return recordCustomerInviteDeliveryFailureRow(this.sql, input);
   }
 
   async getCustomerAuthorityState(workspaceId: WorkspaceId): Promise<CustomerAuthorityState> {

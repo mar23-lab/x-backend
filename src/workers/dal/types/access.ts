@@ -377,16 +377,73 @@ export interface OperatorAuthorityInput {
   access_request_id?: string | null;
 }
 
-export interface CustomerInviteAuditInput {
+export interface CustomerInviteCommandIdempotencyInput {
   workspace_id: WorkspaceId;
   actor_user_id: UserId;
-  email: string;
-  role: string;
+  key: string;
+  route: 'POST /api/v1/customer/invites';
+  request_sha256: string;
+  request_id?: string | null;
 }
 
-export interface CustomerInviteAuditReceipt {
+export interface CustomerInviteCommandInput extends CustomerInviteCommandIdempotencyInput {
+  command_id: string;
+  lease_token: string;
+  email: string;
+  clerk_role: string;
+  workspace_role: string;
+  requested_workspace_role: string;
+  role_basis: string;
+}
+
+export interface CustomerInviteCommandReservation {
+  command_id: string;
+  lease_token: string | null;
+  state: 'delivery_acquired' | 'delivered';
+  replayed: boolean;
+  reconcile_provider: boolean;
+  command?: {
+    email: string;
+    clerk_role: string;
+    workspace_role: string;
+    requested_workspace_role: string;
+    role_basis: string;
+  };
+  receipt?: CustomerInviteDeliveryReceipt;
+}
+
+export interface CustomerInviteDeliveryReceipt {
+  invited: {
+    invitation_id: string;
+    email: string;
+    role: string;
+    status: string;
+    workspace_role: string;
+    requested_workspace_role: string;
+    role_basis: string;
+  };
   invite_receipt_id: string;
+  operation_event_id: string;
   audit_event_id: string;
+  projection_outbox_id: string;
+  read_model_watermark: string;
+  delivery_status: 'delivered';
+  replayed: boolean;
+}
+
+export interface CustomerInviteFinalizeInput extends CustomerInviteCommandInput {
+  invitation_id: string;
+  provider_status: string;
+  operation_event_id: string;
+  projection_outbox_id: string;
+}
+
+export interface CustomerInviteFailureInput extends CustomerInviteCommandIdempotencyInput {
+  command_id: string;
+  lease_token: string;
+  email: string;
+  error_code: string;
+  operation_event_id: string;
 }
 
 export interface CustomerAuthorityWriteReceipt {

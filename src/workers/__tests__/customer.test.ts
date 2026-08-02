@@ -19,12 +19,13 @@ vi.mock('../services/clerk-org', async (importOriginal) => {
       role: input.role,
       status: 'pending',
     })),
+    findTeamInvitationByCommandId: vi.fn(async () => null),
   };
 });
 
 import { Hono } from 'hono';
 import { customerRoute } from '../routes/customer';
-import { createTeamInvitation } from '../services/clerk-org';
+import { createTeamInvitation, findTeamInvitationByCommandId } from '../services/clerk-org';
 
 const ENV = { CLERK_SECRET_KEY: 'sk_test_x', DATABASE_URL: 'postgres://test' };
 
@@ -65,9 +66,11 @@ function appFor(auth: Record<string, unknown>, dal: Record<string, unknown>) {
 }
 
 function post(app: Hono, path: string, body: unknown) {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (path === '/customer/invites') headers['Idempotency-Key'] = 'invite-test-key';
   return app.request(
     `/api/v1${path}`,
-    { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) },
+    { method: 'POST', headers, body: JSON.stringify(body) },
     ENV as never
   );
 }
@@ -429,14 +432,55 @@ describe('POST /customer/authority-consent/revoke', () => {
 });
 
 describe('POST /customer/invites', () => {
+  const inviteReceipt = (overrides: Record<string, unknown> = {}) => ({
+    invited: {
+      invitation_id: 'inv_test_123',
+      email: 'alice@acme.com',
+      role: 'org:member',
+      status: 'pending',
+      workspace_role: 'viewer',
+      requested_workspace_role: 'client',
+      role_basis: 'conservative_default',
+    },
+    invite_receipt_id: 'member-invite:org_acme:command_1:audit_invite_1',
+    operation_event_id: 'event_invite_1',
+    audit_event_id: 'audit_invite_1',
+    projection_outbox_id: 'outbox_invite_1',
+    read_model_watermark: '2026-08-03T00:00:00.000Z',
+    delivery_status: 'delivered',
+    replayed: false,
+    ...overrides,
+  });
   const unlockedDal = () => ({
     getCustomerAuthorityState: vi.fn(async () =>
       authorityState({ unlocked: true, operator_approved: true, consent_acked: true })
     ),
-    recordCustomerInviteAudit: vi.fn(async () => ({
-      invite_receipt_id: 'member-invite:org_acme:alice@acme.com:audit_invite_1',
-      audit_event_id: 'audit_invite_1',
+    reserveCustomerInvite: vi.fn(async (input: Record<string, string>) => ({
+      command_id: 'command_1',
+      lease_token: 'lease_1',
+      state: 'delivery_acquired',
+      replayed: false,
+      reconcile_provider: false,
+      command: {
+        email: input.email,
+        clerk_role: input.clerk_role,
+        workspace_role: input.workspace_role,
+        requested_workspace_role: input.requested_workspace_role,
+        role_basis: input.role_basis,
+      },
     })),
+    finalizeCustomerInvite: vi.fn(async (input: Record<string, string>) => inviteReceipt({
+      invited: {
+        invitation_id: input.invitation_id,
+        email: input.email,
+        role: input.clerk_role,
+        status: input.provider_status,
+        workspace_role: input.workspace_role,
+        requested_workspace_role: input.requested_workspace_role,
+        role_basis: input.role_basis,
+      },
+    })),
+    recordCustomerInviteDeliveryFailure: vi.fn(async () => undefined),
   });
 
   it('401 when unauthenticated', async () => {
@@ -447,6 +491,22 @@ describe('POST /customer/invites', () => {
   it('400 when no workspace', async () => {
     const res = await post(appFor({ user_id: 'u1' }, unlockedDal()), '/customer/invites', { email: 'a@acme.com' });
     expect(res.status).toBe(400);
+  });
+
+  it('428 before reservation or Clerk when Idempotency-Key is missing', async () => {
+    vi.mocked(createTeamInvitation).mockClear();
+    const dal = unlockedDal();
+    const res = await appFor(
+      { user_id: 'u1', workspace_id: 'org_acme', role: 'owner' },
+      dal,
+    ).request(
+      '/api/v1/customer/invites',
+      { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: 'a@acme.com' }) },
+      ENV as never,
+    );
+    expect(res.status).toBe(428);
+    expect(dal.reserveCustomerInvite).not.toHaveBeenCalled();
+    expect(createTeamInvitation).not.toHaveBeenCalled();
   });
 
   it('403 when caller is a viewer (not owner/operator)', async () => {
@@ -482,6 +542,7 @@ describe('POST /customer/invites', () => {
   });
 
   it('201 owner invites a teammate (default role maps to org:member)', async () => {
+    vi.mocked(findTeamInvitationByCommandId).mockClear();
     const res = await post(
       appFor({ user_id: 'u1', workspace_id: 'org_acme', role: 'owner' }, unlockedDal()),
       '/customer/invites',
@@ -496,7 +557,11 @@ describe('POST /customer/invites', () => {
     expect(json.invited.role_basis).toBe('conservative_default');
     expect(json.invite_receipt_id).toMatch(/^member-invite:/);
     expect(json.audit_event_id).toBe('audit_invite_1');
+    expect(json.operation_event_id).toBe('event_invite_1');
+    expect(json.projection_outbox_id).toBe('outbox_invite_1');
+    expect(json.delivery_status).toBe('delivered');
     expect(json.message).toMatch(/alice@acme.com/);
+    expect(findTeamInvitationByCommandId).not.toHaveBeenCalled();
   });
 
   // 260728 · same-domain colleagues arrive as operators, not read-only viewers.
@@ -599,7 +664,7 @@ describe('POST /customer/invites', () => {
       { email: 'colleague@acme.com', role: 'superuser' }
     );
     expect(res.status).toBe(400);
-    expect(dal.recordCustomerInviteAudit).not.toHaveBeenCalled();
+    expect(dal.reserveCustomerInvite).not.toHaveBeenCalled();
     expect(createTeamInvitation).not.toHaveBeenCalled();
   });
 
@@ -612,7 +677,7 @@ describe('POST /customer/invites', () => {
       { email: 'colleague@acme.com', role: 7 }
     );
     expect(res.status).toBe(400);
-    expect(dal.recordCustomerInviteAudit).not.toHaveBeenCalled();
+    expect(dal.reserveCustomerInvite).not.toHaveBeenCalled();
     expect(createTeamInvitation).not.toHaveBeenCalled();
   });
 
@@ -632,7 +697,7 @@ describe('POST /customer/invites', () => {
     expect(json.invited.workspace_role).toBe('viewer');
     expect(json.invited.requested_workspace_role).toBe('client');
     expect(json.invited.role_basis).toBe('explicit_restricted');
-    expect(dal.recordCustomerInviteAudit).toHaveBeenCalledWith(expect.objectContaining({ role: 'viewer' }));
+    expect(dal.reserveCustomerInvite).toHaveBeenCalledWith(expect.objectContaining({ workspace_role: 'viewer' }));
   });
 
   it('201 admin role maps to org:admin (operator caller)', async () => {
@@ -646,15 +711,15 @@ describe('POST /customer/invites', () => {
     expect(json.invited.role).toBe('org:admin');
   });
 
-  it('500 and does not call Clerk when invite audit receipt is missing', async () => {
+  it('500 and does not call Clerk when invite command reservation fails', async () => {
     vi.mocked(createTeamInvitation).mockClear();
     const res = await post(
       appFor(
         { user_id: 'u1', workspace_id: 'org_acme', role: 'owner' },
         {
           getCustomerAuthorityState: vi.fn(async () => authorityState({ unlocked: true, operator_approved: true, consent_acked: true })),
-          recordCustomerInviteAudit: vi.fn(async () => {
-            const e = Object.assign(new Error('audit down'), { status: 500, code: 'INVITE_AUDIT_RECEIPT_MISSING' });
+          reserveCustomerInvite: vi.fn(async () => {
+            const e = Object.assign(new Error('idempotency down'), { status: 500, code: 'INVITE_ATOMICITY_FAILED' });
             throw e;
           }),
         },
@@ -664,5 +729,79 @@ describe('POST /customer/invites', () => {
     );
     expect(res.status).toBe(500);
     expect(createTeamInvitation).not.toHaveBeenCalled();
+  });
+
+  it('replays a completed invitation without another Clerk lookup or send', async () => {
+    vi.mocked(createTeamInvitation).mockClear();
+    vi.mocked(findTeamInvitationByCommandId).mockClear();
+    const dal = unlockedDal();
+    dal.reserveCustomerInvite.mockResolvedValueOnce({
+      command_id: 'command_1',
+      lease_token: null,
+      state: 'delivered',
+      replayed: true,
+      reconcile_provider: false,
+      receipt: inviteReceipt(),
+    });
+    const res = await post(
+      appFor({ user_id: 'u1', workspace_id: 'org_acme', role: 'owner' }, dal),
+      '/customer/invites',
+      { email: 'alice@acme.com' },
+    );
+    expect(res.status).toBe(201);
+    expect(res.headers.get('Idempotency-Replayed')).toBe('true');
+    expect(findTeamInvitationByCommandId).not.toHaveBeenCalled();
+    expect(createTeamInvitation).not.toHaveBeenCalled();
+    expect(dal.finalizeCustomerInvite).not.toHaveBeenCalled();
+  });
+
+  it('recovers a Clerk invitation by command id before creating another email', async () => {
+    vi.mocked(createTeamInvitation).mockClear();
+    vi.mocked(findTeamInvitationByCommandId).mockResolvedValueOnce({
+      invitation_id: 'inv_recovered', email: 'alice@acme.com', role: 'org:member', status: 'pending',
+    });
+    const dal = unlockedDal();
+    dal.reserveCustomerInvite.mockResolvedValueOnce({
+      command_id: 'command_1',
+      lease_token: 'lease_2',
+      state: 'delivery_acquired',
+      replayed: false,
+      reconcile_provider: true,
+      command: {
+        email: 'alice@acme.com',
+        clerk_role: 'org:member',
+        workspace_role: 'viewer',
+        requested_workspace_role: 'client',
+        role_basis: 'conservative_default',
+      },
+    });
+    const res = await post(
+      appFor({ user_id: 'u1', workspace_id: 'org_acme', role: 'owner' }, dal),
+      '/customer/invites',
+      { email: 'alice@acme.com' },
+    );
+    expect(res.status).toBe(201);
+    expect(createTeamInvitation).not.toHaveBeenCalled();
+    expect(dal.finalizeCustomerInvite).toHaveBeenCalledWith(expect.objectContaining({
+      command_id: 'command_1', invitation_id: 'inv_recovered',
+    }));
+  });
+
+  it('records a provider failure and leaves local success unclaimed', async () => {
+    vi.mocked(findTeamInvitationByCommandId).mockResolvedValueOnce(null);
+    vi.mocked(createTeamInvitation).mockRejectedValueOnce(
+      Object.assign(new Error('Clerk unavailable'), { status: 502, code: 'CLERK_ORG_ERROR' }),
+    );
+    const dal = unlockedDal();
+    const res = await post(
+      appFor({ user_id: 'u1', workspace_id: 'org_acme', role: 'owner' }, dal),
+      '/customer/invites',
+      { email: 'alice@acme.com' },
+    );
+    expect(res.status).toBe(502);
+    expect(dal.finalizeCustomerInvite).not.toHaveBeenCalled();
+    expect(dal.recordCustomerInviteDeliveryFailure).toHaveBeenCalledWith(expect.objectContaining({
+      command_id: 'command_1', error_code: 'CLERK_ORG_ERROR',
+    }));
   });
 });
