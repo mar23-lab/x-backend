@@ -46,16 +46,28 @@ export interface WorkspaceMember {
   joined_at: string | null;
 }
 
-export interface WorkspaceMemberRoleMutationReceipt {
-  member: WorkspaceMember;
-  member_mutation_receipt_id: string;
-  audit_event_id: string;
+export interface WorkspaceMemberMutationIdempotencyInput {
+  key: string;
+  request_sha256: string;
+  route: 'PATCH /api/v1/members/:userId/role' | 'DELETE /api/v1/members/:userId';
+  request_id?: string | null;
 }
 
-export interface WorkspaceMemberRemovalReceipt {
-  removed: { user_id: UserId; workspace_id: WorkspaceId; removed_at: string };
+export interface WorkspaceMemberMutationAuthorityFields {
   member_mutation_receipt_id: string;
+  operation_event_id: string;
   audit_event_id: string;
+  projection_outbox_id: string;
+  read_model_watermark: string;
+  replayed: boolean;
+}
+
+export interface WorkspaceMemberRoleMutationReceipt extends WorkspaceMemberMutationAuthorityFields {
+  member: WorkspaceMember;
+}
+
+export interface WorkspaceMemberRemovalReceipt extends WorkspaceMemberMutationAuthorityFields {
+  removed: { user_id: UserId; workspace_id: WorkspaceId; removed_at: string };
 }
 
 export type MembershipStatus = 'pending' | 'active' | 'revoked' | 'suspended';

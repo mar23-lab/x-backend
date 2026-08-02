@@ -33,14 +33,21 @@ const member = {
 const roleReceipt = (role = 'viewer') => ({
   member: { ...member, role },
   member_mutation_receipt_id: 'workspace-member:org_a:u1:role:audit_1',
+  operation_event_id: 'evt_member_role_1',
   audit_event_id: 'audit_1',
+  projection_outbox_id: 'out_member_role_1',
+  read_model_watermark: '2026-08-03T00:00:00.000Z',
+  replayed: false,
 });
 
-function patch(app: ReturnType<typeof appFor>, roleBody: unknown) {
+function patch(app: ReturnType<typeof appFor>, roleBody: unknown, includeIdempotency = true) {
   return app.request('/api/v1/members/u1/role', {
     method: 'PATCH',
     body: JSON.stringify({ role: roleBody }),
-    headers: { 'content-type': 'application/json' },
+    headers: {
+      'content-type': 'application/json',
+      ...(includeIdempotency ? { 'Idempotency-Key': 'member-role-test-1' } : {}),
+    },
   });
 }
 
@@ -50,20 +57,48 @@ describe('PATCH /members/:userId/role', () => {
     const setWorkspaceMemberRole = vi.fn(async () => roleReceipt('viewer'));
     const res = await patch(appFor({ operatorOwnsWorkspace, setWorkspaceMemberRole }), 'viewer');
     expect(res.status).toBe(200);
-    const j = (await res.json()) as { member: { role: string }; member_mutation_receipt_id: string; audit_event_id: string };
+    const j = (await res.json()) as {
+      member: { role: string };
+      member_mutation_receipt_id: string;
+      operation_event_id: string;
+      audit_event_id: string;
+      projection_outbox_id: string;
+      read_model_watermark: string;
+      replayed: boolean;
+    };
     expect(j.member.role).toBe('viewer');
     expect(j.member_mutation_receipt_id).toMatch(/^workspace-member:/);
+    expect(j.operation_event_id).toBe('evt_member_role_1');
     expect(j.audit_event_id).toBe('audit_1');
-    expect(setWorkspaceMemberRole).toHaveBeenCalledWith('org_a', 'u1', 'viewer', 'op');
+    expect(j.projection_outbox_id).toBe('out_member_role_1');
+    expect(j.read_model_watermark).toBeTruthy();
+    expect(j.replayed).toBe(false);
+    expect(setWorkspaceMemberRole).toHaveBeenCalledWith('org_a', 'u1', 'viewer', 'op', expect.objectContaining({
+      key: 'member-role-test-1',
+      route: 'PATCH /api/v1/members/:userId/role',
+      request_id: 't',
+      request_sha256: expect.stringMatching(/^[a-f0-9]{64}$/),
+    }));
   });
 
-  it('500 — a member role mutation cannot succeed without an audit receipt', async () => {
+  it('428 — a member role mutation requires authority-strict idempotency', async () => {
+    const setWorkspaceMemberRole = vi.fn();
+    const res = await patch(appFor({ operatorOwnsWorkspace: vi.fn(), setWorkspaceMemberRole }), 'viewer', false);
+    expect(res.status).toBe(428);
+    expect(setWorkspaceMemberRole).not.toHaveBeenCalled();
+  });
+
+  it('500 — a member role mutation cannot succeed without a complete authority envelope', async () => {
     const operatorOwnsWorkspace = vi.fn(async () => true);
-    const setWorkspaceMemberRole = vi.fn(async () => ({ member: { ...member, role: 'viewer' } }));
+    const setWorkspaceMemberRole = vi.fn(async () => ({
+      member: { ...member, role: 'viewer' },
+      member_mutation_receipt_id: 'partial',
+      audit_event_id: 'audit_only',
+    }));
     const res = await patch(appFor({ operatorOwnsWorkspace, setWorkspaceMemberRole }), 'viewer');
     expect(res.status).toBe(500);
     const body = await res.json();
-    expect(JSON.stringify(body)).toMatch(/MEMBER_AUDIT_RECEIPT_MISSING/);
+    expect(JSON.stringify(body)).toMatch(/MEMBER_AUTHORITY_RECEIPT_INCOMPLETE/);
   });
 
   it('403 — caller is NOT the workspace owner; DAL never called', async () => {

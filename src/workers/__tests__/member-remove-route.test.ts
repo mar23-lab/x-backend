@@ -18,6 +18,8 @@ function appFor(auth: Record<string, unknown> | null, dal: Record<string, unknow
   return app;
 }
 const del = (app: Hono, path: string, env: Record<string, unknown>) =>
+  app.request(path, { method: 'DELETE', headers: { 'Idempotency-Key': 'member-remove-test-1' } }, env as never);
+const delWithoutIdempotency = (app: Hono, path: string, env: Record<string, unknown>) =>
   app.request(path, { method: 'DELETE' }, env as never);
 
 const OWNER = { user_id: 'u_owner', workspace_id: 'org_acme', role: 'owner' };
@@ -30,7 +32,11 @@ function dalStub(over: Record<string, unknown> = {}) {
     removeWorkspaceMember: vi.fn(async (w: string, u: string) => ({
       removed: { user_id: u, workspace_id: w, removed_at: '2026-07-10T00:00:00Z' },
       member_mutation_receipt_id: `workspace-member:${w}:${u}:remove:audit_remove_1`,
+      operation_event_id: 'evt_member_remove_1',
       audit_event_id: 'audit_remove_1',
+      projection_outbox_id: 'out_member_remove_1',
+      read_model_watermark: '2026-08-03T00:00:00.000Z',
+      replayed: false,
     })),
     ...over,
   };
@@ -49,6 +55,13 @@ describe('DELETE /members/:userId · soft member removal', () => {
     expect(res.status).toBe(401);
   });
 
+  it('flag ON, owner, no Idempotency-Key → 428 before the DAL write', async () => {
+    const dal = dalStub();
+    const res = await delWithoutIdempotency(appFor(OWNER, dal), '/api/v1/members/u_target', ON);
+    expect(res.status).toBe(428);
+    expect(dal.removeWorkspaceMember).not.toHaveBeenCalled();
+  });
+
   it('flag ON, non-owner → 403 (owner-only; no removal reachable)', async () => {
     const dal = dalStub({ operatorOwnsWorkspace: vi.fn(async () => false) });
     const res = await del(appFor({ user_id: 'u_viewer', workspace_id: 'org_acme', role: 'viewer' }, dal), '/api/v1/members/u_target', ON);
@@ -60,15 +73,31 @@ describe('DELETE /members/:userId · soft member removal', () => {
     const dal = dalStub();
     const res = await del(appFor(OWNER, dal), '/api/v1/members/u_target', ON);
     expect(res.status).toBe(200);
-    const body = await res.json() as { removed: { user_id: string; workspace_id: string }; member_mutation_receipt_id: string; audit_event_id: string };
+    const body = await res.json() as {
+      removed: { user_id: string; workspace_id: string };
+      member_mutation_receipt_id: string;
+      operation_event_id: string;
+      audit_event_id: string;
+      projection_outbox_id: string;
+      read_model_watermark: string;
+      replayed: boolean;
+    };
     expect(body.removed.user_id).toBe('u_target');
     expect(body.member_mutation_receipt_id).toMatch(/^workspace-member:/);
+    expect(body.operation_event_id).toBe('evt_member_remove_1');
     expect(body.audit_event_id).toBe('audit_remove_1');
-    // dal called (workspace, target, actor) — workspace + actor from the JWT, target from the path
-    expect(dal.removeWorkspaceMember).toHaveBeenCalledWith('org_acme', 'u_target', 'u_owner');
+    expect(body.projection_outbox_id).toBe('out_member_remove_1');
+    expect(body.read_model_watermark).toBeTruthy();
+    expect(body.replayed).toBe(false);
+    expect(dal.removeWorkspaceMember).toHaveBeenCalledWith('org_acme', 'u_target', 'u_owner', expect.objectContaining({
+      key: 'member-remove-test-1',
+      route: 'DELETE /api/v1/members/:userId',
+      request_id: 't',
+      request_sha256: expect.stringMatching(/^[a-f0-9]{64}$/),
+    }));
   });
 
-  it('flag ON, owner → 500 if removal does not return an audit receipt', async () => {
+  it('flag ON, owner → 500 if removal does not return a complete authority envelope', async () => {
     const dal = dalStub({
       removeWorkspaceMember: vi.fn(async (w: string, u: string) => ({
         removed: { user_id: u, workspace_id: w, removed_at: '2026-07-10T00:00:00Z' },
@@ -77,14 +106,16 @@ describe('DELETE /members/:userId · soft member removal', () => {
     const res = await del(appFor(OWNER, dal), '/api/v1/members/u_target', ON);
     expect(res.status).toBe(500);
     const body = await res.json();
-    expect(JSON.stringify(body)).toMatch(/MEMBER_AUDIT_RECEIPT_MISSING/);
+    expect(JSON.stringify(body)).toMatch(/MEMBER_AUTHORITY_RECEIPT_INCOMPLETE/);
   });
 
   it('flag ON, owner + ?workspace_id they own → uses that workspace', async () => {
     const dal = dalStub();
     const res = await del(appFor(OWNER, dal), '/api/v1/members/u_target?workspace_id=org_other', ON);
     expect(res.status).toBe(200);
-    expect(dal.removeWorkspaceMember).toHaveBeenCalledWith('org_other', 'u_target', 'u_owner');
+    expect(dal.removeWorkspaceMember).toHaveBeenCalledWith(
+      'org_other', 'u_target', 'u_owner', expect.objectContaining({ route: 'DELETE /api/v1/members/:userId' }),
+    );
   });
 
   it('store guard errors surface (CANNOT_REMOVE_SELF 409 · LAST_OWNER 409)', async () => {

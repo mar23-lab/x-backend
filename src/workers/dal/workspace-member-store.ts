@@ -10,15 +10,17 @@
 // clause confines the query to the passed workspace, so a caller can never
 // enumerate another tenant's members.
 
-import type { UserId, WorkspaceId, WorkspaceMember, WorkspaceMemberRole, WorkspaceMemberRoleMutationReceipt, WorkspaceMemberRemovalReceipt } from './types';
-import type { Sql, SqlTx } from '../db/client';
+import type { UserId, WorkspaceId, WorkspaceMember, WorkspaceMemberMutationIdempotencyInput, WorkspaceMemberRole, WorkspaceMemberRoleMutationReceipt } from './types';
+import type { Sql } from '../db/client';
 import { assertWorkspaceScope } from './DalAdapter';
-import { makeError } from './shared-helpers';
-import { memberAuthorityProvisioningStatements } from './member-authority-provisioning';
-
-function memberMutationReceipt(workspaceId: WorkspaceId, targetUserId: UserId, action: string, auditEventId: string): string {
-  return `workspace-member:${workspaceId}:${targetUserId}:${action}:${auditEventId}`;
-}
+import { makeError, randomNanoid } from './shared-helpers';
+import { roleMirrorEntitlement } from './member-authority-provisioning';
+import {
+  cleanMemberMutationValue,
+  memberMutationReceiptFromBody,
+  readStrictMemberMutationReplay,
+  validateMemberMutationIdempotency,
+} from './workspace-member-authority-helpers';
 
 // A1 (260710-B) · true when the error is Postgres "column does not exist" (42703) — used to degrade the
 // roster reads to the legacy shape during the migrate→deploy window (before migration 062 adds removed_at).
@@ -194,151 +196,238 @@ export async function setWorkspaceMemberRoleRow(
   targetUserId: UserId,
   role: WorkspaceMemberRole,
   actorUserId: UserId,
+  idempotency: WorkspaceMemberMutationIdempotencyInput,
 ): Promise<WorkspaceMemberRoleMutationReceipt> {
   assertWorkspaceScope(workspaceId);
+  validateMemberMutationIdempotency(idempotency, 'PATCH /api/v1/members/:userId/role');
+  const actor = cleanMemberMutationValue(actorUserId);
+  const target = cleanMemberMutationValue(targetUserId);
+  if (!actor || !target) throw makeError('VALIDATION_ERROR', 'actor and target member are required', 400);
 
-  // Guard: never orphan a workspace by demoting/removing its last owner.
-  if (role !== 'owner') {
-    const current = (await sql/*sql*/`
-      SELECT role FROM workspace_members
-      WHERE workspace_id = ${workspaceId} AND user_id = ${targetUserId}
-    `) as Array<{ role: WorkspaceMemberRole }>;
-    if (!current[0]) {
-      throw makeError('NOT_FOUND', `member ${targetUserId} not in workspace ${workspaceId}`, 404);
-    }
-    if (current[0].role === 'owner') {
-      const owners = (await sql/*sql*/`
-        SELECT count(*)::int AS n FROM workspace_members
-        WHERE workspace_id = ${workspaceId} AND role = 'owner'
-      `) as Array<{ n: number }>;
-      if ((owners[0]?.n ?? 0) <= 1) {
-        throw makeError('LAST_OWNER', 'cannot change the role of the last remaining owner', 409);
-      }
-    }
-  }
-
-  const [rows] = (await (sql as SqlTx).transaction([
-    sql/*sql*/`
-      WITH member_updated AS (
+  const mirror = roleMirrorEntitlement(role);
+  const operatorGrade = role === 'owner' || role === 'operator';
+  const operationEventId = `evt_${randomNanoid()}`;
+  const projectionOutboxId = `out_${randomNanoid()}`;
+  const commandTimestamp = new Date().toISOString();
+  let rows: Array<{ response_body: unknown }>;
+  try {
+    rows = (await sql/*sql*/`
+      WITH existing_replay AS (
+        SELECT id FROM idempotency_keys
+        WHERE workspace_id = ${workspaceId}
+          AND actor_user_id = ${actor}
+          AND route = ${idempotency.route}
+          AND idempotency_key = ${idempotency.key}
+          AND mode = 'authority_strict'
+        LIMIT 1
+      ),
+      command_envelope AS (
+        SELECT nextval(pg_get_serial_sequence('audit_logs', 'id'))::bigint AS audit_id
+        WHERE NOT EXISTS (SELECT 1 FROM existing_replay)
+      ),
+      target_snapshot AS MATERIALIZED (
+        SELECT user_id, workspace_id, role, invited_by, joined_at
+        FROM workspace_members
+        WHERE workspace_id = ${workspaceId} AND user_id = ${target} AND removed_at IS NULL
+        FOR UPDATE
+      ),
+      owner_snapshot AS MATERIALIZED (
+        SELECT user_id FROM workspace_members
+        WHERE workspace_id = ${workspaceId} AND role = 'owner' AND removed_at IS NULL
+        FOR UPDATE
+      ),
+      command_guard AS (
+        SELECT CASE
+          WHEN (SELECT count(*) FROM target_snapshot) <> 1 THEN
+            xlooop_assert_authority_complete(false, 'member_role_target')
+          WHEN ${role !== 'owner'}::boolean
+            AND (SELECT role FROM target_snapshot) = 'owner'
+            AND (SELECT count(*) FROM owner_snapshot) <= 1 THEN
+            xlooop_assert_authority_complete(false, 'member_role_last_owner')
+          ELSE true
+        END AS complete
+        FROM command_envelope
+      ),
+      member_updated AS (
         UPDATE workspace_members
         SET role = ${role}
-        WHERE workspace_id = ${workspaceId} AND user_id = ${targetUserId}
-        RETURNING user_id, workspace_id, role, invited_by, joined_at
+        FROM command_guard
+        WHERE workspace_members.workspace_id = ${workspaceId}
+          AND workspace_members.user_id = ${target}
+          AND workspace_members.removed_at IS NULL
+          AND command_guard.complete
+        RETURNING workspace_members.user_id, workspace_members.workspace_id,
+                  workspace_members.role, workspace_members.invited_by, workspace_members.joined_at
       ),
-      audit_written AS (
-        INSERT INTO audit_logs (actor_user_id, action, target_type, target_id, workspace_id, reason)
-        SELECT ${actorUserId}, 'member_role_change'::text, 'workspace_member', member_updated.user_id,
-               member_updated.workspace_id, ${'role -> ' + role}
+      entitlement_written AS (
+        INSERT INTO customer_entitlements (
+          id, user_id, workspace_id, app_id, account_type,
+          allowed_modes, allowed_actions, denied_actions,
+          authority_ref, granted_at, granted_by, created_at, updated_at
+        )
+        SELECT
+          'cent_' || replace(gen_random_uuid()::text, '-', ''), member_updated.user_id,
+          member_updated.workspace_id, 'xlooop-product', 'company',
+          ${mirror.allowed_modes}::text[], ${mirror.allowed_actions}::text[], ${mirror.denied_actions}::text[],
+          'membership:role-mirror', ${commandTimestamp}::timestamptz, ${actor},
+          ${commandTimestamp}::timestamptz, ${commandTimestamp}::timestamptz
         FROM member_updated
-        RETURNING id::text AS audit_event_id
-      )
-      SELECT member_updated.user_id, member_updated.workspace_id, member_updated.role,
-             member_updated.invited_by, member_updated.joined_at, audit_written.audit_event_id
-      FROM member_updated
-      JOIN audit_written ON TRUE
-    `,
-    // P5(a) §5e: a role change re-mirrors the entitlement + operating-mode axes IN THE SAME TRANSACTION —
-    // promote seeds operator authority; demote downgrades it (else a post-flip demotion would be a lie).
-    ...(memberAuthorityProvisioningStatements(sql, {
-      userId: targetUserId, workspaceId, role, actorUserId,
-    }) as never[]),
-  ])) as [Array<Omit<WorkspaceMember, 'email' | 'status'> & { audit_event_id: string }>, unknown];
-
-  const row = rows[0];
-  if (!row) {
-    throw makeError('NOT_FOUND', `member ${targetUserId} not in workspace ${workspaceId}`, 404);
-  }
-  if (!row.audit_event_id) {
-    throw makeError('MEMBER_AUDIT_RECEIPT_MISSING', 'member role change did not produce an audit receipt', 500);
-  }
-  const { audit_event_id, ...memberRow } = row;
-  return {
-    member: { ...memberRow, email: null, status: null } as WorkspaceMember,
-    audit_event_id,
-    member_mutation_receipt_id: memberMutationReceipt(workspaceId, targetUserId, 'role', audit_event_id),
-  };
-}
-
-// A1 (260710-B) · SOFT-remove a member from a workspace (backs the cockpit "Remove from workspace" control).
-// Mirrors setWorkspaceMemberRoleRow: TENANT-SCOPED (assertWorkspaceScope + WHERE workspace_id), AUDITED
-// ('member_removed' in the same transaction), and GUARDED so it can never orphan a workspace. Removal is
-// SOFT (removed_at) because workspace_members is on the no-hard-delete protected list.
-//
-// ENTITLEMENT NOTE (deliberate scope boundary): removal does NOT touch customer_entitlements here.
-// (DAL-03 260711-J correction: the grain is post-054 UNIQUE(user_id, workspace_id, app_id) — per-workspace,
-// confirmed by member-authority-provisioning.ts ON CONFLICT (user_id, workspace_id, app_id). So a
-// workspace-keyed revoke would be correctly scoped; the earlier "over-revoke across workspaces" rationale
-// is obsolete.) The deferral still stands for a different reason: enforcement is flag-off today (inert),
-// and the ENTITLEMENT_ENFORCEMENT flip (Tranche C) re-derives authority from LIVE membership; that
-// derivation must exclude soft-removed members (removed_at IS NOT NULL) — tracked as the flip's
-// responsibility, not this membership write's. Keeping this fn bounded to membership + audit is the clean
-// seam, not a grain-safety workaround.
-// Guards:
-//   - a caller cannot remove THEMSELVES (leave-workspace is a separate, deliberate flow) → 409;
-//   - the LAST remaining owner cannot be removed (would orphan the workspace) → 409 LAST_OWNER;
-//   - the member must exist + not already be removed → 404.
-export async function removeWorkspaceMemberRow(
-  sql: Sql,
-  workspaceId: WorkspaceId,
-  targetUserId: UserId,
-  actorUserId: UserId,
-): Promise<WorkspaceMemberRemovalReceipt> {
-  assertWorkspaceScope(workspaceId);
-
-  if (String(targetUserId) === String(actorUserId)) {
-    throw makeError('CANNOT_REMOVE_SELF', 'you cannot remove yourself from the workspace', 409);
-  }
-
-  const current = (await sql/*sql*/`
-    SELECT role FROM workspace_members
-    WHERE workspace_id = ${workspaceId} AND user_id = ${targetUserId} AND removed_at IS NULL
-  `) as Array<{ role: WorkspaceMemberRole }>;
-  if (!current[0]) {
-    throw makeError('NOT_FOUND', `member ${targetUserId} not in workspace ${workspaceId}`, 404);
-  }
-  if (current[0].role === 'owner') {
-    const owners = (await sql/*sql*/`
-      SELECT count(*)::int AS n FROM workspace_members
-      WHERE workspace_id = ${workspaceId} AND role = 'owner' AND removed_at IS NULL
-    `) as Array<{ n: number }>;
-    if ((owners[0]?.n ?? 0) <= 1) {
-      throw makeError('LAST_OWNER', 'cannot remove the last remaining owner', 409);
-    }
-  }
-
-  const [rows] = (await (sql as SqlTx).transaction([
-    sql/*sql*/`
-      WITH member_removed AS (
-        UPDATE workspace_members
-        SET removed_at = now()
-        WHERE workspace_id = ${workspaceId} AND user_id = ${targetUserId} AND removed_at IS NULL
-        RETURNING user_id, workspace_id, removed_at
+        ON CONFLICT (user_id, workspace_id, app_id) DO UPDATE SET
+          allowed_modes = EXCLUDED.allowed_modes,
+          allowed_actions = EXCLUDED.allowed_actions,
+          denied_actions = EXCLUDED.denied_actions,
+          authority_ref = EXCLUDED.authority_ref,
+          granted_at = EXCLUDED.granted_at,
+          granted_by = EXCLUDED.granted_by,
+          updated_at = EXCLUDED.updated_at
+        RETURNING user_id, workspace_id
+      ),
+      preference_written AS (
+        INSERT INTO user_session_preferences (user_id, workspace_id, operating_mode, updated_at)
+        SELECT member_updated.user_id, member_updated.workspace_id,
+               ${operatorGrade ? 'operator' : 'watch'}, ${commandTimestamp}::timestamptz
+        FROM member_updated
+        ON CONFLICT (user_id, workspace_id) DO UPDATE SET
+          operating_mode = CASE WHEN ${operatorGrade}::boolean
+            THEN user_session_preferences.operating_mode ELSE 'watch' END,
+          updated_at = CASE WHEN ${operatorGrade}::boolean
+            THEN user_session_preferences.updated_at ELSE EXCLUDED.updated_at END
+        RETURNING user_id, workspace_id
+      ),
+      event_written AS (
+        INSERT INTO operation_events (
+          id, workspace_id, source_tool, agent_id, status, summary, body, visibility,
+          occurred_at, authorized_by_user_id, instrument_kind, authority_source, request_id
+        )
+        SELECT
+          ${operationEventId}, member_updated.workspace_id, 'xlooop', ${actor}, 'completed',
+          ('Workspace member role changed to ' || member_updated.role),
+          'Member role and effective authority changed through an owner command.',
+          'internal_workspace', ${commandTimestamp}::timestamptz, ${actor}, 'human', 'role',
+          ${idempotency.request_id ?? null}
+        FROM member_updated
+        JOIN entitlement_written ON TRUE
+        JOIN preference_written ON TRUE
+        RETURNING id, occurred_at
       ),
       audit_written AS (
-        INSERT INTO audit_logs (actor_user_id, action, target_type, target_id, workspace_id, reason)
-        SELECT ${actorUserId}, 'member_removed'::text, 'workspace_member', member_removed.user_id,
-               member_removed.workspace_id, ${'removed from workspace'}
-        FROM member_removed
+        INSERT INTO audit_logs (
+          id, actor_user_id, action, target_type, target_id, workspace_id, reason,
+          causation_id, metadata
+        )
+        SELECT command_envelope.audit_id, ${actor}, 'member_role_change', 'workspace_member',
+               member_updated.user_id, member_updated.workspace_id, ${'role -> ' + role},
+               event_written.id,
+               jsonb_build_object(
+                 'request_id', ${idempotency.request_id ?? null}::text,
+                 'request_sha256', ${idempotency.request_sha256}::text,
+                 'role', member_updated.role
+               )
+        FROM member_updated
+        JOIN event_written ON TRUE
+        JOIN command_envelope ON TRUE
         RETURNING id::text AS audit_event_id
+      ),
+      outbox_written AS (
+        INSERT INTO projection_outbox (
+          id, workspace_id, event_type, aggregate_type, aggregate_id, payload, created_at
+        )
+        SELECT ${projectionOutboxId}, member_updated.workspace_id, 'workspace_member.role_changed',
+               'workspace_member', member_updated.user_id,
+               jsonb_build_object(
+                 'user_id', member_updated.user_id,
+                 'role', member_updated.role,
+                 'operation_event_id', event_written.id,
+                 'audit_event_id', audit_written.audit_event_id,
+                 'request_sha256', ${idempotency.request_sha256}::text
+               ),
+               ${commandTimestamp}::timestamptz
+        FROM member_updated
+        JOIN event_written ON TRUE
+        JOIN audit_written ON TRUE
+        RETURNING id, created_at
+      ),
+      strict_claim AS (
+        INSERT INTO idempotency_keys (
+          workspace_id, idempotency_key, route, actor_user_id, request_sha256, mode,
+          response_status, response_body, completed_at
+        )
+        SELECT ${workspaceId}, ${idempotency.key}, ${idempotency.route}, ${actor},
+               ${idempotency.request_sha256}, 'authority_strict', 200,
+               jsonb_build_object(
+                 'member', jsonb_build_object(
+                   'user_id', member_updated.user_id,
+                   'workspace_id', member_updated.workspace_id,
+                   'role', member_updated.role,
+                   'email', null,
+                   'status', null,
+                   'invited_by', member_updated.invited_by,
+                   'joined_at', member_updated.joined_at
+                 ),
+                 'member_mutation_receipt_id',
+                   ('workspace-member:' || member_updated.workspace_id || ':' || member_updated.user_id
+                     || ':role:' || audit_written.audit_event_id),
+                 'operation_event_id', event_written.id,
+                 'audit_event_id', audit_written.audit_event_id,
+                 'projection_outbox_id', outbox_written.id,
+                 'read_model_watermark', ${commandTimestamp}::text,
+                 'replayed', false
+               ),
+               ${commandTimestamp}::timestamptz
+        FROM member_updated
+        JOIN entitlement_written ON TRUE
+        JOIN preference_written ON TRUE
+        JOIN event_written ON TRUE
+        JOIN audit_written ON TRUE
+        JOIN outbox_written ON TRUE
+        RETURNING response_body
+      ),
+      authority_result AS (
+        SELECT strict_claim.response_body,
+               CASE
+                 WHEN (SELECT count(*) FROM target_snapshot) <> 1 THEN
+                   xlooop_assert_authority_complete(false, 'member_role_target')
+                 WHEN ${role !== 'owner'}::boolean
+                   AND (SELECT role FROM target_snapshot) = 'owner'
+                   AND (SELECT count(*) FROM owner_snapshot) <= 1 THEN
+                   xlooop_assert_authority_complete(false, 'member_role_last_owner')
+                 ELSE xlooop_assert_authority_complete(
+                   (SELECT count(*) FROM member_updated) = 1
+                   AND (SELECT count(*) FROM entitlement_written) = 1
+                   AND (SELECT count(*) FROM preference_written) = 1
+                   AND (SELECT count(*) FROM event_written) = 1
+                   AND (SELECT count(*) FROM audit_written) = 1
+                   AND (SELECT count(*) FROM outbox_written) = 1
+                   AND (SELECT count(*) FROM strict_claim) = 1,
+                   'member_role_mutation'
+                 )
+               END AS authority_complete
+        FROM command_envelope
+        LEFT JOIN strict_claim ON TRUE
       )
-      SELECT member_removed.user_id, member_removed.workspace_id, member_removed.removed_at,
-             audit_written.audit_event_id
-      FROM member_removed
-      JOIN audit_written ON TRUE
-    `,
-  ])) as [Array<{ user_id: UserId; workspace_id: WorkspaceId; removed_at: string; audit_event_id: string }>, unknown];
-
-  const row = rows[0];
-  if (!row) {
-    throw makeError('NOT_FOUND', `member ${targetUserId} not in workspace ${workspaceId}`, 404);
+      SELECT response_body FROM authority_result WHERE authority_complete
+    `) as Array<{ response_body: unknown }>;
+  } catch (error) {
+    const sqlError = error as { code?: string; constraint?: string; message?: string };
+    if (sqlError.code === '23505' && (sqlError.constraint === 'idempotency_keys_authority_key'
+      || sqlError.message?.includes('idempotency_keys_authority_key'))) {
+      return readStrictMemberMutationReplay(sql, workspaceId, actor, idempotency, 'role') as Promise<WorkspaceMemberRoleMutationReceipt>;
+    }
+    if (sqlError.code === '23514' && sqlError.message?.includes('member_role_target')) {
+      throw makeError('NOT_FOUND', `member ${target} not in workspace ${workspaceId}`, 404);
+    }
+    if (sqlError.code === '23514' && sqlError.message?.includes('member_role_last_owner')) {
+      throw makeError('LAST_OWNER', 'cannot change the role of the last remaining owner', 409);
+    }
+    if (sqlError.code === '23514' && sqlError.message?.includes('xlooop authority incomplete')) {
+      throw makeError('MEMBER_ATOMICITY_FAILED', 'member role change did not complete every authority row', 500);
+    }
+    throw error;
   }
-  if (!row.audit_event_id) {
-    throw makeError('MEMBER_AUDIT_RECEIPT_MISSING', 'member removal did not produce an audit receipt', 500);
+  if (rows[0]?.response_body) {
+    return memberMutationReceiptFromBody(rows[0].response_body, 'role', false) as WorkspaceMemberRoleMutationReceipt;
   }
-  const { audit_event_id, ...removed } = row;
-  return {
-    removed,
-    audit_event_id,
-    member_mutation_receipt_id: memberMutationReceipt(workspaceId, targetUserId, 'remove', audit_event_id),
-  };
+  return readStrictMemberMutationReplay(sql, workspaceId, actor, idempotency, 'role') as Promise<WorkspaceMemberRoleMutationReceipt>;
 }
+
+export { removeWorkspaceMemberRow } from './workspace-member-removal-store';
