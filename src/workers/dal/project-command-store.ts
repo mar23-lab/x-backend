@@ -491,3 +491,5 @@ export async function createProjectWithAuthorityRow(
   if (rows[0]?.response_body) return receiptFromBody(rows[0].response_body, false);
   return readStrictReplay(sql, input.workspace_id, actor, idempotency);
 }
+
+export { mutateProjectWithAuthorityRow } from './project-mutation-store';

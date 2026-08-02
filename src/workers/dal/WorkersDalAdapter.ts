@@ -170,7 +170,7 @@ import {
   updateProjectSourceBindingRow,
   archiveProjectSourceBindingRow,
 } from './project-store';
-import { createProjectWithAuthorityRow } from './project-command-store';
+import { createProjectWithAuthorityRow, mutateProjectWithAuthorityRow } from './project-command-store';
 import {
   listEventsRow,
   listEventsForOperatorRow,
@@ -459,6 +459,14 @@ export class WorkersDalAdapter implements DalAdapter {
     idempotency: ProjectCreateIdempotencyInput,
   ): Promise<ProjectCreateAuthorityReceipt> {
     return createProjectWithAuthorityRow(this.sql, input, actorUserId, idempotency);
+  }
+
+  async mutateProjectWithAuthority(
+    input: import('./types').ProjectMutationAuthorityInput,
+    actorUserId: UserId,
+    idempotency: import('./types').ProjectMutationIdempotencyInput,
+  ): Promise<import('./types').ProjectMutationAuthorityReceipt> {
+    return mutateProjectWithAuthorityRow(this.sql, input, actorUserId, idempotency);
   }
 
   // R54-Stage3-C · operator creates a top-level workspace they own.

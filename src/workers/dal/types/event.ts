@@ -267,6 +267,38 @@ export interface ProjectCreateAuthorityReceipt {
   replayed: boolean;
 }
 
+export type ProjectMutationKind = 'update' | 'archive';
+
+/** Authority-grade PATCH/DELETE /projects/:id command input. */
+export interface ProjectMutationAuthorityInput {
+  workspace_id: WorkspaceId;
+  project_id: ProjectId;
+  mutation_kind: ProjectMutationKind;
+  patch: {
+    name?: string;
+    description?: string | null;
+    status?: ProjectStatus;
+  };
+}
+
+export interface ProjectMutationIdempotencyInput {
+  key: string;
+  request_sha256: string;
+  route: 'PATCH /api/v1/projects/:id' | 'DELETE /api/v1/projects/:id';
+  request_id?: string | null;
+}
+
+export interface ProjectMutationAuthorityReceipt {
+  project: Project;
+  mutation_kind: ProjectMutationKind;
+  receipt_id: string;
+  operation_event_id: string;
+  audit_event_id: string;
+  projection_outbox_id: string;
+  read_model_watermark: string;
+  replayed: boolean;
+}
+
 export interface ProjectListOpts {
   status?: ProjectStatus;
 }

@@ -223,6 +223,13 @@ export interface DalAdapter {
     idempotency: import('./types').ProjectCreateIdempotencyInput,
   ): Promise<import('./types').ProjectCreateAuthorityReceipt>;
 
+  /** Authority-grade project rename/edit/archive with strict replay and one atomic lineage result. */
+  mutateProjectWithAuthority(
+    input: import('./types').ProjectMutationAuthorityInput,
+    actorUserId: UserId,
+    idempotency: import('./types').ProjectMutationIdempotencyInput,
+  ): Promise<import('./types').ProjectMutationAuthorityReceipt>;
+
   /**
    * R54-Stage3-C · POST /api/v1/workspaces · operator creates a top-level
    * workspace owned by ownerUserId. id defaults to a slug of name. Idempotent

@@ -1,7 +1,12 @@
 import { Client, type QueryConfig } from 'pg';
 import { describe, expect, it } from 'vitest';
-import { createProjectWithAuthorityRow } from '../dal/project-command-store';
-import type { ProjectCreateAuthorityInput, ProjectCreateIdempotencyInput } from '../dal/types';
+import { createProjectWithAuthorityRow, mutateProjectWithAuthorityRow } from '../dal/project-command-store';
+import type {
+  ProjectCreateAuthorityInput,
+  ProjectCreateIdempotencyInput,
+  ProjectMutationAuthorityInput,
+  ProjectMutationIdempotencyInput,
+} from '../dal/types';
 import type { Sql } from '../db/client';
 
 type DeferredQuery = QueryConfig<unknown[]>;
@@ -44,6 +49,7 @@ describePostgres('schema 93 strict project authority', () => {
     const sourceMismatchProjectId = `proj_source_mismatch_pg93_${suffix}`;
     const sourceWorkspaceId = `ws_source_mismatch_pg93_${suffix}`;
     const sourceConnectionId = `usc_source_mismatch_pg93_${suffix}`;
+    const missingMutationProjectId = `proj_missing_mutation_pg93_${suffix}`;
     const request = {
       key: `project_pg93_${suffix}`,
       request_sha256: 'a'.repeat(64),
@@ -164,6 +170,90 @@ describePostgres('schema 93 strict project authority', () => {
         audit_count: 1,
         outbox_count: 1,
         replay_count: 1,
+      });
+
+      const mutationRequest = {
+        key: `project_mutation_pg93_${suffix}`,
+        request_sha256: '9'.repeat(64),
+        route: 'PATCH /api/v1/projects/:id',
+        request_id: `request_mutation_pg93_${suffix}`,
+      } satisfies ProjectMutationIdempotencyInput;
+      const mutationInput = {
+        workspace_id: workspaceId,
+        project_id: projectId,
+        mutation_kind: 'update',
+        patch: { name: 'Atomically renamed project' },
+      } satisfies ProjectMutationAuthorityInput;
+      const mutated = await mutateProjectWithAuthorityRow(sql, mutationInput, userId, mutationRequest);
+      expect(mutated).toMatchObject({
+        replayed: false,
+        mutation_kind: 'update',
+        project: { id: projectId, name: 'Atomically renamed project', status: 'active' },
+      });
+      expect(mutated.receipt_id).toContain(projectId);
+      expect(mutated.operation_event_id).toBeTruthy();
+      expect(mutated.audit_event_id).toBeTruthy();
+      expect(mutated.projection_outbox_id).toBeTruthy();
+      expect(mutated.read_model_watermark).toBeTruthy();
+
+      const mutationReplay = await mutateProjectWithAuthorityRow(sql, mutationInput, userId, mutationRequest);
+      expect(mutationReplay).toEqual({ ...mutated, replayed: true });
+      await expect(mutateProjectWithAuthorityRow(sql, mutationInput, userId, {
+        ...mutationRequest,
+        request_sha256: '8'.repeat(64),
+      })).rejects.toMatchObject({ code: 'IDEMPOTENCY_KEY_REUSED', status: 409 });
+
+      const mutationAuthority = await client.query(
+        `SELECT
+           (SELECT count(*)::integer FROM operation_events
+             WHERE workspace_id = $1 AND project_id = $2 AND summary LIKE 'Project updated:%') AS event_count,
+           (SELECT count(*)::integer FROM audit_logs
+             WHERE workspace_id = $1 AND target_type = 'project' AND target_id = $2
+               AND action = 'project_update') AS audit_count,
+           (SELECT count(*)::integer FROM projection_outbox
+             WHERE workspace_id = $1 AND aggregate_type = 'project' AND aggregate_id = $2
+               AND event_type = 'project.updated') AS outbox_count,
+           (SELECT count(*)::integer FROM idempotency_keys
+             WHERE workspace_id = $1 AND actor_user_id = $3 AND route = $4
+               AND idempotency_key = $5 AND mode = 'authority_strict'
+               AND response_status = 200 AND response_body IS NOT NULL) AS replay_count`,
+        [workspaceId, projectId, userId, mutationRequest.route, mutationRequest.key],
+      );
+      expect(mutationAuthority.rows[0]).toEqual({
+        event_count: 1,
+        audit_count: 1,
+        outbox_count: 1,
+        replay_count: 1,
+      });
+
+      const missingMutationRequest = {
+        ...mutationRequest,
+        key: `project_missing_mutation_pg93_${suffix}`,
+        request_sha256: '7'.repeat(64),
+      };
+      await expect(mutateProjectWithAuthorityRow(sql, {
+        workspace_id: workspaceId,
+        project_id: missingMutationProjectId,
+        mutation_kind: 'archive',
+        patch: { status: 'archived' },
+      }, userId, {
+        ...missingMutationRequest,
+        route: 'DELETE /api/v1/projects/:id',
+      })).rejects.toMatchObject({ code: 'NOT_FOUND', status: 404 });
+      const missingMutationAuthority = await client.query(
+        `SELECT
+           (SELECT count(*)::integer FROM operation_events WHERE project_id = $1) AS event_count,
+           (SELECT count(*)::integer FROM audit_logs WHERE target_type = 'project' AND target_id = $1) AS audit_count,
+           (SELECT count(*)::integer FROM projection_outbox WHERE aggregate_type = 'project' AND aggregate_id = $1) AS outbox_count,
+           (SELECT count(*)::integer FROM idempotency_keys
+             WHERE workspace_id = $2 AND idempotency_key = $3) AS replay_count`,
+        [missingMutationProjectId, workspaceId, missingMutationRequest.key],
+      );
+      expect(missingMutationAuthority.rows[0]).toEqual({
+        event_count: 0,
+        audit_count: 0,
+        outbox_count: 0,
+        replay_count: 0,
       });
 
       const missingParentRequest = {
