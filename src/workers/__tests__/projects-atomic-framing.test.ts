@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { Hono } from 'hono';
-import { createProjectWithAuthorityRow } from '../dal/project-command-store';
+import { createProjectWithAuthorityRow, mutateProjectWithAuthorityRow } from '../dal/project-command-store';
 import { projectsRoute } from '../routes/projects';
 import type { Sql } from '../db/client';
 
@@ -210,5 +210,103 @@ describe('atomic project command store', () => {
     )).rejects.toMatchObject({ code: 'PROJECT_ATOMICITY_FAILED', status: 500 });
     expect(statements).toHaveLength(3);
     expect(statements[2]).toContain('DELETE FROM idempotency_keys');
+  });
+});
+
+function mutationReceipt(replayed = false) {
+  return {
+    project: {
+      id: 'proj_atomic', workspace_id: 'ws_owner', name: 'Renamed project', status: 'active',
+      description: null, metadata: {}, scope_binding: null, scope_binding_updated_at: null,
+      scope_binding_updated_by: null, parent_project_id: null,
+      created_at: '2026-08-01T00:00:00.000Z', updated_at: '2026-08-02T00:00:00.000Z',
+    },
+    mutation_kind: 'update' as const,
+    receipt_id: 'project-update:proj_atomic:43',
+    operation_event_id: 'evt_update',
+    audit_event_id: '43',
+    projection_outbox_id: 'out_update',
+    read_model_watermark: '2026-08-02T00:00:00.000Z',
+    replayed,
+  };
+}
+
+describe('atomic project mutation store', () => {
+  it('requires target, event, audit, outbox, and replay in one authority statement', async () => {
+    const statements: string[] = [];
+    const receipt = await mutateProjectWithAuthorityRow(
+      sqlScript([[{ response_body: mutationReceipt(false) }]], statements),
+      {
+        workspace_id: 'ws_owner', project_id: 'proj_atomic', mutation_kind: 'update',
+        patch: { name: 'Renamed project' },
+      },
+      'user_owner',
+      {
+        key: 'project-update-1', request_sha256: 'f'.repeat(64),
+        route: 'PATCH /api/v1/projects/:id', request_id: 'req_update',
+      },
+    );
+    expect(receipt).toMatchObject({ project: { name: 'Renamed project' }, replayed: false });
+    expect(statements).toHaveLength(1);
+    const statement = statements[0]!;
+    for (const cte of [
+      'existing_replay', 'command_envelope', 'strict_claim', 'target_updated',
+      'event_written', 'audit_written', 'outbox_written', 'authority_result',
+    ]) expect(statement).toContain(cte);
+    expect(statement).toContain("mode = 'authority_strict'");
+    expect(statement).toContain("xlooop_assert_authority_complete(false, 'project_mutation_target')");
+    for (const authority of ['target_updated', 'event_written', 'audit_written', 'outbox_written', 'strict_claim']) {
+      expect(statement).toContain(`count(*) FROM ${authority}`);
+    }
+    expect(statement).toContain('FROM command_envelope');
+    expect(statement).toContain('LEFT JOIN strict_claim ON TRUE');
+  });
+
+  it('maps a zero-row target assertion to NOT_FOUND and cannot report a receipt', async () => {
+    const sql = (() => {
+      const error = Object.assign(new Error('xlooop authority incomplete: project_mutation_target'), {
+        code: '23514',
+      });
+      throw error;
+    }) as unknown as Sql;
+    await expect(mutateProjectWithAuthorityRow(
+      sql,
+      {
+        workspace_id: 'ws_owner', project_id: 'proj_missing', mutation_kind: 'update',
+        patch: { name: 'Must not succeed' },
+      },
+      'user_owner',
+      { key: 'project-update-2', request_sha256: '1'.repeat(64), route: 'PATCH /api/v1/projects/:id' },
+    )).rejects.toMatchObject({ code: 'NOT_FOUND', status: 404 });
+  });
+
+  it('replays only a completed matching mutation and rejects a changed digest', async () => {
+    const digest = '2'.repeat(64);
+    const replay = await mutateProjectWithAuthorityRow(
+      sqlScript([
+        [],
+        [{ request_sha256: digest, response_status: 200, response_body: mutationReceipt(false) }],
+      ], []),
+      {
+        workspace_id: 'ws_owner', project_id: 'proj_atomic', mutation_kind: 'update',
+        patch: { name: 'Renamed project' },
+      },
+      'user_owner',
+      { key: 'project-update-3', request_sha256: digest, route: 'PATCH /api/v1/projects/:id' },
+    );
+    expect(replay.replayed).toBe(true);
+
+    await expect(mutateProjectWithAuthorityRow(
+      sqlScript([
+        [],
+        [{ request_sha256: digest, response_status: 200, response_body: mutationReceipt(false) }],
+      ], []),
+      {
+        workspace_id: 'ws_owner', project_id: 'proj_atomic', mutation_kind: 'update',
+        patch: { name: 'Different request' },
+      },
+      'user_owner',
+      { key: 'project-update-3', request_sha256: '3'.repeat(64), route: 'PATCH /api/v1/projects/:id' },
+    )).rejects.toMatchObject({ code: 'IDEMPOTENCY_KEY_REUSED', status: 409 });
   });
 });

@@ -1,13 +1,14 @@
 // destructive-op-event-mirror.test.ts · Recoverability doctrine (260706)
 //
 // Route tests for operator-action evidence on DESTRUCTIVE customer-API ops.
-// Project/workspace archival still mirrors a customer-visible operation_event, best-effort.
+// Project archival now writes its event inside the authority transaction; workspace archival still
+// uses the legacy best-effort mirror until its command is hardened separately.
 // Source disconnect moved to the newer fail-closed audit receipt contract: no legacy
 // best-effort operation_event may be required or treated as authority for success.
 //
 // Mocks the DAL (ctx.set) — same pattern as projects-events-operator-overlay.test.ts.
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { Hono } from 'hono';
 import { projectsRoute } from '../routes/projects';
 import { sourcesRoute } from '../routes/sources';
@@ -29,32 +30,43 @@ function appFor(route: Hono, auth: Record<string, unknown>, dal: Record<string, 
 }
 
 describe('destructive-op event mirror (recoverability doctrine 260706)', () => {
-  it('DELETE /projects/:id → archives AND mirrors [project archived] onto operation_events', async () => {
-    const events: EventCall[] = [];
+  it('DELETE /projects/:id → returns the authority event and never invokes a legacy mirror', async () => {
+    const upsertEvent = vi.fn();
     const dal = {
-      updateProject: async () => ({ id: 'proj-1', name: 'Pilot Project', status: 'archived' }),
-      upsertEvent: async (ws: string, event: Record<string, unknown>) => { events.push({ ws, event }); return { inserted: 1 }; },
+      mutateProjectWithAuthority: async () => ({
+        project: { id: 'proj-1', name: 'Pilot Project', status: 'archived' },
+        mutation_kind: 'archive', receipt_id: 'project-archive:proj-1:1',
+        operation_event_id: 'evt_authority_archive', audit_event_id: '1',
+        projection_outbox_id: 'out_authority_archive', read_model_watermark: '2026-08-02T00:00:00.000Z',
+        replayed: false,
+      }),
+      upsertEvent,
     };
     const app = appFor(projectsRoute, { user_id: 'u1', role: 'owner', workspace_id: 'ws-a' }, dal);
-    const res = await app.request('/api/v1/projects/proj-1', { method: 'DELETE' }, ENV as never);
+    const res = await app.request('/api/v1/projects/proj-1', {
+      method: 'DELETE', headers: { 'Idempotency-Key': 'archive-1' },
+    }, ENV as never);
     expect(res.status).toBe(200);
-    expect((await res.json() as { archived: boolean }).archived).toBe(true);
-    expect(events).toHaveLength(1);
-    expect(events[0].ws).toBe('ws-a');
-    expect(events[0].event.id).toBe('evt_project_archive_proj_1');
-    expect(String(events[0].event.summary)).toContain('[project archived] Pilot Project');
-    expect(events[0].event.agent_id).toBe('xlooop:operator-action');
+    expect(await res.json()).toMatchObject({
+      project: { status: 'archived' }, operation_event_id: 'evt_authority_archive',
+    });
+    expect(upsertEvent).not.toHaveBeenCalled();
   });
 
-  it('DELETE /projects/:id — a mirror FAILURE never fails the archive (best-effort)', async () => {
+  it('DELETE /projects/:id → authority failure fails closed', async () => {
     const dal = {
-      updateProject: async () => ({ id: 'proj-1', name: 'P', status: 'archived' }),
-      upsertEvent: async () => { throw new Error('event spine down'); },
+      mutateProjectWithAuthority: async () => {
+        throw Object.assign(new Error('authority event unavailable'), {
+          code: 'PROJECT_ATOMICITY_FAILED', status: 500,
+        });
+      },
     };
     const app = appFor(projectsRoute, { user_id: 'u1', role: 'owner', workspace_id: 'ws-a' }, dal);
-    const res = await app.request('/api/v1/projects/proj-1', { method: 'DELETE' }, ENV as never);
-    expect(res.status).toBe(200);
-    expect((await res.json() as { archived: boolean }).archived).toBe(true);
+    const res = await app.request('/api/v1/projects/proj-1', {
+      method: 'DELETE', headers: { 'Idempotency-Key': 'archive-2' },
+    }, ENV as never);
+    expect(res.status).toBe(500);
+    expect(await res.json()).toMatchObject({ code: 'PROJECT_ATOMICITY_FAILED' });
   });
 
   it('DELETE /projects/:id/sources/:bindingId → mirrors [project source archived]', async () => {

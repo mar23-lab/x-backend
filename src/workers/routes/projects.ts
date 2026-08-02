@@ -299,7 +299,18 @@ projectsRoute.patch('/projects/:id', async (ctx) => {
       ctx.status(400);
       return ctx.json({ error: 'project id required', code: 'VALIDATION_ERROR', request_id: ctx.get('request_id') });
     }
-    const body = await ctx.req.json().catch(() => null) as { name?: unknown; description?: unknown; status?: unknown } | null;
+    const idempotencyKey = String(ctx.req.header('Idempotency-Key') || '').trim();
+    if (!idempotencyKey || idempotencyKey.length > 200) {
+      ctx.status(428);
+      return ctx.json({ error: 'Idempotency-Key header is required (1-200 chars)', code: 'IDEMPOTENCY_KEY_REQUIRED', request_id: ctx.get('request_id') });
+    }
+    const rawBody = await ctx.req.text();
+    let body: { name?: unknown; description?: unknown; status?: unknown } | null = null;
+    try {
+      body = JSON.parse(rawBody) as { name?: unknown; description?: unknown; status?: unknown };
+    } catch {
+      body = null;
+    }
     if (!body || typeof body !== 'object') {
       ctx.status(400);
       return ctx.json({ error: 'request body must be a JSON object', code: 'VALIDATION_ERROR', request_id: ctx.get('request_id') });
@@ -317,12 +328,23 @@ projectsRoute.patch('/projects/:id', async (ctx) => {
     }
     const dal = ctx.get('dal');
     const ws = await resolveOperatorProjectWorkspace(ctx, dal, projectId, workspace_id, user_id);
-    const project = await dal.updateProject(ws, projectId, { name, description, status }, user_id);
-    if (!project) {
-      ctx.status(404);
-      return ctx.json({ error: `project ${projectId} not found`, code: 'NOT_FOUND', request_id: ctx.get('request_id') });
-    }
-    return ctx.json({ project });
+    const mutationPatch: { name?: string; description?: string | null; status?: ProjectStatus } = {};
+    if (name !== undefined) mutationPatch.name = name;
+    if (description !== undefined) mutationPatch.description = description;
+    if (status !== undefined) mutationPatch.status = status;
+    const receipt = await dal.mutateProjectWithAuthority({
+      workspace_id: ws,
+      project_id: projectId,
+      mutation_kind: 'update',
+      patch: mutationPatch,
+    }, user_id, {
+      key: idempotencyKey,
+      request_sha256: await sha256Text(`PATCH\n${projectId}\n${rawBody}`),
+      route: 'PATCH /api/v1/projects/:id',
+      request_id: ctx.get('request_id'),
+    });
+    if (receipt.replayed) ctx.header('Idempotency-Replayed', 'true');
+    return ctx.json(receipt);
   } catch (err) {
     return errorEnvelope(ctx, err);
   }
@@ -334,8 +356,7 @@ projectsRoute.patch('/projects/:id', async (ctx) => {
 // and it can be restored with PATCH status='active'.
 projectsRoute.delete('/projects/:id', async (ctx) => {
   try {
-    const auth = ctx.get('auth');
-    const { workspace_id, role, user_id } = auth;
+    const { workspace_id, role, user_id } = ctx.get('auth');
     if (role !== 'owner' && role !== 'operator') {
       ctx.status(403);
       return ctx.json({ error: `role ${role} cannot remove projects (requires owner or operator)`, code: 'FORBIDDEN', request_id: ctx.get('request_id') });
@@ -345,36 +366,26 @@ projectsRoute.delete('/projects/:id', async (ctx) => {
       ctx.status(400);
       return ctx.json({ error: 'project id required', code: 'VALIDATION_ERROR', request_id: ctx.get('request_id') });
     }
+    const idempotencyKey = String(ctx.req.header('Idempotency-Key') || '').trim();
+    if (!idempotencyKey || idempotencyKey.length > 200) {
+      ctx.status(428);
+      return ctx.json({ error: 'Idempotency-Key header is required (1-200 chars)', code: 'IDEMPOTENCY_KEY_REQUIRED', request_id: ctx.get('request_id') });
+    }
     const dal = ctx.get('dal');
     const ws = await resolveOperatorProjectWorkspace(ctx, dal, projectId, workspace_id, user_id);
-    const project = await dal.updateProject(ws, projectId, { status: 'archived' }, user_id);
-    if (!project) {
-      ctx.status(404);
-      return ctx.json({ error: `project ${projectId} not found`, code: 'NOT_FOUND', request_id: ctx.get('request_id') });
-    }
-    // Recoverability doctrine (260706, ARCH-006 W1.2 tiered-provenance pattern): destructive ops
-    // MUST be visible on the customer-facing operation_events spine, not only in audit_logs —
-    // otherwise a customer cannot see that their project was archived. Best-effort + idempotent:
-    // never block the archive; log on failure (audit loss must be visible, not silent).
-    try {
-      await dal.upsertEvent(ws, {
-        id: `evt_project_archive_${projectId}`.replace(/[^a-zA-Z0-9_]/g, '_').slice(0, 128),
-        source_tool: 'xlooop',
-        agent_id: 'xlooop:operator-action',
-        project_id: projectId,
-        status: 'completed',
-        summary: `[project archived] ${String(project.name || projectId)}`.slice(0, 512),
-        body: 'Soft-archive (reversible): restore with PATCH status=active.',
-        visibility: 'internal_workspace',
-        occurred_at: new Date().toISOString(),
-        // A-W4/P6 · destructive-op lineage: the archiving human is principal + instrument (role authority).
-        ...lineageFor(auth),
-        request_id: ctx.get('request_id'),
-      });
-    } catch (err) {
-      console.warn('[projects] project-archive event mirror failed (best-effort)', { workspace_id: ws, error: (err as Error)?.message });
-    }
-    return ctx.json({ ok: true, archived: true, project });
+    const receipt = await dal.mutateProjectWithAuthority({
+      workspace_id: ws,
+      project_id: projectId,
+      mutation_kind: 'archive',
+      patch: { status: 'archived' },
+    }, user_id, {
+      key: idempotencyKey,
+      request_sha256: await sha256Text(`DELETE\n${projectId}`),
+      route: 'DELETE /api/v1/projects/:id',
+      request_id: ctx.get('request_id'),
+    });
+    if (receipt.replayed) ctx.header('Idempotency-Replayed', 'true');
+    return ctx.json(receipt);
   } catch (err) {
     return errorEnvelope(ctx, err);
   }

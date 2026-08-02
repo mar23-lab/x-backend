@@ -4399,6 +4399,47 @@
           "reason": "Expose validated canonical invitation role metadata and prove frontend reconciliation safety"
         }
       ]
+    },
+    {
+      "delta_id": "project-lifecycle-authority-20260802",
+      "generated_at": "2026-08-02T13:36:14.288Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "3dd14f9900b7d4345b0e61f02a82698a847b5424",
+      "target_base_commit": "3dd14f9900b7d4345b0e61f02a82698a847b5424",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/__tests__/destructive-op-event-mirror.test.ts",
+          "target_blob": "eedd2ad125e6daca4780285a61aedc06e189d5d9",
+          "reason": "Bind strict transactional project rename/archive authority, replay, missing-target failure, and real PostgreSQL proof"
+        },
+        {
+          "path": "src/workers/__tests__/projects-lifecycle.test.ts",
+          "target_blob": "b3e0055db7e4ce29ee7f05a959aa212ff61cd66a",
+          "reason": "Bind strict transactional project rename/archive authority, replay, missing-target failure, and real PostgreSQL proof"
+        },
+        {
+          "path": "src/workers/dal/DalAdapter.ts",
+          "target_blob": "8aa3f3779f40e84b9caf671223520b4036d94960",
+          "reason": "Bind strict transactional project rename/archive authority, replay, missing-target failure, and real PostgreSQL proof"
+        },
+        {
+          "path": "src/workers/dal/WorkersDalAdapter.ts",
+          "target_blob": "8c9bea68fd8653ad8f57d820c7243272c03e0a68",
+          "reason": "Bind strict transactional project rename/archive authority, replay, missing-target failure, and real PostgreSQL proof"
+        },
+        {
+          "path": "src/workers/dal/types/event.ts",
+          "target_blob": "1cdd1a4618debd656ff38529003529251f339769",
+          "reason": "Bind strict transactional project rename/archive authority, replay, missing-target failure, and real PostgreSQL proof"
+        },
+        {
+          "path": "src/workers/routes/projects.ts",
+          "target_blob": "db3384d1bcbf3cc14df21d69245ed46ab7fa624c",
+          "reason": "Bind strict transactional project rename/archive authority, replay, missing-target failure, and real PostgreSQL proof"
+        }
+      ]
     }
   ]
 }

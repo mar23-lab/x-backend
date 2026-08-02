@@ -1,126 +1,161 @@
-// projects-lifecycle.test.ts · R55-L3
-//
-// Route tests for PATCH /api/v1/projects/:id (rename / edit) and
-// DELETE /api/v1/projects/:id (soft-archive) — the "Projects are next" half of
-// the operator lifecycle ask. Mocks the DAL (ctx.set) so the suite never imports
-// WorkersDalAdapter (avoids the snakecase-keys CJS/ESM collection issue other
-// adapter-importing suites hit).
+// projects-lifecycle.test.ts · authority-grade project rename and soft archive.
 
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { Hono } from 'hono';
 import { projectsRoute } from '../routes/projects';
 
 const ENV = { MBP_OWNER_USER_ID: 'user_op', DATABASE_URL: 'x' };
+const OPERATOR = { user_id: 'user_op', role: 'operator', workspace_id: 'mbp-private' };
 
-type UpdateCall = { ws: string; id: string; patch: Record<string, unknown>; actor: string };
-
-function mockDal(calls: UpdateCall[], opts?: { missing?: boolean }) {
+function mutationReceipt(kind: 'update' | 'archive', replayed = false) {
   return {
-    updateProject: async (ws: string, id: string, patch: Record<string, unknown>, actor: string) => {
-      calls.push({ ws, id, patch, actor });
-      if (opts?.missing) return null;
-      return {
-        id, workspace_id: ws,
-        name: typeof patch.name === 'string' ? patch.name : 'Existing name',
-        status: typeof patch.status === 'string' ? patch.status : 'active',
-        description: typeof patch.description === 'string' ? patch.description : null,
-        metadata: {}, scope_binding: null, scope_binding_updated_at: null,
-        scope_binding_updated_by: null, parent_project_id: null,
-        created_at: '2026-05-01T00:00:00.000Z', updated_at: '2026-06-01T00:00:00.000Z',
-      };
+    project: {
+      id: 'proj_1', workspace_id: 'mbp-private', name: 'New project name',
+      status: kind === 'archive' ? 'archived' : 'active', description: null,
+      metadata: {}, scope_binding: null, scope_binding_updated_at: null,
+      scope_binding_updated_by: null, parent_project_id: null,
+      created_at: '2026-05-01T00:00:00.000Z', updated_at: '2026-08-02T00:00:00.000Z',
     },
+    mutation_kind: kind,
+    receipt_id: `project-${kind}:proj_1:42`,
+    operation_event_id: `evt_project_${kind}`,
+    audit_event_id: '42',
+    projection_outbox_id: `out_project_${kind}`,
+    read_model_watermark: '2026-08-02T00:00:00.000Z',
+    replayed,
   };
 }
 
-function appFor(auth: Record<string, unknown>, calls: UpdateCall[], opts?: { missing?: boolean }) {
+function appFor(auth: Record<string, unknown>, dal: Record<string, unknown>) {
   const app = new Hono();
   app.use('*', async (ctx, next) => {
-    ctx.set('request_id', 'test');
+    ctx.set('request_id', 'req_test');
     ctx.set('auth', auth as never);
-    ctx.set('dal', mockDal(calls, opts) as never);
+    ctx.set('dal', dal as never);
     await next();
   });
   app.route('/api/v1', projectsRoute);
   return app;
 }
 
-function send(method: string, auth: Record<string, unknown>, id: string, body?: Record<string, unknown>, opts?: { missing?: boolean }) {
-  const calls: UpdateCall[] = [];
-  const app = appFor(auth, calls, opts);
-  return app.request(`/api/v1/projects/${id}`, {
+function request(
+  method: 'PATCH' | 'DELETE',
+  auth: Record<string, unknown>,
+  dal: Record<string, unknown>,
+  body?: Record<string, unknown>,
+  key = 'project-lifecycle-1',
+) {
+  return appFor(auth, dal).request('/api/v1/projects/proj_1', {
     method,
-    headers: { 'content-type': 'application/json' },
+    headers: {
+      'content-type': 'application/json',
+      ...(key ? { 'Idempotency-Key': key } : {}),
+    },
     body: body ? JSON.stringify(body) : undefined,
-  }, ENV as never).then((res) => ({ res, calls }));
+  }, ENV as never);
 }
 
-const OPERATOR = { user_id: 'user_op', role: 'operator', workspace_id: 'mbp-private' };
-
-describe('PATCH /projects/:id · rename / edit (R55-L3)', () => {
-  it('operator renames a project → 200, DAL called with name + actor', async () => {
-    const { res, calls } = await send('PATCH', OPERATOR, 'proj_1', { name: 'New project name' });
-    expect(res.status).toBe(200);
-    const json = await res.json() as { project: { name: string } };
-    expect(json.project.name).toBe('New project name');
-    expect(calls).toHaveLength(1);
-    expect(calls[0]!.patch.name).toBe('New project name');
-    expect(calls[0]!.actor).toBe('user_op');
-    expect(calls[0]!.ws).toBe('mbp-private');
+describe('PATCH /projects/:id authority update', () => {
+  it('requires an idempotency key before invoking the DAL', async () => {
+    const mutateProjectWithAuthority = vi.fn();
+    const response = await request('PATCH', OPERATOR, { mutateProjectWithAuthority }, { name: 'New name' }, '');
+    expect(response.status).toBe(428);
+    expect(mutateProjectWithAuthority).not.toHaveBeenCalled();
+    expect(await response.json()).toMatchObject({ code: 'IDEMPOTENCY_KEY_REQUIRED' });
   });
 
-  it('owner edits description → 200', async () => {
-    const { res, calls } = await send('PATCH', { ...OPERATOR, role: 'owner' }, 'proj_1', { description: 'updated desc' });
-    expect(res.status).toBe(200);
-    expect(calls[0]!.patch.description).toBe('updated desc');
+  it('renames through one authority command and returns every durable reference', async () => {
+    const mutateProjectWithAuthority = vi.fn(async () => mutationReceipt('update'));
+    const response = await request('PATCH', OPERATOR, { mutateProjectWithAuthority }, { name: ' New project name ' });
+    expect(response.status).toBe(200);
+    expect(mutateProjectWithAuthority).toHaveBeenCalledTimes(1);
+    const [input, actor, idempotency] = mutateProjectWithAuthority.mock.calls[0]!;
+    expect(input).toEqual({
+      workspace_id: 'mbp-private', project_id: 'proj_1', mutation_kind: 'update',
+      patch: { name: 'New project name' },
+    });
+    expect(actor).toBe('user_op');
+    expect(idempotency).toMatchObject({
+      key: 'project-lifecycle-1', route: 'PATCH /api/v1/projects/:id', request_id: 'req_test',
+    });
+    expect(idempotency.request_sha256).toMatch(/^[a-f0-9]{64}$/);
+    expect(await response.json()).toMatchObject({
+      project: { name: 'New project name' },
+      receipt_id: 'project-update:proj_1:42',
+      operation_event_id: 'evt_project_update',
+      audit_event_id: '42',
+      projection_outbox_id: 'out_project_update',
+      replayed: false,
+    });
   });
 
-  it('no editable fields → 400', async () => {
-    const { res } = await send('PATCH', OPERATOR, 'proj_1', {});
-    expect(res.status).toBe(400);
+  it('marks an exact replay without changing the response contract', async () => {
+    const mutateProjectWithAuthority = vi.fn(async () => mutationReceipt('update', true));
+    const response = await request('PATCH', OPERATOR, { mutateProjectWithAuthority }, { description: 'Updated' });
+    expect(response.status).toBe(200);
+    expect(response.headers.get('Idempotency-Replayed')).toBe('true');
+    expect(await response.json()).toMatchObject({ replayed: true });
   });
 
-  it('invalid status → 400 (DAL not called)', async () => {
-    const { res, calls } = await send('PATCH', OPERATOR, 'proj_1', { status: 'banana' });
-    expect(res.status).toBe(400);
-    expect(calls).toHaveLength(0);
+  it('rejects empty, invalid, and unauthorized changes before authority execution', async () => {
+    for (const [body, auth, status] of [
+      [{}, OPERATOR, 400],
+      [{ status: 'banana' }, OPERATOR, 400],
+      [{ name: 'x' }, { ...OPERATOR, role: 'client' }, 403],
+      [{ name: 'x' }, { ...OPERATOR, role: 'member' }, 403],
+    ] as const) {
+      const mutateProjectWithAuthority = vi.fn();
+      const response = await request('PATCH', auth, { mutateProjectWithAuthority }, body);
+      expect(response.status).toBe(status);
+      expect(mutateProjectWithAuthority).not.toHaveBeenCalled();
+    }
   });
 
-  it('client role → 403', async () => {
-    const { res, calls } = await send('PATCH', { ...OPERATOR, role: 'client' }, 'proj_1', { name: 'x' });
-    expect(res.status).toBe(403);
-    expect(calls).toHaveLength(0);
-  });
-
-  it('member role → 403', async () => {
-    const { res } = await send('PATCH', { ...OPERATOR, role: 'member' }, 'proj_1', { name: 'x' });
-    expect(res.status).toBe(403);
-  });
-
-  it('unknown id (DAL returns null) → 404', async () => {
-    const { res } = await send('PATCH', OPERATOR, 'proj_missing', { name: 'x' }, { missing: true });
-    expect(res.status).toBe(404);
+  it('preserves a fail-closed missing-target response', async () => {
+    const missing = Object.assign(new Error('project proj_1 not found'), { code: 'NOT_FOUND', status: 404 });
+    const response = await request('PATCH', OPERATOR, {
+      mutateProjectWithAuthority: vi.fn(async () => { throw missing; }),
+    }, { name: 'Missing' });
+    expect(response.status).toBe(404);
+    expect(await response.json()).toMatchObject({ code: 'NOT_FOUND' });
   });
 });
 
-describe('DELETE /projects/:id · soft-archive (R55-L3)', () => {
-  it('operator archives → 200 {ok, archived}, DAL called with status=archived', async () => {
-    const { res, calls } = await send('DELETE', OPERATOR, 'proj_1');
-    expect(res.status).toBe(200);
-    const json = await res.json() as { ok: boolean; archived: boolean; project: { status: string } };
-    expect(json.ok).toBe(true);
-    expect(json.archived).toBe(true);
-    expect(json.project.status).toBe('archived');
-    expect(calls[0]!.patch.status).toBe('archived');
+describe('DELETE /projects/:id authority archive', () => {
+  it('requires an idempotency key before invoking the DAL', async () => {
+    const mutateProjectWithAuthority = vi.fn();
+    const response = await request('DELETE', OPERATOR, { mutateProjectWithAuthority }, undefined, '');
+    expect(response.status).toBe(428);
+    expect(mutateProjectWithAuthority).not.toHaveBeenCalled();
   });
 
-  it('client role → 403', async () => {
-    const { res, calls } = await send('DELETE', { ...OPERATOR, role: 'client' }, 'proj_1');
-    expect(res.status).toBe(403);
-    expect(calls).toHaveLength(0);
+  it('soft-archives through one authority command', async () => {
+    const mutateProjectWithAuthority = vi.fn(async () => mutationReceipt('archive'));
+    const response = await request('DELETE', OPERATOR, { mutateProjectWithAuthority });
+    expect(response.status).toBe(200);
+    const [input, actor, idempotency] = mutateProjectWithAuthority.mock.calls[0]!;
+    expect(input).toEqual({
+      workspace_id: 'mbp-private', project_id: 'proj_1', mutation_kind: 'archive',
+      patch: { status: 'archived' },
+    });
+    expect(actor).toBe('user_op');
+    expect(idempotency).toMatchObject({ key: 'project-lifecycle-1', route: 'DELETE /api/v1/projects/:id' });
+    expect(await response.json()).toMatchObject({
+      project: { status: 'archived' }, mutation_kind: 'archive',
+      receipt_id: 'project-archive:proj_1:42', replayed: false,
+    });
   });
 
-  it('archiving an unknown id → 404', async () => {
-    const { res } = await send('DELETE', OPERATOR, 'proj_missing', undefined, { missing: true });
-    expect(res.status).toBe(404);
+  it('rejects unauthorized callers and preserves missing-target errors', async () => {
+    const mutateProjectWithAuthority = vi.fn();
+    const forbidden = await request('DELETE', { ...OPERATOR, role: 'client' }, { mutateProjectWithAuthority });
+    expect(forbidden.status).toBe(403);
+    expect(mutateProjectWithAuthority).not.toHaveBeenCalled();
+
+    const missing = Object.assign(new Error('project proj_1 not found'), { code: 'NOT_FOUND', status: 404 });
+    const absent = await request('DELETE', OPERATOR, {
+      mutateProjectWithAuthority: vi.fn(async () => { throw missing; }),
+    });
+    expect(absent.status).toBe(404);
   });
 });
