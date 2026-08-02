@@ -491,6 +491,9 @@ describe('POST /customer/invites', () => {
     const json = (await res.json()) as Record<string, any>;
     expect(json.invited.email).toBe('alice@acme.com');
     expect(json.invited.role).toBe('org:member');
+    expect(json.invited.workspace_role).toBe('viewer');
+    expect(json.invited.requested_workspace_role).toBe('client');
+    expect(json.invited.role_basis).toBe('conservative_default');
     expect(json.invite_receipt_id).toMatch(/^member-invite:/);
     expect(json.audit_event_id).toBe('audit_invite_1');
     expect(json.message).toMatch(/alice@acme.com/);
@@ -519,6 +522,9 @@ describe('POST /customer/invites', () => {
     expect(res.status).toBe(201);
     const json = (await res.json()) as Record<string, any>;
     expect(json.invited.role).toBe('org:admin');
+    expect(json.invited.workspace_role).toBe('operator');
+    expect(json.invited.requested_workspace_role).toBe('client');
+    expect(json.invited.role_basis).toBe('same_non_public_domain');
   });
 
   it('201 DIFFERENT-domain invitee stays org:member (external stays conservative)', async () => {
@@ -533,6 +539,9 @@ describe('POST /customer/invites', () => {
     expect(res.status).toBe(201);
     const json = (await res.json()) as Record<string, any>;
     expect(json.invited.role).toBe('org:member');
+    expect(json.invited.workspace_role).toBe('viewer');
+    expect(json.invited.requested_workspace_role).toBe('client');
+    expect(json.invited.role_basis).toBe('conservative_default');
   });
 
   // 260730 · THE CASE THE TWO TESTS ABOVE COULD NOT SEE.
@@ -556,6 +565,9 @@ describe('POST /customer/invites', () => {
     expect(res.status).toBe(201);
     const json = (await res.json()) as Record<string, any>;
     expect(json.invited.role).toBe('org:member');
+    expect(json.invited.workspace_role).toBe('viewer');
+    expect(json.invited.requested_workspace_role).toBe('client');
+    expect(json.invited.role_basis).toBe('conservative_default');
   });
 
   // The escape hatch must survive: an owner who deliberately asks for operator still gets it, even
@@ -573,6 +585,54 @@ describe('POST /customer/invites', () => {
     expect(res.status).toBe(201);
     const json = (await res.json()) as Record<string, any>;
     expect(json.invited.role).toBe('org:admin');
+    expect(json.invited.workspace_role).toBe('operator');
+    expect(json.invited.requested_workspace_role).toBe('operator');
+    expect(json.invited.role_basis).toBe('explicit_elevated');
+  });
+
+  it('400 rejects an unsupported workspace role before audit or Clerk', async () => {
+    vi.mocked(createTeamInvitation).mockClear();
+    const dal = unlockedDal();
+    const res = await post(
+      appFor({ user_id: 'u1', workspace_id: 'org_acme', role: 'owner' }, dal),
+      '/customer/invites',
+      { email: 'colleague@acme.com', role: 'superuser' }
+    );
+    expect(res.status).toBe(400);
+    expect(dal.recordCustomerInviteAudit).not.toHaveBeenCalled();
+    expect(createTeamInvitation).not.toHaveBeenCalled();
+  });
+
+  it('400 rejects a non-string workspace role before audit or Clerk', async () => {
+    vi.mocked(createTeamInvitation).mockClear();
+    const dal = unlockedDal();
+    const res = await post(
+      appFor({ user_id: 'u1', workspace_id: 'org_acme', role: 'owner' }, dal),
+      '/customer/invites',
+      { email: 'colleague@acme.com', role: 7 }
+    );
+    expect(res.status).toBe(400);
+    expect(dal.recordCustomerInviteAudit).not.toHaveBeenCalled();
+    expect(createTeamInvitation).not.toHaveBeenCalled();
+  });
+
+  it('201 reports the enforceable viewer role while preserving requested client intent', async () => {
+    const dal = unlockedDal();
+    const res = await post(
+      appFor(
+        { user_id: 'u1', workspace_id: 'org_acme', role: 'owner', email: 'boss@acme.com' },
+        dal
+      ),
+      '/customer/invites',
+      { email: 'outsider@somewhere-else.com', role: 'client' }
+    );
+    expect(res.status).toBe(201);
+    const json = (await res.json()) as Record<string, any>;
+    expect(json.invited.role).toBe('org:member');
+    expect(json.invited.workspace_role).toBe('viewer');
+    expect(json.invited.requested_workspace_role).toBe('client');
+    expect(json.invited.role_basis).toBe('explicit_restricted');
+    expect(dal.recordCustomerInviteAudit).toHaveBeenCalledWith(expect.objectContaining({ role: 'viewer' }));
   });
 
   it('201 admin role maps to org:admin (operator caller)', async () => {

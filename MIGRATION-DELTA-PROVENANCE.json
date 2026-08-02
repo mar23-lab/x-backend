@@ -4378,6 +4378,27 @@
           "reason": "Return canonical workspace inventory identity, coverage, and freshness without substituting onboarding context"
         }
       ]
+    },
+    {
+      "delta_id": "invite-canonical-reconciliation-20260802",
+      "generated_at": "2026-08-02T11:49:03.703Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "0343303c117e14e6227471ca9cdcd627dc27c406",
+      "target_base_commit": "0343303c117e14e6227471ca9cdcd627dc27c406",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/routes/customer.ts",
+          "target_blob": "f6fee3796b604a6e53dc5d342531ef604fa1c03a",
+          "reason": "Expose validated canonical invitation role metadata and prove frontend reconciliation safety"
+        },
+        {
+          "path": "src/workers/__tests__/customer.test.ts",
+          "target_blob": "5bc67f5c2f92a91bf81c9bccf7eb789d1d894ec5",
+          "reason": "Expose validated canonical invitation role metadata and prove frontend reconciliation safety"
+        }
+      ]
     }
   ]
 }

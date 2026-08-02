@@ -327,6 +327,21 @@ customerRoute.post('/customer/invites', async (ctx) => {
     if (!email || !EMAIL_RE.test(email) || email.length > 254) {
       return errorEnvelope(ctx, { status: 400, code: 'VALIDATION_ERROR', message: 'a valid invitee email is required' });
     }
+    if (body.role != null && typeof body.role !== 'string') {
+      return errorEnvelope(ctx, {
+        status: 400,
+        code: 'VALIDATION_ERROR',
+        message: 'role must be a string',
+      });
+    }
+    const requestedBodyRole = (body.role || 'client').trim().toLowerCase();
+    if (!['owner', 'operator', 'admin', 'viewer', 'client'].includes(requestedBodyRole)) {
+      return errorEnvelope(ctx, {
+        status: 400,
+        code: 'VALIDATION_ERROR',
+        message: 'role must be owner, operator, admin, viewer, or client',
+      });
+    }
     // Map the requested workspace role to a Clerk org role (default: member).
     //
     // 260728 — SAME-DOMAIN IS DECIDED HERE, SERVER-SIDE, BECAUSE THE CLIENT DECIDED IT WRONG.
@@ -353,7 +368,10 @@ customerRoute.post('/customer/invites', async (ctx) => {
     // `authorizeGovernedWrite(ctx, 'member:invite')` AND an unlocked workspace authority. The workspace
     // owner can already set any role via PATCH /api/v1/members/:userId/role, so same-domain elevation is
     // a default they could apply by hand anyway. An EXTERNAL domain still defaults to 'client' — the
-    // conservative path is unchanged, and an explicit body.role still wins.
+    // conservative path is unchanged. Clerk's accepted membership is the materialization authority:
+    // org:admin becomes operator and org:member becomes viewer. A requested client role is retained as
+    // explanatory metadata, but must never be advertised as the effective workspace role because the
+    // invite materializer deliberately refuses client and cannot create that authority state.
     //
     // 260730 — A PUBLIC MAIL PROVIDER IS NOT A COMPANY DOMAIN.
     //
@@ -390,15 +408,22 @@ customerRoute.post('/customer/invites', async (ctx) => {
       inviterDomain === inviteeDomain &&
       !PUBLIC_EMAIL_DOMAINS.has(inviterDomain);
     const explicitElevated =
-      body.role === 'owner' || body.role === 'operator' || body.role === 'admin';
+      requestedBodyRole === 'owner' || requestedBodyRole === 'operator' || requestedBodyRole === 'admin';
     const clerkRole = explicitElevated || sameDomainAsInviter ? 'org:admin' : 'org:member';
-    const requestedRole = clerkRole === 'org:admin' ? 'operator' : (body.role || 'client');
+    const workspaceRole = clerkRole === 'org:admin' ? 'operator' : 'viewer';
+    const roleBasis = explicitElevated
+      ? 'explicit_elevated'
+      : sameDomainAsInviter
+        ? 'same_non_public_domain'
+        : body.role
+          ? 'explicit_restricted'
+          : 'conservative_default';
 
     const audit = await dal.recordCustomerInviteAudit({
       workspace_id: auth.workspace_id,
       actor_user_id: auth.user_id,
       email,
-      role: requestedRole,
+      role: workspaceRole,
     });
 
     const result = await createTeamInvitation(ctx.env.CLERK_SECRET_KEY, {
@@ -410,7 +435,12 @@ customerRoute.post('/customer/invites', async (ctx) => {
 
     ctx.status(201);
     return ctx.json({
-      invited: result,
+      invited: {
+        ...result,
+        workspace_role: workspaceRole,
+        requested_workspace_role: requestedBodyRole,
+        role_basis: roleBasis,
+      },
       invite_receipt_id: audit.invite_receipt_id,
       audit_event_id: audit.audit_event_id,
       message: `Invitation sent to ${email}.`,
