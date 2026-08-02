@@ -12,9 +12,9 @@ import { Hono } from 'hono';
 import { errorEnvelope } from '../middleware/error';
 import type { AuthEnv, AuthVariables } from '../middleware/auth';
 import type { DalAdapter } from '../dal/DalAdapter';
-import { createTeamInvitation } from '../services/clerk-org';
 import { authorizeGovernedWrite } from '../lib/spine-authority';
 import { withIdempotency } from '../lib/idempotency';
+import { handleCustomerInvite } from './customer-invites';
 
 export interface CustomerRoutesEnv extends AuthEnv {
   DATABASE_URL: string;
@@ -35,30 +35,6 @@ export const customerRoute = new Hono<{
   Bindings: CustomerRoutesEnv;
   Variables: CustomerRoutesVariables;
 }>();
-
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-// Domains where a shared suffix says nothing about a shared employer. Used ONLY to disqualify the
-// same-domain colleague inference in POST /customer/invites — see the block at its use site for the
-// production audit rows that made this necessary. Never used to reject an address: a Gmail invitee
-// is perfectly valid, they simply arrive at the conservative 'client' role instead of operator.
-//
-// A denylist ages, and a missed provider silently restores the elevation. That is why this is the
-// FIRST of three steps, not the fix: the durable answer is a verified per-workspace domain
-// (workspaces.config, already jsonb and empty for both external tenants), with this list retired.
-const PUBLIC_EMAIL_DOMAINS = new Set([
-  'gmail.com', 'googlemail.com',
-  'outlook.com', 'hotmail.com', 'hotmail.co.uk', 'live.com', 'live.co.uk', 'msn.com',
-  'yahoo.com', 'yahoo.co.uk', 'yahoo.com.au', 'ymail.com', 'rocketmail.com',
-  'icloud.com', 'me.com', 'mac.com',
-  'aol.com', 'proton.me', 'protonmail.com', 'pm.me',
-  'gmx.com', 'gmx.net', 'gmx.de', 'mail.com', 'mail.ru', 'inbox.com',
-  'zoho.com', 'yandex.com', 'yandex.ru', 'fastmail.com', 'fastmail.fm',
-  'tutanota.com', 'tuta.io', 'hey.com', 'hushmail.com', 'zohomail.com',
-  'qq.com', '163.com', '126.com', 'sina.com', 'naver.com', 'daum.net',
-  'web.de', 't-online.de', 'orange.fr', 'free.fr', 'laposte.net',
-  'bigpond.com', 'optusnet.com.au', 'iinet.net.au', 'tpg.com.au',
-]);
 
 customerRoute.post('/customer/authority-consent', (ctx) =>
   withIdempotency(ctx, 'POST /customer/authority-consent', async () => {
@@ -289,163 +265,4 @@ customerRoute.post('/customer/authority-consent/revoke', (ctx) =>
 // authority record (operator approval + customer consent ack) AND caller role (owner/operator).
 // Clerk owns the pending-invite state; a workspace_members row is created when the invitee
 // accepts + signs in (existing onboarding/session flow).
-customerRoute.post('/customer/invites', async (ctx) => {
-  try {
-    const auth = ctx.get('auth');
-    if (!auth?.user_id) {
-      return errorEnvelope(ctx, { status: 401, code: 'UNAUTHORIZED', message: 'auth required' });
-    }
-    if (!auth.workspace_id) {
-      return errorEnvelope(ctx, {
-        status: 400,
-        code: 'VALIDATION_ERROR',
-        message: 'a workspace (organization) is required to invite teammates',
-      });
-    }
-    if (!(await authorizeGovernedWrite(ctx, 'member:invite')).allowed) {
-      return errorEnvelope(ctx, {
-        status: 403,
-        code: 'FORBIDDEN',
-        message: 'only the workspace owner or an operator can invite teammates',
-      });
-    }
-
-    // IP-boundary hard-gate: team invites stay locked until operator approval + consent ack
-    // (CUSTOMER_ECOSYSTEM_ONBOARDING_AND_IP_BOUNDARY_STANDARD). Same predicate as connectors.
-    const dal = ctx.get('dal');
-    const authority = await dal.getCustomerAuthorityState(auth.workspace_id);
-    if (!authority.unlocked) {
-      return errorEnvelope(ctx, {
-        status: 403,
-        code: 'FORBIDDEN',
-        message: 'AUTHORITY_REQUIRED: inviting teammates is locked until your workspace authority and consent are recorded.',
-      });
-    }
-
-    const body = (await ctx.req.json().catch(() => ({}))) as { email?: string; role?: string };
-    const email = (body.email || '').trim().toLowerCase();
-    if (!email || !EMAIL_RE.test(email) || email.length > 254) {
-      return errorEnvelope(ctx, { status: 400, code: 'VALIDATION_ERROR', message: 'a valid invitee email is required' });
-    }
-    if (body.role != null && typeof body.role !== 'string') {
-      return errorEnvelope(ctx, {
-        status: 400,
-        code: 'VALIDATION_ERROR',
-        message: 'role must be a string',
-      });
-    }
-    const requestedBodyRole = (body.role || 'client').trim().toLowerCase();
-    if (!['owner', 'operator', 'admin', 'viewer', 'client'].includes(requestedBodyRole)) {
-      return errorEnvelope(ctx, {
-        status: 400,
-        code: 'VALIDATION_ERROR',
-        message: 'role must be owner, operator, admin, viewer, or client',
-      });
-    }
-    // Map the requested workspace role to a Clerk org role (default: member).
-    //
-    // 260728 — SAME-DOMAIN IS DECIDED HERE, SERVER-SIDE, BECAUSE THE CLIENT DECIDED IT WRONG.
-    //
-    // The cockpit classifies an invitee with `inviteClassify` (wired/src/entities/members.dcfrag.js):
-    // same-domain colleague => 'operator', external => 'client' with a visible warning. That design is
-    // deliberate and good. But it compares against `WORKSPACE_DOMAIN`, a HARDCODED 'xlooop.com'. So for
-    // every CUSTOMER tenant, a colleague at their OWN company domain classified EXTERNAL and the client
-    // sent role:'client' — which lands as:
-    //   'client' -> org:member -> viewer -> allowed_actions [] + operating_mode forced to 'watch'
-    //   -> denied on all 18 governed actions (lib/permissions.ts, mode_requires_operator).
-    // Only @xlooop.com addresses ever became operator. Measured 260728 while preparing a
-    // design-partner launch: the colleague a partner brings in is exactly the person whose feedback
-    // the pilot needs, and they would have arrived unable to do anything.
-    //
-    // WHY THE FIX BELONGS HERE AND NOT IN THE COCKPIT. `project/App.dc.html` is a design-tool export —
-    // AGENTS.md: "fresh exports OVERWRITE project/, so any hand-edit is silently destroyed on the next
-    // re-import." A fix in the fragment also breaks `verify-dc-slice-complete` (fragments must stay
-    // byte-identical to the design export), which is BLOCKING in verify:slice. So the client-side fix is
-    // both non-durable and gate-blocked. Here it is durable, and strictly stronger: `auth.email` is the
-    // JWT-trusted inviter identity, not client state, so the decision cannot be spoofed by the caller.
-    //
-    // AUTHORITY NOTE — this does not widen anyone's power. Reaching this line already required
-    // `authorizeGovernedWrite(ctx, 'member:invite')` AND an unlocked workspace authority. The workspace
-    // owner can already set any role via PATCH /api/v1/members/:userId/role, so same-domain elevation is
-    // a default they could apply by hand anyway. An EXTERNAL domain still defaults to 'client' — the
-    // conservative path is unchanged. Clerk's accepted membership is the materialization authority:
-    // org:admin becomes operator and org:member becomes viewer. A requested client role is retained as
-    // explanatory metadata, but must never be advertised as the effective workspace role because the
-    // invite materializer deliberately refuses client and cannot create that authority state.
-    //
-    // 260730 — A PUBLIC MAIL PROVIDER IS NOT A COMPANY DOMAIN.
-    //
-    // The rule above infers "colleague" from a matching domain. That inference holds only for a
-    // domain an organisation actually controls. For gmail.com it holds for nobody: every Gmail
-    // address is same-domain with every other, so the predicate loses all discriminating power
-    // exactly where it is doing its most dangerous work.
-    //
-    // Measured in production audit_logs, workspace org_3EI0xhBsYKWHbLmtjdvNVY6Yqhz — a real customer
-    // tenant whose owner is on gmail.com. The operator selected "client" in the UI every time:
-    //   16798  2026-07-29 19:38  xloooop23@gmail.com  -> operator   <- typo, THREE o's
-    //   16799  2026-07-29 19:45  xlooop23@gmail.com   -> operator
-    //   16812  2026-07-30 08:54  xlooop23@gmail.com   -> operator
-    //   16813  2026-07-30 09:56  marat@xooop.com      -> client     <- control: domain differed
-    // Row 16798 is the finding: a mistyped Gmail address received a live org:admin invitation to a
-    // customer tenant. Nobody controls that mailbox.
-    //
-    // D5 rejected "default the invitee to operator" in these words: "silently grants full write to
-    // anyone invited by email ... a mistyped address gets write access to a tenant." For a tenant
-    // principal'd on a public provider, the same-domain rule IS that default. The rejected outcome
-    // arrived by another route.
-    //
-    // The two tests added on 260728 to stop a hardcoded 'org:admin' both use corporate-shaped
-    // domains, so the public-provider case was never in the matrix — the negative test written to
-    // catch this could not see it. A third case now pins it.
-    //
-    // This NARROWS the 260728 fix rather than reverting it: a colleague at a domain the tenant
-    // really owns still arrives as operator, which is the read-only defect that fix exists to
-    // prevent. Only public-provider addresses fall back to the conservative 'client' path.
-    const inviterDomain = String(auth.email || '').split('@')[1]?.trim().toLowerCase() || '';
-    const inviteeDomain = email.split('@')[1]?.trim().toLowerCase() || '';
-    const sameDomainAsInviter =
-      !!inviterDomain &&
-      inviterDomain === inviteeDomain &&
-      !PUBLIC_EMAIL_DOMAINS.has(inviterDomain);
-    const explicitElevated =
-      requestedBodyRole === 'owner' || requestedBodyRole === 'operator' || requestedBodyRole === 'admin';
-    const clerkRole = explicitElevated || sameDomainAsInviter ? 'org:admin' : 'org:member';
-    const workspaceRole = clerkRole === 'org:admin' ? 'operator' : 'viewer';
-    const roleBasis = explicitElevated
-      ? 'explicit_elevated'
-      : sameDomainAsInviter
-        ? 'same_non_public_domain'
-        : body.role
-          ? 'explicit_restricted'
-          : 'conservative_default';
-
-    const audit = await dal.recordCustomerInviteAudit({
-      workspace_id: auth.workspace_id,
-      actor_user_id: auth.user_id,
-      email,
-      role: workspaceRole,
-    });
-
-    const result = await createTeamInvitation(ctx.env.CLERK_SECRET_KEY, {
-      organizationId: auth.workspace_id,
-      inviterUserId: auth.user_id,
-      emailAddress: email,
-      role: clerkRole,
-    });
-
-    ctx.status(201);
-    return ctx.json({
-      invited: {
-        ...result,
-        workspace_role: workspaceRole,
-        requested_workspace_role: requestedBodyRole,
-        role_basis: roleBasis,
-      },
-      invite_receipt_id: audit.invite_receipt_id,
-      audit_event_id: audit.audit_event_id,
-      message: `Invitation sent to ${email}.`,
-    });
-  } catch (err) {
-    return errorEnvelope(ctx, err);
-  }
-});
+customerRoute.post('/customer/invites', handleCustomerInvite);

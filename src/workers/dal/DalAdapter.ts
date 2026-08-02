@@ -41,8 +41,11 @@ import {
   CustomerAuthorityState,
   CustomerAuthorityWriteReceipt,
   CustomerConsentAckInput,
-  CustomerInviteAuditInput,
-  CustomerInviteAuditReceipt,
+  CustomerInviteCommandInput,
+  CustomerInviteCommandReservation,
+  CustomerInviteDeliveryReceipt,
+  CustomerInviteFailureInput,
+  CustomerInviteFinalizeInput,
   OperatorAuthorityInput,
   RevokeCustomerAuthorityInput,
   PendingCustomerAuthorityApproval,
@@ -678,8 +681,14 @@ export interface DalAdapter {
   /** Records consent, authority event, audit, and projection outbox in one fail-closed statement. */
   recordCustomerConsentAck(input: CustomerConsentAckInput): Promise<CustomerAuthorityWriteReceipt>;
 
-  /** Records the customer invite audit receipt before the external Clerk invite side effect. */
-  recordCustomerInviteAudit(input: CustomerInviteAuditInput): Promise<CustomerInviteAuditReceipt>;
+  /** Reserves or replays the authority-strict invitation command before calling Clerk. */
+  reserveCustomerInvite(input: CustomerInviteCommandInput): Promise<CustomerInviteCommandReservation>;
+
+  /** Completes the delivered invite, audit, event, outbox, and replay response atomically. */
+  finalizeCustomerInvite(input: CustomerInviteFinalizeInput): Promise<CustomerInviteDeliveryReceipt>;
+
+  /** Releases a failed delivery lease and records an observable failed operation. */
+  recordCustomerInviteDeliveryFailure(input: CustomerInviteFailureInput): Promise<void>;
 
   /** Returns the unlock state for a workspace; connectors + team invites gate on `unlocked`. */
   getCustomerAuthorityState(workspaceId: WorkspaceId): Promise<CustomerAuthorityState>;
