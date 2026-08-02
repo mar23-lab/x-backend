@@ -30,7 +30,7 @@ describe('customerSafeChat', () => {
     const out = customerSafeChat(raw, true) as Record<string, unknown>;
     expect(out).not.toHaveProperty('model');
     expect(out).not.toHaveProperty('llm_requested'); // allow-list: not in the safe surface
-    expect(out.grounded_on).toEqual({ evidence_count: 3 });
+    expect(out.grounded_on).toEqual({ evidence_count: 3, document_count: 0 });
     expect(JSON.stringify(out)).not.toContain('evt_a');
     expect(JSON.stringify(out)).not.toContain('internal');
   });
@@ -169,5 +169,25 @@ describe('customerSafeChat · Option A — preserve the customer-safe source cou
     expect(JSON.stringify(out)).not.toContain('src_internal_1');
     expect(JSON.stringify(out)).not.toContain('evt_a');
     expect(JSON.stringify(out)).not.toContain('scopes');
+  });
+});
+
+describe('customerSafeChat · document grounding', () => {
+  it('preserves only the document count and strips document names and IDs', () => {
+    const out = customerSafeChat({
+      answer: 'grounded', generated_by: 'deterministic', mode: 'ask',
+      grounded_on: {
+        event_ids: [],
+        documents: { total: 2, names: ['private-a.txt', 'private-b.txt'], ids: ['doc_a', 'doc_b'] },
+      },
+      grounding: { document_count: 2 },
+    }, true) as {
+      grounded_on: { document_count: number };
+      grounding: { document_count: number };
+    };
+    expect(out.grounded_on.document_count).toBe(2);
+    expect(out.grounding.document_count).toBe(2);
+    expect(JSON.stringify(out)).not.toContain('private-a.txt');
+    expect(JSON.stringify(out)).not.toContain('doc_a');
   });
 });

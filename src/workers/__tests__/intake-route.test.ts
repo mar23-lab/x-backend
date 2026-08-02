@@ -6,12 +6,16 @@ import { neonClient } from '../db/client';
 
 const AUTH = { user_id: 'user_a', workspace_id: 'tenant_a', role: 'owner' };
 
-function appFor(opts: { enabled?: boolean; packets?: any[]; approvals?: any[]; projects?: any[]; auth?: Record<string, unknown>; createError?: Error } = {}) {
+function appFor(opts: { enabled?: boolean; packets?: any[]; approvals?: any[]; projects?: any[]; documents?: any[]; auth?: Record<string, unknown>; createError?: Error } = {}) {
   const calls: Array<Record<string, unknown>> = [];
   const dal = {
     listTaskPackets: async (workspace_id: string) => { calls.push({ method: 'listTaskPackets', workspace_id }); return opts.packets ?? []; },
     listApprovalRequests: async (workspace_id: string) => { calls.push({ method: 'listApprovalRequests', workspace_id }); return opts.approvals ?? []; },
     listProjects: async (workspace_id: string) => { calls.push({ method: 'listProjects', workspace_id }); return opts.projects ?? []; },
+    listDocumentsByIds: async (workspace_id: string, ids: string[]) => {
+      calls.push({ method: 'listDocumentsByIds', workspace_id, ids });
+      return opts.documents ?? [];
+    },
     createIntakeResolution: async (workspace_id: string, actor_user_id: string, input: any) => {
       calls.push({ method: 'createIntakeResolution', workspace_id, actor_user_id, input });
       if (opts.createError) throw opts.createError;
@@ -90,6 +94,69 @@ describe('single intake route', () => {
       expect(res.status).toBe(201);
       expect((calls.at(-1) as any).input.role_label).toBe(label);
     }
+  });
+
+  it('binds exact document references into the persisted summary and request digest', async () => {
+    const doc = {
+      id: 'doc_1', workspace_id: 'tenant_a', project_id: null, filename: 'brief.txt',
+      content_type: 'text/plain', size_bytes: 20, extracted_text: 'Pilot scope', uploaded_by: 'user_a',
+      uploaded_at: '2026-08-02T00:00:00Z', status: 'recorded', admissibility: 'approved',
+      content_hash: 'a'.repeat(64), version: 1, supersedes_id: null,
+    };
+    const first = appFor({ enabled: true, documents: [doc] });
+    const response = await first.app.request('/api/v1/intake/resolve', {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        text: 'What does this document say?', client_request_id: 'doc-context-1',
+        context_refs: [{ kind: 'document', id: 'doc_1' }],
+      }),
+    }, first.env);
+    expect(response.status).toBe(201);
+    const input = (first.calls.at(-1) as any).input;
+    expect(input.context_summary).toEqual({
+      reference_count: 1, source_count: 0, evidence_count: 1, document_ids: ['doc_1'],
+    });
+    expect(input.request_digest).toMatch(/^[a-f0-9]{64}$/);
+
+    const second = appFor({ enabled: true, documents: [{ ...doc, id: 'doc_2' }] });
+    await second.app.request('/api/v1/intake/resolve', {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        text: 'What does this document say?', client_request_id: 'doc-context-1',
+        context_refs: [{ kind: 'document', id: 'doc_2' }],
+      }),
+    }, second.env);
+    expect((second.calls.at(-1) as any).input.request_digest).not.toBe(input.request_digest);
+  });
+
+  it('does not persist a resolution when a selected document is unavailable', async () => {
+    const { app, calls, env } = appFor({ enabled: true, documents: [] });
+    const response = await app.request('/api/v1/intake/resolve', {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        text: 'Use this document.', client_request_id: 'doc-missing',
+        context_refs: [{ kind: 'document', id: 'doc_missing' }],
+      }),
+    }, env);
+    expect(response.status).toBe(409);
+    expect(calls.some((call) => call.method === 'createIntakeResolution')).toBe(false);
+  });
+
+  it('fails closed when a context kind has no exact grounding loader', async () => {
+    const { app, calls, env } = appFor({ enabled: true });
+    const response = await app.request('/api/v1/intake/resolve', {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        text: 'Use this source.', client_request_id: 'source-not-grounded',
+        context_refs: [{ kind: 'source', id: 'source_1' }],
+      }),
+    }, env);
+    expect(response.status).toBe(400);
+    expect(await response.json()).toMatchObject({
+      code: 'VALIDATION_ERROR',
+      error: 'single intake currently supports document context references only',
+    });
+    expect(calls.some((call) => call.method === 'createIntakeResolution')).toBe(false);
   });
 
   it('preserves the stable request-id conflict code on the wire', async () => {

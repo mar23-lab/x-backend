@@ -7,6 +7,8 @@ import { authorizeSpineWrite } from '../lib/spine-authority';
 import { buildIntakeResolution, type IntakeResolveRequest } from '../lib/intake-resolution';
 import { errorEnvelope } from '../middleware/error';
 import { closingAttestationSigningPayload, signReceipt } from '../dal/role-skill-resolution-store';
+import { parseContextReferences } from '../lib/context-reference';
+import { resolveDocumentContext } from '../services/document-context';
 
 interface IntakeEnv extends AuthEnv {
   DATABASE_URL: string;
@@ -84,6 +86,10 @@ intakeRoute.post('/intake/resolve', async (ctx) => {
     body.interaction_id = typeof body.interaction_id === 'string'
       ? body.interaction_id.trim()
       : body.client_request_id.trim();
+    body.context_refs = parseContextReferences(body.context_refs);
+    if (body.context_refs.some((ref) => ref.kind !== 'document')) {
+      return fail(ctx, 400, 'VALIDATION_ERROR', 'single intake currently supports document context references only');
+    }
     const { workspace_id, user_id, role } = ctx.get('auth');
     stage = 'load_inventory';
     const [packets, approvals, projects, createDecision, decideDecision] = await Promise.all([
@@ -100,12 +106,21 @@ intakeRoute.post('/intake/resolve', async (ctx) => {
       if (operation === 'decide') return { allowed: decideDecision.allowed, safe_reason: decideDecision.reason };
       return { allowed: true, safe_reason: 'read_only_or_draft' };
     };
+    await resolveDocumentContext({
+      dal: ctx.get('dal'),
+      workspace_id,
+      project_id: typeof body.project_id === 'string' && body.project_id.trim() ? body.project_id.trim() : null,
+      user_id,
+      role: String(role || ''),
+      refs: body.context_refs,
+    });
     stage = 'classify_request';
     const requestDigest = await digest(JSON.stringify({
       text: body.text.trim(),
       interaction_id: body.interaction_id,
       project_id: body.project_id ?? null,
       target: body.target ?? null,
+      context_refs: body.context_refs,
     }));
     const input = buildIntakeResolution(body, requestDigest, { packets, approvals, projects, authorityFor, now: new Date() });
     const priorDigest = await digest(JSON.stringify({

@@ -34,6 +34,9 @@ import { type AiRunner } from '../services/agent-digest';
 import { customerSafeChat, customerSafeSerializerEnabled } from '../lib/customer-safe-decision'; // AR-0.2 · customer-safe projection (P3 260714: default-SAFE)
 import { persistAssistantContextLineage, completeAssistantSkillLineage, type AssistantContextLineage } from '../lib/assistant-context-lineage';
 import { createModelExecutionObserver } from '../lib/model-execution-lineage';
+import { parseContextReferences } from '../lib/context-reference';
+import { resolveDocumentContext } from '../services/document-context';
+import { recordChatGroundingReads } from '../dal/document-access-store';
 import {
   answerCockpitChat,
   isProjectInventoryQuestion,
@@ -64,6 +67,7 @@ export interface CustomerChatEnv extends AuthEnv {
   /** Commercial pilot gate: never return a successful chat answer unless the exchange is durably recorded. */
   CHAT_HISTORY_PERSISTENCE_REQUIRED?: string;
   CHAT_RECEIPT_GROUNDING_ENABLED?: string;
+  DOCUMENT_READ_AUDIT_ENABLED?: string;
   ROLE_SKILL_CATALOG_ENABLED?: string;
   RESOLUTION_RECEIPT_SIGNING_SECRET?: string;
   RESOLUTION_RECEIPT_SIGNING_KEY_ID?: string;
@@ -217,6 +221,7 @@ customerChatRoute.post('/customer-chat', async (ctx) => {
       workspace_id?: string;
       project_id?: string | null;
       interaction_id?: string;
+      context_refs?: unknown;
     } | null;
     const message = typeof body?.message === 'string' ? body.message.trim() : '';
     if (!message || message.length > 1000) {
@@ -247,6 +252,15 @@ customerChatRoute.post('/customer-chat', async (ctx) => {
       ctx.status(400);
       return ctx.json({
         error: 'interaction_id must be at most 200 characters',
+        code: 'VALIDATION_ERROR',
+        request_id: ctx.get('request_id'),
+      });
+    }
+    const contextRefs = parseContextReferences(body?.context_refs);
+    if (contextRefs.some((ref) => ref.kind !== 'document')) {
+      ctx.status(400);
+      return ctx.json({
+        error: 'customer chat currently supports document context references only',
         code: 'VALIDATION_ERROR',
         request_id: ctx.get('request_id'),
       });
@@ -345,6 +359,31 @@ customerChatRoute.post('/customer-chat', async (ctx) => {
         });
       }
     }
+
+    const documentContext = await resolveDocumentContext({
+      dal,
+      workspace_id: workspaceId,
+      project_id: projectId,
+      user_id: auth.user_id,
+      role: String(auth.role || ''),
+      refs: contextRefs,
+    });
+    const documents = documentContext.facts;
+    recordChatGroundingReads({
+      enabled: envFlagTrue(ctx.env.DOCUMENT_READ_AUDIT_ENABLED),
+      documents: documentContext.documents,
+      makeSql: () => neonClient(ctx.env.DATABASE_URL),
+      workspaceId,
+      userId: auth.user_id,
+      waitUntil: (promise) => {
+        try {
+          if (ctx.executionCtx?.waitUntil) ctx.executionCtx.waitUntil(promise);
+          else void promise.catch(() => {});
+        } catch {
+          void promise.catch(() => {});
+        }
+      },
+    });
 
     // TENANT-SAFE event read — workspace-scoped via the DAL guard (never operator-wide, never body-supplied).
     const opts: EventListOpts = { limit: MAX_EVENTS, role: auth.role, top_level: true, project_id: projectId ?? undefined };
@@ -448,7 +487,12 @@ customerChatRoute.post('/customer-chat', async (ctx) => {
         role: String(auth.role || 'client'),
         mode,
         intent_ref: await messageIntentRef(message),
-        scope: { event_count: events.length, document_count: 0, unpromoted_document_count: 0, source_count: sources.length },
+        scope: {
+          event_count: events.length,
+          document_count: documents.length,
+          unpromoted_document_count: documentContext.unpromoted_count,
+          source_count: sources.length,
+        },
         redaction_profile: redactionProfile,
         client_empty: clientEmpty,
       });
@@ -468,7 +512,7 @@ customerChatRoute.post('/customer-chat', async (ctx) => {
       : undefined;
     const result = await answerCockpitChat(
       message,
-      { companyContext, events, projects, plan, sources, total: events.length, scope, charter, personalizationProfile },
+      { companyContext, events, documents, projects, plan, sources, total: events.length, scope, charter, personalizationProfile },
       ai,
       mode,
       claudeKey,
@@ -503,7 +547,8 @@ customerChatRoute.post('/customer-chat', async (ctx) => {
     }
     // T3/P6 · the fact-bundle assembly metric (customer plane): size + provenance of what grounded this answer.
     emitEvent('chat_fact_bundle', {
-      workspace_id: workspaceId, events: events.length, projects_total: projects?.length ?? null, sources_total: sources.length,
+      workspace_id: workspaceId, events: events.length, documents: documents.length,
+      projects_total: projects?.length ?? null, sources_total: sources.length,
       sources_connected: sources.filter((s) => s.status === 'connected').length,
       generated_by: result.generated_by,
     });
@@ -590,6 +635,7 @@ customerChatRoute.post('/customer-chat', async (ctx) => {
       grounding: {
         evidence_count: result.grounded_on.event_ids?.length ?? 0,
         project_plan_fact_count: result.grounded_on.plan.entities.length,
+        document_count: result.grounded_on.documents.total,
         freshness: result.grounded_on.plan.updated_at ?? result.grounded_on.data_freshness.newest_event_at,
       },
       lineage: assistantLineage ? {

@@ -82,6 +82,8 @@ function modeLead(mode: CockpitChatMode, where: string): string | null {
 
 /** Plane C (P1 · 260629) · a bounded view of an uploaded document the chief-of-staff can ground on. */
 export interface DocumentFact {
+  /** Internal-only authority reference used for read audit and lineage; never shown to customers. */
+  id?: string;
   filename: string;
   /** A bounded slice of the document's extracted_text — the caller truncates it for prompt cost. */
   excerpt: string;

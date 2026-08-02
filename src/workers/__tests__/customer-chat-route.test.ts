@@ -190,6 +190,47 @@ describe('POST /api/v1/customer-chat', () => {
     ]);
   });
 
+  it('grounds chat in an exact tenant-safe document reference and reports a customer-safe count', async () => {
+    const dal = dalStub({
+      listDocumentsByIds: async (workspaceId: string, ids: string[]) => [{
+        id: ids[0], workspace_id: workspaceId, project_id: null, filename: 'pilot-brief.txt',
+        content_type: 'text/plain', size_bytes: 40, extracted_text: 'The pilot starts in September.',
+        uploaded_by: 'u1', uploaded_at: '2026-08-02T00:00:00Z', status: 'recorded',
+        admissibility: 'approved', content_hash: 'a'.repeat(64), version: 1, supersedes_id: null,
+      }],
+    });
+    const res = await ask(appFor({ ...AUTH, role: 'owner' }, dal), {
+      message: 'What does the attached brief say?',
+      context_refs: [{ kind: 'document', id: 'doc_pilot' }],
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json() as {
+      answer: string;
+      grounded_on: { documents: { total: number; names: string[] } };
+      grounding: { document_count: number };
+    };
+    expect(body.answer).toContain('pilot-brief.txt');
+    expect(body.grounded_on.documents).toEqual({ total: 1, names: ['pilot-brief.txt'] });
+    expect(body.grounding.document_count).toBe(1);
+  });
+
+  it('fails before event/model work when an exact document cannot be resolved', async () => {
+    let eventsRead = false;
+    const dal = dalStub({
+      listDocumentsByIds: async () => [],
+      listEvents: async () => {
+        eventsRead = true;
+        return { events: [], pagination: { has_more: false, next_before: null } };
+      },
+    });
+    const res = await ask(appFor({ ...AUTH, role: 'owner' }, dal), {
+      message: 'Use the attached brief.',
+      context_refs: [{ kind: 'document', id: 'doc_missing' }],
+    });
+    expect(res.status).toBe(409);
+    expect(eventsRead).toBe(false);
+  });
+
   it('does not load plan facts for a project outside the authenticated workspace', async () => {
     let planReads = 0;
     const dal = dalStub({
