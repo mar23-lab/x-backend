@@ -368,6 +368,9 @@ export interface CustomerConsentAckInput {
   auto_approve_operator_user_id?: UserId | null;
   operation_event_id: string;
   projection_outbox_id: string;
+  idempotency_key: string;
+  request_sha256: string;
+  idempotency_route: 'POST /api/v1/customer/authority-consent';
   request_id?: string | null;
 }
 
@@ -453,6 +456,7 @@ export interface CustomerAuthorityWriteReceipt {
   operation_event_id: string;
   projection_outbox_id: string;
   read_model_watermark: string;
+  replayed: boolean;
 }
 
 // Lifecycle L1 (2026-06-15) · in-app withdrawal of authority/consent. Sets revoked_at on the
@@ -468,6 +472,9 @@ export interface RevokeCustomerAuthorityInput {
   re_attest_name?: string | null;
   operation_event_id: string;
   projection_outbox_id: string;
+  idempotency_key: string;
+  request_sha256: string;
+  idempotency_route: 'POST /api/v1/customer/authority-consent/revoke';
   request_id?: string | null;
 }
 

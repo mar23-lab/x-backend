@@ -13,8 +13,13 @@ import { errorEnvelope } from '../middleware/error';
 import type { AuthEnv, AuthVariables } from '../middleware/auth';
 import type { DalAdapter } from '../dal/DalAdapter';
 import { authorizeGovernedWrite } from '../lib/spine-authority';
-import { withIdempotency } from '../lib/idempotency';
 import { handleCustomerInvite } from './customer-invites';
+
+async function sha256Text(value: string): Promise<string> {
+  const bytes = new TextEncoder().encode(value);
+  const digest = await crypto.subtle.digest('SHA-256', bytes);
+  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('');
+}
 
 export interface CustomerRoutesEnv extends AuthEnv {
   DATABASE_URL: string;
@@ -36,8 +41,7 @@ export const customerRoute = new Hono<{
   Variables: CustomerRoutesVariables;
 }>();
 
-customerRoute.post('/customer/authority-consent', (ctx) =>
-  withIdempotency(ctx, 'POST /customer/authority-consent', async () => {
+customerRoute.post('/customer/authority-consent', async (ctx) => {
     try {
       const auth = ctx.get('auth');
       if (!auth?.user_id) {
@@ -51,12 +55,26 @@ customerRoute.post('/customer/authority-consent', (ctx) =>
         });
       }
 
-    const body = (await ctx.req.json().catch(() => ({}))) as {
+    const idempotencyKey = String(ctx.req.header('Idempotency-Key') || '').trim();
+    if (!idempotencyKey || idempotencyKey.length > 200) {
+      return errorEnvelope(ctx, {
+        status: 428,
+        code: 'IDEMPOTENCY_KEY_REQUIRED',
+        message: 'Idempotency-Key is required to record workspace authority consent (1-200 chars)',
+      });
+    }
+    const rawBody = await ctx.req.text();
+    let body: {
       full_name_typed?: string;
       scopes_confirmed?: Record<string, unknown>;
       access_request_id?: string;
       company?: string;
-    };
+    } = {};
+    try {
+      body = JSON.parse(rawBody) as typeof body;
+    } catch {
+      return errorEnvelope(ctx, { status: 400, code: 'VALIDATION_ERROR', message: 'request body must be valid JSON' });
+    }
     const fullName = (body.full_name_typed || '').trim();
     if (fullName.length < 2 || fullName.length > 200) {
       return errorEnvelope(ctx, {
@@ -91,6 +109,10 @@ customerRoute.post('/customer/authority-consent', (ctx) =>
       callerIsOperator && operatorWorkspaceAllowed ? auth.user_id : null;
 
     const dal = ctx.get('dal');
+    const idempotencyRoute = 'POST /api/v1/customer/authority-consent' as const;
+    const requestSha256 = await sha256Text(
+      `POST\n${auth.workspace_id}\n${auth.user_id}\n${rawBody}`,
+    );
     const receipt = await dal.recordCustomerConsentAck({
       workspace_id: auth.workspace_id,
       user_id: auth.user_id,
@@ -106,31 +128,38 @@ customerRoute.post('/customer/authority-consent', (ctx) =>
       auto_approve_operator_user_id: autoApproveOperatorUserId,
       operation_event_id: crypto.randomUUID(),
       projection_outbox_id: crypto.randomUUID(),
+      idempotency_key: idempotencyKey,
+      request_sha256: requestSha256,
+      idempotency_route: idempotencyRoute,
       request_id: ctx.get('request_id') || null,
     });
 
-    const state = await dal.getCustomerAuthorityState(auth.workspace_id);
+    const consentAcked = !!receipt.consent.consent_acked_at;
+    const operatorApproved = !!receipt.consent.operator_approved_at;
+    const unlocked = consentAcked && operatorApproved && !receipt.consent.revoked_at;
+    if (receipt.replayed) ctx.header('Idempotency-Replayed', 'true');
     ctx.status(202);
     return ctx.json({
       acknowledged: true,
       authority: {
-        unlocked: state.unlocked,
-        operator_approved: state.operator_approved,
-        consent_acked: state.consent_acked,
+        unlocked,
+        operator_approved: operatorApproved,
+        consent_acked: consentAcked,
       },
       authority_receipt_id: receipt.authority_receipt_id,
       audit_event_id: receipt.audit_event_id,
       operation_event_id: receipt.operation_event_id,
       projection_outbox_id: receipt.projection_outbox_id,
       read_model_watermark: receipt.read_model_watermark,
-      message: state.unlocked
+      replayed: receipt.replayed,
+      message: unlocked
         ? 'Consent recorded. Connectors and team invites are now unlocked.'
         : 'Consent recorded. Awaiting operator approval before connectors and team invites unlock.',
     });
     } catch (err) {
       return errorEnvelope(ctx, err);
     }
-  }));
+  });
 
 // Lifecycle L1 · GET /api/v1/customer/authority-consent · workspace-scoped (requires org)
 //
@@ -190,8 +219,7 @@ customerRoute.get('/customer/authority-consent', async (ctx) => {
 // supersede); a later connect re-routes to the consent screen (403 AUTHORITY_REQUIRED → W1a),
 // which upserts a fresh active row. The consent update, operation event, audit, and projection
 // outbox are one fail-closed authority statement.
-customerRoute.post('/customer/authority-consent/revoke', (ctx) =>
-  withIdempotency(ctx, 'POST /customer/authority-consent/revoke', async () => {
+customerRoute.post('/customer/authority-consent/revoke', async (ctx) => {
     try {
       const auth = ctx.get('auth');
       if (!auth?.user_id) {
@@ -212,10 +240,24 @@ customerRoute.post('/customer/authority-consent/revoke', (ctx) =>
         });
       }
 
-    const body = (await ctx.req.json().catch(() => ({}))) as {
+    const idempotencyKey = String(ctx.req.header('Idempotency-Key') || '').trim();
+    if (!idempotencyKey || idempotencyKey.length > 200) {
+      return errorEnvelope(ctx, {
+        status: 428,
+        code: 'IDEMPOTENCY_KEY_REQUIRED',
+        message: 'Idempotency-Key is required to revoke workspace authority consent (1-200 chars)',
+      });
+    }
+    const rawBody = await ctx.req.text();
+    let body: {
       full_name_typed?: string;
       reason?: string;
-    };
+    } = {};
+    try {
+      body = JSON.parse(rawBody) as typeof body;
+    } catch {
+      return errorEnvelope(ctx, { status: 400, code: 'VALIDATION_ERROR', message: 'request body must be valid JSON' });
+    }
     const fullName = (body.full_name_typed || '').trim();
     if (fullName.length < 2 || fullName.length > 200) {
       return errorEnvelope(ctx, {
@@ -229,6 +271,10 @@ customerRoute.post('/customer/authority-consent/revoke', (ctx) =>
     const dal = ctx.get('dal');
     // The DAL records the revoke + the audit_logs entry transactionally in one atomic statement
     // (the audit can't silently fail post-revoke, and never logs a no-op). 404 if no active row.
+    const idempotencyRoute = 'POST /api/v1/customer/authority-consent/revoke' as const;
+    const requestSha256 = await sha256Text(
+      `POST\n${auth.workspace_id}\n${auth.user_id}\n${rawBody}`,
+    );
     const receipt = await dal.revokeCustomerAuthority({
       workspace_id: auth.workspace_id,
       revoked_by: auth.user_id,
@@ -236,29 +282,33 @@ customerRoute.post('/customer/authority-consent/revoke', (ctx) =>
       re_attest_name: fullName,
       operation_event_id: crypto.randomUUID(),
       projection_outbox_id: crypto.randomUUID(),
+      idempotency_key: idempotencyKey,
+      request_sha256: requestSha256,
+      idempotency_route: idempotencyRoute,
       request_id: ctx.get('request_id') || null,
     });
 
-    const state = await dal.getCustomerAuthorityState(auth.workspace_id);
+    if (receipt.replayed) ctx.header('Idempotency-Replayed', 'true');
     return ctx.json({
       revoked: true,
       authority: {
-        unlocked: state.unlocked,
-        operator_approved: state.operator_approved,
-        consent_acked: state.consent_acked,
+        unlocked: false,
+        operator_approved: false,
+        consent_acked: false,
       },
       authority_receipt_id: receipt.authority_receipt_id,
       audit_event_id: receipt.audit_event_id,
       operation_event_id: receipt.operation_event_id,
       projection_outbox_id: receipt.projection_outbox_id,
       read_model_watermark: receipt.read_model_watermark,
+      replayed: receipt.replayed,
       message:
         'Workspace authority revoked. Connectors and team invites are locked. Reconnecting a source will ask you to re-authorize.',
     });
     } catch (err) {
       return errorEnvelope(ctx, err);
     }
-  }));
+  });
 
 // POST /api/v1/customer/invites · workspace-scoped (requires org) · R55 Phase 4b
 // Invite a teammate to the workspace's Clerk organization. Hard-gated on the IP-boundary

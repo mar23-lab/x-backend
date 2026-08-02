@@ -432,6 +432,8 @@ describePostgres('schema 91 PostgreSQL authority', () => {
       );
 
       const sql = postgresSql(client);
+      const consentKey = `authority-consent-${suffix}`;
+      const consentDigest = 'a'.repeat(64);
       const consent = await recordCustomerConsentAckRow(sql, {
         workspace_id: workspaceId,
         user_id: userId,
@@ -440,6 +442,9 @@ describePostgres('schema 91 PostgreSQL authority', () => {
         auto_approve_operator_user_id: userId,
         operation_event_id: consentEventId,
         projection_outbox_id: consentOutboxId,
+        idempotency_key: consentKey,
+        request_sha256: consentDigest,
+        idempotency_route: 'POST /api/v1/customer/authority-consent',
         request_id: `request_authority_consent_${suffix}`,
       });
       expect(consent).toMatchObject({
@@ -486,6 +491,38 @@ describePostgres('schema 91 PostgreSQL authority', () => {
         outbox: true,
       });
 
+      const consentReplay = await recordCustomerConsentAckRow(sql, {
+        workspace_id: workspaceId,
+        user_id: userId,
+        full_name_typed: 'Schema Test Owner',
+        scopes_confirmed: { private_sources: true },
+        auto_approve_operator_user_id: userId,
+        operation_event_id: `event_authority_consent_replay_${suffix}`,
+        projection_outbox_id: `outbox_authority_consent_replay_${suffix}`,
+        idempotency_key: consentKey,
+        request_sha256: consentDigest,
+        idempotency_route: 'POST /api/v1/customer/authority-consent',
+        request_id: `request_authority_consent_replay_${suffix}`,
+      });
+      expect(consentReplay).toMatchObject({
+        replayed: true,
+        operation_event_id: consent.operation_event_id,
+        audit_event_id: consent.audit_event_id,
+        projection_outbox_id: consent.projection_outbox_id,
+      });
+      await expect(recordCustomerConsentAckRow(sql, {
+        workspace_id: workspaceId,
+        user_id: userId,
+        full_name_typed: 'Changed Owner',
+        operation_event_id: `event_authority_consent_mismatch_${suffix}`,
+        projection_outbox_id: `outbox_authority_consent_mismatch_${suffix}`,
+        idempotency_key: consentKey,
+        request_sha256: 'c'.repeat(64),
+        idempotency_route: 'POST /api/v1/customer/authority-consent',
+      })).rejects.toMatchObject({ code: 'IDEMPOTENCY_KEY_REUSED', status: 409 });
+
+      const revokeKey = `authority-revoke-${suffix}`;
+      const revokeDigest = 'b'.repeat(64);
       const revoked = await revokeCustomerAuthorityRow(sql, {
         workspace_id: workspaceId,
         revoked_by: userId,
@@ -493,6 +530,9 @@ describePostgres('schema 91 PostgreSQL authority', () => {
         re_attest_name: 'Schema Test Owner',
         operation_event_id: revokeEventId,
         projection_outbox_id: revokeOutboxId,
+        idempotency_key: revokeKey,
+        request_sha256: revokeDigest,
+        idempotency_route: 'POST /api/v1/customer/authority-consent/revoke',
         request_id: `request_authority_revoke_${suffix}`,
       });
       expect(revoked).toMatchObject({
@@ -538,7 +578,24 @@ describePostgres('schema 91 PostgreSQL authority', () => {
         audit: true,
         outbox: true,
       });
+
+      const revokeReplay = await revokeCustomerAuthorityRow(sql, {
+        workspace_id: workspaceId,
+        revoked_by: userId,
+        operation_event_id: `event_authority_revoke_replay_${suffix}`,
+        projection_outbox_id: `outbox_authority_revoke_replay_${suffix}`,
+        idempotency_key: revokeKey,
+        request_sha256: revokeDigest,
+        idempotency_route: 'POST /api/v1/customer/authority-consent/revoke',
+      });
+      expect(revokeReplay).toMatchObject({
+        replayed: true,
+        operation_event_id: revoked.operation_event_id,
+        audit_event_id: revoked.audit_event_id,
+        projection_outbox_id: revoked.projection_outbox_id,
+      });
     } finally {
+      await client.query('DELETE FROM idempotency_keys WHERE workspace_id = $1', [workspaceId]);
       await client.query('DELETE FROM projection_outbox WHERE workspace_id = $1', [workspaceId]);
       await client.query('DELETE FROM audit_logs WHERE workspace_id = $1', [workspaceId]);
       await client.query('DELETE FROM operation_events WHERE workspace_id = $1', [workspaceId]);

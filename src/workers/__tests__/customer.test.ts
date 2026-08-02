@@ -42,14 +42,20 @@ function authorityState(overrides: Record<string, unknown> = {}) {
   };
 }
 
-function authorityWriteReceipt(kind: 'consent' | 'revoke' = 'consent') {
+function authorityWriteReceipt(kind: 'consent' | 'revoke' = 'consent', operatorApproved = false) {
   return {
-    consent: { id: 'cac1', revoked_at: kind === 'revoke' ? 'now' : null },
+    consent: {
+      id: 'cac1',
+      consent_acked_at: kind === 'revoke' ? '2026-07-29T00:00:00.000Z' : '2026-07-30T00:00:00.000Z',
+      operator_approved_at: operatorApproved ? '2026-07-30T00:00:00.000Z' : null,
+      revoked_at: kind === 'revoke' ? '2026-07-30T00:00:00.000Z' : null,
+    },
     authority_receipt_id: `customer-authority-${kind}:cac1:audit_authority_1`,
     audit_event_id: 'audit_authority_1',
     operation_event_id: 'event_authority_1',
     projection_outbox_id: 'outbox_authority_1',
     read_model_watermark: '2026-07-30T00:00:00.000Z',
+    replayed: false,
   };
 }
 
@@ -68,6 +74,8 @@ function appFor(auth: Record<string, unknown>, dal: Record<string, unknown>) {
 function post(app: Hono, path: string, body: unknown) {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
   if (path === '/customer/invites') headers['Idempotency-Key'] = 'invite-test-key';
+  if (path === '/customer/authority-consent') headers['Idempotency-Key'] = 'consent-test-key';
+  if (path === '/customer/authority-consent/revoke') headers['Idempotency-Key'] = 'revoke-test-key';
   return app.request(
     `/api/v1${path}`,
     { method: 'POST', headers, body: JSON.stringify(body) },
@@ -76,6 +84,15 @@ function post(app: Hono, path: string, body: unknown) {
 }
 
 describe('POST /customer/authority-consent', () => {
+  it('428 when Idempotency-Key is absent', async () => {
+    const app = appFor({ user_id: 'u1', workspace_id: 'org_acme' }, { recordCustomerConsentAck: vi.fn() });
+    const res = await app.request(
+      '/api/v1/customer/authority-consent',
+      { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ full_name_typed: 'Jane Smith' }) },
+      ENV as never,
+    );
+    expect(res.status).toBe(428);
+  });
   it('401 when unauthenticated', async () => {
     const res = await post(appFor({}, {}), '/customer/authority-consent', { full_name_typed: 'Jane Smith' });
     expect(res.status).toBe(401);
@@ -136,7 +153,7 @@ describe('POST /customer/authority-consent', () => {
       appFor(
         { user_id: 'u1', workspace_id: 'org_acme' },
         {
-          recordCustomerConsentAck: vi.fn(async () => authorityWriteReceipt()),
+          recordCustomerConsentAck: vi.fn(async () => authorityWriteReceipt('consent', true)),
           getCustomerAuthorityState: vi.fn(async () =>
             authorityState({ consent_acked: true, operator_approved: true, unlocked: true })
           ),
@@ -155,7 +172,7 @@ describe('POST /customer/authority-consent', () => {
     let unlocked = false;
     const recordCustomerConsentAck = vi.fn(async (input: Record<string, unknown>) => {
       unlocked = input.auto_approve_operator_user_id === 'user_op';
-      return authorityWriteReceipt();
+      return authorityWriteReceipt('consent', unlocked);
     });
     const getCustomerAuthorityState = vi.fn(async () =>
       authorityState({ workspace_id: 'org_mine', consent_acked: true, operator_approved: unlocked, unlocked })
@@ -166,7 +183,7 @@ describe('POST /customer/authority-consent', () => {
     );
     const res = await app.request(
       '/api/v1/customer/authority-consent',
-      { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ full_name_typed: 'Op Erator', company: 'Xlooop' }) },
+      { method: 'POST', headers: { 'Content-Type': 'application/json', 'Idempotency-Key': 'operator-consent-key' }, body: JSON.stringify({ full_name_typed: 'Op Erator', company: 'Xlooop' }) },
       { CLERK_SECRET_KEY: 'sk_test_x', DATABASE_URL: 'x', MBP_OWNER_USER_ID: 'user_op' } as never
     );
     expect(res.status).toBe(202);
@@ -194,7 +211,7 @@ describe('POST /customer/authority-consent', () => {
     );
     const res = await app.request(
       '/api/v1/customer/authority-consent',
-      { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ full_name_typed: 'Cust Omer' }) },
+      { method: 'POST', headers: { 'Content-Type': 'application/json', 'Idempotency-Key': 'customer-consent-key' }, body: JSON.stringify({ full_name_typed: 'Cust Omer' }) },
       { CLERK_SECRET_KEY: 'sk_test_x', DATABASE_URL: 'x', MBP_OWNER_USER_ID: 'user_op' } as never
     );
     expect(res.status).toBe(202);
@@ -216,7 +233,7 @@ describe('POST /customer/authority-consent', () => {
     );
     const res = await app.request(
       '/api/v1/customer/authority-consent',
-      { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ full_name_typed: 'A Person' }) },
+      { method: 'POST', headers: { 'Content-Type': 'application/json', 'Idempotency-Key': 'allowlisted-consent-key' }, body: JSON.stringify({ full_name_typed: 'A Person' }) },
       {
         CLERK_SECRET_KEY: 'sk_test_x',
         DATABASE_URL: 'x',
@@ -243,7 +260,7 @@ describe('POST /customer/authority-consent', () => {
     );
     const res = await app.request(
       '/api/v1/customer/authority-consent',
-      { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ full_name_typed: 'Op Erator' }) },
+      { method: 'POST', headers: { 'Content-Type': 'application/json', 'Idempotency-Key': 'blocked-consent-key' }, body: JSON.stringify({ full_name_typed: 'Op Erator' }) },
       { CLERK_SECRET_KEY: 'sk_test_x', DATABASE_URL: 'x', MBP_OWNER_USER_ID: 'user_op', OPERATOR_WORKSPACE_IDS: 'org_mine' } as never
     );
     expect(res.status).toBe(202);
@@ -265,7 +282,7 @@ describe('POST /customer/authority-consent', () => {
     );
     const res = await app.request(
       '/api/v1/customer/authority-consent',
-      { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ full_name_typed: 'Workspace Member' }) },
+      { method: 'POST', headers: { 'Content-Type': 'application/json', 'Idempotency-Key': 'member-consent-key' }, body: JSON.stringify({ full_name_typed: 'Workspace Member' }) },
       {
         CLERK_SECRET_KEY: 'sk_test_x',
         DATABASE_URL: 'x',
@@ -332,6 +349,18 @@ describe('GET /customer/authority-consent', () => {
 });
 
 describe('POST /customer/authority-consent/revoke', () => {
+  it('428 when Idempotency-Key is absent', async () => {
+    const app = appFor(
+      { user_id: 'owner1', workspace_id: 'org_acme', role: 'owner' },
+      lockedAfterRevoke(),
+    );
+    const res = await app.request(
+      '/api/v1/customer/authority-consent/revoke',
+      { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ full_name_typed: 'Jane Smith' }) },
+      ENV as never,
+    );
+    expect(res.status).toBe(428);
+  });
   // After revoke, getCustomerAuthorityState returns the locked state (the active row is gone).
   // The DAL records the audit_logs entry transactionally inside revokeCustomerAuthority — the route
   // no longer calls appendAuditLog, so the mock does not need it.
