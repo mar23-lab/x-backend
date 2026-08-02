@@ -182,6 +182,19 @@ describe('project requested-fact semantic corpus', () => {
     expect(result.answer).not.toMatch(/approval request|operator mode/i);
   });
 
+  it('distinguishes project source bindings from a request for each fact provenance source', () => {
+    const projectSourcePrompts = [
+      'How many admitted sources does this project have?',
+      'List the connected sources for this project.',
+      'Show the project source bindings.',
+      'Which sources are bound to the current project?',
+    ];
+    for (const prompt of projectSourcePrompts) {
+      expect(classifyRequestedProjectFacts(prompt), prompt).toContain('project_sources');
+    }
+    expect(classifyRequestedProjectFacts('Return each fact source and freshness.')).not.toContain('project_sources');
+  });
+
   it('does not convert workspace charter goals into project-plan requirements without project scope', () => {
     const grounded = compileChatFacts(FACTS({
       scope: { workspace_id: 'org_3EG82', project_id: null, domain_id: null },

@@ -144,6 +144,43 @@ describe('canonical intake resolution', () => {
     });
   });
 
+  it('does not let ambient project scope override an unresolved explicitly named project', () => {
+    const row = buildIntakeResolution(
+      {
+        text: 'Create a todo in Missing Project titled "Do not guess".',
+        client_request_id: 'c3-missing-project-with-scope',
+        project_id: 'proj_known',
+      },
+      '8'.repeat(64),
+      inventory([], [], [project('proj_known', 'Known Project')]),
+    );
+    expect(row).toMatchObject({
+      next_step: 'clarify',
+      ambiguity: true,
+      requires_confirmation: false,
+      target: { type: 'none', id: null, label: 'Project clarification required' },
+      action_payload: {},
+    });
+  });
+
+  it('lets a resolved explicitly named project override a different ambient project scope', () => {
+    const row = buildIntakeResolution(
+      {
+        text: 'Create a todo in Target Project titled "Use the named target".',
+        client_request_id: 'c3-explicit-project-with-scope',
+        project_id: 'proj_ambient',
+      },
+      '9'.repeat(64),
+      inventory([], [], [project('proj_ambient', 'Ambient Project'), project('proj_target', 'Target Project')]),
+    );
+    expect(row).toMatchObject({
+      next_step: 'confirm',
+      ambiguity: false,
+      project_id: 'proj_target',
+      action_payload: { project_id: 'proj_target', project_name: 'Target Project' },
+    });
+  });
+
   it('does not bind a project mentioned only inside the requested title', () => {
     const row = buildIntakeResolution(
       { text: 'Create a todo in Missing Project titled "Review Known Project".', client_request_id: 'c3-title-project' },

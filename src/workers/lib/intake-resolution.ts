@@ -57,11 +57,6 @@ function resolveCreateProject(
   projects: Project[],
 ): { project: Project | null; targetWasRequested: boolean; ambiguous: boolean } {
   const active = projects.filter((project) => project.status === 'active');
-  if (request.project_id) {
-    const exact = active.filter((project) => project.id === request.project_id);
-    return { project: exact.length === 1 ? exact[0]! : null, targetWasRequested: true, ambiguous: exact.length !== 1 };
-  }
-
   const requestedQualifier = explicitProjectQualifier(request.text);
   const canonicalIdMatches = requestedQualifier
     ? canonicalProjectIdsInQualifier(requestedQualifier, active)
@@ -78,6 +73,13 @@ function resolveCreateProject(
   if (requestedName) {
     const normalizedName = normalizedProjectText(requestedName);
     const exact = active.filter((project) => normalizedProjectText(project.name) === normalizedName);
+    return { project: exact.length === 1 ? exact[0]! : null, targetWasRequested: true, ambiguous: exact.length !== 1 };
+  }
+
+  // An explicitly typed target is authoritative over ambient UI scope. Falling back to the
+  // selected project here could execute a command against a different project than the user named.
+  if (request.project_id) {
+    const exact = active.filter((project) => project.id === request.project_id);
     return { project: exact.length === 1 ? exact[0]! : null, targetWasRequested: true, ambiguous: exact.length !== 1 };
   }
 
