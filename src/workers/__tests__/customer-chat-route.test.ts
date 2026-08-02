@@ -29,6 +29,11 @@ const PROFILE = {
 function dalStub(overrides: Record<string, unknown> = {}) {
   return {
     getSessionEntitlement: async () => ({ state: 'approved_workspace' }),
+    getSession: async (_userId: string, workspaceId: string) => ({
+      user: { id: 'u1', email: 'a@honestyoung.example', role: 'owner' },
+      workspace: { id: workspaceId, name: 'Honest & Young', slug: 'honest-young' },
+      projects: [],
+    }),
     listEvents: async () => ({ events: [], pagination: { has_more: false, next_before: null } }),
     listProjects: async () => [],
     listUserSources: async () => [],
@@ -114,6 +119,37 @@ describe('POST /api/v1/customer-chat', () => {
     expect(body.answer).not.toContain('project_2');
     expect(body.answer).not.toContain('Here is what is happening');
     expect(body.generated_by).toBe('deterministic');
+  });
+
+  it('returns complete workspace inventory coverage and freshness from canonical tenant records', async () => {
+    const dal = dalStub({
+      listProjects: async (workspaceId: string) => [
+        { id: 'project_1', workspace_id: workspaceId, name: 'Commercial proof', status: 'active', updated_at: '2026-08-02T01:00:00Z' },
+        { id: 'project_2', workspace_id: workspaceId, name: 'Customer onboarding', status: 'active', updated_at: '2026-08-02T02:00:00Z' },
+      ],
+    });
+    const res = await ask(appFor(AUTH, dal), {
+      message: 'Return the current workspace name, active project count, and each active project as exact name | canonical project ID. State required, satisfied, unavailable facts and freshness.',
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json() as {
+      answer: string;
+      requested_facts: { required: string[]; satisfied: string[]; unavailable: string[] };
+      grounding: { freshness: string | null };
+    };
+    expect(body.answer).toContain('Workspace: Honest & Young.');
+    expect(body.answer).toContain('Current active projects in this workspace (2):');
+    expect(body.answer).toContain('Commercial proof — project_1');
+    expect(body.answer).toContain('Customer onboarding — project_2');
+    expect(body.answer).toContain('Project inventory last updated: 2026-08-02T02:00:00Z.');
+    expect(body.answer).toContain('Requested facts: workspace name, project inventory, freshness.');
+    expect(body.answer).toContain('Unavailable: none.');
+    expect(body.requested_facts).toEqual({
+      required: ['workspace_name', 'project_inventory', 'freshness'],
+      satisfied: ['workspace_name', 'project_inventory', 'freshness'],
+      unavailable: [],
+    });
+    expect(body.grounding.freshness).toBe('2026-08-02T02:00:00Z');
   });
 
   it('grounds an exact project plan question in tenant-validated plan entities and returns canonical conversation ids', async () => {
