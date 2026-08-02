@@ -140,6 +140,13 @@ describe('POST /api/v1/customer-chat', () => {
           ];
         },
       },
+      listProjectSourceBindings: async (workspaceId: string, projectId: string) => {
+        calls.push({ method: 'listProjectSourceBindings', workspaceId, projectId });
+        return [
+          { id: 'binding_1', source_kind: 'google_drive_folder', status: 'connected', read_policy: 'read_only' },
+          { id: 'binding_2', source_kind: 'manual', status: 'pending_auth', read_policy: 'metadata_only' },
+        ];
+      },
       appendChatExchange: async (
         _userId: string,
         _scope: Record<string, unknown>,
@@ -156,7 +163,7 @@ describe('POST /api/v1/customer-chat', () => {
     });
 
     const res = await askEnv(appFor(AUTH, dal), {
-      message: 'What is the project name, and list every goal, milestone, and todo with counts and last update?',
+      message: 'What is the project name, and list every goal, milestone, todo, and admitted source with counts and last update?',
       project_id: 'project_1',
       interaction_id: 'interaction_project_1',
     }, { CHAT_HISTORY_PERSISTENCE_REQUIRED: 'true' });
@@ -174,7 +181,10 @@ describe('POST /api/v1/customer-chat', () => {
     expect(body.answer).toContain('Complete acceptance proof');
     expect(body.answer).toContain('Run reload journey');
     expect(body.answer).toContain('Counts: 1 goal · 1 milestone · 1 todo · 0 intents.');
+    expect(body.answer).toContain('Project sources: 2 source bindings (1 connected).');
     expect(body.answer).toContain('Plan last updated: 2026-07-26T10:03:00Z.');
+    expect(body.answer).toContain('Requested facts: project name, goals, milestones, todos, counts, project sources, freshness.');
+    expect(body.answer).toContain('Unavailable: none.');
     expect(body.interaction_id).toBe('interaction_project_1');
     expect(body.scope).toEqual({ workspace_id: 'org_hy', project_id: 'project_1', domain_id: null });
     expect(body.requested_facts.unavailable).toEqual([]);
@@ -187,7 +197,40 @@ describe('POST /api/v1/customer-chat', () => {
     expect(calls).toEqual([
       { method: 'getProject', workspaceId: 'org_hy', projectId: 'project_1' },
       { method: 'listPlanEntities', projectId: 'project_1', options: { workspaceId: 'org_hy' } },
+      { method: 'listProjectSourceBindings', workspaceId: 'org_hy', projectId: 'project_1' },
     ]);
+  });
+
+  it('marks project sources unavailable when their tenant-scoped read cannot be verified', async () => {
+    const dal = dalStub({
+      getProject: async (workspaceId: string, projectId: string) => ({
+        id: projectId,
+        workspace_id: workspaceId,
+        name: 'Commercial launch',
+        status: 'active',
+        updated_at: '2026-07-26T10:00:00Z',
+      }),
+      plan: { listPlanEntities: async () => [] },
+      listProjectSourceBindings: async () => { throw new Error('project source read unavailable'); },
+    });
+
+    const res = await ask(appFor(AUTH, dal), {
+      message: 'How many admitted sources are connected to this project?',
+      project_id: 'project_1',
+    });
+
+    expect(res.status).toBe(200);
+    const body = await res.json() as {
+      answer: string;
+      requested_facts: { required: string[]; satisfied: string[]; unavailable: string[] };
+      grounding: { project_source_fact_count: number };
+    };
+    expect(body.answer).toContain('Project sources: unavailable.');
+    expect(body.answer).toContain('Unavailable: project sources.');
+    expect(body.requested_facts.required).toEqual(['counts', 'project_sources']);
+    expect(body.requested_facts.satisfied).toEqual(['counts']);
+    expect(body.requested_facts.unavailable).toEqual(['project_sources']);
+    expect(body.grounding.project_source_fact_count).toBe(0);
   });
 
   it('grounds chat in an exact tenant-safe document reference and reports a customer-safe count', async () => {

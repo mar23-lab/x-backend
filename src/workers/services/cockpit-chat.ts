@@ -116,7 +116,14 @@ export interface ProjectGroundingFact {
   updated_at?: string | null;
 }
 
-export type RequestedProjectFact = 'project_name' | 'goals' | 'milestones' | 'todos' | 'counts' | 'freshness';
+export type RequestedProjectFact =
+  | 'project_name'
+  | 'goals'
+  | 'milestones'
+  | 'todos'
+  | 'counts'
+  | 'project_sources'
+  | 'freshness';
 
 export interface PlanEntityGroundingFact {
   id: string;
@@ -134,6 +141,13 @@ export interface ProjectPlanGrounding {
   project_status: string;
   project_updated_at?: string | null;
   entities: PlanEntityGroundingFact[];
+}
+
+export interface ProjectSourceGroundingFact {
+  id: string;
+  source_kind: string;
+  status: string;
+  read_policy: string;
 }
 
 export interface CockpitChatFacts {
@@ -172,6 +186,8 @@ export interface CockpitChatFacts {
   projects?: ProjectGroundingFact[];
   /** Canonical plan facts for an explicitly selected, tenant-validated project. */
   plan?: ProjectPlanGrounding | null;
+  /** RLS-scoped source bindings for the explicitly selected project. undefined means the read failed. */
+  projectSources?: ProjectSourceGroundingFact[];
   /** Total Plane-A count for the scope (may exceed events.length when capped). */
   total: number;
   scope: CockpitChatScope;
@@ -261,6 +277,12 @@ export interface CockpitChatResult {
       updated_at: string | null;
       counts: { goals: number; milestones: number; todos: number; intents: number };
       entities: PlanEntityGroundingFact[];
+    };
+    project_sources: {
+      available: boolean;
+      total: number;
+      connected: number;
+      items: ProjectSourceGroundingFact[];
     };
     requested_facts: {
       required: RequestedProjectFact[];
@@ -547,6 +569,8 @@ export function compileChatFacts(facts: CockpitChatFacts, message = ''): Cockpit
   const docs = Array.isArray(facts.documents) ? facts.documents : [];
   const sourceFacts = Array.isArray(facts.sources) ? facts.sources : [];
   const projectFacts = Array.isArray(facts.projects) ? facts.projects : [];
+  const projectSourcesAvailable = Array.isArray(facts.projectSources);
+  const projectSources = projectSourcesAvailable ? facts.projectSources! : [];
   const plan = facts.plan ?? null;
   const pinned = Array.isArray(facts.pinned) ? facts.pinned : [];
   const planeA = Array.isArray(facts.events) ? facts.events : [];
@@ -651,6 +675,7 @@ export function compileChatFacts(facts: CockpitChatFacts, message = ''): Cockpit
     ? classifyRequestedProjectFacts(message)
     : [];
   const satisfiedFacts = requestedFacts.filter((fact) => {
+    if (fact === 'project_sources') return projectSourcesAvailable;
     if (!plan) return false;
     if (fact === 'freshness') return Boolean(newestPlanAt);
     return true;
@@ -704,6 +729,12 @@ export function compileChatFacts(facts: CockpitChatFacts, message = ''): Cockpit
         intents: planEntities.filter((entity) => entity.kind === 'intent').length,
       },
       entities: planEntities.slice(0, 200),
+    },
+    project_sources: {
+      available: projectSourcesAvailable,
+      total: projectSources.length,
+      connected: projectSources.filter((source) => source.status === 'connected').length,
+      items: projectSources.slice(0, 100),
     },
     requested_facts: {
       required: requestedFacts,
@@ -797,6 +828,12 @@ export function classifyRequestedProjectFacts(message: string): RequestedProject
   if (/\bmilestones?\b/.test(q)) requested.add('milestones');
   if (/\b(?:todos?|to-dos?|tasks?)\b/.test(q)) requested.add('todos');
   if (/\b(?:how many|count|counts|number of)\b/.test(q)) requested.add('counts');
+  if (
+    /\b(?:admitted|connected|bound|linked)\s+(?:project\s+)?(?:sources?|connectors?)\b/.test(q)
+    || /\b(?:project\s+)?source\s+bindings?\b/.test(q)
+    || /\b(?:sources?|connectors?)\s+(?:are\s+)?(?:admitted|connected|bound|linked)\b/.test(q)
+    || /\bsources?\s+(?:for|to|in)\s+(?:(?:this|the|current|selected)\s+)?project\b/.test(q)
+  ) requested.add('project_sources');
   if (/\b(?:fresh|freshness|updated|last update|current as of|as of(?: date)?|is\s+(?:this|the)\s+project\s+current)\b/.test(q)) requested.add('freshness');
   return [...requested];
 }
@@ -834,9 +871,31 @@ function buildProjectPlanAnswer(grounded: CockpitChatResult['grounded_on']): str
       + `${plural(c.todos, 'todo')} · ${plural(c.intents, 'intent')}.`,
     );
   }
+  if (required.includes('project_sources')) {
+    lines.push(
+      grounded.project_sources.available
+        ? `Project sources: ${plural(grounded.project_sources.total, 'source binding')} (${grounded.project_sources.connected} connected).`
+        : 'Project sources: unavailable.',
+    );
+  }
   if (required.includes('freshness')) {
     lines.push(`Plan last updated: ${grounded.plan.updated_at || 'unavailable'}.`);
   }
+  const labels: Record<RequestedProjectFact, string> = {
+    project_name: 'project name',
+    goals: 'goals',
+    milestones: 'milestones',
+    todos: 'todos',
+    counts: 'counts',
+    project_sources: 'project sources',
+    freshness: 'freshness',
+  };
+  const listed = (facts: RequestedProjectFact[]) => facts.length
+    ? facts.map((fact) => labels[fact]).join(', ')
+    : 'none';
+  lines.push(`Requested facts: ${listed(grounded.requested_facts.required)}.`);
+  lines.push(`Satisfied: ${listed(grounded.requested_facts.satisfied)}.`);
+  lines.push(`Unavailable: ${listed(grounded.requested_facts.unavailable)}.`);
   return lines.join('\n');
 }
 

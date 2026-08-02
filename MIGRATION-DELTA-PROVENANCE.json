@@ -4255,6 +4255,52 @@
           "reason": "Bind exact tenant document references through intake, customer chat, safe grounding counts, and DAL RLS reads"
         }
       ]
+    },
+    {
+      "delta_id": "project-source-fact-coverage-20260802",
+      "generated_at": "2026-08-02T06:43:46.639Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "21bc188338edb247b3b46e6dafedf519083004fa",
+      "target_base_commit": "21bc188338edb247b3b46e6dafedf519083004fa",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/services/cockpit-chat.ts",
+          "target_blob": "faf6e67741c5faf18332c7270047240d87db41e7",
+          "reason": "Ground exact tenant project source bindings, requested-fact coverage, and explicit target precedence"
+        },
+        {
+          "path": "src/workers/routes/customer-chat.ts",
+          "target_blob": "fa2dba181c6c31cbfa3ed83a327c0fc21f93fbae",
+          "reason": "Ground exact tenant project source bindings, requested-fact coverage, and explicit target precedence"
+        },
+        {
+          "path": "src/workers/lib/observability.ts",
+          "target_blob": "a678a68705f1f02232002b7ace776427cf6470e1",
+          "reason": "Ground exact tenant project source bindings, requested-fact coverage, and explicit target precedence"
+        },
+        {
+          "path": "src/workers/lib/intake-resolution.ts",
+          "target_blob": "a9a26007ff456c2432fe240a311f1d94af04a3ab",
+          "reason": "Ground exact tenant project source bindings, requested-fact coverage, and explicit target precedence"
+        },
+        {
+          "path": "src/workers/__tests__/cockpit-chat.test.ts",
+          "target_blob": "9588af0441e9428cc0b6b3aa544e108c48430457",
+          "reason": "Ground exact tenant project source bindings, requested-fact coverage, and explicit target precedence"
+        },
+        {
+          "path": "src/workers/__tests__/customer-chat-route.test.ts",
+          "target_blob": "bf57dd43896243a9ade0f58306c9a917e90e5672",
+          "reason": "Ground exact tenant project source bindings, requested-fact coverage, and explicit target precedence"
+        },
+        {
+          "path": "src/workers/__tests__/intake-resolution.test.ts",
+          "target_blob": "284211f377cd470b6ccc0022fe1784e9c148e1f1",
+          "reason": "Ground exact tenant project source bindings, requested-fact coverage, and explicit target precedence"
+        }
+      ]
     }
   ]
 }

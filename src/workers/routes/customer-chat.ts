@@ -39,12 +39,14 @@ import { resolveDocumentContext } from '../services/document-context';
 import { recordChatGroundingReads } from '../dal/document-access-store';
 import {
   answerCockpitChat,
+  classifyRequestedProjectFacts,
   isProjectInventoryQuestion,
   type ProjectPlanGrounding,
   type CockpitChatScope,
   type CockpitChatMode,
   type CockpitChatLLM,
   type ProjectGroundingFact,
+  type ProjectSourceGroundingFact,
   type SourceGroundingFact,
 } from '../services/cockpit-chat';
 
@@ -360,6 +362,26 @@ customerChatRoute.post('/customer-chat', async (ctx) => {
       }
     }
 
+    let projectSources: ProjectSourceGroundingFact[] | undefined;
+    const requestedProjectFacts = selectedProject ? classifyRequestedProjectFacts(message) : [];
+    if (selectedProject && requestedProjectFacts.includes('project_sources')) {
+      try {
+        const rows = await dal.listProjectSourceBindings(workspaceId, selectedProject.id);
+        projectSources = rows.map((binding) => ({
+          id: binding.id,
+          source_kind: binding.source_kind,
+          status: binding.status,
+          read_policy: binding.read_policy,
+        }));
+      } catch (err) {
+        emitEvent('chat_project_sources_failed', {
+          workspace_id: workspaceId,
+          project_id: selectedProject.id,
+          error: err instanceof Error ? err.message.slice(0, 200) : String(err).slice(0, 200),
+        });
+      }
+    }
+
     const documentContext = await resolveDocumentContext({
       dal,
       workspace_id: workspaceId,
@@ -512,7 +534,7 @@ customerChatRoute.post('/customer-chat', async (ctx) => {
       : undefined;
     const result = await answerCockpitChat(
       message,
-      { companyContext, events, documents, projects, plan, sources, total: events.length, scope, charter, personalizationProfile },
+      { companyContext, events, documents, projects, plan, projectSources, sources, total: events.length, scope, charter, personalizationProfile },
       ai,
       mode,
       claudeKey,
@@ -635,6 +657,7 @@ customerChatRoute.post('/customer-chat', async (ctx) => {
       grounding: {
         evidence_count: result.grounded_on.event_ids?.length ?? 0,
         project_plan_fact_count: result.grounded_on.plan.entities.length,
+        project_source_fact_count: result.grounded_on.project_sources.total,
         document_count: result.grounded_on.documents.total,
         freshness: result.grounded_on.plan.updated_at ?? result.grounded_on.data_freshness.newest_event_at,
       },
