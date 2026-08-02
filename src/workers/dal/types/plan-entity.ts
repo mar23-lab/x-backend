@@ -40,6 +40,29 @@ export interface PlanEntityDeleteReceipt {
   updated_at: string;
 }
 
+export type PlanEntityMutationOperation = 'create' | 'update' | 'delete';
+
+export interface PlanEntityMutationIdempotencyInput {
+  key: string;
+  request_sha256: string;
+  route: string;
+  request_id?: string | null;
+}
+
+export interface PlanEntityAuthorityReceipt {
+  entity: PlanEntity | null;
+  deleted: { id: PlanEntityId; updated_at: string } | null;
+  plan_entity_id: PlanEntityId;
+  plan_revision_id: string;
+  operation: PlanEntityMutationOperation;
+  receipt_id: string;
+  operation_event_id: string;
+  audit_event_id: string;
+  projection_outbox_id: string;
+  read_model_watermark: string;
+  replayed: boolean;
+}
+
 // Create input — the DAL fills in id/position/timestamps; workspace_id comes from the auth context.
 export interface PlanEntityCreateInput {
   workspace_id: WorkspaceId;

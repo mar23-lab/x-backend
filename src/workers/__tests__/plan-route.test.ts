@@ -68,12 +68,33 @@ describe('GET /plan/:scopeId', () => {
 });
 
 function jsonReq(app: ReturnType<typeof appFor>, path: string, method: string, body: unknown) {
-  return app.request(path, { method, body: JSON.stringify(body), headers: { 'content-type': 'application/json' } }, ON);
+  return app.request(path, {
+    method,
+    body: JSON.stringify(body),
+    headers: { 'content-type': 'application/json', 'Idempotency-Key': `test:${method}:${path}` },
+  }, ON);
+}
+
+function authorityReceipt(operation: 'create' | 'update' | 'delete', value = entity) {
+  const updatedAt = operation === 'delete' ? '2026-07-11T00:01:00Z' : value.updated_at;
+  return {
+    entity: operation === 'delete' ? null : value,
+    deleted: operation === 'delete' ? { id: value.id, updated_at: updatedAt } : null,
+    plan_entity_id: value.id,
+    plan_revision_id: `plan:${operation}:${value.id}:${updatedAt}`,
+    operation,
+    receipt_id: `plan:${operation}:${value.id}:evt_1`,
+    operation_event_id: 'evt_1',
+    audit_event_id: '1',
+    projection_outbox_id: 'out_1',
+    read_model_watermark: updatedAt,
+    replayed: false,
+  };
 }
 
 describe('POST /plan/entity', () => {
   it('201 — creates an entity; DAL called with (input incl workspace_id + kind, actor)', async () => {
-    const createPlanEntity = vi.fn(async () => entity);
+    const createPlanEntity = vi.fn(async () => authorityReceipt('create'));
     const res = await jsonReq(appFor({ createPlanEntity }), '/api/v1/plan/entity', 'POST', {
       scope_id: 'scope_x', scope_type: 'workspace', kind: 'goal', title: 'Ship G1',
     });
@@ -86,7 +107,18 @@ describe('POST /plan/entity', () => {
     expect(createPlanEntity).toHaveBeenCalledWith(
       expect.objectContaining({ workspace_id: 'org_a', scope_id: 'scope_x', kind: 'goal', title: 'Ship G1' }),
       'op',
+      expect.objectContaining({ key: 'test:POST:/api/v1/plan/entity', route: 'POST /api/v1/plan/entity' }),
     );
+  });
+
+  it('428 — refuses a write without an Idempotency-Key', async () => {
+    const createPlanEntity = vi.fn();
+    const res = await appFor({ createPlanEntity }).request('/api/v1/plan/entity', {
+      method: 'POST', body: JSON.stringify({ kind: 'goal', title: 'No key' }),
+      headers: { 'content-type': 'application/json' },
+    }, ON);
+    expect(res.status).toBe(428);
+    expect(createPlanEntity).not.toHaveBeenCalled();
   });
 
   it('400 — invalid kind rejected before any DAL call', async () => {
@@ -107,7 +139,8 @@ describe('POST /plan/entity', () => {
 describe('PATCH /plan/entity/:id', () => {
   it('200 — updates; getPlanEntity tenancy-check then updatePlanEntity(id, patch, actor)', async () => {
     const getPlanEntity = vi.fn(async () => entity);
-    const updatePlanEntity = vi.fn(async () => ({ ...entity, title: 'Renamed', position: 2 }));
+    const updated = { ...entity, title: 'Renamed', position: 2 };
+    const updatePlanEntity = vi.fn(async () => authorityReceipt('update', updated));
     const res = await jsonReq(appFor({ getPlanEntity, updatePlanEntity }), '/api/v1/plan/entity/ple_1', 'PATCH', { title: 'Renamed', position: 2 });
     expect(res.status).toBe(200);
     const j = (await res.json()) as { entity: { id: string; title: string }; plan_entity_id: string; plan_revision_id: string; operation: string };
@@ -116,7 +149,12 @@ describe('PATCH /plan/entity/:id', () => {
     expect(j.plan_revision_id).toBe('plan:update:ple_1:2026-07-11T00:00:00Z');
     expect(j.operation).toBe('update');
     expect(getPlanEntity).toHaveBeenCalledWith('ple_1', 'org_a');
-    expect(updatePlanEntity).toHaveBeenCalledWith('ple_1', { title: 'Renamed', position: 2 }, 'op');
+    expect(updatePlanEntity).toHaveBeenCalledWith(
+      entity,
+      { title: 'Renamed', position: 2 },
+      'op',
+      expect.objectContaining({ key: 'test:PATCH:/api/v1/plan/entity/ple_1', route: 'PATCH /api/v1/plan/entity/ple_1' }),
+    );
   });
 
   it('404 — tenancy: entity not in caller workspace; updatePlanEntity never called', async () => {
@@ -136,40 +174,34 @@ describe('PATCH /plan/entity/:id', () => {
 
   it('200 — explicit parent_id:null reparents to top-level (key-presence honoured)', async () => {
     const getPlanEntity = vi.fn(async () => entity);
-    const updatePlanEntity = vi.fn(async () => entity);
+    const updatePlanEntity = vi.fn(async () => authorityReceipt('update'));
     await jsonReq(appFor({ getPlanEntity, updatePlanEntity }), '/api/v1/plan/entity/ple_1', 'PATCH', { parent_id: null });
-    expect(updatePlanEntity).toHaveBeenCalledWith('ple_1', { parent_id: null }, 'op');
+    expect(updatePlanEntity).toHaveBeenCalledWith(
+      entity, { parent_id: null }, 'op', expect.objectContaining({ route: 'PATCH /api/v1/plan/entity/ple_1' }),
+    );
   });
 });
 
 describe('DELETE /plan/entity/:id', () => {
   it('200 — soft-deletes; getPlanEntity tenancy-check then softDeletePlanEntity(id, actor)', async () => {
     const getPlanEntity = vi.fn(async () => entity);
-    const softDeletePlanEntity = vi.fn(async () => ({ id: 'ple_1', workspace_id: 'org_a', scope_id: 'scope_x', parent_id: null, updated_at: '2026-07-11T00:01:00Z' }));
-    const res = await appFor({ getPlanEntity, softDeletePlanEntity }).request('/api/v1/plan/entity/ple_1', { method: 'DELETE' }, ON);
+    const softDeletePlanEntity = vi.fn(async () => authorityReceipt('delete'));
+    const res = await appFor({ getPlanEntity, softDeletePlanEntity }).request('/api/v1/plan/entity/ple_1', {
+      method: 'DELETE', headers: { 'Idempotency-Key': 'test:delete:ple_1' },
+    }, ON);
     expect(res.status).toBe(200);
-    expect((await res.json())).toEqual({
-      deleted: { id: 'ple_1', updated_at: '2026-07-11T00:01:00Z' },
-      plan_entity_id: 'ple_1',
-      plan_revision_id: 'plan:delete:ple_1:2026-07-11T00:01:00Z',
-      operation: 'delete',
-    });
-    expect(softDeletePlanEntity).toHaveBeenCalledWith('ple_1', 'op');
-  });
-
-  it('503 — delete receipt without revision source fails closed before customer success', async () => {
-    const getPlanEntity = vi.fn(async () => entity);
-    const softDeletePlanEntity = vi.fn(async () => ({ id: 'ple_1', workspace_id: 'org_a', scope_id: 'scope_x', parent_id: null, updated_at: '' }));
-    const res = await appFor({ getPlanEntity, softDeletePlanEntity }).request('/api/v1/plan/entity/ple_1', { method: 'DELETE' }, ON);
-    expect(res.status).toBe(503);
-    const body = (await res.json()) as { code?: string };
-    expect(body.code).toBe('SERVICE_UNAVAILABLE');
+    expect(await res.json()).toEqual(authorityReceipt('delete'));
+    expect(softDeletePlanEntity).toHaveBeenCalledWith(
+      entity, 'op', expect.objectContaining({ key: 'test:delete:ple_1', route: 'DELETE /api/v1/plan/entity/ple_1' }),
+    );
   });
 
   it('404 — tenancy: entity not in caller workspace; softDeletePlanEntity never called', async () => {
     const getPlanEntity = vi.fn(async () => null);
     const softDeletePlanEntity = vi.fn();
-    const res = await appFor({ getPlanEntity, softDeletePlanEntity }).request('/api/v1/plan/entity/ple_x', { method: 'DELETE' }, ON);
+    const res = await appFor({ getPlanEntity, softDeletePlanEntity }).request('/api/v1/plan/entity/ple_x', {
+      method: 'DELETE', headers: { 'Idempotency-Key': 'test:delete:missing' },
+    }, ON);
     expect(res.status).toBe(404);
     expect(softDeletePlanEntity).not.toHaveBeenCalled();
   });
