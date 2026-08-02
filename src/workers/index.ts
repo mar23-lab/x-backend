@@ -32,6 +32,7 @@ import * as Sentry from '@sentry/cloudflare';
 import { sentryFlush, sentryOptions, captureException, captureMessage, type SentryEnv } from './sentry';
 import { decideCronReport } from './lib/cron-observability';
 import { neonClient } from './db/client';
+import { resolveRlsSql } from './db/rls-connection';
 import { WorkersDalAdapter } from './dal/WorkersDalAdapter';
 import type { DalAdapter } from './dal/DalAdapter';
 import { listGoalsWithReviewDueRow, updateGoalReviewDueRow } from './dal/propagation-store';
@@ -169,7 +170,7 @@ app.use('*', async (ctx, next) => {
   // sharing connections across isolates in unexpected ways.
   try {
     const sql = neonClient(ctx.env.DATABASE_URL);
-    const rlsSql = ctx.env.XLOOOP_RLS_APP_DATABASE_URL ? neonClient(ctx.env.XLOOOP_RLS_APP_DATABASE_URL) : sql;
+    const rlsSql = resolveRlsSql(ctx.env, sql);
     ctx.set('dal', new WorkersDalAdapter(sql, rlsSql));
   } catch (err) {
     // If DATABASE_URL is missing, only /health should still respond.
@@ -381,7 +382,7 @@ const scheduledHandler = async (
   }
   try {
     const sql = neonClient(env.DATABASE_URL);
-    const rlsSql = env.XLOOOP_RLS_APP_DATABASE_URL ? neonClient(env.XLOOOP_RLS_APP_DATABASE_URL) : sql;
+    const rlsSql = resolveRlsSql(env, sql);
     const dal = new WorkersDalAdapter(sql, rlsSql);
     const modelLineageRequired = envFlagTrue(env.CONTEXT_PACKET_PERSISTENCE_ENABLED);
     const result = await entry.handler({
@@ -462,7 +463,7 @@ const tenantProjectionQueueHandler = async (
   ctx: { waitUntil: (promise: Promise<unknown>) => void },
 ): Promise<void> => {
   const sql = neonClient(env.DATABASE_URL);
-  const rlsSql = env.XLOOOP_RLS_APP_DATABASE_URL ? neonClient(env.XLOOOP_RLS_APP_DATABASE_URL) : sql;
+  const rlsSql = resolveRlsSql(env, sql);
   const dal = new WorkersDalAdapter(sql, rlsSql);
   const result = await consumeTenantProjectionBatch({
     batch,
