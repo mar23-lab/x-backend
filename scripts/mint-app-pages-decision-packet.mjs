@@ -26,18 +26,21 @@
 //
 // TTL: the verifier caps authorisation at 30 minutes from approved_at. Mint LATE.
 //
-// PAIRING: pass --cutover-id with the value the API minter printed. The verifier refuses a packet
-// whose cutover_id differs from the API packet's, and refuses a packet with none once one is
-// expected — so the two halves cannot be from different cutovers.
+// PAIRING: prefer --from-api-packet. It inherits cutover_id from the packet the API minter just
+// wrote AND asserts that packet's candidate_commit_sha equals this release's backend_sha — so the
+// id proves not merely "minted together" but "both halves target the same build". Passing
+// --cutover-id as a literal still works when it agrees, but it means retyping a UUID between two
+// commands, which is how a documented placeholder ended up pasted verbatim during the 260803
+// cutover.
 //
 // Usage:
 //   node scripts/mint-app-pages-decision-packet.mjs \
 //     --approver "Your Name" \
 //     --approval-reference "conversation:2026-08-03-cutover" \
-//     --cutover-id <uuid printed by mint-authority-decision-packet> \
+//     --from-api-packet <path the API minter printed> \
 //     --rollback-frontend-sha <40-hex currently-live frontend> \
 //     --rollback-deployment-id <uuid from: wrangler pages deployment list --project-name xlooop-app> \
-//     [--ttl-minutes 25] [--out <path OUTSIDE the repo>]
+//     [--ttl-minutes 25] [--out <path OUTSIDE the repo>] [--cutover-id <uuid> · legacy literal]
 //
 //   node scripts/mint-app-pages-decision-packet.mjs --self-test
 //
@@ -175,18 +178,13 @@ if (!UUID.test(rollbackDeploymentId)) {
   refuse('--rollback-deployment-id must be a UUID',
     'From: wrangler pages deployment list --project-name xlooop-app');
 }
-const cutoverId = arg('cutover-id');
-if (cutoverId && !UUID.test(cutoverId)) refuse('--cutover-id must be a UUID', 'Printed by mint-authority-decision-packet.');
-if (!cutoverId) {
-  console.error('mint-app-pages-decision-packet · WARNING · no --cutover-id given.');
-  console.error('  The two halves of this cutover will not be provably paired. Pass the id the API minter printed.');
-}
-
 const ttlMinutes = Number(arg('ttl-minutes') || '25');
 if (!Number.isFinite(ttlMinutes) || ttlMinutes < 1 || ttlMinutes > 30) {
   refuse('--ttl-minutes must be 1..30', 'The verifier caps authorisation at 30 minutes.');
 }
 
+// The manifest is loaded BEFORE the cutover-id resolution below, because --from-api-packet
+// cross-checks the API packet's candidate sha against this release's backend sha.
 const releaseDir = path.resolve(process.env.XLOOOP_APP_PAGES_RELEASE_DIR || path.join(root, 'dist-app-pages-release'));
 const manifestPath = path.join(releaseDir, 'release-manifest.json');
 if (!existsSync(manifestPath)) {
@@ -194,6 +192,54 @@ if (!existsSync(manifestPath)) {
     'Assemble the release first: XLOOOP_FRONTEND_ARTIFACT_DIR=<built frontend> npm run prepare:app:prod');
 }
 const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
+
+// CUTOVER ID — inherited, not transcribed.
+//
+// This asked for --cutover-id as a literal, which meant copying a UUID out of one command's output
+// into the next command by hand. Measured 260803: the operator ran the documented command with the
+// placeholder text still in it and this script refused with "must be a UUID". The refusal was
+// correct; requiring the transcription at all was not. The id already exists on disk in the API
+// packet, so reading it is strictly safer than retyping it — and it lets the script check something
+// a human copy never could.
+//
+// --from-api-packet <path> inherits cutover_id AND asserts the API packet's candidate_commit_sha
+// equals this release's backend_sha. That is the pairing the id is supposed to attest; asserting it
+// here turns "the ids match" into "the ids match AND both halves target the same build". An
+// explicit --cutover-id still wins when it agrees, so no existing invocation changes behaviour.
+const apiPacketPath = arg('from-api-packet');
+let cutoverId = arg('cutover-id');
+if (cutoverId && !UUID.test(cutoverId)) {
+  refuse('--cutover-id must be a UUID',
+    'Printed by mint-authority-decision-packet — or drop it and pass --from-api-packet instead.');
+}
+if (apiPacketPath) {
+  let apiPacket;
+  try {
+    apiPacket = JSON.parse(readFileSync(path.resolve(apiPacketPath), 'utf8'));
+  } catch (err) {
+    refuse(`--from-api-packet could not be read: ${err.message}`,
+      'Point it at the packet mint-authority-decision-packet wrote.');
+  }
+  const inherited = apiPacket?.cutover_id;
+  if (!inherited || !UUID.test(inherited)) {
+    refuse('--from-api-packet carries no usable cutover_id', 'Re-mint the API packet; it prints one.');
+  }
+  if (cutoverId && cutoverId !== inherited) {
+    refuse('--cutover-id disagrees with --from-api-packet',
+      `explicit ${cutoverId} vs packet ${inherited} — one of them belongs to a different cutover.`);
+  }
+  if (apiPacket.candidate_commit_sha && apiPacket.candidate_commit_sha !== manifest.backend_sha) {
+    refuse('the API packet and the assembled release target DIFFERENT backend shas',
+      `packet ${String(apiPacket.candidate_commit_sha).slice(0, 12)} vs release `
+      + `${String(manifest.backend_sha).slice(0, 12)} — re-assemble with prepare:app:prod, or the pair is a lie.`);
+  }
+  cutoverId = inherited;
+}
+if (!cutoverId) {
+  console.error('mint-app-pages-decision-packet · WARNING · no cutover id.');
+  console.error('  The two halves of this cutover will not be provably paired.');
+  console.error('  Prefer: --from-api-packet <the API packet you just minted>');
+}
 
 if (manifest.frontend_sha === rollbackFrontendSha) {
   refuse('rollback frontend sha equals the candidate', 'A rollback target must differ from what you are shipping.');
@@ -222,7 +268,8 @@ console.log(`  candidate    frontend ${manifest.frontend_sha}`);
 console.log(`               backend  ${manifest.backend_sha}`);
 console.log(`  rollback to  ${rollbackFrontendSha} / ${rollbackDeploymentId}`);
 console.log(`  approver     ${approver}`);
-console.log(`  cutover_id   ${cutoverId || '(NONE — halves are not provably paired)'}`);
+console.log(`  cutover_id   ${cutoverId || '(NONE — halves are not provably paired)'}`
+  + (apiPacketPath ? `  [inherited from ${path.basename(path.resolve(apiPacketPath))}, backend sha cross-checked]` : ''));
 console.log(`  expires      ${packet.decision.expires_at}  (${ttlMinutes} min — the clock is RUNNING)`);
 if (inRepo) {
   console.log('  WARNING: this packet is INSIDE the repo and will make the worktree dirty.');
