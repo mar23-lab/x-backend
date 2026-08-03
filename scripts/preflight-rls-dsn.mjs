@@ -20,9 +20,26 @@
 //   node scripts/preflight-rls-dsn.mjs --self-test # offline: exercise the parse/decision logic
 
 import { execFileSync } from 'node:child_process';
+import { existsSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import path from 'node:path';
 
 const REQUIRED_SECRET = 'XLOOOP_RLS_APP_DATABASE_URL';
 const CONFIG = 'wrangler.toml';
+
+// RESOLVE THE LOCAL BINARY FIRST. This spawned a bare `wrangler`, which only works if wrangler is
+// installed GLOBALLY — it is not a dependency of this machine, it is a devDependency of this repo.
+// Measured 260803: `spawnSync wrangler ENOENT`, so this preflight failed CLOSED and would have
+// halted `deploy:api` at step 3 of 10 on any machine without a global install, AFTER the operator
+// had supplied every credential the later steps ask for. The binary was present the whole time at
+// node_modules/.bin/wrangler.
+//
+// Fail-closed behaviour is unchanged and deliberate: if neither the local nor a global wrangler can
+// list the secrets, we still block, because an unverifiable secret list cannot prove the RLS DSN is
+// bound. This only stops us from blocking on the wrong thing.
+const HERE = path.dirname(fileURLToPath(import.meta.url));
+const LOCAL_WRANGLER = path.resolve(HERE, '..', 'node_modules', '.bin', 'wrangler');
+const WRANGLER_BIN = existsSync(LOCAL_WRANGLER) ? LOCAL_WRANGLER : 'wrangler';
 
 // Parse `wrangler secret list` output. Modern wrangler emits a JSON array of {name,type} — but
 // surrounds it with garbage whose PLACEMENT is nondeterministic: an update-check notice precedes it
@@ -92,7 +109,7 @@ if (process.argv.includes('--self-test')) {
 
 let names;
 try {
-  const raw = execFileSync('wrangler', ['secret', 'list', '--config', CONFIG], { encoding: 'utf8' });
+  const raw = execFileSync(WRANGLER_BIN, ['secret', 'list', '--config', CONFIG], { encoding: 'utf8' });
   names = parseSecretNames(raw);
 } catch (err) {
   console.error(`FAIL preflight-rls-dsn: could not list wrangler secrets (${err.message}).`);
