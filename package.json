@@ -10,6 +10,8 @@
     "prepare": "git config core.hooksPath .husky || true",
     "deploy:api": "npm run verify:authority-decision:deploy && npm run verify:schema91-postgres && node scripts/preflight-rls-dsn.mjs && node scripts/verify-rls-grant-parity.mjs && node scripts/verify-prod-migrations.mjs && node scripts/verify-operation-event-source-tool-constraint.mjs --live && node scripts/verify-deploy-schema-head.mjs && node scripts/verify-deploy-sha-current.mjs && node scripts/verify-frontend-pair-before-api-deploy.mjs && node scripts/consume-api-deployment-authorization.mjs && wrangler deploy --config wrangler.toml --var BUILD_SHA:$(git rev-parse HEAD) --var BUILD_TIME:$(date -u +%Y%m%dT%H%M%SZ) --var XLOOOP_SCHEMA_HEAD:$XLOOOP_SCHEMA_HEAD && npm run deploy:api:receipt",
     "prepare:app:prod": "node scripts/prepare-app-pages-release.mjs",
+    "mint:app-pages-decision": "node scripts/mint-app-pages-decision-packet.mjs",
+    "mint:app-pages-decision:self-test": "node scripts/mint-app-pages-decision-packet.mjs --self-test",
     "deploy:app:prod": "node scripts/deploy-app-prod.mjs",
     "verify:app-security-headers": "node scripts/verify-app-security-header-parity.mjs",
     "verify:app-security-headers:self-test": "node scripts/verify-app-security-header-parity.mjs --self-test",

@@ -4771,6 +4771,22 @@
           "reason": "Strict authority claim could never finalize: a same-statement UPDATE cannot see its sibling CTE INSERT (Postgres snapshot), so consent/revoke failed 100% on real Postgres. Claim now written once, complete, attempted unconditionally via LEFT JOIN so the 23505 replay path still fires. Proven 3/3 real Postgres; lineage assertions inverted into a regression guard; comments trimmed to hold the 500-line ratchet."
         }
       ]
+    },
+    {
+      "delta_id": "claude-pages-packet-minter-20260803",
+      "generated_at": "2026-08-03T10:35:08.052Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "72d9c00e4e3bd734358891f33f8949e64f22c2af",
+      "target_base_commit": "72d9c00e4e3bd734358891f33f8949e64f22c2af",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "package.json",
+          "target_blob": "415529dd1ceaf9a3756b51c91948eace739c4c16",
+          "reason": "Add mint-app-pages-decision-packet: deploy:api has had a minter since 260728 but deploy:app:prod never did, so the SECOND packet of every paired cutover was hand-authored JSON typed under a 30-minute clock. It reads the SAME release manifest the deploy reads, refuses to synthesise the approver (the API minter's doctrine), pins commercial_release_allowed false, carries the cutover_id so the halves are provably paired, and defaults --out OUTSIDE the repo because an untracked packet makes the tree dirty and deploy:app:prod refuses on a dirty tree."
+        }
+      ]
     }
   ]
 }
