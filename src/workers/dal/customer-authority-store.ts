@@ -97,16 +97,7 @@ export async function recordCustomerConsentAckRow(
   let rows: Array<{ response_body: unknown }>;
   try {
     rows = (await sql/*sql*/`
-    WITH strict_claim AS (
-      INSERT INTO idempotency_keys (
-        workspace_id, idempotency_key, route, actor_user_id, request_sha256, mode,
-        response_status, response_body, completed_at
-      ) VALUES (
-        ${input.workspace_id}, ${input.idempotency_key.trim()}, ${input.idempotency_route},
-        ${input.user_id}, ${input.request_sha256}, 'authority_strict', NULL, NULL, NULL
-      )
-      RETURNING id
-    ), consent_written AS (
+    WITH consent_written AS (
       INSERT INTO customer_authority_consents (
         id, workspace_id, access_request_id, operator_approved_at, operator_approved_by,
         consent_acked_at, consent_acked_by, full_name_typed, scopes_confirmed,
@@ -156,7 +147,6 @@ export async function recordCustomerConsentAckRow(
         END,
         'internal_owner_only', ${commandTimestamp}::timestamptz, ${input.user_id}, 'human', 'role', ${input.request_id ?? null}
       FROM consent_written
-      JOIN strict_claim ON TRUE
       RETURNING id
     ), audit_written AS (
       INSERT INTO audit_logs (
@@ -210,24 +200,35 @@ export async function recordCustomerConsentAckRow(
       JOIN event_written ON TRUE
       JOIN audit_written ON TRUE
       JOIN outbox_written ON TRUE
-    ), claim_finalized AS (
-      UPDATE idempotency_keys SET
-        response_status = 202,
-        response_body = response_payload.response_body,
-        completed_at = ${commandTimestamp}::timestamptz
-      FROM strict_claim, response_payload
-      WHERE idempotency_keys.id = strict_claim.id
-      RETURNING idempotency_keys.response_body
+    ), strict_claim AS (
+      -- Claim written LAST and already complete. A same-statement UPDATE can NEVER finalize it:
+      -- data-modifying CTEs read the statement-start snapshot, so the UPDATE could not see its
+      -- sibling INSERT and returned 0, failing consent/revoke 100% on real Postgres (260803).
+      INSERT INTO idempotency_keys (
+        workspace_id, idempotency_key, route, actor_user_id, request_sha256, mode,
+        response_status, response_body, completed_at
+      )
+      SELECT
+        ${input.workspace_id}, ${input.idempotency_key.trim()}, ${input.idempotency_route},
+        ${input.user_id}, ${input.request_sha256}, 'authority_strict',
+        202, response_payload.response_body, ${commandTimestamp}::timestamptz
+      -- LEFT JOIN is load-bearing: the claim must be ATTEMPTED unconditionally so a repeat command
+      -- still collides on idempotency_keys_authority_key and takes the 23505 replay path. Sourcing
+      -- it FROM response_payload inserts zero rows when the business CTEs match nothing, silently
+      -- disabling replay. response_body is NULL if the effect did not happen; the assert rejects it.
+      FROM (SELECT 1) AS always_claim
+      LEFT JOIN response_payload ON TRUE
+      RETURNING response_body
     ), authority_result AS (
       SELECT
-        (SELECT response_body FROM claim_finalized) AS response_body,
+        (SELECT response_body FROM strict_claim) AS response_body,
         xlooop_assert_authority_complete(
           (SELECT count(*) FROM strict_claim) = 1
           AND (SELECT count(*) FROM consent_written) = 1
           AND (SELECT count(*) FROM event_written) = 1
           AND (SELECT count(*) FROM audit_written) = 1
           AND (SELECT count(*) FROM outbox_written) = 1
-          AND (SELECT count(*) FROM claim_finalized) = 1,
+          AND (SELECT count(*) FROM response_payload) = 1,
           'customer_authority_consent'
         ) AS authority_complete
       FROM strict_claim
@@ -337,16 +338,7 @@ export async function revokeCustomerAuthorityRow(
   let rows: Array<{ response_body: unknown }>;
   try {
     rows = (await sql/*sql*/`
-    WITH strict_claim AS (
-      INSERT INTO idempotency_keys (
-        workspace_id, idempotency_key, route, actor_user_id, request_sha256, mode,
-        response_status, response_body, completed_at
-      ) VALUES (
-        ${input.workspace_id}, ${input.idempotency_key.trim()}, ${input.idempotency_route},
-        ${input.revoked_by}, ${input.request_sha256}, 'authority_strict', NULL, NULL, NULL
-      )
-      RETURNING id
-    ), consent_updated AS (
+    WITH consent_updated AS (
       UPDATE customer_authority_consents SET
         revoked_at     = ${commandTimestamp}::timestamptz,
         revoked_by     = ${input.revoked_by},
@@ -354,7 +346,6 @@ export async function revokeCustomerAuthorityRow(
         updated_at     = ${commandTimestamp}::timestamptz
       WHERE workspace_id = ${input.workspace_id}
         AND revoked_at IS NULL
-        AND EXISTS (SELECT 1 FROM strict_claim)
       RETURNING id, workspace_id, access_request_id, operator_approved_at, operator_approved_by,
                 allowed_modes, allowed_apps, consent_acked_at, consent_acked_by, full_name_typed,
                 scopes_confirmed, consent_version, ip_address, user_agent, revoked_at, revoked_by,
@@ -420,24 +411,32 @@ export async function revokeCustomerAuthorityRow(
       JOIN event_written ON TRUE
       JOIN audit_written ON TRUE
       JOIN outbox_written ON TRUE
-    ), claim_finalized AS (
-      UPDATE idempotency_keys SET
-        response_status = 200,
-        response_body = response_payload.response_body,
-        completed_at = ${commandTimestamp}::timestamptz
-      FROM strict_claim, response_payload
-      WHERE idempotency_keys.id = strict_claim.id
-      RETURNING idempotency_keys.response_body
+    ), strict_claim AS (
+      -- Written LAST and already complete — see the consent path. The EXISTS guard that used to sit
+      -- on consent_updated went with it: redundant, since one statement rolls back as a unit.
+      INSERT INTO idempotency_keys (
+        workspace_id, idempotency_key, route, actor_user_id, request_sha256, mode,
+        response_status, response_body, completed_at
+      )
+      SELECT
+        ${input.workspace_id}, ${input.idempotency_key.trim()}, ${input.idempotency_route},
+        ${input.revoked_by}, ${input.request_sha256}, 'authority_strict',
+        200, response_payload.response_body, ${commandTimestamp}::timestamptz
+      -- LEFT JOIN, not FROM: a revoke replay finds no ACTIVE consent, so the business CTEs are
+      -- empty; the claim must still be attempted or replay degrades into a 404.
+      FROM (SELECT 1) AS always_claim
+      LEFT JOIN response_payload ON TRUE
+      RETURNING response_body
     ), authority_result AS (
       SELECT
-        (SELECT response_body FROM claim_finalized) AS response_body,
+        (SELECT response_body FROM strict_claim) AS response_body,
         xlooop_assert_authority_complete(
           (SELECT count(*) FROM strict_claim) = 1
           AND (SELECT count(*) FROM consent_updated) = 1
           AND (SELECT count(*) FROM event_written) = 1
           AND (SELECT count(*) FROM audit_written) = 1
           AND (SELECT count(*) FROM outbox_written) = 1
-          AND (SELECT count(*) FROM claim_finalized) = 1,
+          AND (SELECT count(*) FROM response_payload) = 1,
           'customer_authority_revoke'
         ) AS authority_complete
       FROM strict_claim

@@ -103,7 +103,23 @@ describe('customer authority writes are fail-closed', () => {
       /FROM consent_written\s+JOIN event_written ON TRUE\s+JOIN audit_written ON TRUE\s+JOIN outbox_written ON TRUE/s,
     );
     expect(db.statement()).toMatch(/mode,\s+response_status, response_body, completed_at/);
-    expect(db.statement()).toMatch(/claim_finalized/);
+    // REGRESSION GUARD (260803). This previously asserted the presence of a `claim_finalized` CTE:
+    //   UPDATE idempotency_keys ... FROM strict_claim WHERE idempotency_keys.id = strict_claim.id
+    // which can NEVER match. Postgres data-modifying CTEs all read the snapshot taken at statement
+    // start, so that UPDATE could not see the row its sibling INSERT had just created. It returned
+    // 0 rows every time, the completeness assert raised 23514, and strict consent/revoke failed
+    // 100% of the time against real Postgres — while this very test passed, because the mock `sql`
+    // here has no snapshot semantics. So the assertion was pinning the broken shape in place.
+    //
+    // Inverted deliberately: assert the impossible construct is ABSENT. The claim is now written
+    // once, already complete, and its correctness is proven where it can actually be proven —
+    // intake-schema91-postgres against a real database.
+    // Anchored to line-start so it matches a real statement and not the SQL comment that explains
+    // why the construct was removed — the comment text is part of db.statement() too.
+    expect(db.statement()).not.toMatch(/^\s*UPDATE idempotency_keys/m);
+    // And it must be attempted UNCONDITIONALLY, or a repeat command never collides on the unique
+    // index and the 23505 replay path silently stops working.
+    expect(db.statement()).toMatch(/FROM \(SELECT 1\) AS always_claim\s+LEFT JOIN response_payload ON TRUE/s);
   });
 
   it('customer consent cannot issue a receipt when any authority CTE yields no row', async () => {
@@ -134,7 +150,14 @@ describe('customer authority writes are fail-closed', () => {
     expect(db.statement()).toMatch(
       /FROM consent_updated\s+JOIN event_written ON TRUE\s+JOIN audit_written ON TRUE\s+JOIN outbox_written ON TRUE/s,
     );
-    expect(db.statement()).toMatch(/claim_finalized/);
+    // Same regression guard as the consent path — the never-matching same-statement UPDATE must not
+    // return, and the claim must be attempted unconditionally so a revoke REPLAY still hits 23505.
+    // Sourcing the claim straight FROM response_payload inserted zero rows on a replay (no active
+    // consent to revoke), which turned a legitimate replay into a 404.
+    // Anchored to line-start so it matches a real statement and not the SQL comment that explains
+    // why the construct was removed — the comment text is part of db.statement() too.
+    expect(db.statement()).not.toMatch(/^\s*UPDATE idempotency_keys/m);
+    expect(db.statement()).toMatch(/FROM \(SELECT 1\) AS always_claim\s+LEFT JOIN response_payload ON TRUE/s);
   });
 
   it('customer authority revoke cannot issue a receipt when no active consent row is updated', async () => {
