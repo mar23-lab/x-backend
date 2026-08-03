@@ -13,6 +13,9 @@
 
 export interface TurnstileEnv {
   TURNSTILE_SECRET?: string;
+  // Read ONLY to decide the siteverify-unreachable posture (see the catch below): a bot check that
+  // cannot run is a refusal under production authority and a degrade elsewhere.
+  XLOOOP_AUTHORITY_MODE?: string;
 }
 
 export interface TurnstileResult {
@@ -46,7 +49,21 @@ export async function verifyTurnstile(
     if (data && data.success === true) return { ok: true, skipped: false };
     return { ok: false, skipped: false, reason: 'verification_failed' };
   } catch {
-    // Network error reaching Cloudflare. Fail OPEN; rate-limit still applies.
+    // 260803 · Network error reaching Cloudflare siteverify.
+    //
+    // This used to fail OPEN unconditionally, with "rate-limit still applies" as the justification.
+    // That justification was measured and does not hold the way it reads: until 260803 the only
+    // limiter on this path was the per-IP SIGNUP bucket, and an attacker who can reach the endpoint
+    // can also make siteverify appear unreachable is not the threat — the real one is simpler. A
+    // transient Cloudflare blip silently disables bot protection on the public signup funnel for its
+    // duration, and nothing anywhere reports that it happened.
+    //
+    // Under production authority a bot check that cannot run is a REFUSAL, not a pass. Outside
+    // production it still degrades open so local and shadow work is unaffected, and the reason code
+    // is preserved either way so the caller can distinguish "unreachable" from "failed".
+    if (env.XLOOOP_AUTHORITY_MODE === 'production') {
+      return { ok: false, skipped: false, reason: 'siteverify_unreachable' };
+    }
     return { ok: true, skipped: true, reason: 'siteverify_unreachable' };
   }
 }
