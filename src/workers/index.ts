@@ -180,23 +180,7 @@ app.use('*', async (ctx, next) => {
   await next();
 });
 
-// Wave ι · the global API rate limit. rate-limit.ts has shipped the middleware FACTORY since
-// Wave θ with a header that reads "Wave ι (or operator step) wires app.use('/api/v1/*',
-// rateLimit()) into src/workers/index.ts" — that step was never taken. Measured 2026-08-03:
-// only three mounts called rateLimit() (this signup funnel, /customer-chat, /readiness/*), so
-// 216 of 219 route-methods had NO rate limit of any kind. PR #140 correctly bound the durable
-// RATE_LIMITER_IP/USER/TENANT buckets (wrangler.toml:115-131) — they were simply never consulted,
-// which is the reason the tenant bucket documented as "catches a single tenant exhausting the
-// worker" had never caught anything.
-//
-// Concretely this left POST /api/v1/cockpit-chat/enhance-prompt (an LLM call) and POST
-// /api/v1/documents (10MB uploads) uncapped for any authenticated caller — including a leaked
-// customer API token, since CUSTOMER_API_TOKENS_ENABLED is true in production.
-//
-// Defaults come from DEFAULT_CONFIG: 100/min/IP, 1000/min/user, 5000/min/tenant, with
-// /api/v1/health on the skip list so uptime probes are never throttled. This is mounted BEFORE
-// the signup limiter so both apply there and the stricter per-IP bucket still governs the
-// unauthenticated funnel.
+// Wave ι · global API rate limit (260803) — the mount rate-limit.ts asked for; 216/219 were uncapped.
 app.use('/api/v1/*', rateLimit());
 
 // R56 Stage 1 · public-surface hardening · strict per-IP rate-limit on the unauthenticated
