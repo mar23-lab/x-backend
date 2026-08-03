@@ -4598,6 +4598,22 @@
           "reason": "Codex-authored strict consent/revoke idempotency completed by Claude session 23fa1ef6: authority_strict binding on both routes plus the zero-rows error-code restoration (409 lineage-missing / 404 not-found)."
         }
       ]
+    },
+    {
+      "delta_id": "claude-strict-consent-split-20260803",
+      "generated_at": "2026-08-03T04:45:47.070Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "a749dcd5dd0eb7b8bb5cb91128790e765807bac9",
+      "target_base_commit": "a749dcd5dd0eb7b8bb5cb91128790e765807bac9",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/dal/customer-authority-store.ts",
+          "target_blob": "91f4ecb2d0ecfa4ced65020751a48b83fbe76cd7",
+          "reason": "Extracted the strict-idempotency claim helpers into customer-authority-strict.ts so customer-authority-store.ts returns under the 500-line ratchet; behaviour-preserving, 52/52 tests unchanged."
+        }
+      ]
     }
   ]
 }
