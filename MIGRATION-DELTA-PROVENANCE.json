@@ -4567,6 +4567,37 @@
           "reason": "strict provider-confirmed invitation delivery with atomic receipt, retry recovery, and focused authority modules"
         }
       ]
+    },
+    {
+      "delta_id": "claude-strict-consent-20260803",
+      "generated_at": "2026-08-03T03:56:44.444Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "3e8bb6f6cce0ade1b942038402aec2402bf54940",
+      "target_base_commit": "3e8bb6f6cce0ade1b942038402aec2402bf54940",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/__tests__/customer.test.ts",
+          "target_blob": "a45e6167e0f394dd4d7cbb2f00c922da190a4bb0",
+          "reason": "Codex-authored strict consent/revoke idempotency completed by Claude session 23fa1ef6: authority_strict binding on both routes plus the zero-rows error-code restoration (409 lineage-missing / 404 not-found)."
+        },
+        {
+          "path": "src/workers/dal/customer-authority-store.ts",
+          "target_blob": "e232f3ec4c54538a146ce03ab5320638f6144ed7",
+          "reason": "Codex-authored strict consent/revoke idempotency completed by Claude session 23fa1ef6: authority_strict binding on both routes plus the zero-rows error-code restoration (409 lineage-missing / 404 not-found)."
+        },
+        {
+          "path": "src/workers/dal/types/access.ts",
+          "target_blob": "deb673f8d5e67cecb02f7c0b4b56229508f88f05",
+          "reason": "Codex-authored strict consent/revoke idempotency completed by Claude session 23fa1ef6: authority_strict binding on both routes plus the zero-rows error-code restoration (409 lineage-missing / 404 not-found)."
+        },
+        {
+          "path": "src/workers/routes/customer.ts",
+          "target_blob": "5c076773b787762fa264381e387b6b5817077a36",
+          "reason": "Codex-authored strict consent/revoke idempotency completed by Claude session 23fa1ef6: authority_strict binding on both routes plus the zero-rows error-code restoration (409 lineage-missing / 404 not-found)."
+        }
+      ]
     }
   ]
 }
