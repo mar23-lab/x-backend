@@ -106,6 +106,13 @@ const gates = [
   // logic can go RED, including that "could not reach /health" is UNKNOWN and never "clean".
   ['release-debt controls', 'npm', ['run', 'verify:release-debt:self-test']],
   ['release-debt visibility', 'npm', ['run', 'verify:release-debt']],
+  // MB-P projection freshness (260803). This verifier is correct and fail-closed and had ZERO call
+  // sites — two consumers spawned it by name, but nothing in any gate chain ran it, so the staged
+  // projection's lease expired 2026-07-18 and stayed expired silently. It is ADVISORY here because
+  // clearing it requires an owner-approved MB-P re-export, which this runner cannot perform; making
+  // it blocking would create a red with no path out and get the gate deleted instead of the lease
+  // renewed. Advisory means it is finally READ.
+  ['MB-P projection freshness', 'npm', ['run', 'verify:mbp-projection-freshness'], { advisory: true }],
   ['typecheck', 'npm', ['run', 'typecheck']],
   ['worker suite', 'npm', ['test']],
 ];
@@ -121,12 +128,29 @@ const gates = [
 //
 // Now: count what actually ran, and name what did not. The break is retained — failing fast is
 // correct — but the gates it skipped are reported instead of vanishing.
+// ADVISORY GATES (260803). A gate tuple may carry a 4th element { advisory: true }. An advisory
+// gate RUNS and REPORTS but does not break the chain.
+//
+// This exists for a specific, real shape: a control that is correct and fail-closed, but whose red
+// state can only be cleared by someone other than the person running the build. Wiring such a gate
+// as blocking manufactures a red with no path out — the "remediation that cannot clear" defect this
+// estate has already paid for elsewhere — and the predictable response is that someone deletes the
+// gate. Advisory keeps the signal without creating that pressure.
+//
+// It is NOT a soft-fail escape hatch for gates you own. If you can fix it, it blocks.
 let passed = 0;
 let failedGate = null;
-for (const [name, command, args] of gates) {
-  console.log(`\n=== ${name} ===`);
+const advisoryFailures = [];
+for (const [name, command, args, opts] of gates) {
+  console.log(`\n=== ${name}${opts?.advisory ? ' (advisory)' : ''} ===`);
   const result = spawnSync(command, args, { stdio: 'inherit', env: process.env });
   if (result.status !== 0) {
+    if (opts?.advisory) {
+      advisoryFailures.push(name);
+      console.error(`ADVISORY-FAIL ${name} (exit ${String(result.status)}) — reported, not blocking`);
+      passed += 1;
+      continue;
+    }
     failedGate = { name, status: result.status };
     console.error(`FAIL ${name} (exit ${String(result.status)})`);
     break;
@@ -144,4 +168,12 @@ if (failedGate) {
   );
   process.exit(1);
 }
-console.log(`\nPASS x-backend local authority stack (${passed}/${gates.length} gates executed and passed, 0 skipped)`);
+if (advisoryFailures.length) {
+  console.log(
+    `\nPASS x-backend local authority stack (${passed}/${gates.length} gates executed, 0 skipped) `
+    + `— ${advisoryFailures.length} ADVISORY failure(s): ${advisoryFailures.join(', ')}`,
+  );
+  console.log('  Advisory reds are real findings that this runner cannot clear. Do not ignore them.');
+} else {
+  console.log(`\nPASS x-backend local authority stack (${passed}/${gates.length} gates executed and passed, 0 skipped)`);
+}
