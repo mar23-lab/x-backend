@@ -100,6 +100,12 @@ const gates = [
   ['customer onboarding composed gate', 'npm', ['run', 'verify:customer-onboarding-composed-gate']],
   ['customer onboarding composed gate controls', 'npm', ['run', 'verify:customer-onboarding-composed-gate:self-test']],
   ['customer authority gates controls', 'npm', ['run', 'verify:customer-authority-gates:self-test']],
+  // Release-debt visibility (260803). Advisory by default — it reports how far HEAD has drifted from
+  // the LIVE deployed sha, which is the signal that was missing while 22 backend commits accumulated
+  // undeployed across five sessions. The self-test is the gate on the gate: it proves the threshold
+  // logic can go RED, including that "could not reach /health" is UNKNOWN and never "clean".
+  ['release-debt controls', 'npm', ['run', 'verify:release-debt:self-test']],
+  ['release-debt visibility', 'npm', ['run', 'verify:release-debt']],
   ['typecheck', 'npm', ['run', 'typecheck']],
   ['worker suite', 'npm', ['test']],
 ];
