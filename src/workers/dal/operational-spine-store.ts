@@ -650,6 +650,20 @@ export async function executeCustomerDataLifecycleRequestRow(
     input.execution_note ? `Operator note: ${input.execution_note}` : '',
   ].filter(Boolean).join(' ');
 
+  // Every write below carries its precondition IN-STATEMENT. That placement is the whole fix, not a
+  // style choice: these statements run inside withWorkspaceRlsContext, whose transaction COMMITS
+  // when it resolves, so the `if (!approvalRows.length) throw` below executes AFTER the data is
+  // already durable. Validating a result set cannot undo a committed write.
+  //
+  // Two defects of that shape were live here. An approval that was NOT 'approved' still archived
+  // the packet and still inserted a receipt asserting an approved erasure had completed — the
+  // caller saw 404 while the mutation persisted. And a delete whose target packet did not exist
+  // still wrote an erasure receipt for an archive that never happened.
+  //
+  // This is the sign-off CAS idiom (governance-store.ts:281-287) applied to the most dangerous
+  // operation in the codebase: put the precondition inside the write so zero rows means zero
+  // effect. The subqueries are written out literally rather than composed from a nested tagged
+  // template — this driver would stringify a nested query object rather than inline its SQL.
   const queries = (tx: Sql) => {
     const stmts: unknown[] = [
       tx/*sql*/`
@@ -668,39 +682,104 @@ export async function executeCustomerDataLifecycleRequestRow(
                updated_at = now()
          WHERE id = ${targetPacketId}
            AND workspace_id = ${workspaceId}
+           AND EXISTS (
+             SELECT 1 FROM approval_requests
+              WHERE id = ${approvalId}
+                AND workspace_id = ${workspaceId}
+                AND status = 'approved'
+           )
         RETURNING id
       `);
     } else {
       stmts.push(tx/*sql*/`
         SELECT ${targetPacketId}::text AS id
+         WHERE EXISTS (
+           SELECT 1 FROM approval_requests
+            WHERE id = ${approvalId}
+              AND workspace_id = ${workspaceId}
+              AND status = 'approved'
+         )
       `);
     }
-    stmts.push(
-      tx/*sql*/`
-        INSERT INTO evidence_items (
-          id, workspace_id, packet_id, event_id, kind, title, uri, content_hash,
-          summary, redaction_status, actor_user_id
-        ) VALUES (
-          ${receiptId}, ${workspaceId}, ${targetPacketId}, null, 'receipt',
-          ${receiptTitle}, ${receiptUri}, null, ${receiptSummary}, 'metadata_only',
-          ${actorUserId}
-        )
-        RETURNING id, workspace_id, packet_id, event_id, kind, title, uri, content_hash,
-          summary, redaction_status, actor_user_id, created_at
-      `,
-      tx/*sql*/`
-        INSERT INTO tool_events (
-          id, workspace_id, packet_id, tool_name, action, actor_user_id,
-          status, evidence_item_id, summary
-        ) VALUES (
-          ${toolEventId}, ${workspaceId}, ${targetPacketId}, 'xlooop.customer_data_lifecycle',
-          'report_tool_event', ${actorUserId}, 'completed', ${receiptId},
-          ${requestKind === 'delete' ? 'approved customer delete/archive execution completed' : 'approved customer metadata export execution completed'}
-        )
-        RETURNING id, workspace_id, packet_id, tool_name, action, actor_user_id,
-          status, evidence_item_id, summary, created_at
-      `,
-    );
+    // The receipt and its tool event are admissible ONLY if the effect they attest to occurred.
+    // For a delete that means the packet is archived as of THIS transaction; for an export it means
+    // the approval is live. A receipt that outlives its effect is worse than no receipt — it is
+    // durable evidence of something that did not happen.
+    if (requestKind === 'delete') {
+      stmts.push(
+        tx/*sql*/`
+          INSERT INTO evidence_items (
+            id, workspace_id, packet_id, event_id, kind, title, uri, content_hash,
+            summary, redaction_status, actor_user_id
+          )
+          SELECT ${receiptId}, ${workspaceId}, ${targetPacketId}, null, 'receipt',
+            ${receiptTitle}, ${receiptUri}, null, ${receiptSummary}, 'metadata_only',
+            ${actorUserId}
+           WHERE EXISTS (
+             SELECT 1 FROM task_packets
+              WHERE id = ${targetPacketId}
+                AND workspace_id = ${workspaceId}
+                AND lifecycle_state = 'archived'
+           )
+          RETURNING id, workspace_id, packet_id, event_id, kind, title, uri, content_hash,
+            summary, redaction_status, actor_user_id, created_at
+        `,
+        tx/*sql*/`
+          INSERT INTO tool_events (
+            id, workspace_id, packet_id, tool_name, action, actor_user_id,
+            status, evidence_item_id, summary
+          )
+          SELECT ${toolEventId}, ${workspaceId}, ${targetPacketId}, 'xlooop.customer_data_lifecycle',
+            'report_tool_event', ${actorUserId}, 'completed', ${receiptId},
+            'approved customer delete/archive execution completed'
+           WHERE EXISTS (
+             SELECT 1 FROM task_packets
+              WHERE id = ${targetPacketId}
+                AND workspace_id = ${workspaceId}
+                AND lifecycle_state = 'archived'
+           )
+          RETURNING id, workspace_id, packet_id, tool_name, action, actor_user_id,
+            status, evidence_item_id, summary, created_at
+        `,
+      );
+    } else {
+      stmts.push(
+        tx/*sql*/`
+          INSERT INTO evidence_items (
+            id, workspace_id, packet_id, event_id, kind, title, uri, content_hash,
+            summary, redaction_status, actor_user_id
+          )
+          SELECT ${receiptId}, ${workspaceId}, ${targetPacketId}, null, 'receipt',
+            ${receiptTitle}, ${receiptUri}, null, ${receiptSummary}, 'metadata_only',
+            ${actorUserId}
+           WHERE EXISTS (
+             SELECT 1 FROM approval_requests
+              WHERE id = ${approvalId}
+                AND workspace_id = ${workspaceId}
+                AND status = 'approved'
+           )
+          RETURNING id, workspace_id, packet_id, event_id, kind, title, uri, content_hash,
+            summary, redaction_status, actor_user_id, created_at
+        `,
+        tx/*sql*/`
+          INSERT INTO tool_events (
+            id, workspace_id, packet_id, tool_name, action, actor_user_id,
+            status, evidence_item_id, summary
+          )
+          SELECT ${toolEventId}, ${workspaceId}, ${targetPacketId}, 'xlooop.customer_data_lifecycle',
+            'report_tool_event', ${actorUserId}, 'completed', ${receiptId},
+            'approved customer metadata export execution completed'
+           WHERE EXISTS (
+             SELECT 1 FROM approval_requests
+              WHERE id = ${approvalId}
+                AND workspace_id = ${workspaceId}
+                AND status = 'approved'
+           )
+          RETURNING id, workspace_id, packet_id, tool_name, action, actor_user_id,
+            status, evidence_item_id, summary, created_at
+        `,
+      );
+    }
     return stmts;
   };
 
@@ -711,6 +790,9 @@ export async function executeCustomerDataLifecycleRequestRow(
     ToolEvent[],
   ]>(sql, workspaceId, queries);
 
+  // These remain the caller-facing errors, but they are now REPORTS of an outcome the SQL already
+  // enforced, not the enforcement itself. Each guarded write above contributed zero rows in exactly
+  // the cases these branches reject, so a throw here no longer races a committed mutation.
   if (!approvalRows.length) {
     throw makeError('NOT_FOUND', 'approved lifecycle approval request not found', 404);
   }
@@ -719,6 +801,16 @@ export async function executeCustomerDataLifecycleRequestRow(
     : [];
   if (requestKind === 'delete' && archivedPacketIds.length === 0) {
     throw makeError('NOT_FOUND', 'target packet not found or already unavailable for deletion', 404);
+  }
+  // Completeness assert, in the spirit of xlooop_assert_authority_complete: the effect happened, so
+  // its evidence must exist. Without this the function could return `undefined!` as a receipt and
+  // the route would answer 200 with a hole where the audit trail should be.
+  if (!evidenceRows.length || !toolEventRows.length) {
+    throw makeError(
+      'INTERNAL_ERROR',
+      'customer data lifecycle execution produced no receipt; the effect and its evidence disagree',
+      500,
+    );
   }
 
   return {
