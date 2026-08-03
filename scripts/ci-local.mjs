@@ -121,6 +121,18 @@ const gates = [
   // instead of drained. Its own self-test runs first and IS blocking.
   ['hollow-success controls', 'npm', ['run', 'verify:controls-measure-something:self-test']],
   ['hollow-success scan', 'npm', ['run', 'verify:controls-measure-something'], { advisory: true }],
+  // Schema-93 DB contract (260803). Migration 093 re-namespaced the idempotency keys guarding NINE
+  // authority writes, and every schema93 suite opens with `databaseUrl ? describe : describe.skip`
+  // — so without XLOOOP_SCHEMA93_PG_URL, which is every machine in a repo with no CI, the proof was
+  // skipped and vitest still reported success. The contract shipped asserted only by mocks.
+  // Proven 2026-08-03 against real Postgres at schema 93: 11/11. Two facts it surfaced are NOT
+  // readable from the migration source — a reused key with a DIFFERENT digest also raises 23505
+  // (so the DAL's digest comparison, not the DB, separates replay from a 409), and the ordinary and
+  // strict key namespaces really are independent. BLOCKING is safe here precisely because the skip
+  // is honest: unset prints "SKIPPED (0 of 11 invariants asserted)" and exits 0, but exits 1 under
+  // XLOOOP_AUTHORITY_MODE=production, where an unproven migration contract is a red, not a shrug.
+  ['schema-93 invariant controls', 'npm', ['run', 'verify:schema93-invariants:self-test']],
+  ['schema-93 DB contract', 'npm', ['run', 'verify:schema93-invariants']],
   ['typecheck', 'npm', ['run', 'typecheck']],
   ['worker suite', 'npm', ['test']],
 ];

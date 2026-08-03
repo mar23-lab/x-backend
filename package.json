@@ -54,6 +54,8 @@
     "verify:controls-measure-something": "node scripts/verify-controls-measure-something.mjs",
     "verify:controls-measure-something:self-test": "node scripts/verify-controls-measure-something.mjs --self-test",
     "verify:mbp-projection-freshness": "node scripts/verify-mbp-projection-freshness.mjs",
+    "verify:schema93-invariants": "node scripts/verify-schema93-invariants.mjs",
+    "verify:schema93-invariants:self-test": "node scripts/verify-schema93-invariants.mjs --self-test",
     "verify:release-debt": "node scripts/verify-release-debt.mjs",
     "verify:release-debt:self-test": "node scripts/verify-release-debt.mjs --self-test",
     "verify:schema93-source-replay": "node scripts/replay-schema93-postgres.mjs",
