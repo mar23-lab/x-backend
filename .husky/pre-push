@@ -2,13 +2,25 @@
 
 # x-backend pre-push gate.
 #
-# WHY. This repo carries 194 Workers test files and 40 `ci-local` gates, and until this hook
+# NOTE ON THE NUMBERS BELOW. They were 194/40 when this hook was written and are re-measured on
+# every run — `ci-local` prints its own executed/total, and the batch runner prints the file count.
+# Do not hard-code them again: a control whose comment misstates its own scope is the same defect
+# class this repo's meta-gate exists to catch (they had drifted to 202/71 unnoticed, 260803).
+#
+# WHY. This repo carries 200+ Workers test files and 70+ `ci-local` gates, and until this hook
 # existed NOTHING triggered any of them: `core.hooksPath` was unset, `.git/hooks` held only
 # samples, and GitHub Actions are deliberately disabled (free-tier minutes). The suite ran only
 # when a human remembered to type `npm run ci-local`.
 #
-# WHAT IT RUNS. `npm run ci-local` — the full local authority stack (40 gates, ending in the
-# typecheck and the complete Workers suite in bounded batches). Expect ~7.5 minutes.
+# WHAT IT RUNS. `npm run ci-local` — the full local authority stack (every gate, ending in the
+# typecheck and the complete Workers suite in bounded batches). Expect ~8.5 minutes.
+#
+# WHAT IT CANNOT DO. This hook is the ONLY enforcement point in the repo: GitHub Actions are
+# deliberately disabled until commercial launch, so nothing runs server-side. `--no-verify` defeats
+# it by design, and that bypass leaves no portable trace — a receipt written here would be
+# machine-local and therefore not evidence to anyone else. The mechanism that would close it is
+# GitHub branch protection requiring a review, which needs a second reviewer. Until then this hook
+# is a strong control with one named hole; do not claim merge-time enforcement that does not exist.
 #
 # ESCAPE HATCH. For a genuine emergency: `git push --no-verify`. Use it knowingly — the same
 # gates are not run anywhere else, so a bypassed push is an unverified push.
@@ -29,7 +41,7 @@ unset GIT_OBJECT_DIRECTORY GIT_ALTERNATE_OBJECT_DIRECTORIES GIT_QUARANTINE_PATH
 
 start=$(date +%s)
 echo "husky(pre-push): x-backend authority gate — npm run ci-local"
-echo "husky(pre-push): 40 gates + typecheck + full Workers suite; typically ~7.5 min."
+echo "husky(pre-push): full ci-local gate set + typecheck + full Workers suite; typically ~8.5 min."
 echo "husky(pre-push): emergency bypass is 'git push --no-verify' (an unverified push)."
 
 npm run ci-local
