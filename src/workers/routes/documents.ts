@@ -11,6 +11,7 @@
 
 import { Hono } from 'hono';
 import { neonClient } from '../db/client';
+import { resolveRlsSql } from '../db/rls-connection';
 import { errorEnvelope } from '../middleware/error';
 import { withDataClass } from '../lib/response-envelope';
 import { isAdmissibility, ADMISSIBILITY_VALUES } from '../lib/admissibility';
@@ -111,7 +112,7 @@ documentsRoute.post('/documents', async (ctx) => {
     // workspace_id the query already filters on. Same predicate, same rows. The `|| DATABASE_URL`
     // fallback matches the sibling call sites so an environment without the RLS secret bound keeps
     // working instead of silently reading zero rows.
-    const readSql = neonClient(ctx.env.XLOOOP_RLS_APP_DATABASE_URL || ctx.env.DATABASE_URL);
+    const readSql = resolveRlsSql(ctx.env, neonClient(ctx.env.DATABASE_URL));
     const filename = (file.name || 'document').slice(0, 255);
     // A-W5 · version chain: content_hash = SHA-256 of the bytes (the immutable version identity an evidence
     // content_hash matches); if a prior version of this logical document (same project + filename) exists,
@@ -170,7 +171,7 @@ documentsRoute.get('/documents', async (ctx) => {
     if (!auth?.user_id) return errorEnvelope(ctx, { status: 401, code: 'UNAUTHORIZED', message: 'auth required' });
     if (!auth.workspace_id) return ctx.json(withDataClass({ documents: [] }, 'live'));
     // 046 · route the document LIST through the RLS-subject client when configured (else owner → identical).
-    const sql = neonClient(ctx.env.XLOOOP_RLS_APP_DATABASE_URL || ctx.env.DATABASE_URL);
+    const sql = resolveRlsSql(ctx.env, neonClient(ctx.env.DATABASE_URL));
     const docs = await listDocumentsRow(sql, auth.workspace_id);
     return ctx.json(withDataClass({ documents: docs }, 'live'));
   } catch (err) {

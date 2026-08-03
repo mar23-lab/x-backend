@@ -42,7 +42,23 @@ if (!OWNER || !APP) {
     console.error('Set both URLs to a disposable/prod-shaped Neon branch and rerun; this proof is not satisfied by a skip.');
     process.exit(2);
   }
-  console.log('rls-shadow-soak · SKIP — set DATABASE_URL (owner) + XLOOOP_RLS_APP_DATABASE_URL (xlooop_app) on a Neon branch to run.');
+  // 260803 · A SKIP MUST NOT READ AS A PASS. This printed "SKIP" and exited 0, so on every machine
+  // without the two URLs bound — which, with no CI, is every machine but one — the RLS soak reported
+  // success having evaluated ZERO assertions.
+  //
+  // This estate has already paid for this exact shape once. x-ai-front/CLAUDE.md records
+  // verify:coverage-claim being RETIRED because "ZERO lines matched its CLAIM regex, so it had
+  // evaluated 0 assertions and still printed PASS while BLOCKING", and draws the conclusion this
+  // change applies: "A control cited as assurance that measures nothing is worse than no control."
+  //
+  // The wording now states the assertion count explicitly so it cannot be skim-read as a pass, and
+  // under production authority an unrunnable proof is a FAILURE rather than a silent zero.
+  console.log('rls-shadow-soak · SKIPPED (0 assertions evaluated) — this is NOT a pass.');
+  console.log('  Set DATABASE_URL (owner) + XLOOOP_RLS_APP_DATABASE_URL (xlooop_app) on a Neon branch to run it.');
+  if (process.env.XLOOOP_AUTHORITY_MODE === 'production') {
+    console.error('rls-shadow-soak · FAIL — tenant-isolation proof cannot be skipped under production authority.');
+    process.exit(1);
+  }
   process.exit(0);
 }
 

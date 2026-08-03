@@ -14,6 +14,7 @@
 import { Hono } from 'hono';
 import { errorEnvelope, clientError } from '../middleware/error';
 import { neonClient } from '../db/client';
+import { resolveRlsSql } from '../db/rls-connection';
 import { listWorkspaceSourcesRow } from '../dal/source-store';
 import { listDocumentsRow } from '../dal/document-store';
 import { listWorkspaceAuditLogRow, listWorkspaceMemberIdsRow } from '../dal/customer-audit-store';
@@ -136,9 +137,15 @@ mcpCustomerReadsRoute.get('/documents', async (ctx) => {
     // RLS-1 (J-W4 260711-I): route the document read through the RLS-subject client (046) exactly like
     // the first-party routes/documents.ts:191, so the agent-facing MCP surface engages the RLS 2nd layer
     // too. Preserves the test seam (ctx.get('sql')); falls back to owner DATABASE_URL when RLS not bound.
-    const rlsEnv = ctx.env as { XLOOOP_RLS_APP_DATABASE_URL?: string; DATABASE_URL?: string };
+    // XLOOOP_AUTHORITY_MODE must be in this cast: resolveRlsSql keys the fail-closed decision on it,
+    // and a narrower cast would silently hand it `undefined` and restore the owner-connection fallback.
+    const rlsEnv = ctx.env as {
+      XLOOOP_RLS_APP_DATABASE_URL?: string;
+      DATABASE_URL?: string;
+      XLOOOP_AUTHORITY_MODE?: string;
+    };
     const docSql = (ctx.get('sql') as ReturnType<typeof neonClient> | undefined)
-      ?? neonClient(rlsEnv.XLOOOP_RLS_APP_DATABASE_URL || rlsEnv.DATABASE_URL);
+      ?? resolveRlsSql(rlsEnv, neonClient(rlsEnv.DATABASE_URL));
     const docs = await listDocumentsRow(docSql, workspace).catch(() => []);
     return ctx.json({
       schema_id: 'xlooop.mcp_document_list.v1',

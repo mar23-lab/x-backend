@@ -56,7 +56,16 @@ which is the one directory allow-listed to touch `window.*`
    --update-baseline`. This is what makes the reduction permanent — a regression fails CI
    from here on.
 6. **Regenerate the schema + verify integrity** before committing:
-   `node scripts/repo-schema-gen.mjs && npm run verify:current-integrity` (expect 64/64).
+   `node scripts/repo-schema-gen.mjs && npm run ci-local`.
+   <!-- CORRECTED 260803. This step previously read `npm run verify:current-integrity` (expect
+   64/64). That script does NOT exist in x-backend — `rg -c "verify:current-integrity"
+   package.json` returns 0. The instruction was unrunnable, and its "64/64" happened to equal
+   `gates.length` in scripts/ci-local.mjs, so two unrelated constants read as though one
+   corroborated the other. ci-local is the real release authority (step 7 already says so) and
+   now reports a MEASURED pass count rather than a template over its own array length. Do not
+   reintroduce a hard-coded expected total here: any number written in prose stops tracking the
+   thing it claims to describe the moment the gate list changes. -->
+
 7. Commit with the **before→after gate numbers** in the message, and what you
    browser-verified. Push (never `--no-verify`); `ci-local` is the release authority.
 

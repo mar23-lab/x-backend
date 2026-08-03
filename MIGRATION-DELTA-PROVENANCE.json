@@ -4567,6 +4567,110 @@
           "reason": "strict provider-confirmed invitation delivery with atomic receipt, retry recovery, and focused authority modules"
         }
       ]
+    },
+    {
+      "delta_id": "claude-prod-hardening-20260803",
+      "generated_at": "2026-08-03T02:26:49.356Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "de2b63fcd7fab0e1eb6f1210d666d12114f1c8e2",
+      "target_base_commit": "de2b63fcd7fab0e1eb6f1210d666d12114f1c8e2",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "docs/standards/PLATFORM_FACADE_SPEC.md",
+          "target_blob": "41061f734e68ac849698165c634a658ad960e02b",
+          "reason": "Session 23fa1ef6 hardening wave: Sentry value-level PII scrubbing, Turnstile fail-closed under production authority, RLS suite honest skip, and removal of the phantom verify:current-integrity claim from PLATFORM_FACADE_SPEC."
+        },
+        {
+          "path": "scripts/verify-postgres-rls-phase2.mjs",
+          "target_blob": "3b99c8fab11f41e9932e98100f55d63861cd5d0d",
+          "reason": "Session 23fa1ef6 hardening wave: Sentry value-level PII scrubbing, Turnstile fail-closed under production authority, RLS suite honest skip, and removal of the phantom verify:current-integrity claim from PLATFORM_FACADE_SPEC."
+        },
+        {
+          "path": "src/workers/sentry.ts",
+          "target_blob": "52db598a5620a4fdab1c28f9a9fc56bc48dcfe4f",
+          "reason": "Session 23fa1ef6 hardening wave: Sentry value-level PII scrubbing, Turnstile fail-closed under production authority, RLS suite honest skip, and removal of the phantom verify:current-integrity claim from PLATFORM_FACADE_SPEC."
+        },
+        {
+          "path": "src/workers/services/turnstile.ts",
+          "target_blob": "272fbe513655d4417e31821987b0a645e4ae7b9a",
+          "reason": "Session 23fa1ef6 hardening wave: Sentry value-level PII scrubbing, Turnstile fail-closed under production authority, RLS suite honest skip, and removal of the phantom verify:current-integrity claim from PLATFORM_FACADE_SPEC."
+        }
+      ]
+    },
+    {
+      "delta_id": "claude-prod-hardening-20260803-b",
+      "generated_at": "2026-08-03T02:27:18.418Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "de2b63fcd7fab0e1eb6f1210d666d12114f1c8e2",
+      "target_base_commit": "de2b63fcd7fab0e1eb6f1210d666d12114f1c8e2",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "package.json",
+          "target_blob": "a2e56c4b1372fe9f9912429bd60797dd41aa21bf",
+          "reason": "Session 23fa1ef6 hardening wave part 2: global rate limiter mount, RLS fail-closed consolidation across index/documents/mcp-customer-reads, honest ci-local pass counting plus advisory gates, RLS soak honest skip, and the new release-debt/meta-gate npm scripts."
+        },
+        {
+          "path": "scripts/ci-local.mjs",
+          "target_blob": "eca0b15a82427d612ba2f509c4e6de09cef541b8",
+          "reason": "Session 23fa1ef6 hardening wave part 2: global rate limiter mount, RLS fail-closed consolidation across index/documents/mcp-customer-reads, honest ci-local pass counting plus advisory gates, RLS soak honest skip, and the new release-debt/meta-gate npm scripts."
+        },
+        {
+          "path": "scripts/rls-shadow-soak.mjs",
+          "target_blob": "24d2b763b2789aa7a3570ba9587b946ef7f82797",
+          "reason": "Session 23fa1ef6 hardening wave part 2: global rate limiter mount, RLS fail-closed consolidation across index/documents/mcp-customer-reads, honest ci-local pass counting plus advisory gates, RLS soak honest skip, and the new release-debt/meta-gate npm scripts."
+        },
+        {
+          "path": "src/workers/index.ts",
+          "target_blob": "1d68f5c788fb55da43a3788ab29b7cff2239404f",
+          "reason": "Session 23fa1ef6 hardening wave part 2: global rate limiter mount, RLS fail-closed consolidation across index/documents/mcp-customer-reads, honest ci-local pass counting plus advisory gates, RLS soak honest skip, and the new release-debt/meta-gate npm scripts."
+        },
+        {
+          "path": "src/workers/routes/documents.ts",
+          "target_blob": "c97832db9e33670ed8e57794fa0a6b904982fc4e",
+          "reason": "Session 23fa1ef6 hardening wave part 2: global rate limiter mount, RLS fail-closed consolidation across index/documents/mcp-customer-reads, honest ci-local pass counting plus advisory gates, RLS soak honest skip, and the new release-debt/meta-gate npm scripts."
+        },
+        {
+          "path": "src/workers/routes/mcp-customer-reads.ts",
+          "target_blob": "584de4166fd8d2b1310b7602fdf5e6a0dec1a80f",
+          "reason": "Session 23fa1ef6 hardening wave part 2: global rate limiter mount, RLS fail-closed consolidation across index/documents/mcp-customer-reads, honest ci-local pass counting plus advisory gates, RLS soak honest skip, and the new release-debt/meta-gate npm scripts."
+        }
+      ]
+    },
+    {
+      "delta_id": "claude-prod-hardening-20260803-c",
+      "generated_at": "2026-08-03T02:28:18.750Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "de2b63fcd7fab0e1eb6f1210d666d12114f1c8e2",
+      "target_base_commit": "de2b63fcd7fab0e1eb6f1210d666d12114f1c8e2",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/index.ts",
+          "target_blob": "561bd33cf36e6f800f2f758da123b5217f658d25",
+          "reason": "Condensed the rate-limiter rationale comment so index.ts returns under the 500-line source-file-size ratchet; full rationale retained in the commit message."
+        }
+      ]
+    },
+    {
+      "delta_id": "claude-prod-hardening-20260803-d",
+      "generated_at": "2026-08-03T02:29:10.284Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "de2b63fcd7fab0e1eb6f1210d666d12114f1c8e2",
+      "target_base_commit": "de2b63fcd7fab0e1eb6f1210d666d12114f1c8e2",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/index.ts",
+          "target_blob": "a1a283ca17d060b93a7a3f37e6dfd40c1d3dcc19",
+          "reason": "Final condensation of the rate-limiter comment to satisfy the 500-line source-file-size ratchet."
+        }
+      ]
     }
   ]
 }
