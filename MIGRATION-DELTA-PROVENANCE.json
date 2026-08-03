@@ -4755,6 +4755,22 @@
           "reason": "Customer-data lifecycle execution: move the approval and archive preconditions INSIDE the write statements. withWorkspaceRlsContext commits when it resolves, so the post-hoc approvalRows check ran after the data was durable — an unapproved delete archived the packet and wrote an approved-erasure receipt, and a delete with a missing packet wrote a receipt for an archive that never happened. Both reproduced against real Postgres; guarded form verified 3/3 with the pre-fix shape reproducing the defect as a control."
         }
       ]
+    },
+    {
+      "delta_id": "claude-strict-claim-finalize-fix-20260803",
+      "generated_at": "2026-08-03T09:25:52.507Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "08d37af700a867bb9a1955c0731efbbdc8847cdd",
+      "target_base_commit": "08d37af700a867bb9a1955c0731efbbdc8847cdd",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/dal/customer-authority-store.ts",
+          "target_blob": "13873ccfcb0ad78da1a4334fe3dbd42108444a42",
+          "reason": "Strict authority claim could never finalize: a same-statement UPDATE cannot see its sibling CTE INSERT (Postgres snapshot), so consent/revoke failed 100% on real Postgres. Claim now written once, complete, attempted unconditionally via LEFT JOIN so the 23505 replay path still fires. Proven 3/3 real Postgres; lineage assertions inverted into a regression guard; comments trimmed to hold the 500-line ratchet."
+        }
+      ]
     }
   ]
 }
