@@ -113,6 +113,14 @@ const gates = [
   // it blocking would create a red with no path out and get the gate deleted instead of the lease
   // renewed. Advisory means it is finally READ.
   ['MB-P projection freshness', 'npm', ['run', 'verify:mbp-projection-freshness'], { advisory: true }],
+  // The meta-gate (260803). Six controls in this estate were found reporting success while
+  // evaluating nothing; on first run this detector found 17 across 236 scripts, including the
+  // "207/207 files" test-batch line and the "219/219 classified" route-manifest line — both
+  // templates over a single constant, neither ever a pass RATE. ADVISORY because 17 pre-existing
+  // findings cannot be cleared in one wave, and a meta-gate that blocks on day one gets deleted
+  // instead of drained. Its own self-test runs first and IS blocking.
+  ['hollow-success controls', 'npm', ['run', 'verify:controls-measure-something:self-test']],
+  ['hollow-success scan', 'npm', ['run', 'verify:controls-measure-something'], { advisory: true }],
   ['typecheck', 'npm', ['run', 'typecheck']],
   ['worker suite', 'npm', ['test']],
 ];

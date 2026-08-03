@@ -51,6 +51,8 @@
     "verify:schema91-postgres:self-test": "node scripts/verify-schema91-postgres.mjs --self-test",
     "verify:schema92-replay-bridge": "node scripts/verify-schema92-replay-bridge.mjs",
     "verify:schema92-replay-bridge:self-test": "node scripts/verify-schema92-replay-bridge.mjs --self-test",
+    "verify:controls-measure-something": "node scripts/verify-controls-measure-something.mjs",
+    "verify:controls-measure-something:self-test": "node scripts/verify-controls-measure-something.mjs --self-test",
     "verify:mbp-projection-freshness": "node scripts/verify-mbp-projection-freshness.mjs",
     "verify:release-debt": "node scripts/verify-release-debt.mjs",
     "verify:release-debt:self-test": "node scripts/verify-release-debt.mjs --self-test",
