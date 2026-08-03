@@ -35,7 +35,22 @@
 //     --approval-reference "conversation:2026-07-28-cutover" \
 //     --rollback-version-id <uuid from: npx wrangler versions list> \
 //     --rollback-sha <40-hex currently-live build> \
-//     [--ttl-minutes 25] [--api-base https://api.xlooop.com] [--out <path>]
+//     [--paired-release-dir <dist-app-pages-release>]   <- REQUIRED for a PAIRED cutover; see below
+//     [--ttl-minutes 25] [--api-base https://api.xlooop.com] [--out <path OUTSIDE the repo>]
+//
+// PAIRED CUTOVER (--paired-release-dir). Preflight step 9
+// (verify-frontend-pair-before-api-deploy.mjs) passes on exactly two states: the live frontend
+// already expects the sha being shipped, OR this packet carries a `paired_frontend_release` block
+// naming a locally assembled artifact. When you are shipping BOTH halves the first state is false by
+// definition — the live frontend still expects the OLD backend — so the block is mandatory. Until
+// 260804 this script emitted no such block and the operator hand-patched four lines into the packet
+// mid-TTL. Pass the assembled dir and it is produced from that artifact's own manifest, with the
+// cross-check a hand-written block cannot make: manifest.backend_sha MUST equal the candidate.
+//
+// WRITE IT OUTSIDE THE REPO — and the default now does. `deploy:api` refuses on a dirty backend
+// worktree, so a packet written into the repo blocks the very deploy it authorises. The old default
+// was docs/deployment/evidence/ (inside); it is now ../_cutover-packets/, matching the Pages minter.
+// An explicit in-repo --out is refused rather than silently accepted.
 //
 //   node scripts/mint-authority-decision-packet.mjs --self-test
 //
@@ -94,7 +109,7 @@ async function readLiveHealth(apiBase) {
 }
 
 export function buildPacket({ candidate, live, approver, approvalReference, rollbackSha,
-  rollbackVersionId, rollbackEvidence, ttlMinutes, now, cutoverId }) {
+  rollbackVersionId, rollbackEvidence, ttlMinutes, now, cutoverId, pairedFrontendRelease = null }) {
   const approvedAt = new Date(now);
   const expiresAt = new Date(approvedAt.getTime() + ttlMinutes * 60 * 1000);
   return {
@@ -133,6 +148,16 @@ export function buildPacket({ candidate, live, approver, approvalReference, roll
       cloudflare_version_id: rollbackVersionId,
       evidence_reference: rollbackEvidence,
     },
+    // paired_frontend_release · 260804 · the block preflight step 9 requires, PRODUCED rather than
+    // hand-written. verify-frontend-pair-before-api-deploy.mjs passes on exactly two states: the live
+    // frontend already expects the sha being shipped, OR the packet carries this block naming a
+    // locally assembled artifact. During the 260804 cutover neither held — the live frontend expected
+    // the OLD backend — so the packet had to be hand-patched at the keyboard, mid-TTL, to add four
+    // lines. A verifier with no producer is the shape this estate has retired repeatedly; this closes
+    // it for the API packet the same way --from-api-packet closed it for the Pages one.
+    // Omitted (no --paired-release-dir) => absent, which is correct for a solo API deploy where the
+    // live frontend already expects the candidate.
+    ...(pairedFrontendRelease ? { paired_frontend_release: pairedFrontendRelease } : {}),
     // Measured from the LIVE target, except build_sha which is what the deploy must PRODUCE.
     expected_deployment: {
       worker_name: 'xlooop-api',
@@ -183,8 +208,36 @@ async function main() {
       'Rolling back to the thing you are deploying is not a rollback.');
   }
 
+  // --paired-release-dir: read the ASSEMBLED release and emit the block preflight step 9 wants.
+  // Reading the manifest rather than re-deriving is the point — a second derivation is a second
+  // thing that can disagree with the artifact the deploy actually uploads.
+  const pairedDirArg = arg('paired-release-dir');
+  let pairedFrontendRelease = null;
+  if (pairedDirArg) {
+    const pairedDir = path.resolve(pairedDirArg);
+    const manifestPath = path.join(pairedDir, 'release-manifest.json');
+    if (!fs.existsSync(manifestPath)) {
+      refuse(`no release-manifest.json in ${pairedDir}`,
+        'Run `npm run prepare:app:prod` first — the block must name an artifact that exists.');
+    }
+    let manifest;
+    try {
+      manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+    } catch (error) {
+      refuse(`release-manifest.json is not readable JSON: ${error instanceof Error ? error.message : String(error)}`);
+    }
+    // The cross-check a hand-written block could never make: the assembled frontend must be compiled
+    // against the sha this packet authorises, or the "pair" is two unrelated deploys.
+    if (manifest.backend_sha !== candidate) {
+      refuse(`the assembled release targets backend ${String(manifest.backend_sha).slice(0, 12)}, not the candidate ${candidate.slice(0, 12)}`,
+        'Re-assemble with `npm run prepare:app:prod` from the sha you are deploying, or the pair is a lie.');
+    }
+    pairedFrontendRelease = { artifact_dir: pairedDir, backend_sha: manifest.backend_sha };
+  }
+
   const live = await readLiveHealth(arg('api-base', 'https://api.xlooop.com'));
   const packet = buildPacket({
+    pairedFrontendRelease,
     candidate, live, approver, approvalReference, rollbackSha, rollbackVersionId,
     rollbackEvidence: arg('rollback-evidence', 'wrangler:versions-list:' + new Date().toISOString().slice(0, 10)),
     ttlMinutes, now: Date.now(),
@@ -193,7 +246,21 @@ async function main() {
     cutoverId: arg('cutover-id', randomUUID()),
   });
 
-  const out = arg('out', path.join(ROOT, 'docs/deployment/evidence/authority-decision-' + candidate.slice(0, 7) + '.json'));
+  // The default MUST be outside the repo. It used to be docs/deployment/evidence/ — INSIDE — and
+  // `deploy:api` refuses on a dirty backend worktree, so the default output path blocked the very
+  // deploy it authorised. The Pages minter already defaults to ../_cutover-packets/ and says so in
+  // its header; this one silently did the opposite. Measured 260804.
+  const out = path.resolve(arg('out', path.join(ROOT, '..', '_cutover-packets',
+    'authority-decision-' + candidate.slice(0, 7) + '.json')));
+  // Refuse an in-repo path even when passed explicitly — a dirty tree is a deploy that cannot run,
+  // and finding that out mid-TTL costs the whole authorisation window.
+  const repoPrefix = path.resolve(ROOT) + path.sep;
+  if (out.startsWith(repoPrefix)) {
+    refuse(`--out is inside the repository (${out})`,
+      'A packet written into the repo makes the worktree dirty, and deploy:api refuses a dirty '
+      + 'backend worktree — so it would block the deploy it authorises. Write it outside, e.g. '
+      + path.join(ROOT, '..', '_cutover-packets') + '.');
+  }
   fs.mkdirSync(path.dirname(out), { recursive: true });
   fs.writeFileSync(out, JSON.stringify(packet, null, 2) + '\n');
 
@@ -247,6 +314,22 @@ function selfTest() {
     buildPacket(base).cutover_id === p.cutover_id]);
   checks.push(['…while its authorization_id still differs (they remain separate authorisations)',
     buildPacket(base).decision.authorization_id !== p.decision.authorization_id]);
+  // paired_frontend_release · both directions. Absent by default (a solo API deploy must not claim a
+  // pair it does not have), present and exact when supplied — this is the block preflight step 9
+  // reads, so a wrong shape here reproduces the 260804 hand-patch.
+  checks.push(['paired_frontend_release is ABSENT by default (a solo deploy claims no pair)',
+    !('paired_frontend_release' in p)]);
+  const paired = buildPacket({
+    ...base,
+    pairedFrontendRelease: { artifact_dir: '/tmp/dist-app-pages-release', backend_sha: base.candidate },
+  });
+  checks.push(['paired_frontend_release is emitted when supplied',
+    !!paired.paired_frontend_release]);
+  checks.push(['…its backend_sha equals the candidate (step 9 compares exactly this)',
+    paired.paired_frontend_release.backend_sha === base.candidate]);
+  checks.push(['…and it names the artifact dir step 9 will read',
+    paired.paired_frontend_release.artifact_dir === '/tmp/dist-app-pages-release']);
+
   // The refusal paths are argument-level and exercised by the child-process cases in the PR body;
   // buildPacket() itself is the shape contract, so that is what is asserted here.
   let bad = 0;
