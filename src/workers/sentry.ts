@@ -36,6 +36,39 @@ export interface SentryEnv {
 
 const REDACT_FIELD_RE = /password|token|secret|key|jwt|authorization|cookie|api[_-]?key/i;
 
+// VALUE-level scrubbing (260803). REDACT_FIELD_RE above matches on the KEY, which is the right
+// control for structured context but misses the single most dangerous field in a Sentry event:
+// `event.exception.values[].value` holds the exception MESSAGE, under the key `value`, which
+// matches nothing in REDACT_FIELD_RE. Two concrete leaks that shipped verbatim as a result:
+//
+//   1. `neonClient(env.DATABASE_URL)` throwing a connection error carries the full DSN —
+//      postgres://user:password@host/db — straight into a Sentry issue. A Neon blip therefore
+//      published production database credentials.
+//   2. A Postgres unique-violation message carries the offending VALUES:
+//      `duplicate key value violates unique constraint "..." Key (email)=(alice@corp.com)`.
+//      That is customer PII, in plaintext, on a routine 500.
+//
+// These patterns are matched on the value regardless of its key, so they hold wherever the string
+// travels (message, breadcrumb, extra, stack frame variable). Deliberately narrow: each pattern
+// targets a structure that is never legitimately useful in a bug report, so over-redaction risk is
+// low and the remaining message text stays diagnostic.
+const VALUE_SCRUBBERS: ReadonlyArray<readonly [RegExp, string]> = [
+  // Any URI with embedded credentials — covers postgres://, postgresql://, redis://, https:// etc.
+  [/\b([a-z][a-z0-9+.-]*):\/\/[^\s:/@]+:[^\s@]+@/gi, '$1://[REDACTED]@'],
+  // Postgres constraint-violation detail, which echoes the offending column VALUES back.
+  [/\bKey \([^)]*\)=\([^)]*\)/gi, 'Key ([REDACTED])=([REDACTED])'],
+  // Bearer tokens and bare JWTs that reach a message body.
+  [/\bBearer\s+[A-Za-z0-9._~+/-]+=*/gi, 'Bearer [REDACTED]'],
+  [/\beyJ[A-Za-z0-9._-]{10,}/g, '[REDACTED_JWT]'],
+];
+
+/** Scrub sensitive STRUCTURES out of a string value, wherever that string appears in an event. */
+export function scrubSensitiveText(value: string): string {
+  let out = value;
+  for (const [pattern, replacement] of VALUE_SCRUBBERS) out = out.replace(pattern, replacement);
+  return out;
+}
+
 /**
  * Build the withSentry options for this request's env, or `undefined` when SENTRY_DSN is unset so
  * withSentry passes through untouched (dormant-safe). Called once per request by the handler wrapper.
@@ -142,7 +175,18 @@ function redactPii(event: Record<string, unknown>): Record<string, unknown> {
     }
     return out;
   }
-  return walk(event) as Record<string, unknown>;
+  // Strings are scrubbed by VALUE as well as by key. This is the leg that covers
+  // event.exception.values[].value — the exception message, whose key is `value` and therefore
+  // never matched REDACT_FIELD_RE. See VALUE_SCRUBBERS for the two measured leaks this closes.
+  function walkStrings(obj: unknown): unknown {
+    if (typeof obj === 'string') return scrubSensitiveText(obj);
+    if (obj === null || obj === undefined || typeof obj !== 'object') return obj;
+    if (Array.isArray(obj)) return obj.map(walkStrings);
+    const out: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(obj as Record<string, unknown>)) out[k] = walkStrings(v);
+    return out;
+  }
+  return walkStrings(walk(event)) as Record<string, unknown>;
 }
 
 // Test-only reset (no cached state now that init is withSentry-managed; kept for back-compat).
