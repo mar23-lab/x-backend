@@ -107,9 +107,19 @@ async function liveCheck() {
 async function appRoleCheck() {
   const appUrl = process.env.XLOOOP_RLS_APP_DATABASE_URL || process.env.APP_DATABASE_URL || '';
   if (!appUrl) {
-    const message = 'XLOOOP_RLS_APP_DATABASE_URL not set; skipped non-owner app-role RLS verification';
-    if (process.env.XLOOOP_REQUIRE_APP_ROLE_RLS === '1') failures.push(message);
-    else warnings.push(message);
+    // 260803 · state the assertion count, and fail closed under production authority. The old
+    // message said "skipped", which is true but reads as benign; the substantive fact is that the
+    // non-owner app-role leg evaluated NOTHING, so the run's green says nothing about tenant
+    // isolation. Same defect class as the retired verify:coverage-claim (x-ai-front/CLAUDE.md):
+    // a control cited as assurance that measures nothing is worse than no control.
+    const message = 'XLOOOP_RLS_APP_DATABASE_URL not set — non-owner app-role RLS verification '
+      + 'evaluated 0 assertions (NOT a pass)';
+    if (process.env.XLOOOP_REQUIRE_APP_ROLE_RLS === '1'
+      || process.env.XLOOOP_AUTHORITY_MODE === 'production') {
+      failures.push(message);
+    } else {
+      warnings.push(message);
+    }
     return null;
   }
   const db = neon(appUrl);
