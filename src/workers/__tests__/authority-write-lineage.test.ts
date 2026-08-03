@@ -55,9 +55,36 @@ const authorityRow = {
   read_model_watermark: '2026-07-30T00:00:00.000Z',
 };
 
+function authorityResponse(kind: 'consent' | 'revoke' = 'consent') {
+  const consent = { ...authorityRow, revoked_at: kind === 'revoke' ? '2026-07-30T01:00:00.000Z' : null };
+  return {
+    response_body: {
+      consent,
+      authority_receipt_id: `customer-authority-${kind}:auth_1:audit_authority_1`,
+      operation_event_id: 'evt_authority_1',
+      audit_event_id: 'audit_authority_1',
+      projection_outbox_id: 'outbox_authority_1',
+      read_model_watermark: '2026-07-30T00:00:00.000Z',
+      replayed: false,
+    },
+  };
+}
+
+const strictConsent = {
+  idempotency_key: 'authority-test-key',
+  request_sha256: 'a'.repeat(64),
+  idempotency_route: 'POST /api/v1/customer/authority-consent' as const,
+};
+
+const strictRevoke = {
+  idempotency_key: 'authority-revoke-test-key',
+  request_sha256: 'b'.repeat(64),
+  idempotency_route: 'POST /api/v1/customer/authority-consent/revoke' as const,
+};
+
 describe('customer authority writes are fail-closed', () => {
   it('customer consent requires consent, event, audit, and outbox in its final authority result', async () => {
-    const db = capturingSql([authorityRow]);
+    const db = capturingSql([authorityResponse()]);
     const write = await recordCustomerConsentAckRow(db.sql, {
       workspace_id: 'ws_1',
       user_id: 'usr_1',
@@ -65,6 +92,7 @@ describe('customer authority writes are fail-closed', () => {
       operation_event_id: 'evt_authority_1',
       projection_outbox_id: 'outbox_authority_1',
       request_id: 'req_1',
+      ...strictConsent,
     });
 
     expect(write.authority_receipt_id).toBe('customer-authority-consent:auth_1:audit_authority_1');
@@ -74,6 +102,8 @@ describe('customer authority writes are fail-closed', () => {
     expect(db.statement()).toMatch(
       /FROM consent_written\s+JOIN event_written ON TRUE\s+JOIN audit_written ON TRUE\s+JOIN outbox_written ON TRUE/s,
     );
+    expect(db.statement()).toMatch(/mode,\s+response_status, response_body, completed_at/);
+    expect(db.statement()).toMatch(/claim_finalized/);
   });
 
   it('customer consent cannot issue a receipt when any authority CTE yields no row', async () => {
@@ -84,11 +114,12 @@ describe('customer authority writes are fail-closed', () => {
       full_name_typed: 'Test Owner',
       operation_event_id: 'evt_authority_1',
       projection_outbox_id: 'outbox_authority_1',
-    })).rejects.toMatchObject({ code: 'CUSTOMER_AUTHORITY_LINEAGE_MISSING', status: 409 });
+      ...strictConsent,
+    })).rejects.toMatchObject({ code: 'CUSTOMER_AUTHORITY_ATOMICITY_FAILED', status: 500 });
   });
 
   it('customer authority revoke requires target, event, audit, and outbox in its final authority result', async () => {
-    const db = capturingSql([{ ...authorityRow, revoked_at: '2026-07-30T01:00:00.000Z' }]);
+    const db = capturingSql([authorityResponse('revoke')]);
     const write = await revokeCustomerAuthorityRow(db.sql, {
       workspace_id: 'ws_1',
       revoked_by: 'usr_1',
@@ -96,12 +127,14 @@ describe('customer authority writes are fail-closed', () => {
       operation_event_id: 'evt_authority_1',
       projection_outbox_id: 'outbox_authority_1',
       request_id: 'req_1',
+      ...strictRevoke,
     });
 
     expect(write.authority_receipt_id).toBe('customer-authority-revoke:auth_1:audit_authority_1');
     expect(db.statement()).toMatch(
       /FROM consent_updated\s+JOIN event_written ON TRUE\s+JOIN audit_written ON TRUE\s+JOIN outbox_written ON TRUE/s,
     );
+    expect(db.statement()).toMatch(/claim_finalized/);
   });
 
   it('customer authority revoke cannot issue a receipt when no active consent row is updated', async () => {
@@ -111,6 +144,7 @@ describe('customer authority writes are fail-closed', () => {
       revoked_by: 'usr_1',
       operation_event_id: 'evt_authority_1',
       projection_outbox_id: 'outbox_authority_1',
+      ...strictRevoke,
     })).rejects.toMatchObject({ code: 'NOT_FOUND', status: 404 });
   });
 
