@@ -187,10 +187,27 @@ export function rateLimit(userConfig: RateLimitConfig = {}): MiddlewareHandler {
     const userId = resolveUserId(ctx);
     const tenantId = resolveTenantId(ctx);
 
-    // Always check the IP bucket (covers unauthed paths).
-    const ipResult = await checkBucket(ctx, config.ip, `ip:${ip}`, getEnv);
-    if (!ipResult.allowed) {
-      return rateLimitResponse(ctx, 'ip', config.ip);
+    // 260805 · THE IP BUCKET GOVERNS UNAUTHED TRAFFIC ONLY — which is what the old comment here
+    // ("covers unauthed paths") already said, while the code checked it unconditionally.
+    //
+    // THE COMMERCIAL DEFECT THAT CAUSED. resolveIp() reads `cf-connecting-ip`, which for a company
+    // is the shared NAT/VPN egress address: every seat presents the SAME ip. The IP bucket is
+    // 100/60s — TEN TIMES TIGHTER than the per-user bucket (1,000/60s) — and it was evaluated
+    // FIRST, so an authenticated user could never reach their own allowance. One authenticated page
+    // load costs a measured floor of 15 requests, i.e. roughly SIX PAGE LOADS PER MINUTE FOR AN
+    // ENTIRE OFFICE. A ten-seat customer logging in at 9am exhausts it on the first wave, and the
+    // client has no 429 handling, so it surfaces as a silent, causeless "unavailable".
+    //
+    // An authenticated request is already attributable to a user AND a tenant, and both have
+    // correctly sized buckets below (1,000 and 5,000). LAYERING IS PRESERVED, NOT REMOVED: unauthed
+    // traffic keeps the tight 100/60s, and authed traffic remains capped per user and per tenant.
+    // Raising the IP limit instead was rejected — it keeps a shared-NAT ceiling that punishes large
+    // customers precisely for being large, and only moves the cliff.
+    if (!userId) {
+      const ipResult = await checkBucket(ctx, config.ip, `ip:${ip}`, getEnv);
+      if (!ipResult.allowed) {
+        return rateLimitResponse(ctx, 'ip', config.ip);
+      }
     }
 
     // If authed, also check the user bucket.
