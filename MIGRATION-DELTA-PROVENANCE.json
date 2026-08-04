@@ -4849,6 +4849,27 @@
           "reason": "Register verify:untyped-jsonb-params and its self-test."
         }
       ]
+    },
+    {
+      "delta_id": "claude-projection-outbox-drain-preflight-20260804",
+      "generated_at": "2026-08-04T08:15:00.000Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "05a7a0aa1ce87202ea6ec3bcaff2d7926feed180",
+      "target_base_commit": "05a7a0aa1ce87202ea6ec3bcaff2d7926feed180",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "scripts/ci-local.mjs",
+          "target_blob": "62f142f34c9a776c1fa66d2751c65600ff62d892",
+          "reason": "ITEM 23 closed as a DEPLOY-TIME gate. 10 DAL modules run INSERT INTO projection_outbox UNCONDITIONALLY while TENANT_PROJECTION_QUEUE_ENABLED gates only the DRAIN, so the table fills with no consumer by construction. My own audit first called this 'unbounded, monotonic, billed'; measured, it was 4 rows / 80 kB / static for 7 days - latent, not live. It is now 22 rows, having grown during this session purely because the document-upload path was exercised, which is the write-amplification made visible. I originally declined to build any gate because ci-local has no DATABASE_URL and a third advisory red nobody can clear would contradict the rule I applied elsewhere. That reasoning was stale: the right home was always deploy:api, where the DSN exists and where the check fires at the moment it matters. The gate distinguishes no_consumer from drain_too_slow - a growing queue with no drain is a different defect from a slow one - and FAILS CLOSED without a DSN rather than printing a skip that reads as PASS. Its decision function is pure and its 8 controls run in ci-local, so the logic is never unexercised."
+        },
+        {
+          "path": "package.json",
+          "target_blob": "380cd47ef01cc624683f86c0cca6f2dcb0943581",
+          "reason": "Register verify:projection-outbox-drain (+ self-test) and insert it into the deploy:api preflight chain after verify-prod-migrations, which already requires the same DSN."
+        }
+      ]
     }
   ]
 }

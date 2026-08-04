@@ -8,7 +8,7 @@
   },
   "scripts": {
     "prepare": "git config core.hooksPath .husky || true",
-    "deploy:api": "npm run verify:authority-decision:deploy && npm run verify:schema91-postgres && node scripts/preflight-rls-dsn.mjs && node scripts/verify-rls-grant-parity.mjs && node scripts/verify-prod-migrations.mjs && node scripts/verify-operation-event-source-tool-constraint.mjs --live && node scripts/verify-deploy-schema-head.mjs && node scripts/verify-deploy-sha-current.mjs && node scripts/verify-frontend-pair-before-api-deploy.mjs && node scripts/consume-api-deployment-authorization.mjs && wrangler deploy --config wrangler.toml --var BUILD_SHA:$(git rev-parse HEAD) --var BUILD_TIME:$(date -u +%Y%m%dT%H%M%SZ) --var XLOOOP_SCHEMA_HEAD:$XLOOOP_SCHEMA_HEAD && npm run deploy:api:receipt",
+    "deploy:api": "npm run verify:authority-decision:deploy && npm run verify:schema91-postgres && node scripts/preflight-rls-dsn.mjs && node scripts/verify-rls-grant-parity.mjs && node scripts/verify-prod-migrations.mjs && node scripts/verify-projection-outbox-drain.mjs && node scripts/verify-operation-event-source-tool-constraint.mjs --live && node scripts/verify-deploy-schema-head.mjs && node scripts/verify-deploy-sha-current.mjs && node scripts/verify-frontend-pair-before-api-deploy.mjs && node scripts/consume-api-deployment-authorization.mjs && wrangler deploy --config wrangler.toml --var BUILD_SHA:$(git rev-parse HEAD) --var BUILD_TIME:$(date -u +%Y%m%dT%H%M%SZ) --var XLOOOP_SCHEMA_HEAD:$XLOOOP_SCHEMA_HEAD && npm run deploy:api:receipt",
     "prepare:app:prod": "node scripts/prepare-app-pages-release.mjs",
     "mint:app-pages-decision": "node scripts/mint-app-pages-decision-packet.mjs",
     "mint:app-pages-decision:self-test": "node scripts/mint-app-pages-decision-packet.mjs --self-test",
@@ -79,6 +79,8 @@
     "verify:contract": "node scripts/verify-api-contract-artifact.mjs",
     "verify:error-code-preservation": "node scripts/verify-error-code-preservation.mjs",
     "verify:error-code-preservation:self-test": "node scripts/verify-error-code-preservation.mjs --self-test",
+    "verify:projection-outbox-drain": "node scripts/verify-projection-outbox-drain.mjs",
+    "verify:projection-outbox-drain:self-test": "node scripts/verify-projection-outbox-drain.mjs --self-test",
     "verify:untyped-jsonb-params": "node scripts/verify-untyped-jsonb-params.mjs",
     "verify:untyped-jsonb-params:self-test": "node scripts/verify-untyped-jsonb-params.mjs --self-test",
     "verify:provenance": "node scripts/verify-shadow-seed-provenance.mjs && node scripts/verify-backend-delta-provenance.mjs",
