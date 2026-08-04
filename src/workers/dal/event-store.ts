@@ -32,6 +32,7 @@ import type {
   UpsertResult,
   ProjectScopeBinding,
   ProjectScopeFilterType,
+  WorkspaceRole,
 } from './types';
 import type { Sql } from '../db/client';
 
@@ -100,6 +101,8 @@ export async function listEventsRow(sql: Sql, workspaceId: WorkspaceId, opts: Ev
   // top_level=true => only non-replies (roll-up). parent wins if both are set.
   const parentFilter = opts.parent_event_id ?? null;
   const topLevelOnly = !parentFilter && opts.top_level === true;
+  // 260805 · attention filter — opt-in, default OFF, so every existing caller is byte-identical.
+  const attentionOnly = opts.attention_only === true;
 
   // Use a single query with NULL-tolerant filters via COALESCE pattern.
   // Wrapped in the workspace-RLS GUC transaction (043) so a restricted rlsSql client is DB-filtered;
@@ -121,6 +124,15 @@ export async function listEventsRow(sql: Sql, workspaceId: WorkspaceId, opts: Ev
       AND (${sourceFilter}::text IS NULL OR source_tool = ${sourceFilter}::text)
       AND (${parentFilter}::text IS NULL OR parent_event_id = ${parentFilter}::text)
       AND (${topLevelOnly}::boolean IS NOT TRUE OR parent_event_id IS NULL)
+      -- 260805 · ATTENTION PREDICATE, IN SQL. Callers that want "what needs a human" must NOT page
+      -- by recency and filter in JS: measured on production, workspace org_3EG82… holds 3,436
+      -- top-level events of which 10 are pending, and only ONE falls inside the newest 200 — worst
+      -- pending rank 1,621. Nine approvals were invisible while the card asserted "1 item needs you".
+      -- Raising the page size only moves the cliff; the predicate belongs next to the ORDER BY.
+      AND (${attentionOnly}::boolean IS NOT TRUE OR (
+            (status = 'needs_review' AND approval_state IS DISTINCT FROM 'approved')
+            OR status = 'blocked'
+          ))
     ORDER BY occurred_at DESC, id DESC
     LIMIT ${fetchLimit}
   `,
@@ -134,6 +146,51 @@ export async function listEventsRow(sql: Sql, workspaceId: WorkspaceId, opts: Ev
     events: events.map((r) => redactPrincipalForRole(normalizeEventRow(r), opts.role)),
     pagination: { has_more, next_before },
   };
+}
+
+/**
+ * 260805 · Count event states with a real aggregate, over the WHOLE workspace.
+ *
+ * WHY THIS EXISTS. `/current-work` used to derive every count — needs_you, blocked, done, total,
+ * done_pct — by filtering ONE page of the 200 most recent events. Measured on production, workspace
+ * org_3EG82… holds 3,436 top-level events of which 10 are pending and only ONE sits inside that
+ * window (worst pending rank 1,621). So the card asserted "1 item needs you" while ten waited, and
+ * `done_pct` was a percentage of a window rather than of the work.
+ *
+ * A count that is computed from a page is not a count. Aggregate in SQL, where the database can see
+ * every row, and let the page do what pages are for.
+ */
+export async function countEventStatesRow(
+  sql: Sql,
+  workspaceId: WorkspaceId,
+  opts: { role: WorkspaceRole; project_id?: string | null },
+): Promise<{ needs_you: number; blocked: number; done: number; total: number }> {
+  assertWorkspaceScope(workspaceId);
+  const visList = visibilityForRole(opts.role);
+  const projectFilter = opts.project_id ?? null;
+  const [rows] = await withWorkspaceRlsContext<[Array<Record<string, string | number>>]>(
+    sql,
+    workspaceId,
+    (tx) => [
+      tx/*sql*/`
+      SELECT
+        count(*) FILTER (WHERE status = 'needs_review' AND approval_state IS DISTINCT FROM 'approved') AS needs_you,
+        count(*) FILTER (WHERE status = 'blocked') AS blocked,
+        count(*) FILTER (WHERE status IN ('completed', 'approved')) AS done,
+        count(*) AS total
+      FROM operation_events
+      WHERE workspace_id = ${workspaceId}
+        AND archived_at IS NULL
+        AND parent_event_id IS NULL
+        AND visibility = ANY(${visList as unknown as string[]})
+        AND (${projectFilter}::text IS NULL OR project_id = ${projectFilter}::text OR project_id IS NULL)
+    `,
+    ],
+    { readOnly: true },
+  );
+  const r = rows[0] || {};
+  const n = (v: unknown) => Number(v ?? 0) || 0;
+  return { needs_you: n(r.needs_you), blocked: n(r.blocked), done: n(r.done), total: n(r.total) };
 }
 
 export async function listEventsForOperatorRow(sql: Sql, ownerUserIds: string[], opts: EventListOpts): Promise<EventPage> {

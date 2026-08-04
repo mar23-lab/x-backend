@@ -121,14 +121,30 @@ currentWorkRoute.get('/current-work', async (ctx) => {
     const projects = Array.isArray(session.projects) ? session.projects : [];
     const projectId = ctx.req.query('project_id') || (projects[0] ? projects[0].id : null);
 
-    const page = await dal.listEvents(workspaceId, { role: auth.role, limit: 200, top_level: true })
-      .catch(() => ({ events: [], pagination: { has_more: false, next_before: null } }));
+    // 260805 · ASK FOR WHAT NEEDS A HUMAN — do not page by recency and filter afterwards.
+    //
+    // This used to read ONE page of the 200 most recent events and filter it in JS. Measured on
+    // production, workspace org_3EG82… holds 3,436 top-level events, 10 of them pending, and only
+    // ONE inside that window — worst pending rank 1,621. Nine approvals were invisible, and because
+    // the survivor count was 1 the card asserted "1 item needs you": a CONFIDENT WRONG COUNT, which
+    // is worse than an empty state. The client shares the identical bug, so the parity shadow
+    // compares two copies of it and reports "parity OK".
+    //
+    // Raising the limit only moves the cliff. The predicate belongs in SQL, next to the ORDER BY.
+    const page = await dal.listEvents(workspaceId, {
+      role: auth.role, limit: 200, top_level: true, attention_only: true,
+    }).catch(() => ({ events: [], pagination: { has_more: false, next_before: null } }));
     const inScope = (e: { project_id: string | null }) => !projectId || e.project_id === projectId || e.project_id === null;
     const events = page.events.filter(inScope);
 
     const pending = events.filter((e) => e.status === 'needs_review' && e.approval_state !== 'approved');
     const blocked = events.filter((e) => e.status === 'blocked');
-    const done = events.filter((e) => e.status === 'completed' || e.status === 'approved');
+
+    // Counts come from a whole-workspace AGGREGATE, not from the page above. `done`/`total` were
+    // window-derived too, which made done_pct a percentage of the last 200 rows rather than of the
+    // work. A count computed from a page is not a count.
+    const totals = await dal.countEventStates(workspaceId, { role: auth.role, project_id: projectId })
+      .catch(() => ({ needs_you: pending.length, blocked: blocked.length, done: 0, total: 0 }));
 
     // The single focal item + its plain-language primary action (mirrors the frontend H2 state machine).
     let focus: null | { event_id: string; intent_id: string | null; project_id: string | null; title: string; state: string; status_label: string; next: string; primary_action: { code: string; label: string } | null } = null;
@@ -145,7 +161,9 @@ currentWorkRoute.get('/current-work', async (ctx) => {
       focus = { event_id: '', intent_id: null, project_id: projectId, title: 'No work is waiting on you', state: 'all_clear', status_label: 'All clear', next: 'Describe the outcome you want', primary_action: null };
     }
 
-    const total = events.length;
+    // `events` is now the ATTENTION page, so its length is not a workspace total — see `totals`.
+    // Kept only for the parity payload below, which compares like for like with the client.
+    const total = totals.total;
     const generatedAt = new Date().toISOString();
     const sourceWatermark = events
       .map((e) => String((e as unknown as { occurred_at?: string; created_at?: string; updated_at?: string }).updated_at
@@ -181,12 +199,15 @@ currentWorkRoute.get('/current-work', async (ctx) => {
         blocked_reason: focus.state === 'blocked' ? focus.title : null,
         review_state: focus.state === 'needs_review' ? 'requested' : focus.state === 'all_clear' ? 'not_required' : 'none',
       } : null,
+      // WHOLE-WORKSPACE counts from the SQL aggregate. `pending.length` here would be the size of
+      // the attention page, which is complete today but would silently cap again at scale — the
+      // exact failure being fixed. Take counts from the counter.
       counts: {
-        needs_you: pending.length,
-        blocked: blocked.length,
-        done: done.length,
-        total,
-        done_pct: total > 0 ? Math.round((done.length / total) * 100) : 0,
+        needs_you: totals.needs_you,
+        blocked: totals.blocked,
+        done: totals.done,
+        total: totals.total,
+        done_pct: totals.total > 0 ? Math.round((totals.done / totals.total) * 100) : 0,
       },
       // evidence is a COUNT, never ids
       evidence_count: events.filter((e) => Boolean(e.evidence_link)).length,
