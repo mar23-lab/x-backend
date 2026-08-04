@@ -99,6 +99,13 @@ export function buildPagesPacket(manifest, input, nowIso) {
     },
     rollback: {
       frontend_sha: input.rollbackFrontendSha,
+      // 260805 · CARRY THE ROLLBACK BACKEND SHA. Without it the packet cannot PROVE that a
+      // backend-only cutover is recoverable: the rollback block held only a frontend sha, so the
+      // deploy contract's distinctness test had nothing to compare and refused every backend-only
+      // deploy — twice, each time after the API had already shipped, leaving a mismatched live pair
+      // that had to be rolled back. A packet must carry enough for the gate that reads it to decide.
+      // Sourced from the API packet's rollback.target_sha, so both halves name the same fallback.
+      backend_sha: input.rollbackBackendSha || null,
       cloudflare_deployment_id: input.rollbackDeploymentId,
       evidence_reference: input.rollbackEvidence,
     },
@@ -173,6 +180,9 @@ if (!SHA.test(rollbackFrontendSha)) {
   refuse('--rollback-frontend-sha must be a 40-hex commit sha',
     'The frontend sha currently serving app.xlooop.com.');
 }
+// Inherited from the API packet's rollback.target_sha when --from-api-packet is used, so both
+// halves of a cutover name the same backend fallback. Null when minting standalone.
+let rollbackBackendSha = null;
 const rollbackDeploymentId = arg('rollback-deployment-id');
 if (!UUID.test(rollbackDeploymentId)) {
   refuse('--rollback-deployment-id must be a UUID',
@@ -220,6 +230,7 @@ if (apiPacketPath) {
     refuse(`--from-api-packet could not be read: ${err.message}`,
       'Point it at the packet mint-authority-decision-packet wrote.');
   }
+  rollbackBackendSha = apiPacket?.rollback?.target_sha || null;
   const inherited = apiPacket?.cutover_id;
   if (!inherited || !UUID.test(inherited)) {
     refuse('--from-api-packet carries no usable cutover_id', 'Re-mint the API packet; it prints one.');
@@ -285,6 +296,10 @@ const packet = buildPagesPacket(manifest, {
   cutoverId,
   rollbackFrontendSha,
   rollbackDeploymentId,
+  // The API packet already names the backend fallback (rollback.target_sha). Carrying it here is
+  // what lets the deploy contract prove a backend-only cutover is recoverable, and it also means
+  // BOTH halves of the cutover name the SAME fallback rather than each holding a different half.
+  rollbackBackendSha,
   rollbackEvidence: `wrangler:pages-deployments-list:${new Date().toISOString().slice(0, 10)}`,
   ttlMinutes,
 }, new Date().toISOString());
