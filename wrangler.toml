@@ -335,6 +335,22 @@ PACKET_INTENT_QUALITY_ENABLED = "true"  # F4 260714 (operator-approved) — POST
 # inherit a read proof — the whole point of the precondition is that it expires.
 # Read-only projection over operation_events: no new writes, no authority change.
 CURRENT_WORK_PROJECTION_ENABLED = "true"
+# 260804 (operator-approved) — the projection's EVIDENCE CHANNEL. Found by browser-testing the live
+# authenticated cockpit: the page POSTs its parity observation on every load and gets 404, three
+# times per load, because this is a SECOND flag and only the read flag above was flipped.
+#   GET  200 /api/v1/current-work                      <- works
+#   POST 404 /api/v1/current-work/parity-observations  <- discarded, x3 per page load
+# shadowCurrentWork (live-data.js:1901) is explicitly "the evidence-gathering stage before making the
+# server projection authoritative (stage 2)". With this off, the read is on and the EVIDENCE IS
+# THROWN AWAY — stage 1 runs without producing the one artifact it exists to produce, and every user
+# gets three console errors per load.
+# Write path verified LIVE on production before flipping, not assumed (mig 077 is headed
+# "STAGED ONLY, never auto-applied", so its presence had to be measured):
+#   to_regclass('current_work_parity_observations')  = present
+#   xlooop_app grants                                = INSERT, SELECT
+#   RLS enabled = true · policies = 1
+# That check is the RLS-without-GRANT lesson applied BEFORE the flip rather than after a 42501.
+CURRENT_WORK_PARITY_OBSERVATIONS_ENABLED = "true"
 # XLOOOP_DEPLOY_SHA = "<build sha>"      # optional receipt provenance stamp (Track A); unset ⇒ deploy_sha null
 # RESOLUTION_RECEIPT_SIGNING_KEY_ID = "k1"  # optional rotation label for signed receipts; unset ⇒ 'default'
 
