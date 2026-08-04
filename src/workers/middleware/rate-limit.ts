@@ -203,11 +203,28 @@ export function rateLimit(userConfig: RateLimitConfig = {}): MiddlewareHandler {
     // traffic keeps the tight 100/60s, and authed traffic remains capped per user and per tenant.
     // Raising the IP limit instead was rejected — it keeps a shared-NAT ceiling that punishes large
     // customers precisely for being large, and only moves the cliff.
-    if (!userId) {
-      const ipResult = await checkBucket(ctx, config.ip, `ip:${ip}`, getEnv);
-      if (!ipResult.allowed) {
-        return rateLimitResponse(ctx, 'ip', config.ip);
-      }
+    // 260805 · CORRECTED. My first attempt guarded on `if (!userId)` and was UNREACHABLE:
+    // index.ts:184 mounts `app.use('/api/v1/*', rateLimit())` BEFORE every clerkAuth (:219/:240/:254),
+    // Hono runs middleware in registration order, so ctx.get('auth') is unset here and
+    // resolveUserId() ALWAYS returns null. The guard was always true and the fix changed nothing —
+    // "wiring is not binding", in the commit that claimed to close the blocker.
+    //
+    // Skipping the IP bucket on a Bearer would be worse than the bug: a forged token would then face
+    // NO ip ceiling at all. So a request that CLAIMS an identity gets the identity-tier ceiling
+    // instead of the anonymous one. A forged-token flood is capped at the user limit per IP rather
+    // than unlimited; a real office of authenticated seats behind one NAT egress stops sharing the
+    // 100/60s anonymous bucket, which was the actual defect (15 requests per page load meant ~6 page
+    // loads per minute for an entire company).
+    //
+    // Anonymous traffic is UNCHANGED at config.ip. Authenticated identity is still separately capped
+    // per user and per tenant below, once clerkAuth has run and those buckets are reachable.
+    const claimsIdentity = /^Bearer\s+\S/i.test(ctx.req.header('authorization') || '');
+    const ipBucket = claimsIdentity
+      ? { ...config.ip, limit: config.user.limit }
+      : config.ip;
+    const ipResult = await checkBucket(ctx, ipBucket, `ip:${ip}`, getEnv);
+    if (!ipResult.allowed) {
+      return rateLimitResponse(ctx, 'ip', ipBucket);
     }
 
     // If authed, also check the user bucket.
