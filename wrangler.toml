@@ -322,6 +322,19 @@ ROLE_SKILL_RESOLVER_ENABLED = "true"  # OAR-W2 shadow observer — flipped 26071
 ROLE_SKILL_CATALOG_ENABLED = "true"  # AR-2.1 260713 — resolver uses bundled role-skill-catalog.json (9 entries): real skill resolution vs no_catalog. Shadow, no authority change.
 CUSTOMER_SAFE_SERIALIZER_ENABLED = "true"  # AR-0 260713 — strips internal provisioning + normalizes generated_by from customer chat/session payloads (closes live IP-leak). Non-authority.
 PACKET_INTENT_QUALITY_ENABLED = "true"  # F4 260714 (operator-approved) — POST /packets rejects bare-verb/one-word titles with 400 intent_too_thin (live incident: chat words "execute"/"proceed" became junk packets). Compat verified: only internal writer is report-wave-to-spine ("Dev-agent wave ..."). Non-authority.
+# ITEM 64 260804 (operator-approved, in-conversation) — current-work projection ON.
+# current-work.ts:13 demands "a Neon-branch read proof" before this flips, and that proof is what
+# decided it. Measured on production br-dark-credit-a7tb4yhu immediately before flipping, using the
+# route's OWN pending filter (current-work.ts:129):
+#   needs_review AND approval_state IS DISTINCT FROM 'approved'  = 15
+#   blocked                                                      =  2
+#   spread across FOUR real workspaces (3 Clerk orgs + mbp-private), not one test tenant.
+# An EARLIER read proof this session returned pending=0 / blocked=0, and on that basis I argued
+# AGAINST flipping: enabling would have turned "honestly disabled" into "silently empty", which is
+# worse. That objection was right then and is FALSIFIED now. Re-measure before flipping; never
+# inherit a read proof — the whole point of the precondition is that it expires.
+# Read-only projection over operation_events: no new writes, no authority change.
+CURRENT_WORK_PROJECTION_ENABLED = "true"
 # XLOOOP_DEPLOY_SHA = "<build sha>"      # optional receipt provenance stamp (Track A); unset ⇒ deploy_sha null
 # RESOLUTION_RECEIPT_SIGNING_KEY_ID = "k1"  # optional rotation label for signed receipts; unset ⇒ 'default'
 

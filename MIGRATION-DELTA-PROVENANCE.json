@@ -4870,6 +4870,22 @@
           "reason": "Register verify:projection-outbox-drain (+ self-test) and insert it into the deploy:api preflight chain after verify-prod-migrations, which already requires the same DSN."
         }
       ]
+    },
+    {
+      "delta_id": "claude-current-work-projection-flag-20260804",
+      "generated_at": "2026-08-04T10:40:00.000Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "3b744e97389ec325b2b3ee926a4b69c35d4b2e87",
+      "target_base_commit": "3b744e97389ec325b2b3ee926a4b69c35d4b2e87",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "wrangler.toml",
+          "target_blob": "6f3e9651207e5d382b15bbb8d2e343c5e0e91824",
+          "reason": "ITEM 64 - CURRENT_WORK_PROJECTION_ENABLED flipped to true (operator-approved, in-conversation 2026-08-04). current-work.ts:13 requires a Neon-branch read proof before this flag moves. Measured on production br-dark-credit-a7tb4yhu immediately before flipping, using the route's OWN pending filter (current-work.ts:129): needs_review AND approval_state IS DISTINCT FROM 'approved' = 15; blocked = 2; spread across FOUR real workspaces (3 Clerk orgs + mbp-private), not one test tenant. An EARLIER read proof this session returned pending=0/blocked=0 and on that basis I argued AGAINST flipping - enabling would have converted 'honestly disabled' into 'silently empty', which is worse. That objection was correct then and is FALSIFIED now; a precondition that can be inherited is not a precondition. Read-only projection over operation_events: no new writes, no authority change. Pairs with x-ai-front a16573d, which flips the EXPECTED posture - live-data.js:471 fails the handshake on any posture mismatch, so both must ship in one cutover."
+        }
+      ]
     }
   ]
 }
