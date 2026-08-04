@@ -427,6 +427,17 @@ customerChatRoute.post('/customer-chat', async (ctx) => {
       .catch(() => ({ events: [], pagination: { has_more: false, next_before: null } } as EventPage));
     let events: HarnessFlowEvent[] = Array.isArray(page.events) ? page.events : [];
 
+    // 260805 · Whole-workspace state counts, aggregated in SQL. `page` above is capped at MAX_EVENTS
+    // by recency, so its length is what we LOOKED AT, never what EXISTS. Same primitive the
+    // /current-work fix uses (dal/event-store.ts countEventStatesRow) — reuse, not new machinery.
+    //
+    // Fallback is `events.length`, deliberately NOT 0: cockpit-chat.ts:1032 flips to the empty-state
+    // narrative when events_total === 0 and drops source facts, so a failed aggregate read must
+    // never claim less than the page we already hold.
+    const chatTotals = await dal
+      .countEventStates(workspaceId, { role: auth.role, project_id: projectId ?? null })
+      .catch(() => ({ needs_you: 0, blocked: 0, done: 0, total: events.length }));
+
     const sourceRows = await dal.listUserSources(auth.user_id).catch(() => [] as UserSourceConnection[]);
     // D-16 (260710) · resolve each source's effective per-project trust tier, flag-gated (OFF = byte-
     // identical: no map → no access_tier, no reorder). 'rely' leans on a source's METADATA more; NO content
@@ -523,6 +534,8 @@ customerChatRoute.post('/customer-chat', async (ctx) => {
         mode,
         intent_ref: await messageIntentRef(message),
         scope: {
+          // Deliberately the PAGE length: this records what the answer actually looked at.
+          // The whole-workspace figure is `chatTotals.total`, passed to buildContext below.
           event_count: events.length,
           document_count: documents.length,
           unpromoted_document_count: documentContext.unpromoted_count,
@@ -547,7 +560,18 @@ customerChatRoute.post('/customer-chat', async (ctx) => {
       : undefined;
     const result = await answerCockpitChat(
       message,
-      { workspaceName, companyContext, events, documents, projects, plan, projectSources, sources, total: events.length, scope, charter, personalizationProfile },
+      // 260805 · `total` is the WHOLE-WORKSPACE count from a SQL aggregate, not `events.length`.
+      // `events` is a 40-row RECENCY page (MAX_EVENTS), and cockpit-chat.ts documents this field as
+      // "Total Plane-A count for the scope (may exceed events.length when capped)" — passing the
+      // page length made that promise false on every call, so the honesty hedge at
+      // cockpit-chat.ts:1059 ("I looked at the N most recent") was structurally dead: it compares
+      // events_considered against events_total, and both were the same number. Chat could state
+      // "1 item needs your sign-off" for a workspace holding eleven, and never disclose the cap.
+      //
+      // THE FALLBACK IS THE PAGE LENGTH, NEVER 0. cockpit-chat.ts:1032 switches to the empty-state
+      // narrative when events_total === 0, which drops source facts entirely. A degraded aggregate
+      // read must not under-report below what we can already see.
+      { workspaceName, companyContext, events, documents, projects, plan, projectSources, sources, total: chatTotals.total, scope, charter, personalizationProfile },
       ai,
       mode,
       claudeKey,

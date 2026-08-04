@@ -27,7 +27,7 @@ const PROFILE = {
 };
 
 function dalStub(overrides: Record<string, unknown> = {}) {
-  return {
+  const stub = {
     getSessionEntitlement: async () => ({ state: 'approved_workspace' }),
     getSession: async (_userId: string, workspaceId: string) => ({
       user: { id: 'u1', email: 'a@honestyoung.example', role: 'owner' },
@@ -40,6 +40,28 @@ function dalStub(overrides: Record<string, unknown> = {}) {
     getCustomerContextProfile: async () => PROFILE,
     ...overrides,
   } as Record<string, unknown>;
+
+  // 260805 · countEventStates DERIVES from whichever listEvents this stub ended up with (base or
+  // override), so a fixture holding N events reports N — it is never hardcoded.
+  //
+  // This is the exact trap that made me revert this change once already: I stubbed a flat `total: 0`
+  // against fixtures that DO hold events, which drove events_total to 0, flipped
+  // cockpit-chat.ts:1032 into the empty-state narrative, and dropped source facts from the answer.
+  // Two tests failed on missing source text and I briefly read that as a defect in the route. The
+  // route was right; the mock was lying. A mock that contradicts its own fixture tests nothing.
+  if (!('countEventStates' in stub)) {
+    stub.countEventStates = async (...args: unknown[]) => {
+      const listed = await (stub.listEvents as (...a: unknown[]) => Promise<{ events?: unknown[] }>)(...args);
+      const rows = (Array.isArray(listed?.events) ? listed.events : []) as Array<Record<string, unknown>>;
+      return {
+        needs_you: rows.filter((r) => r.status === 'needs_review' && r.approval_state !== 'approved').length,
+        blocked: rows.filter((r) => r.status === 'blocked').length,
+        done: rows.filter((r) => r.status === 'completed' || r.status === 'approved').length,
+        total: rows.length,
+      };
+    };
+  }
+  return stub;
 }
 
 function appFor(auth: Record<string, unknown> | null, dal: Record<string, unknown>) {

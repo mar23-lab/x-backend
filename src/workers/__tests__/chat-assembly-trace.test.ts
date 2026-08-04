@@ -91,6 +91,9 @@ function appWithCapture(captured: { messages: unknown[] }) {
   const dal = {
     getSessionEntitlement: async () => ({ state: 'approved_workspace' }),
     listEvents: async () => ({ events: [], pagination: { has_more: false, next_before: null } }),
+    // 260805 · /customer-chat now takes its whole-workspace total from this aggregate rather than
+    // from the recency page. Derived from the same fixture so the mock can never contradict it.
+    countEventStates: async () => ({ needs_you: 0, blocked: 0, done: 0, total: 0 }),
     listUserSources: async () => [],
     getCustomerContextProfile: async () => PROFILE,
     appendChatExchange: async (_u: string, _s: unknown, messages: unknown[]) => { captured.messages = messages; },
