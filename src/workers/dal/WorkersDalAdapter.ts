@@ -180,6 +180,7 @@ import {
 import { createProjectWithAuthorityRow, mutateProjectWithAuthorityRow } from './project-command-store';
 import {
   listEventsRow,
+  countEventStatesRow,
   listEventsForOperatorRow,
   upsertEventRow,
   updateEventStatusForOperatorRow,
@@ -365,6 +366,13 @@ export class WorkersDalAdapter implements DalAdapter {
   // ============================================================
   // /api/v1/events
   // ============================================================
+
+  async countEventStates(
+    workspaceId: WorkspaceId,
+    opts: { role: EventListOpts['role']; project_id?: string | null },
+  ): Promise<{ needs_you: number; blocked: number; done: number; total: number }> {
+    return countEventStatesRow(this.rlsSql, workspaceId, opts); // 043 · same RLS-subject client
+  }
 
   async listEvents(workspaceId: WorkspaceId, opts: EventListOpts): Promise<EventPage> {
     return listEventsRow(this.rlsSql, workspaceId, opts); // 043 · RLS-subject client (defaults to sql)

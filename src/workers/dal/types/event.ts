@@ -188,6 +188,14 @@ export interface EventListOpts {
   // (excludes replies). Mutually exclusive in practice; parent_event_id wins if both set.
   parent_event_id?: string;
   top_level?: boolean;
+  // 260805 · ATTENTION FILTER — OPT-IN, default OFF (every existing caller stays byte-identical).
+  // true => only rows that need a human: (needs_review AND approval_state <> 'approved') OR blocked.
+  //
+  // Exists because "what needs you" must be a QUERY, not a page of recent rows filtered afterwards.
+  // Measured on production: workspace org_3EG82… holds 3,436 top-level events, 10 pending, and only
+  // ONE inside the newest 200 (worst pending rank 1,621). Nine approvals were invisible while the
+  // UI asserted "1 item needs you" — a wrong count, which is worse than an empty state.
+  attention_only?: boolean;
 }
 
 export interface UpsertResult {

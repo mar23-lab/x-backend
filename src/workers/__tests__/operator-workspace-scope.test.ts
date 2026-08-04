@@ -24,6 +24,11 @@ function cwDal(spy: { eventsFor: string[]; canScopeCalls: Array<[string, string]
   return {
     getSession: async (_u: string, w: string) => ({ projects: [{ id: 'prj_1', name: 'P1' }], workspace: { id: w }, user: { role: 'operator' } }),
     listEvents: async (w: string) => { spy.eventsFor.push(w); return { events: [{ id: 'e1', project_id: 'prj_1', intent_id: 'i', status: 'needs_review', approval_state: 'pending', summary: 's', evidence_link: null }], pagination: { has_more: false, next_before: null } }; },
+    // 260805 · counts now come from a whole-workspace aggregate. It deliberately does NOT record on
+    // `spy.eventsFor`: that spy asserts WHICH workspace the read was scoped to, and a second push
+    // per request made it ['ws_x','ws_x'] and broke the assertion. The scope decision is already
+    // proven by the listEvents entry; a duplicate would test the mock, not the route.
+    countEventStates: async () => ({ needs_you: 1, blocked: 0, done: 0, total: 1 }),
     countGovernedExecutionReceipts: async () => 0,
     userCanScopeWorkspace: async (u: string, w: string) => { spy.canScopeCalls.push([u, w]); return spy.canScope; },
   } as any;
@@ -105,6 +110,7 @@ function chDal(spy: { eventsFor: string[]; ctxFor: string[]; canScopeCalls: Arra
   return {
     getSessionEntitlement: async () => ({ state: 'approved_workspace' }),
     listEvents: async (w: string) => { spy.eventsFor.push(w); return { events: [], pagination: { has_more: false, next_before: null } }; },
+    countEventStates: async () => ({ needs_you: 0, blocked: 0, done: 0, total: 0 }),
     listUserSources: async () => [],
     getCustomerContextProfile: async (w: string) => { spy.ctxFor.push(w); return PROFILE; },
     userCanScopeWorkspace: async (u: string, w: string) => { spy.canScopeCalls.push([u, w]); return spy.canScope; },

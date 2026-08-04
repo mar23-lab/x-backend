@@ -4902,6 +4902,74 @@
           "reason": "CURRENT_WORK_PARITY_OBSERVATIONS_ENABLED flipped to true (operator-approved, in-conversation 2026-08-04). FOUND BY BROWSER-TESTING THE LIVE AUTHENTICATED COCKPIT: the page POSTs its parity observation on every load and receives 404 x3, because this is a SECOND flag and only the read flag was flipped. GET 200 /api/v1/current-work works; POST 404 /current-work/parity-observations is discarded. shadowCurrentWork (live-data.js:1901) is explicitly 'the evidence-gathering stage before making the server projection authoritative (stage 2)' - so with this off, stage 1 runs WITHOUT producing the one artifact it exists to produce, and every user gets 3 console errors per page load. Write path verified LIVE before flipping, not assumed (migration 077 is headed 'STAGED ONLY, never auto-applied', so presence had to be measured): table present, xlooop_app holds INSERT+SELECT, RLS enabled with 1 policy. That is the RLS-without-GRANT lesson applied BEFORE the flip instead of after a 42501. Superseded note follows: ITEM 64 - CURRENT_WORK_PROJECTION_ENABLED flipped to true (operator-approved, in-conversation 2026-08-04). current-work.ts:13 requires a Neon-branch read proof before this flag moves. Measured on production br-dark-credit-a7tb4yhu immediately before flipping, using the route's OWN pending filter (current-work.ts:129): needs_review AND approval_state IS DISTINCT FROM 'approved' = 15; blocked = 2; spread across FOUR real workspaces (3 Clerk orgs + mbp-private), not one test tenant. An EARLIER read proof this session returned pending=0/blocked=0 and on that basis I argued AGAINST flipping - enabling would have converted 'honestly disabled' into 'silently empty', which is worse. That objection was correct then and is FALSIFIED now; a precondition that can be inherited is not a precondition. Read-only projection over operation_events: no new writes, no authority change. Pairs with x-ai-front a16573d, which flips the EXPECTED posture - live-data.js:471 fails the handshake on any posture mismatch, so both must ship in one cutover."
         }
       ]
+    },
+    {
+      "delta_id": "claude-current-work-server-side-predicate-20260805",
+      "generated_at": "2026-08-05T01:05:00.000Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "e3972fb9d652d72b40509a94714d97056195d770",
+      "target_base_commit": "e3972fb9d652d72b40509a94714d97056195d770",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/dal/DalAdapter.ts",
+          "target_blob": "bfa20cbf4625fe5e70ea9c568a0bfc755cce2e85",
+          "reason": "COMMERCIAL BLOCKER - approvals were invisible past the newest 200. /current-work read ONE page of the 200 most recent top-level events and filtered it in JS. MEASURED ON PRODUCTION (br-dark-credit-a7tb4yhu) before the fix: workspace org_3EG82VEzc8t3t65XSZ0YDlcaDMI holds 3,436 top-level events, 10 pending (needs_review AND approval_state IS DISTINCT FROM 'approved'), and only ONE inside the 200-row window - worst pending rank 1,621. Nine approvals were invisible, and because exactly one survived the window the card asserted '1 item needs you': a CONFIDENT WRONG COUNT, which is worse than an empty state. done/total were window-derived too, so done_pct was a percentage of the last 200 rows rather than of the work. The client (wired/live-data.js:1700) shares the identical bug, so the parity shadow compared two copies of it and would report 'parity OK'. Raising the limit only moves the cliff. Fix: attention predicate pushed into SQL next to the ORDER BY (opt-in attention_only, default OFF so every other caller is byte-identical), and counts taken from a real whole-workspace aggregate (countEventStates) instead of from a page. A count computed from a page is not a count. [this file: declare countEventStates on the DAL interface]"
+        },
+        {
+          "path": "src/workers/dal/WorkersDalAdapter.ts",
+          "target_blob": "5a7d5dc7b4444508f13b0272a1324fd966eb4ec0",
+          "reason": "COMMERCIAL BLOCKER - approvals were invisible past the newest 200. /current-work read ONE page of the 200 most recent top-level events and filtered it in JS. MEASURED ON PRODUCTION (br-dark-credit-a7tb4yhu) before the fix: workspace org_3EG82VEzc8t3t65XSZ0YDlcaDMI holds 3,436 top-level events, 10 pending (needs_review AND approval_state IS DISTINCT FROM 'approved'), and only ONE inside the 200-row window - worst pending rank 1,621. Nine approvals were invisible, and because exactly one survived the window the card asserted '1 item needs you': a CONFIDENT WRONG COUNT, which is worse than an empty state. done/total were window-derived too, so done_pct was a percentage of the last 200 rows rather than of the work. The client (wired/live-data.js:1700) shares the identical bug, so the parity shadow compared two copies of it and would report 'parity OK'. Raising the limit only moves the cliff. Fix: attention predicate pushed into SQL next to the ORDER BY (opt-in attention_only, default OFF so every other caller is byte-identical), and counts taken from a real whole-workspace aggregate (countEventStates) instead of from a page. A count computed from a page is not a count. [this file: bind countEventStates to the RLS-subject client]"
+        },
+        {
+          "path": "src/workers/dal/types/event.ts",
+          "target_blob": "c6ade1c50b42ef612ee70118ac8a1980a28365db",
+          "reason": "COMMERCIAL BLOCKER - approvals were invisible past the newest 200. /current-work read ONE page of the 200 most recent top-level events and filtered it in JS. MEASURED ON PRODUCTION (br-dark-credit-a7tb4yhu) before the fix: workspace org_3EG82VEzc8t3t65XSZ0YDlcaDMI holds 3,436 top-level events, 10 pending (needs_review AND approval_state IS DISTINCT FROM 'approved'), and only ONE inside the 200-row window - worst pending rank 1,621. Nine approvals were invisible, and because exactly one survived the window the card asserted '1 item needs you': a CONFIDENT WRONG COUNT, which is worse than an empty state. done/total were window-derived too, so done_pct was a percentage of the last 200 rows rather than of the work. The client (wired/live-data.js:1700) shares the identical bug, so the parity shadow compared two copies of it and would report 'parity OK'. Raising the limit only moves the cliff. Fix: attention predicate pushed into SQL next to the ORDER BY (opt-in attention_only, default OFF so every other caller is byte-identical), and counts taken from a real whole-workspace aggregate (countEventStates) instead of from a page. A count computed from a page is not a count. [this file: EventListOpts.attention_only - opt-in, default OFF, existing callers byte-identical]"
+        },
+        {
+          "path": "src/workers/dal/event-store.ts",
+          "target_blob": "f69b0a0bdc2310b3ecae856fc8b0fc96f793a4c0",
+          "reason": "COMMERCIAL BLOCKER - approvals were invisible past the newest 200. /current-work read ONE page of the 200 most recent top-level events and filtered it in JS. MEASURED ON PRODUCTION (br-dark-credit-a7tb4yhu) before the fix: workspace org_3EG82VEzc8t3t65XSZ0YDlcaDMI holds 3,436 top-level events, 10 pending (needs_review AND approval_state IS DISTINCT FROM 'approved'), and only ONE inside the 200-row window - worst pending rank 1,621. Nine approvals were invisible, and because exactly one survived the window the card asserted '1 item needs you': a CONFIDENT WRONG COUNT, which is worse than an empty state. done/total were window-derived too, so done_pct was a percentage of the last 200 rows rather than of the work. The client (wired/live-data.js:1700) shares the identical bug, so the parity shadow compared two copies of it and would report 'parity OK'. Raising the limit only moves the cliff. Fix: attention predicate pushed into SQL next to the ORDER BY (opt-in attention_only, default OFF so every other caller is byte-identical), and counts taken from a real whole-workspace aggregate (countEventStates) instead of from a page. A count computed from a page is not a count. [this file: attention predicate in SQL + countEventStatesRow aggregate over the whole workspace]"
+        },
+        {
+          "path": "src/workers/routes/current-work.ts",
+          "target_blob": "d4f4f8649e9148e7646b166da027b5c0a64b4583",
+          "reason": "COMMERCIAL BLOCKER - approvals were invisible past the newest 200. /current-work read ONE page of the 200 most recent top-level events and filtered it in JS. MEASURED ON PRODUCTION (br-dark-credit-a7tb4yhu) before the fix: workspace org_3EG82VEzc8t3t65XSZ0YDlcaDMI holds 3,436 top-level events, 10 pending (needs_review AND approval_state IS DISTINCT FROM 'approved'), and only ONE inside the 200-row window - worst pending rank 1,621. Nine approvals were invisible, and because exactly one survived the window the card asserted '1 item needs you': a CONFIDENT WRONG COUNT, which is worse than an empty state. done/total were window-derived too, so done_pct was a percentage of the last 200 rows rather than of the work. The client (wired/live-data.js:1700) shares the identical bug, so the parity shadow compared two copies of it and would report 'parity OK'. Raising the limit only moves the cliff. Fix: attention predicate pushed into SQL next to the ORDER BY (opt-in attention_only, default OFF so every other caller is byte-identical), and counts taken from a real whole-workspace aggregate (countEventStates) instead of from a page. A count computed from a page is not a count. [this file: ask for what needs a human; take counts from the aggregate, not from a page]"
+        }
+      ]
+    },
+    {
+      "delta_id": "claude-current-work-test-mock-countEventStates-20260805",
+      "generated_at": "2026-08-05T01:12:00.000Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "e3972fb9d652d72b40509a94714d97056195d770",
+      "target_base_commit": "e3972fb9d652d72b40509a94714d97056195d770",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/__tests__/current-work-route.test.ts",
+          "target_blob": "17144dde159bcaf7cb2a523e3944dbc78b998f48",
+          "reason": "Teach the mock DAL the countEventStates aggregate introduced by claude-current-work-server-side-predicate-20260805. Three tests failed on the new method and were RIGHT to: the route now takes its counts from a whole-workspace aggregate rather than from a page of the 200 most recent events. The mock derives the counts from the SAME fixture array the page uses, so these tests keep asserting the route's shaping logic instead of becoming a second, divergent source of truth. Result: 11/11 pass."
+        }
+      ]
+    },
+    {
+      "delta_id": "claude-operator-workspace-scope-mock-countEventStates-20260805",
+      "generated_at": "2026-08-05T01:12:00.000Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "e3972fb9d652d72b40509a94714d97056195d770",
+      "target_base_commit": "e3972fb9d652d72b40509a94714d97056195d770",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/__tests__/operator-workspace-scope.test.ts",
+          "target_blob": "fcea64814943b93f3dcaaa37eb24328a7d031f64",
+          "reason": "Teach both operator-workspace-scope mocks the countEventStates aggregate introduced by claude-current-work-server-side-predicate-20260805. It deliberately does NOT record on spy.eventsFor: that spy asserts WHICH workspace the read was scoped to, and my first attempt pushed to it from countEventStates as well, making it ['ws_x','ws_x'] and breaking the assertion. The scope decision is already proven by the listEvents entry; a duplicate would have tested the mock rather than the route. Result: 13/13 pass."
+        }
+      ]
     }
   ]
 }

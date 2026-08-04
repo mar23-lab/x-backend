@@ -7,6 +7,15 @@ function mkDal(events: any[], receiptCount = 0, receiptReadFails = false, parity
   return {
     getSession: async () => ({ projects: [{ id: 'prj_1', name: 'P1' }], workspace: { id: 'ws_1' }, user: { role: 'operator' } }),
     listEvents: async () => ({ events, pagination: { has_more: false, next_before: null } }),
+    // 260805 · counts now come from a whole-workspace SQL aggregate, not from the page above.
+    // The mock derives them from the SAME fixture so these tests keep asserting the route's
+    // shaping logic rather than a second, divergent source of truth.
+    countEventStates: async () => ({
+      needs_you: events.filter((e: any) => e.status === 'needs_review' && e.approval_state !== 'approved').length,
+      blocked: events.filter((e: any) => e.status === 'blocked').length,
+      done: events.filter((e: any) => e.status === 'completed' || e.status === 'approved').length,
+      total: events.length,
+    }),
     countGovernedExecutionReceipts: async () => {
       if (receiptReadFails) throw new Error('receipt read unavailable');
       return receiptCount;

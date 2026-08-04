@@ -134,6 +134,13 @@ export interface DalAdapter {
 
   /** GET /api/v1/events — returns paginated events scoped to workspace + visibility filter. */
   listEvents(workspaceId: WorkspaceId, opts: EventListOpts): Promise<EventPage>;
+  /** 260805 · Whole-workspace state counts via a SQL aggregate. A count derived from ONE PAGE of
+   *  recent rows is not a count: /current-work asserted "1 item needs you" while 10 were pending,
+   *  because 9 of them sat outside the newest 200 (worst rank 1,621 of 3,436). */
+  countEventStates(
+    workspaceId: WorkspaceId,
+    opts: { role: EventListOpts['role']; project_id?: string | null },
+  ): Promise<{ needs_you: number; blocked: number; done: number; total: number }>;
 
   /** R54-Stage2 · operator-overlay event list. Lists events across ALL
    *  workspaces owned by the operator's identity set (ownerUserIds), so the
