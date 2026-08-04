@@ -27,6 +27,12 @@ const gates = [
   ['runtime independence', 'npm', ['run', 'verify:no-mbp-runtime-dependency']],
   ['mounted-route authorization manifest controls', 'npm', ['run', 'verify:route-manifest']],
   ['API contract', 'npm', ['run', 'verify:contract']],
+  // 260804 · a handler that hand-builds an INTERNAL_ERROR wrapper destroys the Postgres code that
+  // errorEnvelope exists to preserve. Measured cost: `POST /documents` had NEVER once succeeded in
+  // production and reported only INTERNAL_ERROR, while the same week `POST /intake/:id/execute`
+  // failed identically and reported 42501 — which named the failing layer and led straight to a fix.
+  ['error-code preservation controls', 'npm', ['run', 'verify:error-code-preservation:self-test']],
+  ['error-code preservation', 'npm', ['run', 'verify:error-code-preservation']],
   ['deploy provenance wiring', 'npm', ['run', 'verify:deploy-provenance']],
   ['Pages artifact-owned Sentry release', 'npm', ['run', 'verify:pages-sentry-release']],
   ['rate-limit buckets bound to real limiters', 'npm', ['run', 'verify:rate-limit-binding-parity']],

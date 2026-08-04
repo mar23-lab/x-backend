@@ -160,7 +160,7 @@ documentsRoute.post('/documents', async (ctx) => {
       },
     }, 201);
   } catch (err) {
-    return errorEnvelope(ctx, { status: 500, code: 'INTERNAL_ERROR', message: (err as Error).message });
+    return errorEnvelope(ctx, err);
   }
 });
 
@@ -175,7 +175,7 @@ documentsRoute.get('/documents', async (ctx) => {
     const docs = await listDocumentsRow(sql, auth.workspace_id);
     return ctx.json(withDataClass({ documents: docs }, 'live'));
   } catch (err) {
-    return errorEnvelope(ctx, { status: 500, code: 'INTERNAL_ERROR', message: (err as Error).message });
+    return errorEnvelope(ctx, err);
   }
 });
 
@@ -229,6 +229,6 @@ documentsRoute.patch('/documents/:id/admissibility', async (ctx) => {
       projection_outbox_id: write.projection_outbox_id,
     }, 'live'));
   } catch (err) {
-    return errorEnvelope(ctx, { status: 500, code: 'INTERNAL_ERROR', message: (err as Error).message });
+    return errorEnvelope(ctx, err);
   }
 });

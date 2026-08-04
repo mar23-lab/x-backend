@@ -4787,6 +4787,42 @@
           "reason": "Add mint-app-pages-decision-packet: deploy:api has had a minter since 260728 but deploy:app:prod never did, so the SECOND packet of every paired cutover was hand-authored JSON typed under a 30-minute clock. It reads the SAME release manifest the deploy reads, refuses to synthesise the approver (the API minter's doctrine), pins commercial_release_allowed false, carries the cutover_id so the halves are provably paired, and defaults --out OUTSIDE the repo because an untracked packet makes the tree dirty and deploy:app:prod refuses on a dirty tree."
         }
       ]
+    },
+    {
+      "delta_id": "claude-preserve-error-code-in-envelope-20260804",
+      "generated_at": "2026-08-04T01:52:00.000Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "b0d2a7217e0bb14e79cfe7d549651a1dc3a6489e",
+      "target_base_commit": "b0d2a7217e0bb14e79cfe7d549651a1dc3a6489e",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/routes/pmf.ts",
+          "target_blob": "ff84b00aa59c53d0c6207cf6720468d24308bdfe",
+          "reason": "Pass the CAUGHT error to errorEnvelope instead of a hand-built {status:500, code:'INTERNAL_ERROR'} wrapper. errorEnvelope deliberately PRESERVES a thrown error's code on the wire (EE-1) precisely because silently rewriting unregistered codes to INTERNAL_ERROR had already masked ~30 real codes once; 13 handlers across documents/sources/pmf discarded the cause before the envelope could preserve it, so both the wire AND the Sentry capture received the wrapper rather than the real error. MEASURED COST: POST /api/v1/documents had NEVER once succeeded in production (zero operation_events and zero projection_outbox rows for document uploads, ever) and reported only INTERNAL_ERROR, while the same week POST /intake/:id/execute failed identically and reported 42501 - which named the failing layer and led straight to a fix. Same class of bug, same week; one route was diagnosable and the other was not, and the only difference was this line. The correct idiom already dominated the codebase 196 to 13. Ships with verify:error-code-preservation (5/5 detector controls, self-test is the mutation control) wired into ci-local so it cannot recur."
+        },
+        {
+          "path": "src/workers/routes/documents.ts",
+          "target_blob": "85bdaf64471dcd835985933572c496daa85d69c8",
+          "reason": "Same change, and this is the route whose swallowed code cost the most: POST /api/v1/documents returns 500 in production and has never once written a row through insertDocumentWithAuthorityRow. Three handlers here now pass the caught error through, so the next probe sees the real code instead of INTERNAL_ERROR."
+        },
+        {
+          "path": "src/workers/routes/sources.ts",
+          "target_blob": "db2b806b83fb0c8cc17cf969e8c82c8a782ababb",
+          "reason": "Same change across seven handlers — the largest concentration of the pattern."
+        },
+        {
+          "path": "scripts/ci-local.mjs",
+          "target_blob": "26b498fe78b96d23c020da8ed2762c19116da6ef",
+          "reason": "Register the error-code-preservation gate and its self-test in the local authority stack, so the pattern cannot return silently. Gate count 71 -> 73."
+        },
+        {
+          "path": "package.json",
+          "target_blob": "a05b8fe57346f10322419d1e238aedd2df730ea4",
+          "reason": "Register verify:error-code-preservation and its self-test so ci-local can run the recurrence gate."
+        }
+      ]
     }
   ]
 }
