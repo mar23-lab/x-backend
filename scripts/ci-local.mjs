@@ -37,6 +37,11 @@ const gates = [
   // et al.) raises 42P18 on EVERY call — a guaranteed runtime failure that mocks, typecheck and an
   // inline-literal SQL replay all miss. It broke POST /documents so completely the endpoint had
   // never once succeeded in production.
+  // ITEM 23 · the projection-outbox gate itself needs a live DSN, so it runs in deploy:api, not
+  // here. Its DECISION LOGIC is pure and must still be exercised somewhere that always runs —
+  // otherwise the only thing standing between a no-consumer queue and production is a check nobody
+  // has ever seen execute. Controls only; the live measurement is a deploy preflight.
+  ['projection-outbox drain controls', 'npm', ['run', 'verify:projection-outbox-drain:self-test']],
   ['untyped variadic SQL parameter controls', 'npm', ['run', 'verify:untyped-jsonb-params:self-test']],
   ['untyped variadic SQL parameters', 'npm', ['run', 'verify:untyped-jsonb-params']],
   ['deploy provenance wiring', 'npm', ['run', 'verify:deploy-provenance']],
