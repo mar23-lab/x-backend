@@ -4886,6 +4886,22 @@
           "reason": "ITEM 64 - CURRENT_WORK_PROJECTION_ENABLED flipped to true (operator-approved, in-conversation 2026-08-04). current-work.ts:13 requires a Neon-branch read proof before this flag moves. Measured on production br-dark-credit-a7tb4yhu immediately before flipping, using the route's OWN pending filter (current-work.ts:129): needs_review AND approval_state IS DISTINCT FROM 'approved' = 15; blocked = 2; spread across FOUR real workspaces (3 Clerk orgs + mbp-private), not one test tenant. An EARLIER read proof this session returned pending=0/blocked=0 and on that basis I argued AGAINST flipping - enabling would have converted 'honestly disabled' into 'silently empty', which is worse. That objection was correct then and is FALSIFIED now; a precondition that can be inherited is not a precondition. Read-only projection over operation_events: no new writes, no authority change. Pairs with x-ai-front a16573d, which flips the EXPECTED posture - live-data.js:471 fails the handshake on any posture mismatch, so both must ship in one cutover."
         }
       ]
+    },
+    {
+      "delta_id": "claude-current-work-parity-observations-flag-20260804",
+      "generated_at": "2026-08-04T10:40:00.000Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "adcd1322d947555d0b80f2096cc2819e8795a88e",
+      "target_base_commit": "adcd1322d947555d0b80f2096cc2819e8795a88e",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "wrangler.toml",
+          "target_blob": "c02305fbbbd11effb8180246f6b74fffbf06c6b1",
+          "reason": "CURRENT_WORK_PARITY_OBSERVATIONS_ENABLED flipped to true (operator-approved, in-conversation 2026-08-04). FOUND BY BROWSER-TESTING THE LIVE AUTHENTICATED COCKPIT: the page POSTs its parity observation on every load and receives 404 x3, because this is a SECOND flag and only the read flag was flipped. GET 200 /api/v1/current-work works; POST 404 /current-work/parity-observations is discarded. shadowCurrentWork (live-data.js:1901) is explicitly 'the evidence-gathering stage before making the server projection authoritative (stage 2)' - so with this off, stage 1 runs WITHOUT producing the one artifact it exists to produce, and every user gets 3 console errors per page load. Write path verified LIVE before flipping, not assumed (migration 077 is headed 'STAGED ONLY, never auto-applied', so presence had to be measured): table present, xlooop_app holds INSERT+SELECT, RLS enabled with 1 policy. That is the RLS-without-GRANT lesson applied BEFORE the flip instead of after a 42501. Superseded note follows: ITEM 64 - CURRENT_WORK_PROJECTION_ENABLED flipped to true (operator-approved, in-conversation 2026-08-04). current-work.ts:13 requires a Neon-branch read proof before this flag moves. Measured on production br-dark-credit-a7tb4yhu immediately before flipping, using the route's OWN pending filter (current-work.ts:129): needs_review AND approval_state IS DISTINCT FROM 'approved' = 15; blocked = 2; spread across FOUR real workspaces (3 Clerk orgs + mbp-private), not one test tenant. An EARLIER read proof this session returned pending=0/blocked=0 and on that basis I argued AGAINST flipping - enabling would have converted 'honestly disabled' into 'silently empty', which is worse. That objection was correct then and is FALSIFIED now; a precondition that can be inherited is not a precondition. Read-only projection over operation_events: no new writes, no authority change. Pairs with x-ai-front a16573d, which flips the EXPECTED posture - live-data.js:471 fails the handshake on any posture mismatch, so both must ship in one cutover."
+        }
+      ]
     }
   ]
 }
