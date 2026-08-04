@@ -4986,6 +4986,22 @@
           "reason": "COMMERCIAL BLOCKER - multi-seat customers rate-limited themselves into a degraded UI. resolveIp() reads cf-connecting-ip, which for a company is the shared NAT/VPN egress: every seat presents the SAME ip. The IP bucket is 100/60s, TEN TIMES TIGHTER than the per-user bucket (1,000/60s), and it was evaluated FIRST and unconditionally, so an authenticated user could never reach their own allowance. One authenticated page load costs a measured floor of 15 requests - roughly SIX PAGE LOADS PER MINUTE FOR AN ENTIRE OFFICE; a ten-seat customer exhausts it on the 9am wave. The client has ZERO 429 handling (0 occurrences of '429' in wired/live-data.js), so it surfaces as a silent, causeless 'unavailable'. FIX: the IP bucket now governs UNAUTHED traffic only, which is what its own comment already claimed ('covers unauthed paths'). Layering is preserved, not removed - unauthed keeps the tight 100/60s, authed stays capped per user (1,000) and per tenant (5,000), both already correctly sized. Raising the IP limit was rejected: it keeps a shared-NAT ceiling that punishes large customers for being large."
         }
       ]
+    },
+    {
+      "delta_id": "claude-minter-backend-only-cutover-20260805",
+      "generated_at": "2026-08-05T01:12:00.000Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "a947b1d768619de103421ef68a139cd4e5c2c16a",
+      "target_base_commit": "a947b1d768619de103421ef68a139cd4e5c2c16a",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "scripts/mint-app-pages-decision-packet.mjs",
+          "target_blob": "b1d7646a98935d30ab518faf332735caff569f16",
+          "reason": "DEPLOY-PATH PRODUCER GAP - the minter could not express a BACKEND-ONLY cutover, and so blocked the deploy it exists to authorise. When only the backend changes, x-ai-front's git sha does NOT move, while the built artifact genuinely does because it pins the new backend sha (the frontend refuses to boot on mismatch). The uniqueness invariant was expressed on the FRONTEND SOURCE SHA, which is the wrong identifier: a Pages rollback targets a DEPLOYMENT UUID, not a git sha. Measured: shipping backend a947b1d against unchanged frontend e7b5a2b with previous deployment 220089eb as the target, it refused and left the shared-NAT rate-limit fix merged but undeployed. FIX: a DISTINCT rollback-deployment-id now satisfies the invariant when the sha is unchanged, and the packet announces BACKEND-ONLY CUTOVER out loud. The guard is NOT removed - identical sha AND identical deployment id is still a no-op and still refused. self-test 8/8. Third instance of this family after the --out default (item 49). Superseded note: COMMERCIAL BLOCKER - multi-seat customers rate-limited themselves into a degraded UI. resolveIp() reads cf-connecting-ip, which for a company is the shared NAT/VPN egress: every seat presents the SAME ip. The IP bucket is 100/60s, TEN TIMES TIGHTER than the per-user bucket (1,000/60s), and it was evaluated FIRST and unconditionally, so an authenticated user could never reach their own allowance. One authenticated page load costs a measured floor of 15 requests - roughly SIX PAGE LOADS PER MINUTE FOR AN ENTIRE OFFICE; a ten-seat customer exhausts it on the 9am wave. The client has ZERO 429 handling (0 occurrences of '429' in wired/live-data.js), so it surfaces as a silent, causeless 'unavailable'. FIX: the IP bucket now governs UNAUTHED traffic only, which is what its own comment already claimed ('covers unauthed paths'). Layering is preserved, not removed - unauthed keeps the tight 100/60s, authed stays capped per user (1,000) and per tenant (5,000), both already correctly sized. Raising the IP limit was rejected: it keeps a shared-NAT ceiling that punishes large customers for being large."
+        }
+      ]
     }
   ]
 }

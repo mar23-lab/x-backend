@@ -241,8 +241,41 @@ if (!cutoverId) {
   console.error('  Prefer: --from-api-packet <the API packet you just minted>');
 }
 
-if (manifest.frontend_sha === rollbackFrontendSha) {
-  refuse('rollback frontend sha equals the candidate', 'A rollback target must differ from what you are shipping.');
+// 260805 · A BACKEND-ONLY CUTOVER IS A REAL SHAPE, AND THIS REFUSED IT.
+//
+// The invariant being protected is sound: a rollback target must differ from what you are shipping,
+// or "rollback" is a no-op that reads like insurance. But it was expressed on the FRONTEND SOURCE
+// SHA, and that is the wrong identifier for a Pages rollback.
+//
+// When only the backend changes, x-ai-front's git sha does NOT move — while the built artifact
+// genuinely does, because it pins the new backend sha and the frontend refuses to boot on mismatch.
+// So the deploy is mandatory and the packet was unmintable. Measured: shipping backend a947b1d
+// against unchanged frontend e7b5a2b, with the previous deployment 220089eb as the rollback target,
+// this refused and left a COMMERCIAL FIX (the shared-NAT rate limiter) merged but undeployed —
+// a gate blocking the deploy it exists to authorise. That is the third instance of this family in
+// this repo (see the --out default, item 49).
+//
+// THE DEPLOYMENT ID IS WHAT A PAGES ROLLBACK ACTUALLY TARGETS. `wrangler pages deployment` rolls
+// back to a deployment UUID, not to a git sha. So a DISTINCT deployment id satisfies the real
+// invariant — "you can get back to something else" — even when the source sha is identical.
+//
+// The guard is NOT removed: identical sha AND identical deployment id is still a no-op and is still
+// refused. Only the genuinely-recoverable case is admitted, and it says so out loud in the packet.
+const backendOnlyCutover = manifest.frontend_sha === rollbackFrontendSha
+  && rollbackDeploymentId
+  && rollbackDeploymentId !== manifest.deployment_id;
+if (manifest.frontend_sha === rollbackFrontendSha && !backendOnlyCutover) {
+  refuse(
+    'rollback frontend sha equals the candidate, and no distinct rollback deployment id was given',
+    'A rollback target must differ from what you are shipping. For a BACKEND-ONLY cutover the '
+    + 'frontend sha legitimately does not move — pass --rollback-deployment-id naming the previous '
+    + 'Pages deployment, which is what a Pages rollback actually targets.',
+  );
+}
+if (backendOnlyCutover) {
+  console.error('mint-app-pages-decision-packet · BACKEND-ONLY CUTOVER');
+  console.error(`  frontend sha unchanged (${String(rollbackFrontendSha).slice(0, 12)}) — the ARTIFACT still differs because it pins the new backend sha.`);
+  console.error(`  rollback targets Pages deployment ${rollbackDeploymentId}, which is what a Pages rollback resolves.`);
 }
 
 const packet = buildPagesPacket(manifest, {
