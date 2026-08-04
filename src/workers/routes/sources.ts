@@ -144,7 +144,7 @@ sourcesRoute.get('/sources', async (ctx) => {
     const scoped = rows.filter((source) => sourceMatchesActiveWorkspace(source, auth.workspace_id));
     return ctx.json(withDataClass(withAuthority({ sources: scoped.map(toApiResponse) }, auth, 'source'), 'live'));
   } catch (err) {
-    return errorEnvelope(ctx, { status: 500, code: 'INTERNAL_ERROR', message: (err as Error).message });
+    return errorEnvelope(ctx, err);
   }
 });
 
@@ -197,7 +197,7 @@ sourcesRoute.get('/sources/:id/repos', async (ctx) => {
       return errorEnvelope(ctx, { status, code: code.toUpperCase(), message: (err as Error).message });
     }
   } catch (err) {
-    return errorEnvelope(ctx, { status: 500, code: 'INTERNAL_ERROR', message: (err as Error).message });
+    return errorEnvelope(ctx, err);
   }
 });
 
@@ -245,7 +245,7 @@ sourcesRoute.get('/sources/:id/folders', async (ctx) => {
       return errorEnvelope(ctx, { status, code: code.toUpperCase(), message: (err as Error).message });
     }
   } catch (err) {
-    return errorEnvelope(ctx, { status: 500, code: 'INTERNAL_ERROR', message: (err as Error).message });
+    return errorEnvelope(ctx, err);
   }
 });
 
@@ -373,7 +373,7 @@ sourcesRoute.post('/sources/connect/:provider', async (ctx) => {
       audit_event_id: write.audit_event_id,
     }, 201);
   } catch (err) {
-    return errorEnvelope(ctx, { status: 500, code: 'INTERNAL_ERROR', message: (err as Error).message });
+    return errorEnvelope(ctx, err);
   }
 });
 
@@ -407,7 +407,7 @@ sourcesRoute.delete('/sources/:id', async (ctx) => {
     }
     return ctx.json(write);
   } catch (err) {
-    return errorEnvelope(ctx, { status: 500, code: 'INTERNAL_ERROR', message: (err as Error).message });
+    return errorEnvelope(ctx, err);
   }
 });
 
@@ -474,7 +474,7 @@ sourcesRoute.patch('/sources/:id', (ctx) => withIdempotency(ctx, 'PATCH /api/v1/
       throw err;
     }
   } catch (err) {
-    return errorEnvelope(ctx, { status: 500, code: 'INTERNAL_ERROR', message: (err as Error).message });
+    return errorEnvelope(ctx, err);
   }
 }));
 
@@ -613,6 +613,6 @@ sourcesRoute.post('/sources/:id/sync', async (ctx) => {
       });
     }
   } catch (err) {
-    return errorEnvelope(ctx, { status: 500, code: 'INTERNAL_ERROR', message: (err as Error).message });
+    return errorEnvelope(ctx, err);
   }
 });

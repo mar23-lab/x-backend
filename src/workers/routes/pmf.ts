@@ -62,7 +62,7 @@ pmfRoute.post('/pmf', async (ctx) => {
     });
     return ctx.json({ recorded: { id: resp.id, sentiment: resp.sentiment } }, 201);
   } catch (err) {
-    return errorEnvelope(ctx, { status: 500, code: 'INTERNAL_ERROR', message: (err as Error).message });
+    return errorEnvelope(ctx, err);
   }
 });
 
@@ -80,7 +80,7 @@ pmfRoute.get('/pmf-summary', async (ctx) => {
     const summary = await dal.getPmfSummary();
     return ctx.json({ summary });
   } catch (err) {
-    return errorEnvelope(ctx, { status: 500, code: 'INTERNAL_ERROR', message: (err as Error).message });
+    return errorEnvelope(ctx, err);
   }
 });
 
@@ -103,6 +103,6 @@ pmfRoute.get('/engagement-summary', async (ctx) => {
     const summary = await dal.getEngagementRollup(windowDays);
     return ctx.json({ summary });
   } catch (err) {
-    return errorEnvelope(ctx, { status: 500, code: 'INTERNAL_ERROR', message: (err as Error).message });
+    return errorEnvelope(ctx, err);
   }
 });
