@@ -247,7 +247,36 @@ export function assessPagesDecisionPacket(packet, expected) {
   if (!SHA_PATTERN.test(candidate.frontend_sha || '')) problems.push('candidate_frontend_sha');
   if (!SHA_PATTERN.test(candidate.backend_sha || '')) problems.push('candidate_backend_sha');
   if (!SHA_PATTERN.test(rollback.frontend_sha || '')) problems.push('rollback_frontend_sha');
-  if (rollback.frontend_sha === candidate.frontend_sha) problems.push('rollback_frontend_not_distinct');
+  // 260805 · THE SAME CHECK LIVED IN TWO PLACES, AND I ONLY FIXED ONE.
+  //
+  // The minter was corrected to admit a BACKEND-ONLY cutover; this contract — read by
+  // deploy-app-prod.mjs — was not. Consequence, measured in production: the API deployed to
+  // fda3277a, then `deploy:app:prod` FAILED CLOSED on rollback_frontend_not_distinct, leaving the
+  // live pair mismatched (backend fda3277a, frontend pinning ccbf6d29) until the declared rollback
+  // was executed to restore it. Fixing a duplicated invariant in one copy is not fixing it.
+  //
+  // The requirement is "you can get back to something else". A Pages rollback resolves a DEPLOYMENT
+  // UUID, never a git sha, so a distinct deployment id satisfies it even when the frontend source
+  // sha is unchanged — which is exactly what a backend-only cutover looks like, because the built
+  // artifact still differs (it pins the new backend sha).
+  //
+  // NOT a loosening: identical sha AND identical deployment id remains a no-op and is still
+  // refused, below.
+  // FIRST ATTEMPT WAS VACUOUS AND THE SELF-TEST CAUGHT IT. I compared the rollback deployment id
+  // against `candidate.cloudflare_deployment_id` — but a CANDIDATE HAS NOT BEEN DEPLOYED YET, so it
+  // carries no deployment id. The comparison was therefore always true and the guard stopped firing
+  // entirely. `verify-app-pages-decision-packet self-test · FAIL · same rollback` said so
+  // immediately. A guard I widen must still fail on the case it exists for.
+  //
+  // The genuine no-op is NOTHING CHANGING: same frontend sha AND same backend sha. A backend-only
+  // cutover has an unchanged frontend sha and a DIFFERENT backend sha — the artifact really does
+  // differ, because it pins that backend sha.
+  const backendOnly = rollback.frontend_sha === candidate.frontend_sha
+    && SHA_PATTERN.test(rollback.backend_sha || '')
+    && rollback.backend_sha !== candidate.backend_sha;
+  if (rollback.frontend_sha === candidate.frontend_sha && !backendOnly) {
+    problems.push('rollback_frontend_not_distinct');
+  }
   if (!UUID_PATTERN.test(rollback.cloudflare_deployment_id || '')) problems.push('rollback_deployment_id');
   if (!rollback.evidence_reference) problems.push('rollback_evidence_reference');
   if (deployment.api_base !== 'https://api.xlooop.com') problems.push('expected_api_base');
