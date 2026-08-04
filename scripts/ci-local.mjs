@@ -33,6 +33,12 @@ const gates = [
   // failed identically and reported 42501 — which named the failing layer and led straight to a fix.
   ['error-code preservation controls', 'npm', ['run', 'verify:error-code-preservation:self-test']],
   ['error-code preservation', 'npm', ['run', 'verify:error-code-preservation']],
+  // 260804 · a bare tagged-template parameter inside a variadic-"any" function (jsonb_build_object
+  // et al.) raises 42P18 on EVERY call — a guaranteed runtime failure that mocks, typecheck and an
+  // inline-literal SQL replay all miss. It broke POST /documents so completely the endpoint had
+  // never once succeeded in production.
+  ['untyped variadic SQL parameter controls', 'npm', ['run', 'verify:untyped-jsonb-params:self-test']],
+  ['untyped variadic SQL parameters', 'npm', ['run', 'verify:untyped-jsonb-params']],
   ['deploy provenance wiring', 'npm', ['run', 'verify:deploy-provenance']],
   ['Pages artifact-owned Sentry release', 'npm', ['run', 'verify:pages-sentry-release']],
   ['rate-limit buckets bound to real limiters', 'npm', ['run', 'verify:rate-limit-binding-parity']],

@@ -424,7 +424,9 @@ export async function markUserSourceSyncRow(
                'status', source_updated.status,
                'last_sync_error', source_updated.last_sync_error,
                'emitted_events', ${emittedEvents}::jsonb,
-               'request_id', ${authority.request_id}
+               -- ::text is load-bearing — jsonb_build_object is variadic "any", so a bare parameter
+               -- raises 42P18 on every call. The sibling line above already casts; this one did not.
+               'request_id', ${authority.request_id}::text
              )
       FROM source_updated
       JOIN event_written ON TRUE

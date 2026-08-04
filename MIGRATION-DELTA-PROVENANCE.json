@@ -4823,6 +4823,32 @@
           "reason": "Register verify:error-code-preservation and its self-test so ci-local can run the recurrence gate."
         }
       ]
+    },
+    {
+      "delta_id": "claude-fix-42p18-untyped-jsonb-params-20260804",
+      "generated_at": "2026-08-04T02:55:00.000Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "f251ab5a12ac5766e459bd77f02b91176e619806",
+      "target_base_commit": "f251ab5a12ac5766e459bd77f02b91176e619806",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/dal/source-store.ts",
+          "target_blob": "f35b8e4338d4b7cd2075bc5220107839fffa8d0f",
+          "reason": "ROOT CAUSE of the POST /api/v1/documents 500, found in three places estate-wide. jsonb_build_object is variadic \"any\", so a BARE tagged-template parameter has no inferable type and PostgreSQL raises 42P18 'could not determine data type of parameter $N' on EVERY call. Cast it: ${authority.request_id}::text. This file is instructive - the sibling line already casts ${emittedEvents}::jsonb, so the correct idiom sat directly above the defect. Proven against real PostgreSQL as a controlled comparison: the pre-fix shape raises 42P18, the ::text shape returns the object, and the NULL case works too. WHY EVERY OTHER CONTROL MISSED IT: unit suites drive a MOCK sql tag that never parses SQL; typecheck cannot see it because every TypeScript type is correct; and replaying the statement against real PostgreSQL did NOT reproduce it because the replay substituted literals INLINE, which means there were no parameters at all - an inline-literal replay is not the same statement. Ships with verify:untyped-jsonb-params (7/7 detector controls) wired into ci-local."
+        },
+        {
+          "path": "scripts/ci-local.mjs",
+          "target_blob": "4391f473db0fd5c6716d4f6136ab2a6e5edb7ef8",
+          "reason": "Register the untyped-variadic-parameter gate and its self-test in the local authority stack. Gate count 73 -> 75."
+        },
+        {
+          "path": "package.json",
+          "target_blob": "c4d01b31ecddba0ca47fa787dc8793908ddd2b35",
+          "reason": "Register verify:untyped-jsonb-params and its self-test."
+        }
+      ]
     }
   ]
 }
