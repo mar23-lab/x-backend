@@ -128,7 +128,11 @@ export async function insertDocumentWithAuthorityRow(
           'document_id', document_written.id,
           'content_hash', document_written.content_hash,
           'version', document_written.version,
-          'request_id', ${authority.request_id}
+          -- ::text is LOad-BEARING. jsonb_build_object is variadic "any", so a bare parameter has no
+          -- inferable type and PostgreSQL raises 42P18 "could not determine data type of parameter"
+          -- on EVERY call. Without this cast POST /api/v1/documents returned 500 unconditionally and
+          -- had never once succeeded in production. See scripts/verify-untyped-jsonb-params.mjs.
+          'request_id', ${authority.request_id}::text
         )
       FROM document_written
       JOIN event_written ON TRUE
@@ -425,7 +429,8 @@ export async function updateDocumentAdmissibilityWithAuthorityRow(
           'admissibility', document_updated.admissibility,
           'content_hash', document_updated.content_hash,
           'version', document_updated.version,
-          'request_id', ${authority.request_id}
+          -- ::text is load-bearing — same 42P18 hazard as the insert path above.
+          'request_id', ${authority.request_id}::text
         )
       FROM document_updated
       JOIN event_written ON TRUE
