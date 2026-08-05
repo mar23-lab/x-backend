@@ -298,7 +298,20 @@ workspacesRoute.post('/workspaces/:id/agent/digest', async (ctx) => {
       });
     }
     const now = new Date().toISOString();
-    const eventId = `evt_agent_digest_${id}_${now.slice(0, 10)}`; // idempotent: one per workspace per day
+    // 260806 · JOURNEY SEED NONCE (item 41's per-day residual, operator-delegated decision).
+    // The per-workspace-per-day idempotency is a DELIBERATE product guarantee and stays byte-
+    // identical by default: the nonce is honoured ONLY when the operator has flipped
+    // XLOOOP_JOURNEY_SEED_ENABLED (default OFF) AND the caller is an operator/owner — never a
+    // client. This lets the live journey suite replenish its reviewable item within a day for a
+    // test window without weakening real-traffic dedupe, which the suite's own record refused to
+    // do by making the digest globally non-deterministic.
+    const journeyNonceRaw = (ctx.req.query('journey_nonce') || '').replace(/[^a-z0-9-]/gi, '').slice(0, 24);
+    const seedEnabled = envFlagTrue((ctx.env as { XLOOOP_JOURNEY_SEED_ENABLED?: string }).XLOOOP_JOURNEY_SEED_ENABLED);
+    const journeyNonce = seedEnabled && journeyNonceRaw && (role === 'operator' || role === 'owner') ? journeyNonceRaw : null;
+    if (journeyNonceRaw && !journeyNonce) {
+      console.log(JSON.stringify({ kind: 'journey_nonce_refused', seed_enabled: seedEnabled, role }));
+    }
+    const eventId = `evt_agent_digest_${id}_${now.slice(0, 10)}${journeyNonce ? `_${journeyNonce}` : ''}`; // idempotent: one per workspace per day (per nonce only under the flag)
     await dal.upsertEvent(id, {
       id: eventId,
       source_tool: 'xlooop',

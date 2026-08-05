@@ -5349,6 +5349,87 @@
           "reason": "POSTURE KEPT + DISCLOSED. Fail-open is the deliberate posture for the ORDINARY retry guard (strict authority namespace protects replay-intolerant writes with DB-enforced claims); blocking all writes on a guard-store blink would trade a dedupe nicety for an outage. The double-execution window is now observable: idempotency_guard_read_failed_fail_open."
         }
       ]
+    },
+    {
+      "delta_id": "claude-journey-nonce-and-disclosure-batch-20260806",
+      "generated_at": "2026-08-06T05:45:00.000Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "d3bee9a827185619fa2856686cca9b2256a0dcf6",
+      "target_base_commit": "d3bee9a827185619fa2856686cca9b2256a0dcf6",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/routes/workspaces.ts",
+          "target_blob": "70b429f7027cd94922e042699e15f83e3f7432da",
+          "reason": "JOURNEY SEED NONCE (item 41 residual, operator-delegated): digest id gains an optional nonce dimension honoured ONLY when XLOOOP_JOURNEY_SEED_ENABLED=true (default OFF - production byte-identical) AND caller role is operator/owner. Refused nonces log journey_nonce_refused. Per-day idempotency for real traffic unchanged. Plus 16 false-zero/silent-degrade catches across this batch now emit degraded_read_disclosed naming their surface: usage metering, document-access audit, customer-audit export + member redaction, source read-policies, chat receipt lookup, current-work attention + totals, workspace feed, MCP source/document lists, request-access user lookup, assembly trace, clerk org sweep (whose recorded-elsewhere claim was measured FALSE), receipt signing (HMAC failure vs unconfigured), and callClaude HTTP status + network exception (401/429/529 no longer indistinguishable). Every degrade posture KEPT; the logs separate \"empty\" from \"could not read\"."
+        },
+        {
+          "path": "src/workers/dal/llm-usage-store.ts",
+          "target_blob": "fe11eadac34b2a93c3facdfe26eb236ee640510b",
+          "reason": "Disclosure batch member - see routes/workspaces.ts reason for the batch description."
+        },
+        {
+          "path": "src/workers/dal/document-access-store.ts",
+          "target_blob": "1fa46f12bd986536c7adf4c4c4922da50144f11a",
+          "reason": "Disclosure batch member - see routes/workspaces.ts reason for the batch description."
+        },
+        {
+          "path": "src/workers/dal/customer-audit-store.ts",
+          "target_blob": "88fe0bafda78b9baaed2907efa15f4e22ee26a6c",
+          "reason": "Disclosure batch member - see routes/workspaces.ts reason for the batch description."
+        },
+        {
+          "path": "src/workers/dal/source-store.ts",
+          "target_blob": "80bb8750e15412645d0c09cc57e6fb628532eac8",
+          "reason": "Disclosure batch member - see routes/workspaces.ts reason for the batch description."
+        },
+        {
+          "path": "src/workers/dal/chat-store.ts",
+          "target_blob": "a00b9f63d477e2944b9e261396f340f11d22979d",
+          "reason": "Disclosure batch member - see routes/workspaces.ts reason for the batch description."
+        },
+        {
+          "path": "src/workers/routes/current-work.ts",
+          "target_blob": "edccc3175127268aca252325fa9d556f79920411",
+          "reason": "Disclosure batch member - see routes/workspaces.ts reason for the batch description."
+        },
+        {
+          "path": "src/workers/routes/customer-workspace-feed.ts",
+          "target_blob": "16961800591b63d4b9236defdea3ace7c913a68d",
+          "reason": "Disclosure batch member - see routes/workspaces.ts reason for the batch description."
+        },
+        {
+          "path": "src/workers/routes/mcp-customer-reads.ts",
+          "target_blob": "f1ff8d8037fde461defc39a81a03139b37ba369a",
+          "reason": "Disclosure batch member - see routes/workspaces.ts reason for the batch description."
+        },
+        {
+          "path": "src/workers/routes/request-access.ts",
+          "target_blob": "fdef3927996d7b6d5f23b534319408ebada9858d",
+          "reason": "Disclosure batch member - see routes/workspaces.ts reason for the batch description."
+        },
+        {
+          "path": "src/workers/services/chat-assembly-trace.ts",
+          "target_blob": "72a926c4af6d5f7c3d40b155a045f3766a3a6905",
+          "reason": "Disclosure batch member - see routes/workspaces.ts reason for the batch description."
+        },
+        {
+          "path": "src/workers/services/clerk-org.ts",
+          "target_blob": "9cd15a3e303e0594f3eff185e398a0ebc86fc26c",
+          "reason": "Disclosure batch member - see routes/workspaces.ts reason for the batch description."
+        },
+        {
+          "path": "src/workers/dal/role-skill-resolution-store.ts",
+          "target_blob": "0488f06ad7aa55108b4a372433069fc86034012d",
+          "reason": "Disclosure batch member - see routes/workspaces.ts reason for the batch description."
+        },
+        {
+          "path": "src/workers/services/cockpit-chat.ts",
+          "target_blob": "0119a4741c4a2b133539b1f66549514b79d29026",
+          "reason": "Disclosure batch member - see routes/workspaces.ts reason for the batch description."
+        }
+      ]
     }
   ]
 }

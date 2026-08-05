@@ -293,5 +293,10 @@ export async function getMessageByReceiptUidRow(sql: Sql, receiptUid: string): P
       grounding_event_ids: Array.isArray(r.grounding_event_ids) ? (r.grounding_event_ids as string[]) : null,
       created_at: r.created_at == null ? null : new Date(r.created_at as string).toISOString(),
     };
-  } catch { return null; /* pre-058 schema */ }
+  } catch (err) {
+    // DISCLOSURE (260806): a failed receipt lookup otherwise renders as a clean 404 "receipt not
+    // found" — an infrastructure error wearing a definitive answer. Degrade kept; now observable.
+    console.log(JSON.stringify({ kind: 'degraded_read_disclosed', surface: 'chat_receipt_lookup', error: String((err as Error)?.message || err).slice(0, 160) }));
+    return null; /* pre-058 schema */
+  }
 }

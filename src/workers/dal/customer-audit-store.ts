@@ -52,6 +52,10 @@ export async function listWorkspaceAuditLogRow(sql: Sql, workspaceId: string, li
     // and Sentry sees it; genuine emptiness still returns [] from the query itself.
     const message = err instanceof Error ? err.message : String(err);
     if (/does not exist|undefined_column|42703/i.test(message)) throw err;
+    // FALSE-ZERO DISCLOSURE (260806): this file's own post-mortem records 1,043 silently omitted
+    // audit rows; the 42703 hardening above covers only the schema-error signature. Connection/
+    // permission/timeout failures still degrade to [] — a header-only audit export — and now SAY SO.
+    console.log(JSON.stringify({ kind: 'degraded_read_disclosed', surface: 'customer_audit_export', error: message.slice(0, 160) }));
     return [];
   }
 }
@@ -65,5 +69,10 @@ export async function listWorkspaceMemberIdsRow(sql: Sql, workspaceId: string): 
       SELECT user_id FROM workspace_members WHERE workspace_id = ${ws} AND status = 'active'
     `) as Array<Record<string, unknown>>;
     return new Set(rows.map((r) => String(r.user_id)));
-  } catch { return new Set(); }
+  } catch (err) {
+    // DISCLOSURE (260806): an empty member set makes actor redaction substitute the generic
+    // operator id for every real teammate in the export. Degrade kept; now observable.
+    console.log(JSON.stringify({ kind: 'degraded_read_disclosed', surface: 'audit_member_set', error: String((err as Error)?.message || err).slice(0, 160) }));
+    return new Set();
+  }
 }

@@ -118,7 +118,12 @@ export function finalizeAssemblyTrace(trace: AssemblyTrace | null | undefined): 
       clean = { ...(collapseArrays(clean) as Record<string, unknown>), clamped: true };
     }
     return clean;
-  } catch (_) { return null; }
+  } catch (err) {
+    // DISCLOSURE (260806): a failed trace-finalize silently drops the explainability assembly
+    // block from the chat receipt — indistinguishable from the flag being off. Degrade kept.
+    console.log(JSON.stringify({ kind: 'degraded_read_disclosed', surface: 'chat_assembly_trace', error: String((err as Error)?.message || err).slice(0, 160) }));
+    return null;
+  }
 }
 
 /**

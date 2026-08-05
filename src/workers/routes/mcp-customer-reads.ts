@@ -77,7 +77,11 @@ mcpCustomerReadsRoute.get('/sources', async (ctx) => {
     const workspace = ws(ctx as never);
     if (!workspace) return clientError(ctx, 403, 'FORBIDDEN', 'no workspace binding');
     auditRead(ctx as never, 'list_sources');
-    const rows = await listWorkspaceSourcesRow(sqlFor(ctx as never), workspace).catch(() => []);
+    const rows = await listWorkspaceSourcesRow(sqlFor(ctx as never), workspace).catch((err) => {
+      // FALSE-ZERO DISCLOSURE (260806): the MCP tool otherwise answers "no sources" on a failed read.
+      console.log(JSON.stringify({ kind: 'degraded_read_disclosed', surface: 'mcp_source_list', error: String((err as Error)?.message || err).slice(0, 160) }));
+      return [];
+    });
     return ctx.json({
       schema_id: 'xlooop.mcp_source_list.v1',
       sources: rows.map((r) => ({
@@ -146,7 +150,11 @@ mcpCustomerReadsRoute.get('/documents', async (ctx) => {
     };
     const docSql = (ctx.get('sql') as ReturnType<typeof neonClient> | undefined)
       ?? resolveRlsSql(rlsEnv, neonClient(rlsEnv.DATABASE_URL));
-    const docs = await listDocumentsRow(docSql, workspace).catch(() => []);
+    const docs = await listDocumentsRow(docSql, workspace).catch((err) => {
+      // FALSE-ZERO DISCLOSURE (260806): the MCP tool otherwise answers "no documents" on a failed read.
+      console.log(JSON.stringify({ kind: 'degraded_read_disclosed', surface: 'mcp_document_list', error: String((err as Error)?.message || err).slice(0, 160) }));
+      return [];
+    });
     return ctx.json({
       schema_id: 'xlooop.mcp_document_list.v1',
       documents: (docs as Array<Record<string, unknown>>).map((d) => ({

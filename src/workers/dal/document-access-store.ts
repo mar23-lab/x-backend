@@ -92,5 +92,10 @@ export async function listDocumentAccessRow(sql: Sql, workspaceId: string, limit
       read_count: Number(r.read_count) || 0,
       last_read_at: r.last_read_at == null ? null : new Date(r.last_read_at as string).toISOString(),
     }));
-  } catch { return []; }
+  } catch (err) {
+    // FALSE-ZERO DISCLOSURE (260806): the document-access audit surface otherwise shows "no reads
+    // ever happened" on a failed read. Degrade kept; the log names the difference.
+    console.log(JSON.stringify({ kind: 'degraded_read_disclosed', surface: 'document_access_list', error: String((err as Error)?.message || err).slice(0, 160) }));
+    return [];
+  }
 }

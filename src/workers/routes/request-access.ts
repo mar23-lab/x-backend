@@ -174,7 +174,12 @@ requestAccessRoute.post('/request-access', async (ctx) => {
     // Best-effort — a lookup failure must never block the notification. A `users` row means the
     // person has a Clerk identity; its absence means an anonymous website lead (the operator's ask:
     // "notify even if not registered, mark not-registered").
-    const existingUser = await dal.getUserByEmail(accessRequest.email).catch(() => null);
+    const existingUser = await dal.getUserByEmail(accessRequest.email).catch((err) => {
+      // DISCLOSURE (260806): a failed lookup otherwise labels a REGISTERED customer "LEAD (not
+      // registered)" in the admin email. Best-effort degrade kept; now observable.
+      console.log(JSON.stringify({ kind: 'degraded_read_disclosed', surface: 'request_access_user_lookup', error: String((err as Error)?.message || err).slice(0, 160) }));
+      return null;
+    });
 
     // Best-effort notify (never throws — notifier returns delivered: false on failure)
     const notifyResult = await notifyAdminAccessRequest(ctx.env, {

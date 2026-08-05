@@ -1189,7 +1189,13 @@ async function callClaude(
         messages: [{ role: 'user', content: user }],
       }),
     });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      // DISCLOSURE (260806): the HTTP status was discarded, so a 401 (bad key), 429 (quota) and
+      // 529 (overloaded) were indistinguishable at the instrumented outer site, which logs only
+      // len:0. The status is the diagnosis; log it before degrading.
+      console.log(JSON.stringify({ kind: 'cockpit_chat_claude_http_error', status: res.status }));
+      return null;
+    }
     // G2 (260711) · usage was previously parsed away here — the Messages API carries top-level
     // usage:{input_tokens,output_tokens}; surface it for per-tenant metering.
     const data = (await res.json()) as {
@@ -1200,7 +1206,10 @@ async function callClaude(
       ? data.content.filter((b) => b && b.type === 'text').map((b) => String(b.text ?? '')).join('').trim()
       : '';
     return text.length > 0 ? { text, usage: data.usage } : null;
-  } catch (_) {
+  } catch (err) {
+    // DISCLOSURE (260806): the network exception was swallowed entirely, so "Claude was never
+    // reachable" and "Claude answered 3 characters" produced the same outer fallthrough line.
+    console.log(JSON.stringify({ kind: 'cockpit_chat_claude_network_error', error: String((err as Error)?.message || err).slice(0, 160) }));
     return null;
   }
 }

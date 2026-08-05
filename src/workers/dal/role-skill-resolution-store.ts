@@ -51,7 +51,10 @@ export async function signReceipt(secret: string | undefined, payload: string, k
     );
     const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(payload));
     return { content_sha256, signature_alg: 'HS256', signature: base64Url(new Uint8Array(sig)), signing_key_id: keyId ?? 'default' };
-  } catch {
+  } catch (err) {
+    // DISCLOSURE (260806): an HMAC FAILURE otherwise persists byte-identically to "no signing
+    // secret configured" (both read signature_alg: none). Degrade kept; the log separates them.
+    console.log(JSON.stringify({ kind: 'degraded_read_disclosed', surface: 'resolution_receipt_signing', error: String((err as Error)?.message || err).slice(0, 160) }));
     // signing must never break the shadow path; fall back to hashed-but-unsigned
     return { content_sha256, signature_alg: 'none', signature: null, signing_key_id: null };
   }
