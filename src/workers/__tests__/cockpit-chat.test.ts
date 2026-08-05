@@ -309,6 +309,40 @@ describe('buildDeterministicChatAnswer — grounded, not canned', () => {
     expect(a).toMatch(/no recorded activity in this project yet/);
     expect(a).not.toMatch(/269/);
   });
+
+  // 260805 · THE REGRESSION THAT REACHED AN OPERATOR IN PRODUCTION.
+  // Two different questions against an empty project returned BYTE-IDENTICAL answers, because the
+  // empty-scope branch never referenced `message`. It was honest and it was useless. These controls
+  // fail on the pre-fix shape, which is the only reason to trust them.
+  it('does NOT return identical bytes for two different questions on an empty scope', () => {
+    const empty = () => compileChatFacts({ events: [], total: 0, scope: FACTS().scope });
+    const priorities = buildDeterministicChatAnswer('what are our next priorities?', empty(), FACTS().scope);
+    const blocked = buildDeterministicChatAnswer("what's blocked or needs my sign-off?", empty(), FACTS().scope);
+
+    expect(priorities).not.toBe(blocked);
+    // Still honest about the absence — the fix must not buy variety with fabrication.
+    expect(priorities).toMatch(/no recorded activity in this project yet/);
+    expect(blocked).toMatch(/no recorded activity in this project yet/);
+    // And the sign-off question is answered AS a sign-off question.
+    expect(blocked).toMatch(/nothing is blocked/i);
+    expect(priorities).not.toMatch(/nothing is blocked/i);
+  });
+
+  it('surfaces the PLAN on an empty scope instead of discarding it', () => {
+    // A project with a goal and no events is the ordinary state of a new customer. The old answer
+    // threw the plan away and invited the user to come back later.
+    const facts = FACTS();
+    const g = compileChatFacts({ ...facts, events: [], total: 0 });
+    const a = buildDeterministicChatAnswer('what are our next priorities?', g, facts.scope);
+
+    if (g.plan.available && g.plan.counts.goals + g.plan.counts.milestones + g.plan.counts.todos > 0) {
+      expect(a).toMatch(/What IS on record here is the plan/);
+      // Plan rows are never presented as delivered work.
+      expect(a).toMatch(/no linked events yet/);
+    }
+    // Whatever the plan holds, the answer never claims activity that is not recorded.
+    expect(a).toMatch(/no recorded activity in this project yet/);
+  });
 });
 
 describe('answerCockpitChat — LLM-richer + fail-safe + grounded provenance', () => {

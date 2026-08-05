@@ -5172,6 +5172,27 @@
           "reason": "B1 - CHAT ASSERTED GOVERNANCE TOTALS FROM A 40-ROW RECENCY PAGE. customer-chat.ts passed `total: events.length` into buildContext, where cockpit-chat.ts:196 documents the field as 'Total Plane-A count for the scope (may exceed events.length when capped)'. Passing the page length made that promise false on EVERY call, and it structurally killed the honesty hedge at cockpit-chat.ts:1059, which discloses a cap by comparing events_considered against events_total - both were the same number, so the answer could never say it had been capped. Measured on production: workspace org_3EG82VEzc8t3t65XSZ0YDlcaDMI holds 3,435 top-level events with attention items at recency ranks up to 2,450; exactly one falls inside the newest 40. Chat there would state one item needs sign-off while eleven wait, and print no blocked line while two are blocked. The workspace where chat is ACTUALLY used holds exactly 40 events - correct today by coincidence, and event 41 starts the lying. I REVERTED THIS FIX ONCE BEFORE ON A FALSE READING. My first attempt stubbed a flat total of 0 into mocks whose fixtures DO hold events; that drove events_total to 0, flipped cockpit-chat.ts:1032 into the empty-state narrative, dropped source facts, and failed two assertions about source text. I read that as a defect in the route and backed the change out. The route was right; the mock was lying. The mocks now DERIVE their counts from the same fixture their listEvents returns, so a mock can never again contradict its own data. Fallback is events.length rather than 0 for the same reason: a degraded aggregate read must not under-report below the page already in hand and tip the narrative into empty-state. Result: customer-chat-route 33/33, chat-assembly-trace 10/10. [this file: fourth stub needing the aggregate; each one surfaced only by running the FULL ci-local, never by the targeted run that preceded it - adding a DAL method has a mock tail, and the tail is only visible from the whole suite]"
         }
       ]
+    },
+    {
+      "delta_id": "claude-chat-answers-the-question-20260805",
+      "generated_at": "2026-08-05T11:10:00.000Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "6f0ca3160a72e95f10de7f31d4a8d08aa6f7de73",
+      "target_base_commit": "6f0ca3160a72e95f10de7f31d4a8d08aa6f7de73",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/services/cockpit-chat.ts",
+          "target_blob": "7e0384aa9db155ba3b80baa3aa19e8428fe1dadb",
+          "reason": "THE EMPTY-SCOPE ANSWER IGNORED THE QUESTION. cockpit-chat.ts:1032 returned company context plus one fixed sentence and referenced `message` NOWHERE, so any two questions produced byte-identical output. An operator asked \"what are our next priorities?\" and then \"what other aspects are we not seeing?\" against a project with no events and received the SAME BYTES for both - honest about the absence, useless as a reply. An empty event log is not an empty context: grounded.plan (goals/milestones/todos) and grounded.documents were already in hand and were discarded. The branch now surfaces the plan (explicitly marked \"no linked events yet\", so plan rows are never presented as delivered work) and reflects whether a sign-off/blocked question was asked. Honesty is unchanged - it still states plainly that no activity is recorded and still never infers activity from plan rows. Also: the missing-AI-binding exit now logs cockpit_chat_no_ai_binding. The two neighbouring exits already logged cockpit_chat_llm_short and cockpit_chat_llm_error, so a missing binding was the ONE degradation that returned a clean 200 with no trace, indistinguishable from a model that ran and chose those words. Also: deleted a comment paragraph asserting Claude is primary \"for EVERY read mode whenever ANTHROPIC_API_KEY is configured\" - the adjacent line and the code both implement the opposite (Claude only on explicit selection or deep-research), so the file contradicted itself in adjacent lines."
+        },
+        {
+          "path": "src/workers/__tests__/cockpit-chat.test.ts",
+          "target_blob": "0b7a445ec7ae866096acf57e1d885e8b95cebd6f",
+          "reason": "Regression controls for the above. One asserts two different questions on an empty scope do NOT return identical bytes, while both still state \"no recorded activity\" - variety must not be bought with fabrication. A second asserts the plan is surfaced rather than discarded, and that plan rows carry \"no linked events yet\". Both fail on the pre-fix shape by construction, since that branch never referenced the message."
+        }
+      ]
     }
   ]
 }
