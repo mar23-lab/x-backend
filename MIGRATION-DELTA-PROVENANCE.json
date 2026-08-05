@@ -5302,6 +5302,27 @@
           "reason": "Adds the verify:ai-binding-disclosure scripts."
         }
       ]
+    },
+    {
+      "delta_id": "claude-false-zero-grounding-disclosure-20260806",
+      "generated_at": "2026-08-06T03:45:00.000Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "5192a5138d8495146f5a8c3289a9b33ce8066a09",
+      "target_base_commit": "5192a5138d8495146f5a8c3289a9b33ce8066a09",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/routes/customer-chat.ts",
+          "target_blob": "63b48e0f09af0ff3e9956bef918c22fa631c2fc4",
+          "reason": "FALSE-ZERO DISCLOSURE. Six grounding catches substituted empty/zero/null for FAILED reads with no log: events page (model grounded on the record shows 0 events), state counts (fabricated zeros in the fact block), sources (prompt asserts customer has no connected sources), company profile (generic stereotype preamble), charter (plane dropped), personalization (unpersonalized answer). Every substitution STAYS - chat must degrade, not 500 - but each now emits cockpit_chat_grounding_read_failed naming the surface, so a DB blip and a genuinely empty workspace stop producing byte-identical answers. That indistinguishability is the operator-reported symptom class from 260805."
+        },
+        {
+          "path": "src/workers/routes/workspaces.ts",
+          "target_blob": "3b913e730b78d03bbc0f72f30dd365576b8e3db9",
+          "reason": "Twin disclosure on the operator-plane chat surface: company_profile_operator_plane. Same degrade, now named."
+        }
+      ]
     }
   ]
 }

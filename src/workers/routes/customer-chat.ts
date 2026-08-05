@@ -444,7 +444,15 @@ customerChatRoute.post('/customer-chat', async (ctx) => {
     const opts: EventListOpts = { limit: MAX_EVENTS, role: auth.role, top_level: true, project_id: projectId ?? undefined };
     const page: EventPage = await dal
       .listEvents(workspaceId, opts)
-      .catch(() => ({ events: [], pagination: { has_more: false, next_before: null } } as EventPage));
+      .catch((err) => {
+        // FALSE-ZERO DISCLOSURE (260806). This catch substitutes an EMPTY event page for a FAILED
+        // read, so the model is then grounded on "the record shows 0 events" and answers
+        // confidently about an empty workspace. The substitution stays (chat must degrade, not
+        // 500) — but it must SAY SO: silently, a DB blip and a genuinely empty workspace produce
+        // byte-identical answers, which is the exact operator-reported symptom class.
+        console.log(JSON.stringify({ kind: 'cockpit_chat_grounding_read_failed', surface: 'events_page', error: String((err as Error)?.message || err).slice(0, 200) }));
+        return { events: [], pagination: { has_more: false, next_before: null } } as EventPage;
+      });
     let events: HarnessFlowEvent[] = Array.isArray(page.events) ? page.events : [];
 
     // 260805 · Whole-workspace state counts, aggregated in SQL. `page` above is capped at MAX_EVENTS
@@ -456,9 +464,20 @@ customerChatRoute.post('/customer-chat', async (ctx) => {
     // never claim less than the page we already hold.
     const chatTotals = await dal
       .countEventStates(workspaceId, { role: auth.role, project_id: projectId ?? null })
-      .catch(() => ({ needs_you: 0, blocked: 0, done: 0, total: events.length }));
+      .catch((err) => {
+        // FALSE-ZERO DISCLOSURE (260806): fabricated zero counts enter the chat's structured fact
+        // block on a failed aggregate. The events.length floor stays (see comment above); the log
+        // is what distinguishes "counted zero" from "could not count".
+        console.log(JSON.stringify({ kind: 'cockpit_chat_grounding_read_failed', surface: 'state_counts', error: String((err as Error)?.message || err).slice(0, 200) }));
+        return { needs_you: 0, blocked: 0, done: 0, total: events.length };
+      });
 
-    const sourceRows = await dal.listUserSources(auth.user_id).catch(() => [] as UserSourceConnection[]);
+    const sourceRows = await dal.listUserSources(auth.user_id).catch((err) => {
+      // FALSE-ZERO DISCLOSURE (260806): a failed source-list read otherwise makes the prompt
+      // assert the customer has NO connected sources — a false statement served as grounding.
+      console.log(JSON.stringify({ kind: 'cockpit_chat_grounding_read_failed', surface: 'sources', error: String((err as Error)?.message || err).slice(0, 200) }));
+      return [] as UserSourceConnection[];
+    });
     // D-16 (260710) · resolve each source's effective per-project trust tier, flag-gated (OFF = byte-
     // identical: no map → no access_tier, no reorder). 'rely' leans on a source's METADATA more; NO content
     // read (reflection_only preserved). Fail-safe: any read error → no tiers, grounding unchanged.
@@ -520,13 +539,21 @@ customerChatRoute.post('/customer-chat', async (ctx) => {
     }
 
     // S1 · the customer's captured company context → the chief-of-staff is company-aware, not generic.
-    const companyContext = await dal.getCustomerContextProfile(workspaceId).catch(() => null);
+    // FALSE-ZERO DISCLOSURE (260806) on the three grounding planes below: a failed read degrades
+    // to null — swapping the company-aware preamble for the generic stereotype, dropping the
+    // charter plane, or serving the unpersonalized answer — with no way to tell that from "the
+    // customer never configured it". The degrade stays; the log names which plane was lost.
+    const disclose = (surface: string) => (err: unknown) => {
+      console.log(JSON.stringify({ kind: 'cockpit_chat_grounding_read_failed', surface, error: String((err as Error)?.message || err).slice(0, 200) }));
+      return null;
+    };
+    const companyContext = await dal.getCustomerContextProfile(workspaceId).catch(disclose('company_profile'));
 
     // PR-4 (260721) · the workspace CHARTER (mission/background/goals) → the info->plan->context join.
     // Flag-gated (CHARTER_GROUNDING_ENABLED, born-OFF ⇒ null ⇒ answerCockpitChat prompt byte-identical).
     // Degrade-safe: any read error → null → grounding unchanged. Seeded by PR-3, read here.
     const charter = envFlagTrue((ctx.env as { CHARTER_GROUNDING_ENABLED?: string }).CHARTER_GROUNDING_ENABLED)
-      ? await dal.getCharter(workspaceId).catch(() => null)
+      ? await dal.getCharter(workspaceId).catch(disclose('charter'))
       : null;
 
     // Y-wave APPLY (ADR-XB-012) · the effective personalization PROFILE (learned prefs/rules/skills,
@@ -534,7 +561,7 @@ customerChatRoute.post('/customer-chat', async (ctx) => {
     // born-OFF ⇒ null ⇒ answerCockpitChat prompt byte-identical). Degrade-safe: any read error → null.
     // Inert until the materialize stage writes profiles (they are empty today).
     const personalizationProfile = envFlagTrue((ctx.env as { PERSONALIZATION_APPLY_ENABLED?: string }).PERSONALIZATION_APPLY_ENABLED)
-      ? await dal.getEffectivePersonalizationProfile(workspaceId, auth.user_id, String(auth.role || 'member')).catch(() => null)
+      ? await dal.getEffectivePersonalizationProfile(workspaceId, auth.user_id, String(auth.role || 'member')).catch(disclose('personalization_profile'))
       : null;
 
     const scope: CockpitChatScope = { workspace_id: workspaceId, project_id: projectId, domain_id: null };
