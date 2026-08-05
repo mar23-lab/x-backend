@@ -272,7 +272,27 @@ customerChatRoute.post('/customer-chat', async (ctx) => {
     if (projectId && (!selectedProject || selectedProject.status === 'archived')) {
       return errorEnvelope(ctx, { status: 404, code: 'NOT_FOUND', message: 'project not found in this workspace' });
     }
-    const mode: CockpitChatMode = ALLOWED_MODES.includes(body?.mode as CockpitChatMode) ? (body!.mode as CockpitChatMode) : 'ask';
+    // 260805 · A SILENT ENUM COERCION IS INDISTINGUISHABLE FROM CORRECT OPERATION.
+    // The frontend sent `mode: 'research'` for its Research-brief button. That value is not in
+    // ALLOWED_MODES, so this line quietly rewrote it to 'ask' — no error, no log, and an answer that
+    // still read plausibly. It survived because nothing ever said it was happening.
+    //
+    // The cost was not one button. cockpit-chat.ts reaches Claude only on an explicit `llm: 'claude'`
+    // or `mode === 'deep-research'`, and the chat body carries no `llm` field, so deep-research was
+    // the ONLY route to Claude from that UI — closed by a one-word mismatch nobody could see.
+    //
+    // Still coerced rather than rejected: a 400 here would break any client mid-flight, and the
+    // answer is genuinely better than an error. But it now ANNOUNCES itself.
+    const requestedMode = body?.mode;
+    const mode: CockpitChatMode = ALLOWED_MODES.includes(requestedMode as CockpitChatMode) ? (requestedMode as CockpitChatMode) : 'ask';
+    if (requestedMode !== undefined && requestedMode !== mode) {
+      console.log(JSON.stringify({
+        kind: 'cockpit_chat_unknown_mode_coerced',
+        requested: String(requestedMode).slice(0, 40),
+        served: mode,
+        allowed: ALLOWED_MODES,
+      }));
+    }
     // User-selected model (the chat's model switcher). Default = free Llama; 'claude' uses the premium tier.
     const llm: CockpitChatLLM = body?.llm === 'claude' ? 'claude' : 'llama';
     const chatHistoryPersistenceRequired = envFlagTrue(ctx.env.CHAT_HISTORY_PERSISTENCE_REQUIRED);
