@@ -1030,12 +1030,54 @@ export function buildDeterministicChatAnswer(
   }
 
   if (grounded.events_total === 0 && grounded.pinned_total === 0) {
+    // 260805 · THIS BRANCH USED TO IGNORE THE QUESTION ENTIRELY.
+    // It returned company context + one fixed sentence, referencing `message` nowhere. An operator
+    // asked "what are our next priorities?" and then "what aren't we seeing that matters?" and got
+    // BYTE-IDENTICAL answers — correct about the absence of events, and useless as a reply to either
+    // question. An empty event log is not an empty CONTEXT: the plan (goals, milestones, todos) and
+    // the documents are right here in `grounded`, and the old text discarded all of them.
+    //
+    // Honesty is preserved — we still say plainly that no activity is recorded, and we still never
+    // infer activity from plan rows. What changes is that the answer now uses what it does have and
+    // reflects what was actually asked.
     const docNote = grounded.documents && grounded.documents.total > 0
       ? ` You do have ${plural(grounded.documents.total, 'document')} on file (${grounded.documents.names.join(', ')}) — ask me about their contents.`
       : '';
     const company = companyContextSummary(companyContext);
-    const body = `There is no recorded activity in ${where} yet.${docNote} Once events start flowing in from your connected sources (or you connect your tools), ask me again and I will summarize what is happening, what is blocked, and what needs your sign-off.`;
-    return company ? `${company}\n\n${body}` : body;
+    const lines: string[] = [];
+    if (company) lines.push(company, '');
+
+    lines.push(`There is no recorded activity in ${where} yet.${docNote}`);
+
+    // The plan is context the old answer threw away. Surfacing counts is not inferring progress:
+    // a goal with no linked events is stated as exactly that.
+    const planCounts = grounded.plan.available ? grounded.plan.counts : null;
+    const planTotal = planCounts ? planCounts.goals + planCounts.milestones + planCounts.todos : 0;
+    if (planCounts && planTotal > 0) {
+      const parts: string[] = [];
+      if (planCounts.goals) parts.push(plural(planCounts.goals, 'goal'));
+      if (planCounts.milestones) parts.push(plural(planCounts.milestones, 'milestone'));
+      if (planCounts.todos) parts.push(plural(planCounts.todos, 'todo'));
+      lines.push('', `What IS on record here is the plan: ${parts.join(', ')}.`);
+      for (const entity of grounded.plan.entities.slice(0, 5)) {
+        lines.push(`  – ${entity.title || entity.kind} [${entity.kind}, no linked events yet]`);
+      }
+    }
+
+    // Reflect the question asked. Two different questions must not return identical bytes — that
+    // was the reported defect, and a shared template is how it happened.
+    lines.push('');
+    if (asksBlocked) {
+      lines.push(planTotal > 0
+        ? 'Nothing is blocked or waiting on your sign-off, because no work has been executed against this plan yet. The first governed action here will start that record.'
+        : 'Nothing is blocked or waiting on your sign-off — there is no work on record here at all yet.');
+    } else if (planTotal > 0) {
+      lines.push('I can only ground an answer in what is on record, and here that is the plan above rather than delivered work. Connect a source or run a governed action, and I will be able to tell you what is progressing, what is blocked, and what needs your sign-off.');
+    } else {
+      lines.push('There is nothing on record here yet — no plan entries and no activity — so I have nothing to ground an answer in. Add a goal, or connect a source, and ask me again.');
+    }
+
+    return lines.join('\n');
   }
 
   const gov = grounded.governance;
@@ -1432,12 +1474,19 @@ export async function answerCockpitChat(
   const structuredBlock = buildStructuredFactBlock(facts, grounded);
   const userPrompt = `Event facts:\n${factLines.join('\n')}\n\nStructured facts (typed records of the SAME items — reason over these for precise, per-item answers; never invent fields):\n${structuredBlock}\n\nOperator question: ${String(message || '').slice(0, 600)}`;
 
-  // Claude is the PRIMARY LLM whenever ANTHROPIC_API_KEY is configured (a worker secret) — for EVERY
-  // read mode, not just deep-research. This makes the chat genuinely generative + high-quality (the
-  // model the product is built around). The Workers-AI Llama below is the free fallback, and the
-  // company-aware deterministic floor is the final fallback. Claude failure/short answer falls through.
-  // Claude is used ONLY when the user explicitly selects it (or in deep-research mode) AND a key is set.
-  // The default is the free Workers-AI Llama (below). Claude failure falls through to Llama → deterministic.
+  // 260805 · THESE TWO PARAGRAPHS USED TO CONTRADICT EACH OTHER, IN ADJACENT LINES.
+  // The first said Claude is primary "for EVERY read mode whenever ANTHROPIC_API_KEY is configured";
+  // the second said it runs ONLY on explicit selection or deep-research. The code implements the
+  // SECOND. Anyone who read the first formed a false model of the product — and did so while looking
+  // straight at the line that disproves it. The false half is deleted rather than softened.
+  //
+  // ACTUAL BEHAVIOUR: Claude runs only when the caller explicitly selects it (llm === 'claude') or
+  // mode === 'deep-research', AND a key is set. Every other read answers from the free Workers-AI
+  // Llama below; a bound ANTHROPIC_API_KEY alone changes nothing. Claude failure or a short answer
+  // falls through to Llama, then to the company-aware deterministic floor.
+  //
+  // NOTE FOR THE UI: if a model picker offers a Claude/Sonnet option, it must send `llm: 'claude'`
+  // or the user is shown one model and served another.
   if (claudeKey && (llmChoice === 'claude' || mode === 'deep-research')) {
     const startedAt = Date.now();
     const execution = await executionObserver?.start({ provider: 'anthropic', model_key: COCKPIT_CHAT_CLAUDE_MODEL });
@@ -1465,7 +1514,17 @@ export async function answerCockpitChat(
     console.log(JSON.stringify({ kind: 'cockpit_chat_claude_fallthrough', len: claude ? claude.text.length : 0 }));
   }
 
-  if (!ai) return { answer: deterministic, generated_by: 'deterministic', grounded_on: grounded, model: null };
+  // 260805 · THE ONE DEGRADATION THAT USED TO LEAVE NO TRACE.
+  // The two exits below both log (`cockpit_chat_llm_short`, `cockpit_chat_llm_error`), so a short or
+  // failed model answer is diagnosable from `wrangler tail`. A MISSING AI BINDING logged nothing and
+  // returned a clean 200 carrying the canned floor — indistinguishable, on the wire and in the logs,
+  // from a model that ran and chose those words. An operator reported two different questions coming
+  // back byte-identical and there was no signal to point at. Silence is the worst possible reading of
+  // "the AI never ran": make it say so.
+  if (!ai) {
+    console.log(JSON.stringify({ kind: 'cockpit_chat_no_ai_binding', mode, events_total: grounded.events_total }));
+    return { answer: deterministic, generated_by: 'deterministic', grounded_on: grounded, model: null };
+  }
 
   const startedAt = Date.now();
   const execution = await executionObserver?.start({ provider: 'workers_ai', model_key: COCKPIT_CHAT_LLM_MODEL });
