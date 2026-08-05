@@ -5323,6 +5323,32 @@
           "reason": "Twin disclosure on the operator-plane chat surface: company_profile_operator_plane. Same degrade, now named."
         }
       ]
+    },
+    {
+      "delta_id": "claude-semantic-failopen-tranche-20260806",
+      "generated_at": "2026-08-06T04:25:00.000Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "5cbc662b0b617a7eed3dc6a7a6a387d3c4dc2f65",
+      "target_base_commit": "5cbc662b0b617a7eed3dc6a7a6a387d3c4dc2f65",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/middleware/auth.ts",
+          "target_blob": "6cb8491223822e40a8df0665a9d7734e81485694",
+          "reason": "BEHAVIOUR FIX (operator-authorized 260806). A token-lookup DB error returned miss, sending a VALID customer service token down the Clerk path to a 401 - indistinguishable from a revoked token, converting an outage into an apparent revocation. New error outcome maps to 503 SERVICE_UNAVAILABLE (retryable infrastructure state, not an identity verdict) and logs customer_token_lookup_error."
+        },
+        {
+          "path": "src/workers/dal/entitlement-store.ts",
+          "target_blob": "3729dd0527efad3a732b06a86ed48a5417b416f6",
+          "reason": "POSTURE KEPT + DISCLOSED. Fail-closed is CORRECT for entitlements (never authorize on an unreadable read) and is retained; the defect was silence - an entitled paying customer served the locked product on a DB blip read as churn, not outage. Logs entitlement_read_failed_fail_closed."
+        },
+        {
+          "path": "src/workers/dal/idempotency-store.ts",
+          "target_blob": "afcaf09939d09bea3c13c0a4f767d6a1085617b4",
+          "reason": "POSTURE KEPT + DISCLOSED. Fail-open is the deliberate posture for the ORDINARY retry guard (strict authority namespace protects replay-intolerant writes with DB-enforced claims); blocking all writes on a guard-store blink would trade a dedupe nicety for an outage. The double-execution window is now observable: idempotency_guard_read_failed_fail_open."
+        }
+      ]
     }
   ]
 }

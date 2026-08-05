@@ -109,6 +109,13 @@ export function clerkAuth(opts: ClerkAuthOptions = {}): MiddlewareHandler<{
     if (customer === 'expired') {
       return jsonError(ctx, 401, 'UNAUTHORIZED', 'customer connector token has expired');
     }
+    if (customer === 'error') {
+      // Retryable infrastructure state, NOT an identity verdict — a valid token must never 401
+      // because the lookup store blinked. 503 tells the client to retry; 401 tells it to
+      // re-authenticate, which for a service principal means a human rotating a token that was
+      // never bad.
+      return jsonError(ctx, 503, 'SERVICE_UNAVAILABLE', 'token verification is temporarily unavailable; retry');
+    }
 
     try {
       const payload = await verifyToken(token, {
@@ -231,7 +238,7 @@ async function customerTokenAuth(
   ctx: Context<{ Bindings: AuthEnv; Variables: AuthVariables }>,
   token: string,
   opts: ClerkAuthOptions,
-): Promise<'matched' | 'expired' | 'miss'> {
+): Promise<'matched' | 'expired' | 'miss' | 'error'> {
   if (!opts.allowCustomerToken) return 'miss';
   if (!envFlagTrue(ctx.env.CUSTOMER_API_TOKENS_ENABLED)) return 'miss';
   if (token.includes('.')) return 'miss'; // JWTs contain dots; customer tokens never do
@@ -244,8 +251,14 @@ async function customerTokenAuth(
     sql = neonClient(dbUrl);
     const tokenHash = await sha256Hex(token);
     row = await getCustomerTokenByHashRow(sql, tokenHash);
-  } catch {
-    return 'miss'; // never let a token-lookup error masquerade as a forbidden/expired result
+  } catch (err) {
+    // 260806 (9.6 tranche 2): this used to return 'miss', which is WORSE than the comment knew —
+    // a transient DB error sent a VALID customer service token down the Clerk path to a 401,
+    // indistinguishable from a revoked token. 'error' lets the caller answer 503 (retryable
+    // infrastructure state) instead of 401 (identity verdict). A lookup FAILURE is not a lookup
+    // MISS; conflating them converts an outage into an apparent revocation.
+    console.log(JSON.stringify({ kind: 'customer_token_lookup_error', error: String((err as Error)?.message || err).slice(0, 200) }));
+    return 'error';
   }
   if (!row) return 'miss';
   if (Date.parse(row.expires_at) <= Date.now()) return 'expired';
