@@ -5,6 +5,7 @@
 import { Hono } from 'hono';
 import { isSentryActive } from '../sentry';
 import { envFlagTrue } from '../lib/env-flag';
+import { rlsBindingMode } from '../db/rls-connection';
 import apiContract from '../../../docs/contracts/api-contract.v1.json';
 
 export const healthRoute = new Hono();
@@ -76,7 +77,12 @@ healthRoute.get('/health', (ctx) => {
       //
       // This publishes the state without changing behaviour, so the pairing can be asserted from
       // outside. Deliberately a boolean-derived label, never the DSN.
-      rls_binding: env.XLOOOP_RLS_APP_DATABASE_URL ? 'app' : 'owner',
+      //
+      // 260805: this line used to re-derive the label inline from the secret. That made /health a
+      // SECOND source of truth for the same decision resolveRlsSql makes — so a change to the
+      // resolution rule would leave the one externally observable signal reporting the old posture.
+      // It now calls the same module, which is the point of that module existing.
+      rls_binding: rlsBindingMode(env),
     },
     capabilities: {
       sign_offs: true,
