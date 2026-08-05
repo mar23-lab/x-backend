@@ -41,6 +41,7 @@ import {
   type GovernanceStreamRow,
 } from '../services/cockpit-chat';
 import { neonClient } from '../db/client';
+import { resolveRlsSql } from '../db/rls-connection';
 import { recordLlmUsage } from '../dal/llm-usage-store'; // G2 260711
 import { envFlagTrue } from '../lib/env-flag';
 import { idempotencyMiddleware } from '../lib/idempotency'; // J-W1/IDEM-4
@@ -530,9 +531,27 @@ workspacesRoute.post('/cockpit-chat', async (ctx) => {
     const roleScopedOn = envFlagTrue((ctx.env as { CHAT_ROLE_SCOPED_CONTEXT_ENABLED?: string }).CHAT_ROLE_SCOPED_CONTEXT_ENABLED);
     let rscDocMeta: Array<{ filename: string; excerpt: string; id: string; admissibility?: string; uploaded_by?: string }> = [];
     if (workspaceId) {
+      // 046 · document LIST via the RLS-subject client.
+      //
+      // 260805: this was the SEVENTH call site of the fail-OPEN
+      // `XLOOOP_RLS_APP_DATABASE_URL || DATABASE_URL` expression. rls-connection.ts enumerates the
+      // six it replaced (index.ts:172/384/465, documents.ts:114/173, mcp-customer-reads.ts:141);
+      // this one was never counted, so it kept the silent owner-connection fallback every other
+      // tenant read had given up. `neondb_owner` carries BYPASSRLS and no table sets FORCE, so an
+      // unbound secret here meant cross-tenant documents entering the model's grounding context —
+      // the one place a leak is also laundered into a generated answer.
+      //
+      // The catch below is best-effort cover for "no docs / missing table / unusable dev DSN", and
+      // it must KEEP that behaviour — but it must not swallow resolveRlsSql's 503, because that
+      // would convert fail-CLOSED back into a silent empty grounding set, the exact shape being
+      // retired. So the refusal is re-thrown by code below and everything else still degrades.
+      //
+      // Hoisting the whole expression out of the try instead was WRONG and the suite caught it:
+      // `neonClient()` on a placeholder DSN throws during CONSTRUCTION, which is a best-effort
+      // condition, not a refusal. The decision and the construction are different things.
       try {
-        // 046 · document LIST via the RLS-subject client when configured (else owner → identical).
-        const rows = await listDocumentsRow(neonClient(ctx.env.XLOOOP_RLS_APP_DATABASE_URL || ctx.env.DATABASE_URL), workspaceId, 20);
+        const documentSql = resolveRlsSql(ctx.env, neonClient(ctx.env.DATABASE_URL));
+        const rows = await listDocumentsRow(documentSql, workspaceId, 20);
         documents = rows
           // M6 · AI-context admissibility — only admissible docs enter the model's grounding context. With
           // the 049 default 'approved' (+ pre-migration degrade to 'approved') this is a no-op today; the
@@ -572,7 +591,14 @@ workspacesRoute.post('/cockpit-chat', async (ctx) => {
           });
         }
         documents = documents.map((d) => ({ filename: d.filename, excerpt: d.excerpt })); // facts stay shape-identical
-      } catch (_) { documents = []; }
+      } catch (err) {
+        // A 503 SERVICE_UNAVAILABLE here is resolveRlsSql REFUSING to serve tenant reads on the
+        // BYPASSRLS owner connection. Degrading that to an empty document set would hide the
+        // refusal and answer the customer from a silently unguarded read path — so it propagates.
+        // Every other failure (missing table, no rows, unusable dev DSN) stays best-effort.
+        if ((err as { status?: number })?.status === 503) throw err;
+        documents = [];
+      }
     }
     // G9 (260709) · §168 — flag-ON, the PURE assembler is the ONLY place the grounding set is built: the
     // asker's REAL role projects the bundle (grounding ≤ visibility ceiling · approved-only + own-candidate

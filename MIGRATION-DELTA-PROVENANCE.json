@@ -5225,6 +5225,42 @@
           "reason": "COMMENT-ONLY. x-backend carries TWO wrangler configs - wrangler.toml (the API Worker, xlooop-api) and wrangler.jsonc (a Pages project for the functions/ feedback plane). Wrangler auto-detects the .jsonc, sees pages_build_output_dir, and refuses every Workers command with \"It looks like you have run a Workers-specific command in a Pages project\" - an error that names the command rather than the config that caused it. During a live chat incident this cost three failed wrangler tail attempts before the cause was identified; the remedy is always --config wrangler.toml and it is now stated in the file someone will actually open. The note also records DO NOT DELETE with its evidence: mid-debug this file looked stray and deletion was nearly recommended, but functions/_middleware.js, functions/_lib and functions/api all exist and FEEDBACK_DB is consumed by scripts/provision-feedback-d1-cloudflare.mjs and scripts/verify-customer-feedback-api-scenarios.mjs, so removing it breaks the feedback API deploy. No behavioural change: the JSONC parses unchanged and both configs still resolve."
         }
       ]
+    },
+    {
+      "delta_id": "claude-rls-connection-single-source-20260805",
+      "generated_at": "2026-08-05T18:55:00.000Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "25623ac3967372c5fae98ffa45a135ab01fd2f98",
+      "target_base_commit": "25623ac3967372c5fae98ffa45a135ab01fd2f98",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/routes/workspaces.ts",
+          "target_blob": "31a9c6ea402aac7dbdac184da71d4642d3a49803",
+          "reason": "SECURITY. This was the SEVENTH call site of the fail-OPEN XLOOOP_RLS_APP_DATABASE_URL || DATABASE_URL expression. db/rls-connection.ts was written to delete that expression and its header enumerates the six it replaced (index.ts:172/384/465, documents.ts:114/173, mcp-customer-reads.ts:141); this one was never counted and survived the whole migration. It feeds listDocumentsRow into the model document-grounding context, so an unbound secret meant cross-tenant documents entering a generated answer - neondb_owner carries BYPASSRLS and relforcerowsecurity is 0 of 96 tables, so every policy on all 73 RLS-enabled tables is inert on that connection. Now resolves through resolveRlsSql, which throws 503 under production authority. Resolved OUTSIDE the surrounding try on purpose: that catch is best-effort cover for missing-table/no-docs, and swallowing the 503 would convert fail-CLOSED back into a silent empty grounding set."
+        },
+        {
+          "path": "src/workers/routes/health.ts",
+          "target_blob": "ff0723782cad4a0f0e2c539c6e450d9e325a86c5",
+          "reason": "Collapses a SECOND source of truth. bindings.rls_binding re-derived its label inline from the secret rather than calling rlsBindingMode(env), so a change to the resolution rule would have left the single externally observable RLS signal reporting the old posture. Behaviour is byte-identical today; the point is that it can no longer diverge."
+        },
+        {
+          "path": "scripts/ci-local.mjs",
+          "target_blob": "ecde75d19affe10374e93c7649ce33a37b983fa8",
+          "reason": "Registers verify:rls-connection-single-source and its self-test as blocking gates (76 -> 78 executed)."
+        },
+        {
+          "path": "package.json",
+          "target_blob": "9a4ac297bb047fcae8e427e97a5edb079b290bda",
+          "reason": "Adds the verify:rls-connection-single-source and :self-test scripts."
+        },
+        {
+          "path": "scripts/verify-rls-connection-single-source.mjs",
+          "target_blob": "7e7485952304b464fcd9e01bb0adc4f68a82e8be",
+          "reason": "NEW GATE. Asserts that outside db/rls-connection.ts no source file branches on XLOOOP_RLS_APP_DATABASE_URL; type declarations and comments are exempt. Comment stripping is load-bearing because the protected module documents the exact expression it forbids. Self-test 9/9 including the pre-fix expression as a required-detection control. Exists because the original fix was applied to an ENUMERATED LIST of six sites and missed a seventh - an enumeration is a snapshot, the gate is the invariant."
+        }
+      ]
     }
   ]
 }

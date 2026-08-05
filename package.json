@@ -83,6 +83,8 @@
     "verify:projection-outbox-drain:self-test": "node scripts/verify-projection-outbox-drain.mjs --self-test",
     "verify:untyped-jsonb-params": "node scripts/verify-untyped-jsonb-params.mjs",
     "verify:untyped-jsonb-params:self-test": "node scripts/verify-untyped-jsonb-params.mjs --self-test",
+    "verify:rls-connection-single-source": "node scripts/verify-rls-connection-single-source.mjs",
+    "verify:rls-connection-single-source:self-test": "node scripts/verify-rls-connection-single-source.mjs --self-test",
     "verify:provenance": "node scripts/verify-shadow-seed-provenance.mjs && node scripts/verify-backend-delta-provenance.mjs",
     "verify:source-file-size-ratchet": "node scripts/verify-source-file-size-ratchet.mjs",
     "verify:source-file-size-ratchet:self-test": "node scripts/verify-source-file-size-ratchet.mjs --self-test",
