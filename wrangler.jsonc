@@ -1,3 +1,27 @@
+// ⚠️ THIS REPO HAS TWO WRANGLER CONFIGS, AND WRANGLER PICKS THE WRONG ONE BY DEFAULT.
+//
+//   wrangler.toml   → the API WORKER (xlooop-api)  ← almost everything you want
+//   wrangler.jsonc  → this file: a PAGES project for the functions/ feedback plane
+//
+// Wrangler auto-detects this file, sees `pages_build_output_dir`, and concludes the directory is a
+// Pages project. Every Workers command then fails with a message that names the wrong cause:
+//
+//   [ERROR] It looks like you've run a Workers-specific command in a Pages project.
+//
+// That error is about THIS FILE, not about the command you ran. The fix is always the same:
+//
+//   npx wrangler tail xlooop-api --config wrangler.toml
+//   npx wrangler secret list     --config wrangler.toml
+//
+// DO NOT DELETE THIS FILE to "clean up" the ambiguity. It is live config: functions/_middleware.js,
+// functions/_lib and functions/api all exist, and the FEEDBACK_DB binding below is consumed by
+// scripts/provision-feedback-d1-cloudflare.mjs and scripts/verify-customer-feedback-api-scenarios.mjs.
+// Removing it breaks the feedback API deploy. An agent mid-debug on 260805 concluded it was stray and
+// nearly recommended deletion; checking the consumers first is what stopped that.
+//
+// `pages_build_output_dir` points at dist-cloudflare/, which no script in this repo writes — see the
+// note at scripts/verify-app-security-header-parity.mjs:64 documenting the same dead path. That is a
+// separate, pre-existing question and is NOT a reason to delete this config.
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "xlooop",
