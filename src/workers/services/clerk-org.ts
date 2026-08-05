@@ -88,9 +88,12 @@ export async function listUserOrgMemberships(
       }
     }
     return out;
-  } catch {
-    // Intentionally swallowed — see the fail-open contract above. The caller records the skip
-    // reason on the session envelope so the absence is observable without being fatal.
+  } catch (err) {
+    // Intentionally swallowed — see the fail-open contract above. 260806: the claim that "the
+    // caller records the skip reason" was MEASURED FALSE (routes/session.ts records only
+    // successful sweeps), so the log below is the only place the empty-vs-error distinction
+    // exists. Degrade kept.
+    console.log(JSON.stringify({ kind: 'degraded_read_disclosed', surface: 'clerk_org_membership_sweep', error: String((err as Error)?.message || err).slice(0, 160) }));
     return [];
   }
 }

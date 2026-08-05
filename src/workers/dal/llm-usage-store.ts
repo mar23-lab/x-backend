@@ -106,5 +106,10 @@ export async function listLlmUsageRow(sql: Sql, workspaceId: string, limit = 200
       first_used_at: r.first_used_at == null ? null : String(r.first_used_at),
       last_used_at: r.last_used_at == null ? null : String(r.last_used_at),
     }));
-  } catch { return []; /* pre-064 schema — the read degrades to empty */ }
+  } catch (err) {
+    // FALSE-ZERO DISCLOSURE (260806): the usage surface otherwise reports a fabricated zero that
+    // reads as a measurement. Degrade kept; the log separates "no usage" from "could not read".
+    console.log(JSON.stringify({ kind: 'degraded_read_disclosed', surface: 'llm_usage_list', error: String((err as Error)?.message || err).slice(0, 160) }));
+    return []; /* pre-064 schema — the read degrades to empty */
+  }
 }

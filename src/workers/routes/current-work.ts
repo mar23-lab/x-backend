@@ -133,7 +133,13 @@ currentWorkRoute.get('/current-work', async (ctx) => {
     // Raising the limit only moves the cliff. The predicate belongs in SQL, next to the ORDER BY.
     const page = await dal.listEvents(workspaceId, {
       role: auth.role, limit: 200, top_level: true, attention_only: true,
-    }).catch(() => ({ events: [], pagination: { has_more: false, next_before: null } }));
+    }).catch((err) => {
+      // FALSE-ZERO DISCLOSURE (260806): a failed attention read otherwise drives the focus card
+      // to "All clear / nothing is waiting on you" — the product's central promise, inverted by an
+      // outage. Degrade kept; the log separates "clear" from "could not look".
+      console.log(JSON.stringify({ kind: 'degraded_read_disclosed', surface: 'current_work_attention_page', error: String((err as Error)?.message || err).slice(0, 160) }));
+      return { events: [], pagination: { has_more: false, next_before: null } };
+    });
     const inScope = (e: { project_id: string | null }) => !projectId || e.project_id === projectId || e.project_id === null;
     const events = page.events.filter(inScope);
 
@@ -144,7 +150,12 @@ currentWorkRoute.get('/current-work', async (ctx) => {
     // window-derived too, which made done_pct a percentage of the last 200 rows rather than of the
     // work. A count computed from a page is not a count.
     const totals = await dal.countEventStates(workspaceId, { role: auth.role, project_id: projectId })
-      .catch(() => ({ needs_you: pending.length, blocked: blocked.length, done: 0, total: 0 }));
+      .catch((err) => {
+        // FALSE-ZERO DISCLOSURE (260806): done/total fabricate zeros on a failed aggregate, so
+        // done_pct computes from nothing. The page-derived floor for needs_you/blocked stays.
+        console.log(JSON.stringify({ kind: 'degraded_read_disclosed', surface: 'current_work_totals', error: String((err as Error)?.message || err).slice(0, 160) }));
+        return { needs_you: pending.length, blocked: blocked.length, done: 0, total: 0 };
+      });
 
     // The single focal item + its plain-language primary action (mirrors the frontend H2 state machine).
     let focus: null | { event_id: string; intent_id: string | null; project_id: string | null; title: string; state: string; status_label: string; next: string; primary_action: { code: string; label: string } | null } = null;

@@ -173,7 +173,12 @@ export async function listWorkspaceSourceReadPoliciesRow(
       user_source_connection_id: r.user_source_connection_id == null ? null : String(r.user_source_connection_id),
       read_policy: String(r.read_policy || 'metadata_only'),
     }));
-  } catch { return []; }
+  } catch (err) {
+    // DISCLOSURE (260806): a failed read-policy query collapses every binding to the default
+    // metadata_only trust tier. Degrade kept (fail-toward-least-trust is correct); now observable.
+    console.log(JSON.stringify({ kind: 'degraded_read_disclosed', surface: 'source_read_policies', error: String((err as Error)?.message || err).slice(0, 160) }));
+    return [];
+  }
 }
 
 /** T4/P7 (260710) · WORKSPACE-scoped source list — the MCP read tool's tenant view (a customer-token

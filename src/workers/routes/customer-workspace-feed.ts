@@ -47,7 +47,11 @@ customerWorkspaceFeedRoute.get('/customer/workspace-feed', async (ctx) => {
       role: auth.role,
       limit: 8,
       top_level: true,
-    }).catch(() => ({ events: [], pagination: { has_more: false, next_before: null } }));
+    }).catch((err) => {
+      // FALSE-ZERO DISCLOSURE (260806): a failed feed read substitutes an empty workspace feed.
+      console.log(JSON.stringify({ kind: 'degraded_read_disclosed', surface: 'workspace_feed', error: String((err as Error)?.message || err).slice(0, 160) }));
+      return { events: [], pagination: { has_more: false, next_before: null } };
+    });
     const now = new Date().toISOString();
 
     return ctx.json(withDataClass({
