@@ -20,7 +20,13 @@ export interface PromptRefineResult {
 export async function refinePromptText(text: string, ai?: AiRunner, executionObserver?: ModelExecutionObserver): Promise<PromptRefineResult> {
   const original = String(text || '').trim();
   if (!original || original.length > 600) return { proposed: original, refined: false };
-  if (!ai) return { proposed: original, refined: false };
+  // DEGRADATION DISCLOSURE (twin of cockpit_chat_no_ai_binding). "Improve wording" returned the
+  // user's own text unchanged with no log and no observer started, so a permanently unavailable
+  // refiner was indistinguishable from a refiner that judged the prompt already good.
+  if (!ai) {
+    console.log(JSON.stringify({ kind: 'prompt_refine_no_ai_binding', chars: original.length }));
+    return { proposed: original, refined: false };
+  }
   const startedAt = Date.now();
   const execution = await executionObserver?.start({ provider: 'workers_ai', model_key: PROMPT_REFINE_MODEL });
   let out: unknown;

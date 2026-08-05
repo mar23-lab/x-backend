@@ -5261,6 +5261,47 @@
           "reason": "NEW GATE. Asserts that outside db/rls-connection.ts no source file branches on XLOOOP_RLS_APP_DATABASE_URL; type declarations and comments are exempt. Comment stripping is load-bearing because the protected module documents the exact expression it forbids. Self-test 9/9 including the pre-fix expression as a required-detection control. Exists because the original fix was applied to an ENUMERATED LIST of six sites and missed a seventh - an enumeration is a snapshot, the gate is the invariant."
         }
       ]
+    },
+    {
+      "delta_id": "claude-ai-binding-disclosure-20260805",
+      "generated_at": "2026-08-05T19:45:00.000Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "30921ec0a2d8a76d5bced40e1ea3c17c1a91df5b",
+      "target_base_commit": "30921ec0a2d8a76d5bced40e1ea3c17c1a91df5b",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/services/agent-digest.ts",
+          "target_blob": "fd577779c73431a4959ecc9dc5a41df7da34309c",
+          "reason": "DEGRADATION DISCLOSURE. Two silent no-AI-binding returns (workspace digest, day-1 onboarding welcome) now emit agent_digest_no_ai_binding. Both were structural twins of the cockpit-chat defect an operator reported as two different questions answered byte-identically; that fix was applied to one function and left standing here."
+        },
+        {
+          "path": "src/workers/services/prompt-refine.ts",
+          "target_blob": "88219fba58377a2bd43b99af8e33c724444a5fe2",
+          "reason": "DEGRADATION DISCLOSURE. Improve-wording returned the users own text unchanged with no log and no observer, so a permanently unavailable refiner was indistinguishable from one that judged the prompt already good. Now emits prompt_refine_no_ai_binding."
+        },
+        {
+          "path": "src/workers/services/packet-enrichment.ts",
+          "target_blob": "fca508cfced1452be6e9a4fd8f2dbf69e7f6e378",
+          "reason": "DEGRADATION DISCLOSURE. The deterministic floor is reached both when a model ran and failed (which leaves an execution receipt) and when there is NO AI binding at all (which starts no observer and left no trace anywhere). Now emits packet_enrichment_deterministic_floor with ai_bound, which is what separates the model was tried and lost from the model was never there."
+        },
+        {
+          "path": "scripts/verify-ai-binding-disclosure.mjs",
+          "target_blob": "a9611f9c8437dce0a7cdd9a2d567cd1324630737",
+          "reason": "NEW GATE. Requires every if (!ai)-shaped guard that RETURNS a substitute to emit a console log. Deliberately narrow - only the AI-binding shape, only when the guard returns; a guard that throws is already loud. Does NOT attempt the general degraded-substitution case (measured 9 instrumented of 54 sites), because that would be a red nobody can clear. Receipts explicitly do not satisfy it: they are DB-side, invisible to wrangler tail, and absent when no observer was started. Self-test 8/8."
+        },
+        {
+          "path": "scripts/ci-local.mjs",
+          "target_blob": "3ff41e63b95f28d48cb6a3b783ede6527dcca386",
+          "reason": "Registers the gate and its self-test as blocking (78 -> 80 executed)."
+        },
+        {
+          "path": "package.json",
+          "target_blob": "4055f9e235e824c50898855c52b65ef768e28de6",
+          "reason": "Adds the verify:ai-binding-disclosure scripts."
+        }
+      ]
     }
   ]
 }

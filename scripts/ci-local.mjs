@@ -44,6 +44,8 @@ const gates = [
   ['projection-outbox drain controls', 'npm', ['run', 'verify:projection-outbox-drain:self-test']],
   ['untyped variadic SQL parameter controls', 'npm', ['run', 'verify:untyped-jsonb-params:self-test']],
   ['untyped variadic SQL parameters', 'npm', ['run', 'verify:untyped-jsonb-params']],
+  ['AI-binding disclosure controls', 'npm', ['run', 'verify:ai-binding-disclosure:self-test']],
+  ['AI-binding disclosure', 'npm', ['run', 'verify:ai-binding-disclosure']],
   ['RLS connection single-source controls', 'npm', ['run', 'verify:rls-connection-single-source:self-test']],
   ['RLS connection single-source', 'npm', ['run', 'verify:rls-connection-single-source']],
   ['deploy provenance wiring', 'npm', ['run', 'verify:deploy-provenance']],

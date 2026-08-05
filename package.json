@@ -83,6 +83,8 @@
     "verify:projection-outbox-drain:self-test": "node scripts/verify-projection-outbox-drain.mjs --self-test",
     "verify:untyped-jsonb-params": "node scripts/verify-untyped-jsonb-params.mjs",
     "verify:untyped-jsonb-params:self-test": "node scripts/verify-untyped-jsonb-params.mjs --self-test",
+    "verify:ai-binding-disclosure": "node scripts/verify-ai-binding-disclosure.mjs",
+    "verify:ai-binding-disclosure:self-test": "node scripts/verify-ai-binding-disclosure.mjs --self-test",
     "verify:rls-connection-single-source": "node scripts/verify-rls-connection-single-source.mjs",
     "verify:rls-connection-single-source:self-test": "node scripts/verify-rls-connection-single-source.mjs --self-test",
     "verify:provenance": "node scripts/verify-shadow-seed-provenance.mjs && node scripts/verify-backend-delta-provenance.mjs",

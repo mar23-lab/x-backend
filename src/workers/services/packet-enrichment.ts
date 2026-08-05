@@ -182,5 +182,11 @@ export async function generateIntentEnrichment(
   }
 
   // Deterministic floor — honest, never empty, never fabricated.
+  //
+  // DEGRADATION DISCLOSURE. This floor is reached two ways that used to look identical from
+  // outside: a model ran and failed (which DOES leave an execution receipt via the observer), and
+  // NO AI BINDING AT ALL — which starts no observer, so that path left no trace anywhere. Logging
+  // `ai_bound` is what separates "the model was tried and lost" from "the model was never there".
+  console.log(JSON.stringify({ kind: 'packet_enrichment_deterministic_floor', ai_bound: Boolean(ai) }));
   return { ...deterministicEnrichment(intent, prior), generated_by: 'deterministic', model: null };
 }
