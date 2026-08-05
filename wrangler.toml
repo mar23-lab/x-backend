@@ -210,7 +210,7 @@ CUSTOMER_CENSUS_ENABLED = "true"
 # than exactly "true" the arm makes zero reads and zero Clerk calls. Observe-only when armed — it
 # compares and reports, it never materializes or removes. Flip it on only after the paired cutover
 # that carries it, so the first run is observed rather than discovered.
-CLERK_DB_PARITY_ENABLED = "false"
+CLERK_DB_PARITY_ENABLED = "true"  # 260806 full-prod-test sweep (operator-ruled) — observe-only comparator, armed per its own instruction above via a paired cutover so the first run is observed.
 # OS-3 UX Wave-2.1 · the execution-pipeline executor (services/operations-queue-consumer.ts, chained
 # into the hourly :45 reclassify slot). Default OFF ("disabled") — deploying the worker is INERT: the
 # executor makes ZERO DB calls until this flips. The keystone trust fix: WRITE-mode chat actions log
@@ -351,6 +351,42 @@ CURRENT_WORK_PROJECTION_ENABLED = "true"
 #   RLS enabled = true · policies = 1
 # That check is the RLS-without-GRANT lesson applied BEFORE the flip rather than after a 42501.
 CURRENT_WORK_PARITY_OBSERVATIONS_ENABLED = "true"
+
+# ---- 260806 FULL-PRODUCTION-TEST SWEEP (operator-ruled: "switch everything on") ----
+# A 17-flag census (9 read-only research agents, per-flag call-site verdicts) classified every
+# flag that was OFF in production. 15 of 17 enable below, plus the journey seed flag. The TWO
+# exclusions are measured, not cautious defaults:
+#   PURGE_DELETED_ENABLED            — DESTRUCTIVE: hard-deletes soft-deleted customer events past
+#                                      the 30-day window, cross-workspace, owner connection,
+#                                      irreversible. Its own comment says stays OFF. Operator call.
+#   TENANT_PROJECTION_QUEUE_ENABLED  — pure downside as a flag flip: the queue producer/consumer
+#                                      bindings are ABSENT from this file by design ("Provisioning
+#                                      intentionally excluded until approved"), so ON = a guaranteed
+#                                      daily projection_queue_binding_missing failure + Sentry noise
+#                                      + a feature_posture flip, and zero outbox rows move. Making it
+#                                      real is a Cloudflare Queues provisioning decision, not a var.
+# Observability-only (trace/audit/shadow evidence; no behavior change on existing traffic):
+ACTION_INTENT_SHADOW_ENABLED = "true"       # unhides the authed advisory /action-intent/shadow endpoint; stateless, writes nothing
+CHAT_ASSEMBLY_TRACE_ENABLED = "true"        # persists the redacted per-answer assembly trace into chat_messages.grounded_on (8KB clamp, never-throw)
+MCP_READ_AUDIT_ENABLED = "true"             # audit rows for MCP customer reads
+# Product-behavior (each verdict names its preconditions as measured-in-code):
+CHAT_RECEIPT_GROUNDING_ENABLED = "true"     # grounded answers mint per-answer receipt uids (mig 058 shapes; receipt route already mounted)
+CONTEXT_RESOLVER_ENABLED = "true"
+GRAPH_DOCUMENT_NODES_ENABLED = "true"
+PACKET_COMPLETION_EVALUATION_ENABLED = "true"
+PERSONALIZATION_SEED_ENABLED = "true"
+SOURCE_TIER_GROUNDING_ENABLED = "true"
+CUSTOMER_OPERATIONAL_TOKENS_ENABLED = "true"
+# Provisioning chain (M.7 first-login journey — all three together; blast radius = brand-new
+# Clerk-org sessions only; existing tenants cannot reach the branch; approver secret MEASURED set):
+CUSTOMER_AUTO_PROVISION_ON_SESSION = "true"
+CUSTOMER_AUTO_PROVISION_FROM_CLERK_ORG = "true"
+CUSTOMER_INAPP_READINESS_GATE = "true"
+DOMAIN_SCAFFOLD_ENABLED = "true"
+# Journey seed nonce (the named ask): honoured only for operator/owner roles, per-run nonce param;
+# suite half landed as x-ai-front #165.
+XLOOOP_JOURNEY_SEED_ENABLED = "true"
+
 # XLOOOP_DEPLOY_SHA = "<build sha>"      # optional receipt provenance stamp (Track A); unset ⇒ deploy_sha null
 # RESOLUTION_RECEIPT_SIGNING_KEY_ID = "k1"  # optional rotation label for signed receipts; unset ⇒ 'default'
 
