@@ -64,7 +64,13 @@ export async function getAppEntitlementRow(sql: Sql, userId: string, workspaceId
     const r = rows[0];
     if (!r) return null; // ← FAIL CLOSED (no entitlement)
     return toAppEntitlement(r);
-  } catch {
+  } catch (err) {
+    // 260806 (9.6 tranche 2): the fail-CLOSED posture here is CORRECT and deliberately kept — an
+    // entitlement must never be granted on an unreadable read. The defect was the SILENCE: an
+    // entitled, paying customer served the locked product on a DB blip was indistinguishable from
+    // a customer who never bought it. The log is what separates "not entitled" from "could not
+    // check" so support and telemetry can see the outage instead of a churn signal.
+    console.log(JSON.stringify({ kind: 'entitlement_read_failed_fail_closed', error: String((err as Error)?.message || err).slice(0, 200) }));
     return null; // degrade-safe: never let a read error read as authorized
   }
 }

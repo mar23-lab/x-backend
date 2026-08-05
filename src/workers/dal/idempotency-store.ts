@@ -56,7 +56,14 @@ export async function reserveIdempotencyKey(
     if (!row) return { status: 'owned' }; // vanished between INSERT and SELECT — execute
     if (row.response_status == null) return { status: 'in_progress' };
     return { status: 'replay', responseStatus: Number(row.response_status) || 200, body: row.response_body ?? null };
-  } catch {
+  } catch (err) {
+    // 260806 (9.6 tranche 2): fail-OPEN is the deliberate posture for the ORDINARY retry guard and
+    // is kept — blocking every write whenever the guard store blinks would convert a nicety
+    // (dedupe) into an outage, and the writes that genuinely cannot tolerate replay are protected
+    // by the STRICT authority namespace with DB-enforced claims, not by this guard. The defect was
+    // the silence: a retried POST re-executing during a guard outage looked identical to a first
+    // POST. The log makes the double-execution window observable.
+    console.log(JSON.stringify({ kind: 'idempotency_guard_read_failed_fail_open', error: String((err as Error)?.message || err).slice(0, 200) }));
     return { status: 'owned' }; // pre-065 schema / transient → execute normally (fail-open)
   }
 }
