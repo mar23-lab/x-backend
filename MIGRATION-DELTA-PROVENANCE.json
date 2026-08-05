@@ -5193,6 +5193,22 @@
           "reason": "Regression controls for the above. One asserts two different questions on an empty scope do NOT return identical bytes, while both still state \"no recorded activity\" - variety must not be bought with fabrication. A second asserts the plan is surfaced rather than discarded, and that plan rows carry \"no linked events yet\". Both fail on the pre-fix shape by construction, since that branch never referenced the message."
         }
       ]
+    },
+    {
+      "delta_id": "claude-chat-unknown-mode-observable-20260805",
+      "generated_at": "2026-08-05T12:20:00.000Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "596c201bed9194bec7eb478d9e0a94d73baef6ef",
+      "target_base_commit": "596c201bed9194bec7eb478d9e0a94d73baef6ef",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/routes/customer-chat.ts",
+          "target_blob": "05c99143b3c40ecd42bbe9046218c3b04b01b5bd",
+          "reason": "A SILENT ENUM COERCION IS INDISTINGUISHABLE FROM CORRECT OPERATION. customer-chat.ts:275 rewrote any mode outside ALLOWED_MODES to \"ask\" with no error and no log. The frontend had been sending mode:\"research\" for its Research-brief button - not a member of the set - so that button degraded to a plain ask, invisibly, because the answer still read plausibly. The cost was not one button: cockpit-chat.ts:1435 reaches Claude only on an explicit llm:\"claude\" or mode===\"deep-research\", and the chat request body carries no llm field at all (the \"Sonnet 4.8\" control is display markup with no state binding), so deep-research was the ONLY route to Claude from that UI and a one-word mismatch closed it. Every production chat answer has therefore come from the free Workers-AI Llama or the deterministic floor while the interface named a different model. The coercion is RETAINED rather than turned into a 400 - rejecting would break clients mid-flight and a coerced answer beats an error - but it now emits cockpit_chat_unknown_mode_coerced carrying the requested value, the served value and the allowed set, so the next mismatch announces itself instead of hiding behind a plausible answer. Frontend counterpart: x-ai-front #156."
+        }
+      ]
     }
   ]
 }
