@@ -520,7 +520,12 @@ workspacesRoute.post('/cockpit-chat', async (ctx) => {
     // Guarded like every other dal call in this handler — a partial dal (tests, degraded boot) must
     // degrade to companyContext=null, never a sync TypeError → 500 (the pre-existing 10/16 suite rot).
     const companyContext = workspaceId && typeof dal.getCustomerContextProfile === 'function'
-      ? await dal.getCustomerContextProfile(workspaceId).catch(() => null)
+      // FALSE-ZERO DISCLOSURE (260806): twin of customer-chat's company_profile degrade — a failed
+      // read silently swapped the company-aware preamble for the generic one on THIS surface too.
+      ? await dal.getCustomerContextProfile(workspaceId).catch((err) => {
+          console.log(JSON.stringify({ kind: 'cockpit_chat_grounding_read_failed', surface: 'company_profile_operator_plane', error: String((err as Error)?.message || err).slice(0, 200) }));
+          return null;
+        })
       : null;
     // Plane C (P1 · 260629) · uploaded documents (extracted_text) so the chief-of-staff answers FROM the
     // customer's own docs, not just events. Bounded (<=8 with text) + excerpt-truncated; workspace-scoped
