@@ -75,7 +75,15 @@ export async function buildWorkspaceDigestLLM(
   executionObserver?: ModelExecutionObserver,
 ): Promise<DigestDraft> {
   const deterministic = buildWorkspaceDigest(s);
-  if (!ai) return { ...deterministic, generated_by: 'deterministic' };
+  // DEGRADATION DISCLOSURE. An absent AI binding silently returned the canned digest — on the wire
+  // and in the logs, indistinguishable from a model that ran and chose those words. That is the
+  // exact defect fixed in cockpit-chat (`cockpit_chat_no_ai_binding`), and it was left standing at
+  // four structural twins including this one. A degraded substitution must name what was requested
+  // and what was served; silence is the worst possible reading of "the AI never ran".
+  if (!ai) {
+    console.log(JSON.stringify({ kind: 'agent_digest_no_ai_binding', surface: 'workspace_digest' }));
+    return { ...deterministic, generated_by: 'deterministic' };
+  }
   const startedAt = Date.now();
   const execution = await executionObserver?.start({ provider: 'workers_ai', model_key: DIGEST_LLM_MODEL });
   let out: unknown;
@@ -213,7 +221,12 @@ export async function buildOnboardingWelcomeDraft(
     generated_by: 'deterministic',
   };
 
-  if (!opts.ai) return deterministic;
+  // Same disclosure as the workspace digest above: the day-1 onboarding welcome silently became the
+  // canned template with no log and no execution receipt.
+  if (!opts.ai) {
+    console.log(JSON.stringify({ kind: 'agent_digest_no_ai_binding', surface: 'onboarding_welcome' }));
+    return deterministic;
+  }
 
   const startedAt = Date.now();
   const execution = await opts.executionObserver?.start({ provider: 'workers_ai', model_key: DIGEST_LLM_MODEL });
