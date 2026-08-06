@@ -373,24 +373,31 @@ check(
 );
 
 // The 260720 entitlement flip: CUSTOMER agent credentials are entitlement-gated, PLATFORM canary
-// principals keep the legacy path. Observed behaviourally — resolving entitlement is a database
-// round trip, so the statement count distinguishes the two paths without asserting any internals.
+// principals keep the legacy path. Stage-0 MCP unblock (260806) re-based the mechanism: a customer
+// token's entitlement is ISSUANCE-DERIVED (buildCustomerTokenPrincipal — zero DB statements, so the
+// old statement-count distinguisher no longer separates the paths). The behavioural distinguisher
+// that CANNOT pass on the legacy role-only path is the ACTION AXIS: legacy canWrite('operator')
+// is action-blind and would allow signoff:decide, while the issuance entitlement structurally
+// denies decide-class actions (deny-wins) and allows only the report class. So: an operator token
+// must be ALLOWED to submit evidence AND DENIED sign-off with reason 'action_denied' — the pair is
+// unreachable from the legacy path in either direction.
 const enforcedEnv = { ENTITLEMENT_ENFORCEMENT: 'on' };
 const operatingMode = { getOperatingMode: async () => 'operator' };
 
 const customerProbe = recordingSql(() => []);
-const customerVerdict = await authority.authorizeSpineWrite(
-  honoContext(
-    { role: 'operator', user_id: 'u_c', workspace_id: 'ws_a', service_principal: 'customer_token' },
-    enforcedEnv,
-    { sql: customerProbe.sql, dal: operatingMode },
-  ),
-  'evidence:submit',
+const customerCtx = () => honoContext(
+  { role: 'operator', user_id: 'u_c', workspace_id: 'ws_a', service_principal: 'customer_token' },
+  enforcedEnv,
+  { sql: customerProbe.sql, dal: operatingMode },
 );
+const customerReportVerdict = await authority.authorizeSpineWrite(customerCtx(), 'evidence:submit');
+const customerDecideVerdict = await authority.authorizeSpineWrite(customerCtx(), 'signoff:decide');
 check(
   'customer_service_principal_is_not_exempt_from_entitlement',
-  customerProbe.statements.length > 0 && customerVerdict.allowed === false,
-  `with enforcement on, a customer credential took the legacy role-only path (${customerProbe.statements.length} entitlement statement(s), verdict ${JSON.stringify(customerVerdict)}) — customer agents must be entitlement-gated`,
+  customerReportVerdict.allowed === true
+    && customerDecideVerdict.allowed === false
+    && customerDecideVerdict.reason === 'action_denied',
+  `with enforcement on, a customer credential must ride the issuance entitlement — report-class allowed, decide-class denied by the action list. Got evidence:submit ${JSON.stringify(customerReportVerdict)}, signoff:decide ${JSON.stringify(customerDecideVerdict)} — the legacy role-only path would allow BOTH`,
 );
 
 const canaryProbe = recordingSql(() => []);

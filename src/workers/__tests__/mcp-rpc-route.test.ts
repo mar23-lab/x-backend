@@ -107,4 +107,42 @@ describe('mcp-rpc route', () => {
     expect(j.transport).toBe('streamable-http');
     expect(j.tools).toContain('xlooop.whoami');
   });
+
+  // ── Stage-0 parity pin (260806) ────────────────────────────────────────────────────────────────
+  // tools/list once under-reported the advertised surface by 8: four finished customer-data reads
+  // sat in SAFE_TOOLS and were never registered here (two hand-maintained lists — the enumerated-
+  // list class). This pins the two lists together in BOTH directions so they can never drift again:
+  // every GET in SAFE_TOOLS must be a registered MCP tool, and every registered MCP tool that maps
+  // to a SAFE_TOOLS path must carry the same published name. Writes are excluded EXPLICITLY (they
+  // are typed shut in McpToolDef until the operational write connector is signed off) — a write
+  // appearing in tools/list should fail this test until that design step is taken deliberately.
+  it('PARITY: every SAFE_TOOLS read is a registered MCP tool and no MCP tool is unadvertised', async () => {
+    const { SAFE_TOOLS } = await import('../routes/mcp-gateway');
+    const safeReads = (SAFE_TOOLS as readonly { name: string; method: string }[]).filter((t) => t.method === 'GET');
+    const mcpNames = new Set(MCP_READ_TOOLS.map((t) => t.name));
+    const safeReadNames = new Set(safeReads.map((t) => t.name));
+
+    const missingFromMcp = safeReads.map((t) => t.name).filter((n) => !mcpNames.has(n));
+    expect(missingFromMcp, 'SAFE_TOOLS reads absent from tools/list').toEqual([]);
+
+    // MCP tools not in SAFE_TOOLS: only the template-policy pair predates the advertisement and is
+    // allowed by name; anything else must be advertised.
+    const unadvertised = MCP_READ_TOOLS.map((t) => t.name).filter((n) => !safeReadNames.has(n));
+    expect(unadvertised, 'MCP tools missing from the SAFE_TOOLS advertisement').toEqual([]);
+
+    // Writes stay off the MCP surface until deliberately opened.
+    const writes = (SAFE_TOOLS as readonly { name: string; method: string }[]).filter((t) => t.method !== 'GET');
+    for (const w of writes) expect(mcpNames.has(w.name), `write ${w.name} must not be an MCP tool yet`).toBe(false);
+  });
+
+  it('the new cockpit-read tools build tenant-plane GET paths', () => {
+    const byName = new Map(MCP_READ_TOOLS.map((t) => [t.name, t]));
+    expect(byName.get('xlooop.get_current_work')!.build({})).toEqual({ method: 'GET', path: '/api/v1/mcp/current-work' });
+    expect(byName.get('xlooop.list_events')!.build({ limit: 500, before: 'evt_x' }))
+      .toEqual({ method: 'GET', path: '/api/v1/mcp/events?limit=100&before=evt_x' }); // cap enforced
+    expect(byName.get('xlooop.get_plan')!.build({})).toEqual({ error: 'scope_id is required' });
+    expect(byName.get('xlooop.get_plan')!.build({ scope_id: 'prj 1' })).toEqual({ method: 'GET', path: '/api/v1/mcp/plan/prj%201' });
+    expect(byName.get('xlooop.get_evidence')!.build({})).toEqual({ error: 'packet_id is required' });
+    expect(byName.get('xlooop.list_receipts')!.build({ limit: 9999 })).toEqual({ method: 'GET', path: '/api/v1/mcp/receipts?limit=200' });
+  });
 });

@@ -89,6 +89,115 @@ export const MCP_READ_TOOLS: McpToolDef[] = [
     inputSchema: STRING(),
     build: () => ({ method: 'GET', path: '/api/v1/template-policy/personalization/effective-profile' }),
   },
+  // ── Stage-0 registration repair + cockpit reads (260806) ──────────────────────────────────────
+  // The four T4/P7 customer-data reads below were fully built, prod-flagged and advertised in
+  // SAFE_TOOLS — and never registered here, so tools/list under-reported the surface by 8 (the
+  // enumerated-list class: two lists, one hand-maintained). The parity test in
+  // mcp-rpc-route.test.ts now pins tools/list to the SAFE_TOOLS read set so the two can never
+  // drift again. The last three expose the operator cockpit's read models on the token plane
+  // (mcp-customer-reads.ts wrappers — posture-flagged, tenant-bound, role-filtered).
+  {
+    name: 'xlooop.list_sources',
+    description: 'List connected data sources for this workspace (connection/sync metadata only).',
+    inputSchema: STRING(),
+    build: () => ({ method: 'GET', path: '/api/v1/mcp/sources' }),
+  },
+  {
+    name: 'xlooop.get_evidence',
+    description: 'List evidence items recorded against one task packet.',
+    inputSchema: {
+      type: 'object',
+      properties: { packet_id: { type: 'string', description: 'Task packet id.' } },
+      required: ['packet_id'],
+      additionalProperties: false,
+    },
+    build: (args) => {
+      const pid = reqString(args, 'packet_id');
+      return pid ? { method: 'GET', path: `/api/v1/mcp/evidence?packet_id=${encodeURIComponent(pid)}` } : { error: 'packet_id is required' };
+    },
+  },
+  {
+    name: 'xlooop.list_receipts',
+    description: 'List the redacted workspace audit trail (actors outside the workspace appear as xlooop:operator).',
+    inputSchema: {
+      type: 'object',
+      properties: { limit: { type: 'number', description: 'Max receipts (default 50, cap 200).' } },
+      required: [],
+      additionalProperties: false,
+    },
+    build: (args) => {
+      const n = Number(args?.limit);
+      const limit = Number.isFinite(n) && n > 0 ? Math.min(200, Math.floor(n)) : 50;
+      return { method: 'GET', path: `/api/v1/mcp/receipts?limit=${limit}` };
+    },
+  },
+  {
+    // Named get_document to match the published SAFE_TOOLS advertisement (the REST surface returns
+    // the workspace document LIST, metadata only) — the parity test pins the two names together.
+    name: 'xlooop.get_document',
+    description: 'List workspace documents — metadata only (id, filename, admissibility, content hash); never document text.',
+    inputSchema: STRING(),
+    build: () => ({ method: 'GET', path: '/api/v1/mcp/documents' }),
+  },
+  {
+    name: 'xlooop.list_packets',
+    description: 'List task packets and their execution receipts for this workspace.',
+    inputSchema: STRING(),
+    build: () => ({ method: 'GET', path: '/api/v1/packets' }),
+  },
+  {
+    name: 'xlooop.get_packet_completion',
+    description: 'Read the completion evaluation for one task packet.',
+    inputSchema: {
+      type: 'object',
+      properties: { packet_id: { type: 'string', description: 'Task packet id.' } },
+      required: ['packet_id'],
+      additionalProperties: false,
+    },
+    build: (args) => {
+      const pid = reqString(args, 'packet_id');
+      return pid ? { method: 'GET', path: `/api/v1/packets/${encodeURIComponent(pid)}/completion-evaluation` } : { error: 'packet_id is required' };
+    },
+  },
+  {
+    name: 'xlooop.get_current_work',
+    description: 'What needs a human right now: whole-workspace counts (needs_you/blocked/done/total) plus the attention queue.',
+    inputSchema: STRING(),
+    build: () => ({ method: 'GET', path: '/api/v1/mcp/current-work' }),
+  },
+  {
+    name: 'xlooop.list_events',
+    description: 'List top-level workspace events (id, status, approval state, summary), newest first.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        limit: { type: 'number', description: 'Max events (default 50, cap 100).' },
+        before: { type: 'string', description: 'Pagination cursor from a previous page.' },
+      },
+      required: [],
+      additionalProperties: false,
+    },
+    build: (args) => {
+      const n = Number(args?.limit);
+      const limit = Number.isFinite(n) && n > 0 ? Math.min(100, Math.floor(n)) : 50;
+      const before = reqString(args, 'before');
+      return { method: 'GET', path: `/api/v1/mcp/events?limit=${limit}${before ? `&before=${encodeURIComponent(before)}` : ''}` };
+    },
+  },
+  {
+    name: 'xlooop.get_plan',
+    description: 'Read the plan entities (goals, milestones, todos) for one scope (e.g. a project id).',
+    inputSchema: {
+      type: 'object',
+      properties: { scope_id: { type: 'string', description: 'Scope id (e.g. project id).' } },
+      required: ['scope_id'],
+      additionalProperties: false,
+    },
+    build: (args) => {
+      const sid = reqString(args, 'scope_id');
+      return sid ? { method: 'GET', path: `/api/v1/mcp/plan/${encodeURIComponent(sid)}` } : { error: 'scope_id is required' };
+    },
+  },
 ];
 
 type JsonRpcId = string | number | null;
