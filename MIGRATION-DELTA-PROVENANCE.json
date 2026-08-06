@@ -5640,6 +5640,27 @@
           "reason": "index.ts comment condensed for the 500-line ratchet"
         }
       ]
+    },
+    {
+      "delta_id": "oauth-token-form-encoding",
+      "generated_at": "2026-08-06T03:24:08.072Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "00ee9ad653613f192dea7c91d620f1b2a3e033b9",
+      "target_base_commit": "00ee9ad653613f192dea7c91d620f1b2a3e033b9",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/middleware/request-guards.ts",
+          "target_blob": "0130daa406c95279033ef141406ec676b6a5a88b",
+          "reason": "RFC 6749 4.1.3 form-urlencoded allowance scoped to /oauth/token in the ingress gate + middleware-level pin tests (post-deploy live-probe fix)"
+        },
+        {
+          "path": "src/workers/__tests__/request-guards.test.ts",
+          "target_blob": "4439b54c5a8e4279d2caed5290274a6666bada4c",
+          "reason": "RFC 6749 4.1.3 form-urlencoded allowance scoped to /oauth/token in the ingress gate + middleware-level pin tests (post-deploy live-probe fix)"
+        }
+      ]
     }
   ]
 }
