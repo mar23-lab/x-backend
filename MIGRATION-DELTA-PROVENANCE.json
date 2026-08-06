@@ -5661,6 +5661,22 @@
           "reason": "RFC 6749 4.1.3 form-urlencoded allowance scoped to /oauth/token in the ingress gate + middleware-level pin tests (post-deploy live-probe fix)"
         }
       ]
+    },
+    {
+      "delta_id": "oauth-as-hardening",
+      "generated_at": "2026-08-06T06:08:26.768Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "18ac207492fdd261a749c90a2545ff91e2849833",
+      "target_base_commit": "18ac207492fdd261a749c90a2545ff91e2849833",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/index.ts",
+          "target_blob": "39b92760735257fb74734648541e3644515cc916",
+          "reason": "Rate limit on origin-root /oauth/* (was unlimited) + structured invalid_grant telemetry with test pin"
+        }
+      ]
     }
   ]
 }

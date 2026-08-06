@@ -189,8 +189,7 @@ app.use('/api/v1/*', rateLimit());
 // binding (wrangler.toml), in-isolate fallback until provisioned.
 app.use('/api/v1/request-access', rateLimit({ ip: { limit: 5, periodSeconds: 60, bindingName: 'RATE_LIMITER_SIGNUP' } }));
 
-// AS hardening (260806): /oauth/* sits at origin root, OUTSIDE the /api/v1/* limiter — without this
-// mount register/token were unlimited brute-force targets. 30 req/min/IP is ~7 full connect flows.
+// AS hardening (260806): /oauth/* is at origin root, OUTSIDE the /api/v1/* limiter — register/token were unlimited brute-force targets. 30/min/IP ≈ 7 connect flows.
 app.use('/oauth/*', rateLimit({ ip: { limit: 30, periodSeconds: 60, bindingName: 'RATE_LIMITER_SIGNUP' } }));
 
 // ---- Public routes (no auth) ----
