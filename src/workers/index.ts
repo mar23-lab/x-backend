@@ -41,6 +41,7 @@ import { listWorkspaceMembersRow } from './dal/workspace-member-store'; // P10 �
 import { listOrgMembers } from './services/clerk-org'; // P10 · parity gateway (read-only, null on outage)
 import { listActiveLearningSignalsForMaterializationRow, upsertUserPersonalizationProfileRow } from './dal/personalization-materialize-store';
 import { healthRoute } from './routes/health';
+import { oauthDiscoveryRoute } from './routes/oauth-discovery';
 import { sessionRoute } from './routes/session';
 import { eventsRoute } from './routes/events';
 import { sourcesRoute } from './routes/sources';   // R50.3b · Clerk OAuth source connectors
@@ -193,6 +194,7 @@ app.use(
 
 // ---- Public routes (no auth) ----
 app.route('/api/v1', healthRoute);
+app.route('/', oauthDiscoveryRoute);               // Stage-2 slice 1 (260806) · RFC 9728 /.well-known/oauth-protected-resource (public, cacheable)
 app.route('/api/v1', requestAccessRoute);          // R40 · public access-request funnel
 app.route('/api/v1', diagnoseRoute);               // R43.17 · diagnose-user for stuck sign-in triage — OPERATOR-GATED (self-auth via MBP_OWNER_USER_ID; was public until 260710 sec-review)
 app.route('/api/v1', githubWebhookRoute);          // R54-S1 · public HMAC-gated GitHub → operation_events producer
@@ -203,10 +205,8 @@ app.route('/api/v1', investorPublicRoute);         // Wave R-I.7 Stage C · /inv
 app.route('/api/v1', sessionRoute);                // R40 · entitlement state machine
 
 // ---- MB-P operator-only data endpoints (R43.7) ----
-// Self-auth inside the route handlers via MBP_OWNER_USER_ID match; do NOT use
-// clerkAuth() middleware here (which requires org_id and would 403 the operator
-// when they're not in a specific Clerk org context). Operator's identity is
-// the only gate.
+// Self-auth inside the handlers via MBP_OWNER_USER_ID match; do NOT front with clerkAuth() —
+// it requires org_id and would 403 the operator outside a Clerk org context. Identity is the only gate.
 app.route('/api/v1', mbpProjectionRoute);          // R43.7 · /api/v1/mbp-projection + /mbp-live-stream
 
 // ---- Operational spine + MCP canary routes ----

@@ -5551,6 +5551,53 @@
           "reason": "Stage 1: register-codex subcommand + hosted-endpoint-first register-claude in the canonical CLI"
         }
       ]
+    },
+    {
+      "delta_id": "mcp-oauth-discovery-260806",
+      "generated_at": "2026-08-06T01:05:15.502Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "849605d30d3ea27ba9714590f24f534f1e6ddd05",
+      "target_base_commit": "849605d30d3ea27ba9714590f24f534f1e6ddd05",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/middleware/auth.ts",
+          "target_blob": "42b24ad8e320ad7fbadc7c5d7b19bc6d5e533419",
+          "reason": "Stage-2 slice 1: RFC 9728 discovery (401 challenge + well-known doc)"
+        },
+        {
+          "path": "src/workers/index.ts",
+          "target_blob": "4a081dde643b130f481c9b456fe7ec3c0cc77017",
+          "reason": "Stage-2 slice 1: RFC 9728 discovery (401 challenge + well-known doc)"
+        },
+        {
+          "path": "scripts/emit-routes-manifest.mjs",
+          "target_blob": "452be524bd6224d28f45d44653d55065940e7dc9",
+          "reason": "Stage-2 slice 1: RFC 9728 discovery (401 challenge + well-known doc)"
+        },
+        {
+          "path": "docs/contracts/api-contract.v1.json",
+          "target_blob": "a69908eeb53a45c13590c5d1126238acdee6165a",
+          "reason": "Stage-2 slice 1: RFC 9728 discovery (401 challenge + well-known doc)"
+        }
+      ]
+    },
+    {
+      "delta_id": "mcp-oauth-discovery-260806-b",
+      "generated_at": "2026-08-06T01:06:05.260Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "6a44f973f1285b4372e752c35129bcd80d5c7f4c",
+      "target_base_commit": "6a44f973f1285b4372e752c35129bcd80d5c7f4c",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/index.ts",
+          "target_blob": "568aab5f678b73be63e2280234ce44a61ae1e362",
+          "reason": "index.ts comment condensed to respect the 500-line ratchet (house precedent: condense, never raise)"
+        }
+      ]
     }
   ]
 }
