@@ -1,0 +1,6 @@
+{
+  "name": "xlooop",
+  "version": "0.1.0",
+  "description": "Operate app.xlooop.com from Claude Code: governed work queue, packets, evidence, receipts — through your own Xlooop connector token. Reads are tenant-scoped; the agent reports work, humans sign off.",
+  "author": { "name": "Xlooop (ADEVI Pty Ltd)" }
+}
