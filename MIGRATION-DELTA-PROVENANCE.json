@@ -5535,6 +5535,22 @@
           "reason": "spine-authority test re-based to the issuance-derived customer-token branch (partial mock keeps the real pure builder)"
         }
       ]
+    },
+    {
+      "delta_id": "xlooop-plugin-260806",
+      "generated_at": "2026-08-06T00:47:47.493Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "dee1c28c6e18c80fa90c928ab11bd2c44834e850",
+      "target_base_commit": "dee1c28c6e18c80fa90c928ab11bd2c44834e850",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "packages/xlooop-mcp-server/src/bin/cli.ts",
+          "target_blob": "1c714f2297fff50923ccf0bfb9bd2c49dfc64e1a",
+          "reason": "Stage 1: register-codex subcommand + hosted-endpoint-first register-claude in the canonical CLI"
+        }
+      ]
     }
   ]
 }

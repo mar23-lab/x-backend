@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "xlooop": {
+      "type": "http",
+      "url": "https://api.xlooop.com/api/v1/mcp/rpc",
+      "headers": {
+        "Authorization": "Bearer ${XLOOOP_TOKEN}"
+      }
+    }
+  }
+}

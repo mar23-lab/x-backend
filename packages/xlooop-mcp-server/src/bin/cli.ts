@@ -8,6 +8,7 @@
 //   xlooop ping               — call /api/v1/health, no auth
 //   xlooop tools              — list MCP tool names + descriptions
 //   xlooop register-claude    — print the JSON config block to add to claude mcp
+//   xlooop register-codex     — print the Codex CLI/IDE config for the hosted endpoint
 //   xlooop version            — print version
 
 import { mkdir, writeFile, unlink } from 'node:fs/promises';
@@ -134,6 +135,12 @@ function listTools(): number {
 }
 
 function registerClaude(): number {
+  print('RECOMMENDED — the hosted Streamable-HTTP endpoint (no local process, always current):');
+  print('');
+  print('  claude mcp add --transport http xlooop https://api.xlooop.com/api/v1/mcp/rpc \\');
+  print('    --header "Authorization: Bearer $XLOOOP_TOKEN"');
+  print('');
+  print('Alternative — the local stdio server (this package):');
   const config = {
     mcpServers: {
       xlooop: {
@@ -146,11 +153,24 @@ function registerClaude(): number {
       },
     },
   };
-  print('Add this to your Claude Code MCP config (~/.claude.json or via `claude mcp add`):');
-  print('');
   print(JSON.stringify(config, null, 2));
+  return 0;
+}
+
+// Stage-1 (260806, operator-approved plan): Codex parity — same hosted endpoint, Codex config shape.
+function registerCodex(): number {
+  print('Codex CLI / IDE — add the hosted Xlooop MCP server:');
   print('');
-  print('Or run: claude mcp add xlooop "npx -y @xlooop/mcp-server"');
+  print('  codex mcp add xlooop --url https://api.xlooop.com/api/v1/mcp/rpc \\');
+  print('    --header "Authorization: Bearer $XLOOOP_TOKEN"');
+  print('');
+  print('Or in ~/.codex/config.toml:');
+  print('');
+  print('  [mcp_servers.xlooop]');
+  print('  url = "https://api.xlooop.com/api/v1/mcp/rpc"');
+  print('  http_headers = { "Authorization" = "Bearer $XLOOOP_TOKEN" }');
+  print('');
+  print('Mint XLOOOP_TOKEN in app.xlooop.com -> Settings -> Developer access (shown once; 90-day expiry).');
   return 0;
 }
 
@@ -164,6 +184,7 @@ async function main(): Promise<void> {
       case 'ping': return pingCmd();
       case 'tools': return listTools();
       case 'register-claude': case 'install-claude': return registerClaude();
+      case 'register-codex': case 'install-codex': return registerCodex();
       case 'version': case '--version': case '-v': print(`xlooop ${VERSION}`); return 0;
       case 'creds-path': print(credentialsPath()); return 0;
       case 'creds-status': {
