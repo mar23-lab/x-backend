@@ -15,6 +15,12 @@ import { MiddlewareHandler } from 'hono';
 const MAX_BODY_BYTES = 10 * 1024 * 1024; // 10 MB
 const MUTATING_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 const CONTENT_TYPE_EXEMPT = ['webhook'];
+// RFC 6749 §4.1.3 REQUIRES the OAuth token endpoint to accept
+// application/x-www-form-urlencoded — it is what every standard OAuth client (incl. Claude
+// Code's MCP OAuth flow) sends. Scoped to this exact path: the endpoint is public, cookie-less,
+// and PKCE-bound, so the CSRF rationale for excluding form posts from the JSON API plane does
+// not apply. Everywhere else form-urlencoded stays 415 (260806 live-probe fix).
+const FORM_URLENCODED_OK_PATHS = new Set(['/oauth/token']);
 
 export function requestGuards(): MiddlewareHandler {
   return async (ctx, next) => {
@@ -33,7 +39,8 @@ export function requestGuards(): MiddlewareHandler {
       const hasBody = len > 0 || (ctx.req.header('transfer-encoding') || '').trim().length > 0;
       if (hasBody && !exempt) {
         const contentType = (ctx.req.header('content-type') || '').toLowerCase();
-        const okType = contentType.includes('application/json') || contentType.includes('multipart/form-data');
+        const okType = contentType.includes('application/json') || contentType.includes('multipart/form-data')
+          || (FORM_URLENCODED_OK_PATHS.has(ctx.req.path) && contentType.includes('application/x-www-form-urlencoded'));
         if (!okType) {
           return ctx.json({ error: 'unsupported content-type; expected application/json or multipart/form-data', code: 'UNSUPPORTED_MEDIA_TYPE', request_id: '' }, 415);
         }
