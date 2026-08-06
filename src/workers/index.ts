@@ -185,12 +185,12 @@ app.use('*', async (ctx, next) => {
 // Wave ι · global API rate limit (260803) — the mount rate-limit.ts asked for; 216/219 were uncapped.
 app.use('/api/v1/*', rateLimit());
 
-// R56 Stage 1 · strict per-IP limit on the unauthenticated signup funnel (5 req/min/IP); uses the
-// RATE_LIMITER_SIGNUP binding (wrangler.toml), falling back to an in-isolate bucket until provisioned.
-app.use(
-  '/api/v1/request-access',
-  rateLimit({ ip: { limit: 5, periodSeconds: 60, bindingName: 'RATE_LIMITER_SIGNUP' } })
-);
+// R56 Stage 1 · strict per-IP limit on the unauthenticated signup funnel (5 req/min/IP); RATE_LIMITER_SIGNUP
+// binding (wrangler.toml), in-isolate fallback until provisioned.
+app.use('/api/v1/request-access', rateLimit({ ip: { limit: 5, periodSeconds: 60, bindingName: 'RATE_LIMITER_SIGNUP' } }));
+
+// AS hardening (260806): /oauth/* is at origin root, OUTSIDE the /api/v1/* limiter — register/token were unlimited brute-force targets. 30/min/IP ≈ 7 connect flows.
+app.use('/oauth/*', rateLimit({ ip: { limit: 30, periodSeconds: 60, bindingName: 'RATE_LIMITER_SIGNUP' } }));
 
 // ---- Public routes (no auth) ----
 app.route('/api/v1', healthRoute);

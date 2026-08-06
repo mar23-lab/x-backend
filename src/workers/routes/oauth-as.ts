@@ -48,7 +48,18 @@ export const oauthAsRoute = new Hono<{ Bindings: OAuthAsEnv; Variables: OAuthAsV
 function sqlFor(ctx: { get: (k: 'sql') => unknown; env: { DATABASE_URL: string } }) {
   return (ctx.get('sql') as ReturnType<typeof neonClient> | undefined) ?? neonClient(ctx.env.DATABASE_URL);
 }
-function oauthError(ctx: { status: (s: 400 | 403 | 503) => void; json: (b: unknown) => Response }, status: 400 | 403 | 503, error: string, description: string): Response {
+function oauthError(ctx: { status: (s: 400 | 403 | 503) => void; json: (b: unknown) => Response; req?: { header: (name: string) => string | undefined } }, status: 400 | 403 | 503, error: string, description: string): Response {
+  if (error === 'invalid_grant' || error === 'invalid_client') {
+    // AS hardening (260806): structured, greppable denial telemetry (the
+    // cockpit_chat_unknown_mode_coerced pattern) — repeated invalid_grant from one origin is the
+    // brute-force signature the rate limiter alone cannot narrate.
+    console.warn(JSON.stringify({
+      event: 'oauth_as_denied',
+      error,
+      description,
+      ip: ctx.req?.header('cf-connecting-ip') ?? 'unknown',
+    }));
+  }
   ctx.status(status);
   return ctx.json({ error, error_description: description });
 }
