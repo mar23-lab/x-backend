@@ -175,6 +175,19 @@ function jsonError(
 ): Response {
   const requestId = (ctx.get('request_id') as string) || '';
   ctx.status(status as 401 | 403 | 500);
+  if (status === 401) {
+    // Stage-2 slice 1 (260806) · RFC 9728 discovery: a 401 without a WWW-Authenticate challenge is
+    // a dead end for an MCP host's authorization ladder — measured live: Claude Code cannot even
+    // OFFER to authenticate against this API. The challenge names the protected-resource metadata
+    // document; today that document advertises where credentials come from (no AS yet), and when
+    // the Stage-2 PKCE authorization server lands, the same challenge upgrades hosts to one-click
+    // sign-in with no client change. Emitting it on every 401 is per RFC 6750 §3 (a browser fetch
+    // ignores Bearer challenges, so the Clerk plane is unaffected).
+    ctx.header(
+      'WWW-Authenticate',
+      'Bearer resource_metadata="https://api.xlooop.com/.well-known/oauth-protected-resource"',
+    );
+  }
   return ctx.json({
     error: message,
     code,

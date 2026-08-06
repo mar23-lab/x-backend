@@ -57,6 +57,13 @@ const DIRECT_AUTH = Object.freeze({
     source: 'src/workers/index.ts: explicit public mount',
     guard: { kind: 'explicit_public' },
   },
+  // Stage-2 slice 1 (260806) · RFC 9728 protected-resource metadata — deliberately public and
+  // cacheable: discovery documents are read BEFORE any credential exists, by definition.
+  oauthDiscoveryRoute: {
+    policy: 'public',
+    source: 'src/workers/index.ts: explicit public mount (RFC 9728 well-known document)',
+    guard: { kind: 'explicit_public' },
+  },
   requestAccessRoute: {
     policy: 'public_with_abuse_controls',
     source: 'src/workers/index.ts: request-access rateLimit; src/workers/routes/request-access.ts: verifyTurnstile',
