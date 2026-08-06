@@ -64,6 +64,15 @@ const DIRECT_AUTH = Object.freeze({
     source: 'src/workers/index.ts: explicit public mount (RFC 9728 well-known document)',
     guard: { kind: 'explicit_public' },
   },
+  // Stage-2 second half (260806) · the PKCE AS. Metadata/register/authorize/token are public by
+  // the OAuth protocol's nature (PKCE is the proof for public clients; authorize 400s rather than
+  // redirecting on any client/redirect validation failure). /oauth/consent is Clerk-gated in-route
+  // (clerkAuth + authorizeGovernedWrite('token:create') — the same gate as manual token minting).
+  oauthAsRoute: {
+    policy: 'public_with_abuse_controls',
+    source: 'src/workers/routes/oauth-as.ts: PKCE-only public endpoints; consent clerk-gated via authorizeGovernedWrite(token:create)',
+    guard: { kind: 'route_handler_call', helper: 'authorizeGovernedWrite' },
+  },
   requestAccessRoute: {
     policy: 'public_with_abuse_controls',
     source: 'src/workers/index.ts: request-access rateLimit; src/workers/routes/request-access.ts: verifyTurnstile',
