@@ -25,8 +25,9 @@ export function protectedResourceMetadata() {
   return {
     // RFC 9728 §2 — the resource identifier MUST match what tokens are bound to.
     resource: RESOURCE_ORIGIN,
-    // No authorization_servers yet: the PKCE AS is the deliberate second half of Stage 2.
-    // Absent (not []) so a client treats it as "no AS advertised" rather than "an empty AS list".
+    // Stage-2 second half (260806): the PKCE AS is LIVE (routes/oauth-as.ts) — advertising it here
+    // is the one line that upgrades every MCP host from manual token paste to one-click sign-in.
+    authorization_servers: [RESOURCE_ORIGIN],
     bearer_methods_supported: ['header'],
     resource_name: 'Xlooop customer API + MCP gateway',
     resource_documentation: 'https://app.xlooop.com/settings',

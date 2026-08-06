@@ -5598,6 +5598,48 @@
           "reason": "index.ts comment condensed to respect the 500-line ratchet (house precedent: condense, never raise)"
         }
       ]
+    },
+    {
+      "delta_id": "oauth-pkce-as-260806",
+      "generated_at": "2026-08-06T02:45:34.740Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "cd17523d7ed325c0686b043fb98957b37469d8c2",
+      "target_base_commit": "cd17523d7ed325c0686b043fb98957b37469d8c2",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/index.ts",
+          "target_blob": "5d250122d42b7c430212e0d5bb4f8a77abdb5d44",
+          "reason": "Stage-2 second half: stateless PKCE AS over the existing xlk token model (operator-approved plan)"
+        },
+        {
+          "path": "scripts/emit-routes-manifest.mjs",
+          "target_blob": "16013fd72ddbff0cc063d336b15ad57e4ae9f16f",
+          "reason": "Stage-2 second half: stateless PKCE AS over the existing xlk token model (operator-approved plan)"
+        },
+        {
+          "path": "docs/contracts/api-contract.v1.json",
+          "target_blob": "a69908eeb53a45c13590c5d1126238acdee6165a",
+          "reason": "Stage-2 second half: stateless PKCE AS over the existing xlk token model (operator-approved plan)"
+        }
+      ]
+    },
+    {
+      "delta_id": "oauth-pkce-as-260806-b",
+      "generated_at": "2026-08-06T02:48:21.612Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "94c30423ac5bd83a2a2b98ac0cf2cc9b2b329c4c",
+      "target_base_commit": "94c30423ac5bd83a2a2b98ac0cf2cc9b2b329c4c",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/index.ts",
+          "target_blob": "416b222221aa9f2889061676545c9e88467f68cb",
+          "reason": "index.ts comment condensed for the 500-line ratchet"
+        }
+      ]
     }
   ]
 }

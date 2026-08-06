@@ -23,9 +23,9 @@ describe('oauth discovery (RFC 9728, interim no-AS shape)', () => {
     const j = await res.json() as Record<string, unknown>;
     expect(j.resource).toBe('https://api.xlooop.com');
     expect(j.bearer_methods_supported).toEqual(['header']);
-    // HONEST INTERIM: no AS exists yet, so the member must be ABSENT — advertising an empty list
-    // (or a fake AS) would send a conforming client into a broken authorization flow.
-    expect('authorization_servers' in j).toBe(false);
+    // Stage-2 second half: the PKCE AS is live, so the member must now be PRESENT and point at
+    // this origin (the interim shape deliberately kept it absent until an AS actually existed).
+    expect(j.authorization_servers).toEqual(['https://api.xlooop.com']);
     expect(String(j.resource_documentation)).toContain('app.xlooop.com');
   });
 

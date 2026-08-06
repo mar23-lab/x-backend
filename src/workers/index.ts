@@ -42,6 +42,7 @@ import { listOrgMembers } from './services/clerk-org'; // P10 · parity gateway 
 import { listActiveLearningSignalsForMaterializationRow, upsertUserPersonalizationProfileRow } from './dal/personalization-materialize-store';
 import { healthRoute } from './routes/health';
 import { oauthDiscoveryRoute } from './routes/oauth-discovery';
+import { oauthAsRoute } from './routes/oauth-as';
 import { sessionRoute } from './routes/session';
 import { eventsRoute } from './routes/events';
 import { sourcesRoute } from './routes/sources';   // R50.3b · Clerk OAuth source connectors
@@ -184,9 +185,8 @@ app.use('*', async (ctx, next) => {
 // Wave ι · global API rate limit (260803) — the mount rate-limit.ts asked for; 216/219 were uncapped.
 app.use('/api/v1/*', rateLimit());
 
-// R56 Stage 1 · public-surface hardening · strict per-IP rate-limit on the unauthenticated
-// signup funnel (5 req/min/IP). Production uses the RATE_LIMITER_SIGNUP binding (wrangler.toml);
-// until the operator provisions it, the middleware falls back to an in-isolate token bucket.
+// R56 Stage 1 · strict per-IP limit on the unauthenticated signup funnel (5 req/min/IP); uses the
+// RATE_LIMITER_SIGNUP binding (wrangler.toml), falling back to an in-isolate bucket until provisioned.
 app.use(
   '/api/v1/request-access',
   rateLimit({ ip: { limit: 5, periodSeconds: 60, bindingName: 'RATE_LIMITER_SIGNUP' } })
@@ -195,14 +195,14 @@ app.use(
 // ---- Public routes (no auth) ----
 app.route('/api/v1', healthRoute);
 app.route('/', oauthDiscoveryRoute);               // Stage-2 slice 1 (260806) · RFC 9728 /.well-known/oauth-protected-resource (public, cacheable)
+app.route('/', oauthAsRoute);                      // Stage-2 second half (260806) · PKCE AS: RFC 8414 metadata + DCR + authorize/consent/token (root = outside the API contract)
 app.route('/api/v1', requestAccessRoute);          // R40 · public access-request funnel
 app.route('/api/v1', diagnoseRoute);               // R43.17 · diagnose-user for stuck sign-in triage — OPERATOR-GATED (self-auth via MBP_OWNER_USER_ID; was public until 260710 sec-review)
 app.route('/api/v1', githubWebhookRoute);          // R54-S1 · public HMAC-gated GitHub → operation_events producer
 app.route('/api/v1', activityWebhookRoute);        // R54-S3-A · token-gated operator/agent activity → operation_events producer
 app.route('/api/v1', investorPublicRoute);         // Wave R-I.7 Stage C · /investor/nda-accept (public)
 
-// ---- /session has its own JWT path (allows orgless via state machine) ----
-app.route('/api/v1', sessionRoute);                // R40 · entitlement state machine
+app.route('/api/v1', sessionRoute);                // R40 · entitlement state machine (own JWT path; allows orgless via the state machine)
 
 // ---- MB-P operator-only data endpoints (R43.7) ----
 // Self-auth inside the handlers via MBP_OWNER_USER_ID match; do NOT front with clerkAuth() —
@@ -210,8 +210,8 @@ app.route('/api/v1', sessionRoute);                // R40 · entitlement state m
 app.route('/api/v1', mbpProjectionRoute);          // R43.7 · /api/v1/mbp-projection + /mbp-live-stream
 
 // ---- Operational spine + MCP canary routes ----
-// Mount before any broad authenticated route group: Hono group middleware can
-// reject by prefix before a later route group is considered.
+// Mount before any broad authenticated route group: Hono group middleware can reject by prefix
+// before a later route group is considered.
 // Normal users authenticate via Clerk. The scoped canary service principal is
 // accepted only here, as role=viewer, so existing route-level RBAC keeps it
 // read-only. It cannot reach product/admin/customer routes.
