@@ -129,6 +129,13 @@ describe('safe MCP gateway routes', () => {
       'xlooop.get_evidence',
       'xlooop.list_receipts',
       'xlooop.get_document',
+      // Stage-0 cockpit reads (260806) — advertised here AND registered in mcp-rpc MCP_READ_TOOLS;
+      // the parity test in mcp-rpc-route.test.ts pins the two lists together.
+      'xlooop.list_packets',
+      'xlooop.get_packet_completion',
+      'xlooop.get_current_work',
+      'xlooop.list_events',
+      'xlooop.get_plan',
     ]);
     expect(body.forbidden_surfaces).toContain('raw_graph');
     expect(body.forbidden_surfaces).toContain('search_all_memory');

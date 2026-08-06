@@ -29,6 +29,10 @@ export interface McpCustomerReadsEnv extends AuthEnv {
   DATABASE_URL: string;
   /** L2 (260710-D) · day-grain audit of these tenant reads into mcp_access_log (063; default off). */
   MCP_READ_AUDIT_ENABLED?: string;
+  /** Stage-0 MCP unblock (260806): the cockpit-read wrappers honour the same posture flags as the
+   *  first-party routes — a surface disabled for the browser must not be quietly readable by an agent. */
+  CURRENT_WORK_PROJECTION_ENABLED?: string;
+  PLAN_ENTITIES_ENABLED?: string;
 }
 export interface McpCustomerReadsVariables extends AuthVariables {
   dal: DalAdapter;
@@ -39,6 +43,10 @@ export const mcpCustomerReadsRoute = new Hono<{ Bindings: McpCustomerReadsEnv; V
 
 function ws(ctx: { get: (k: 'auth') => { workspace_id?: string } }): string {
   return String(ctx.get('auth')?.workspace_id || '').trim();
+}
+/** Tokens carry viewer|operator by construction; anything else narrows to viewer (never a widening). */
+function tokenReadRole(ctx: { get: (k: 'auth') => { role?: string } }): 'viewer' | 'operator' {
+  return ctx.get('auth')?.role === 'operator' ? 'operator' : 'viewer';
 }
 function sqlFor(ctx: { get: (k: 'sql') => unknown; env: { DATABASE_URL: string } }) {
   return (ctx.get('sql') as ReturnType<typeof neonClient> | undefined) ?? neonClient(ctx.env.DATABASE_URL);
@@ -162,5 +170,99 @@ mcpCustomerReadsRoute.get('/documents', async (ctx) => {
         content_hash: d.content_hash ?? null, created_at: d.created_at ?? null,
       })),
     });
+  } catch (err) { return errorEnvelope(ctx, err); }
+});
+
+// ── Stage-0 cockpit-read wrappers (260806) ────────────────────────────────────────────────────────
+// The operator cockpit's read models live on protectedRoutes (Clerk-human plane, index.ts) and never
+// opt into customer tokens — so an MCP agent could read packets but not the cockpit. These wrappers
+// expose the SAME reads on the token plane, tenant-bound to the verified token workspace, without
+// remounting the Clerk plane. NO duplicated predicates: attention/pending live in SQL
+// (listEvents attention_only) and counts in the countEventStates aggregate — the exact producers the
+// first-party route consumes. Event visibility is role-filtered by the DAL (fail-closed for unknown
+// roles), and payloads carry ids/enums/summaries of the caller's OWN workspace only.
+
+// xlooop.get_current_work · GET /api/v1/mcp/current-work — focusless agent variant: counts + attention page.
+mcpCustomerReadsRoute.get('/current-work', async (ctx) => {
+  try {
+    if (!envFlagTrue(ctx.env.CURRENT_WORK_PROJECTION_ENABLED)) {
+      // Mirror the first-party route's wire shape exactly (current-work.ts:99) — FEATURE_DISABLED is
+      // deliberately not in the ApiErrorCode whitelist, so the raw-json form is the published contract.
+      ctx.status(404);
+      return ctx.json({ error: 'current-work projection is not enabled', code: 'FEATURE_DISABLED', request_id: ctx.get('request_id') });
+    }
+    const workspace = ws(ctx as never);
+    if (!workspace) return clientError(ctx, 403, 'FORBIDDEN', 'no workspace binding');
+    auditRead(ctx as never, 'get_current_work');
+    // Tokens carry viewer|operator by construction (auth.ts customerTokenAuth); anything else
+    // narrows to viewer — the most-restricted read visibility, never a widening.
+    const role = tokenReadRole(ctx as never);
+    const dal = ctx.get('dal');
+    const page = await dal.listEvents(workspace, { role, limit: 100, top_level: true, attention_only: true })
+      .catch((err) => {
+        // FALSE-ZERO DISCLOSURE: a failed attention read otherwise tells the agent "nothing is waiting".
+        console.log(JSON.stringify({ kind: 'degraded_read_disclosed', surface: 'mcp_current_work_attention', error: String((err as Error)?.message || err).slice(0, 160) }));
+        return { events: [], pagination: { has_more: false, next_before: null } };
+      });
+    const totals = await dal.countEventStates(workspace, { role, project_id: null })
+      .catch((err) => {
+        console.log(JSON.stringify({ kind: 'degraded_read_disclosed', surface: 'mcp_current_work_totals', error: String((err as Error)?.message || err).slice(0, 160) }));
+        return { needs_you: page.events.length, blocked: 0, done: 0, total: 0 };
+      });
+    return ctx.json({
+      schema_id: 'xlooop.mcp_current_work.v1',
+      workspace_id: workspace,
+      counts: {
+        needs_you: totals.needs_you, blocked: totals.blocked, done: totals.done, total: totals.total,
+        done_pct: totals.total > 0 ? Math.round((totals.done / totals.total) * 100) : 0,
+      },
+      attention: page.events.map((e) => ({
+        event_id: e.id, intent_id: e.intent_id ?? null, project_id: e.project_id ?? null,
+        status: e.status, approval_state: (e as { approval_state?: string | null }).approval_state ?? null,
+        summary: e.summary, occurred_at: (e as { occurred_at?: string | null }).occurred_at ?? null,
+      })),
+      generated_at: new Date().toISOString(),
+    });
+  } catch (err) { return errorEnvelope(ctx, err); }
+});
+
+// xlooop.list_events · GET /api/v1/mcp/events?limit=&before= — the top-level event stream, capped at 100.
+mcpCustomerReadsRoute.get('/events', async (ctx) => {
+  try {
+    const workspace = ws(ctx as never);
+    if (!workspace) return clientError(ctx, 403, 'FORBIDDEN', 'no workspace binding');
+    auditRead(ctx as never, 'list_events');
+    const url = new URL(ctx.req.url);
+    const limitRaw = Number(url.searchParams.get('limit'));
+    const limit = Number.isFinite(limitRaw) && limitRaw > 0 ? Math.min(100, Math.floor(limitRaw)) : 50;
+    const before = url.searchParams.get('before') || undefined;
+    const role = tokenReadRole(ctx as never);
+    const page = await ctx.get('dal').listEvents(workspace, { role, limit, top_level: true, before });
+    return ctx.json({
+      schema_id: 'xlooop.mcp_event_list.v1',
+      events: page.events.map((e) => ({
+        event_id: e.id, intent_id: e.intent_id ?? null, project_id: e.project_id ?? null,
+        status: e.status, approval_state: (e as { approval_state?: string | null }).approval_state ?? null,
+        summary: e.summary, occurred_at: (e as { occurred_at?: string | null }).occurred_at ?? null,
+      })),
+      pagination: page.pagination ?? { has_more: false, next_before: null },
+    });
+  } catch (err) { return errorEnvelope(ctx, err); }
+});
+
+// xlooop.get_plan · GET /api/v1/mcp/plan/:scopeId — plan entities for a scope, workspace-bound by the DAL.
+mcpCustomerReadsRoute.get('/plan/:scopeId', async (ctx) => {
+  try {
+    if (!envFlagTrue(ctx.env.PLAN_ENTITIES_ENABLED)) {
+      ctx.status(404);
+      return ctx.json({ error: 'plan entities are not enabled', code: 'FEATURE_DISABLED', request_id: ctx.get('request_id') });
+    }
+    const workspace = ws(ctx as never);
+    if (!workspace) return clientError(ctx, 403, 'FORBIDDEN', 'no workspace binding');
+    const scopeId = ctx.req.param('scopeId');
+    if (!scopeId) return clientError(ctx, 400, 'VALIDATION_ERROR', 'scopeId path param required');
+    auditRead(ctx as never, 'get_plan');
+    const entities = await ctx.get('dal').plan.listPlanEntities(scopeId, { workspaceId: workspace });
+    return ctx.json({ schema_id: 'xlooop.mcp_plan.v1', scope_id: scopeId, entities });
   } catch (err) { return errorEnvelope(ctx, err); }
 });

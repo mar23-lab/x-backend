@@ -5430,6 +5430,111 @@
           "reason": "Disclosure batch member - see routes/workspaces.ts reason for the batch description."
         }
       ]
+    },
+    {
+      "delta_id": "mcp-surface-unblock-260806",
+      "generated_at": "2026-08-06T00:05:57.258Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "69dd823ca4d0402b1633a3e5d2e0fbc900f96eeb",
+      "target_base_commit": "69dd823ca4d0402b1633a3e5d2e0fbc900f96eeb",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/routes/mcp-rpc.ts",
+          "target_blob": "07b315f672c0c96b9ff98633276002a741b14dd7",
+          "reason": "Stage-0 MCP unblock: register hidden reads, cockpit token-plane wrappers, issuance-derived customer-token principal (operator-approved plan 260806)"
+        },
+        {
+          "path": "src/workers/routes/mcp-gateway.ts",
+          "target_blob": "0b2e8d4e498225a11dce6b5cc9e7a79a18306440",
+          "reason": "Stage-0 MCP unblock: register hidden reads, cockpit token-plane wrappers, issuance-derived customer-token principal (operator-approved plan 260806)"
+        },
+        {
+          "path": "src/workers/routes/mcp-customer-reads.ts",
+          "target_blob": "1688e41bb32bf60c73703cbc4c8e6320410f708b",
+          "reason": "Stage-0 MCP unblock: register hidden reads, cockpit token-plane wrappers, issuance-derived customer-token principal (operator-approved plan 260806)"
+        },
+        {
+          "path": "src/workers/dal/principal-hydration.ts",
+          "target_blob": "b3a2ff2069b8ffb6c949a38eea3d82556f7e6b71",
+          "reason": "Stage-0 MCP unblock: register hidden reads, cockpit token-plane wrappers, issuance-derived customer-token principal (operator-approved plan 260806)"
+        },
+        {
+          "path": "src/workers/lib/spine-authority.ts",
+          "target_blob": "2d1092a72ebb98bc169c4dcb1c3ce0bffc3593fb",
+          "reason": "Stage-0 MCP unblock: register hidden reads, cockpit token-plane wrappers, issuance-derived customer-token principal (operator-approved plan 260806)"
+        },
+        {
+          "path": "src/workers/__tests__/mcp-rpc-route.test.ts",
+          "target_blob": "30e740b5a33cb426b4dde193582f429065b83c1a",
+          "reason": "Stage-0 MCP unblock: register hidden reads, cockpit token-plane wrappers, issuance-derived customer-token principal (operator-approved plan 260806)"
+        }
+      ]
+    },
+    {
+      "delta_id": "full-prod-test-flags-260806",
+      "generated_at": "2026-08-06T00:06:17.073Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "ac38c9c2e4c3fba458452f627dbf31e311481a27",
+      "target_base_commit": "ac38c9c2e4c3fba458452f627dbf31e311481a27",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "wrangler.toml",
+          "target_blob": "5b754722380d07a6c3ec64f377ef1c33d8e69a00",
+          "reason": "Repair: #186 flag sweep (16 flags on, operator-ruled full production test) changed wrangler.toml without a delta receipt - main fails verify:provenance since; receipt appended here"
+        }
+      ]
+    },
+    {
+      "delta_id": "mcp-surface-unblock-260806-contract",
+      "generated_at": "2026-08-06T00:07:33.108Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "fa2b150c4a1c3d124988c1f4c4c944f95ddc2f8e",
+      "target_base_commit": "fa2b150c4a1c3d124988c1f4c4c944f95ddc2f8e",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "docs/contracts/api-contract.v1.json",
+          "target_blob": "a69908eeb53a45c13590c5d1126238acdee6165a",
+          "reason": "Contract regenerated for the 3 Stage-0 cockpit wrapper routes (219 to 222)"
+        }
+      ]
+    },
+    {
+      "delta_id": "mcp-surface-unblock-260806-gwtest",
+      "generated_at": "2026-08-06T00:16:07.421Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "39f3f5733b4f4d0b84e9dd81d98b5addbf18f086",
+      "target_base_commit": "39f3f5733b4f4d0b84e9dd81d98b5addbf18f086",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/__tests__/mcp-gateway-route.test.ts",
+          "target_blob": "e8cefbaed03db2682ebbff396c06343a37abdf6a",
+          "reason": "Gateway route test expectation extended to the 5 new advertised cockpit reads"
+        }
+      ]
+    },
+    {
+      "delta_id": "mcp-surface-unblock-260806-satest",
+      "generated_at": "2026-08-06T00:26:10.956Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "1265cb708883e94866108091c32b935815d6364f",
+      "target_base_commit": "1265cb708883e94866108091c32b935815d6364f",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/__tests__/spine-authority.test.ts",
+          "target_blob": "0ae6443d62b63d262204a1980032176cd43ae338",
+          "reason": "spine-authority test re-based to the issuance-derived customer-token branch (partial mock keeps the real pure builder)"
+        }
+      ]
     }
   ]
 }

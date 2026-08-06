@@ -8,7 +8,12 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // resolvePrincipal is the only DB-touching dependency of the enforcement path — mock it so we can inject a
 // principal with a chosen entitlement without a real database.
-vi.mock('../dal/principal-hydration', () => ({ resolvePrincipal: vi.fn() }));
+// Partial mock: resolvePrincipal (the DB path) stays mocked; buildCustomerTokenPrincipal is the
+// REAL pure builder — the customer-token branch is issuance-derived and must be tested unfaked.
+vi.mock('../dal/principal-hydration', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../dal/principal-hydration')>()),
+  resolvePrincipal: vi.fn(),
+}));
 import { resolvePrincipal } from '../dal/principal-hydration';
 import { authorizeSpineWrite, authorizeGovernedWrite, projectSpineAuthority, SPINE_ACTIONS } from '../lib/spine-authority';
 import { canWrite } from '../lib/permissions';
@@ -105,16 +110,24 @@ describe('authorizeSpineWrite · service principals exempt from enforcement (fla
     expect(dal.getOperatingMode).not.toHaveBeenCalled();
     expect(resolvePrincipal).not.toHaveBeenCalled(); // exempt → never reaches the entitlement read
   });
-  it('customer_token → now goes THROUGH enforcement (260720: customer agents entitlement-gated, exemption scoped to platform)', async () => {
-    // The exemption was narrowed to PLATFORM service principals only. A customer_token now reaches
-    // canActOnSpine; without a customer_entitlements row it is DENIED (correct — the mandate: customer
-    // agents may not write without an entitlement). resolvePrincipal IS called (enforcement path).
-    (resolvePrincipal as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(principal([], [], []));
+  it('customer_token → issuance-derived enforcement (260806: report-class allowed, decide-class denied, NO DB path)', async () => {
+    // 260720 narrowed the exemption to platform principals; 260806 re-based the customer-token
+    // mechanism to ISSUANCE-DERIVED entitlement (buildCustomerTokenPrincipal): no session row, no
+    // customer_entitlements row — the token row the auth layer verified IS the grant. The same
+    // canActOnSpine core decides. The pair below is unreachable from the legacy role-only path:
+    // it would allow BOTH (action-blind), and the old DB path would deny BOTH (fail-closed).
     const dal = { getOperatingMode: vi.fn(async () => 'operator' as const) };
-    const ctx = makeCtx({ role: 'operator', user_id: 'svc_customer_abc', workspace_id: 'w', service_principal: 'customer_token' }, ON, dal);
-    const d = await authorizeSpineWrite(ctx, 'tool_event:report');
-    expect(d.allowed).toBe(false);
-    expect(resolvePrincipal).toHaveBeenCalled();
+    const ctx = () => makeCtx({ role: 'operator', user_id: 'svc_customer_abc', workspace_id: 'w', service_principal: 'customer_token' }, ON, dal);
+    const report = await authorizeSpineWrite(ctx(), 'tool_event:report');
+    expect(report).toEqual({ allowed: true, reason: 'active_entitlement' });
+    const decide = await authorizeSpineWrite(ctx(), 'signoff:decide');
+    expect(decide).toEqual({ allowed: false, reason: 'action_denied' });
+    expect(resolvePrincipal).not.toHaveBeenCalled(); // issuance path — no DB principal resolution
+    expect(dal.getOperatingMode).not.toHaveBeenCalled(); // mode derives from the token role, not a session row
+    // A VIEWER token cannot write at all — the mode axis denies before any entitlement question.
+    const viewerCtx = makeCtx({ role: 'viewer', user_id: 'svc_customer_v', workspace_id: 'w', service_principal: 'customer_token' }, ON, dal);
+    const viewer = await authorizeSpineWrite(viewerCtx, 'evidence:submit');
+    expect(viewer).toEqual({ allowed: false, reason: 'mode_requires_operator' });
   });
   it('canary_read (viewer) → still DENIED (exemption keeps the role gate, does not widen authority)', async () => {
     const dal = { getOperatingMode: vi.fn() };

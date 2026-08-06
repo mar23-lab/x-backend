@@ -18,7 +18,7 @@
 import type { Context } from 'hono';
 import { neonClient, type Sql } from '../db/client';
 import { canWrite, canActOnSpine, type SpineAction, type SpineWriteDecision, type SpineDenyReason } from './permissions';
-import { resolvePrincipal } from '../dal/principal-hydration';
+import { resolvePrincipal, buildCustomerTokenPrincipal } from '../dal/principal-hydration';
 import { observeRoleSkillResolution } from './role-skill-shadow';
 
 /** The full governed action set — the projection covers every one so the UI never guesses. */
@@ -80,6 +80,22 @@ export async function authorizeSpineWrite(ctx: Context, action: SpineAction): Pr
   const isPlatformService = !!auth?.service_principal && auth.service_principal !== 'customer_token';
   if (!entitlementEnforcementOn(ctx.env) || isPlatformService) {
     decision = legacyDecision(auth);
+  } else if (auth?.service_principal === 'customer_token') {
+    // Stage-0 MCP unblock (260806): a customer connector token's authority is ISSUANCE-DERIVED, not
+    // row-derived. The previous fall-through sent `svc_customer_*` down resolveEnforcement, where
+    // getOperatingMode found no session row (⇒ 'watch') and getAppEntitlementRow found no
+    // users/membership rows (⇒ fail closed) — so CUSTOMER_OPERATIONAL_TOKENS_ENABLED opened the
+    // MINT while every write 403'd: the door flag was on, the room behind it locked by a different
+    // mechanism. Mode and entitlement now both derive from the token row the auth layer already
+    // verified (live, unexpired, role-carrying); the SAME canActOnSpine core still decides, and the
+    // issuance entitlement denies sign-off/decide-class actions structurally.
+    mode = auth.role === 'operator' ? 'operator' : 'watch';
+    decision = canActOnSpine(buildCustomerTokenPrincipal(auth as never), 'xlooop', mode, action);
+    if (!decision.allowed) {
+      try {
+        console.warn(JSON.stringify({ evt: 'spine_authority.deny', action, reason: decision.reason, user_id: auth?.user_id, workspace_id: auth?.workspace_id, principal: 'customer_token' }));
+      } catch { /* best-effort */ }
+    }
   } else {
     const resolved = await resolveEnforcement(ctx, auth ?? {});
     mode = resolved.mode;

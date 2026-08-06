@@ -61,6 +61,14 @@ export const SAFE_TOOLS = [
   { name: 'xlooop.get_evidence', action: 'get_evidence', method: 'GET', path: '/api/v1/mcp/evidence' },
   { name: 'xlooop.list_receipts', action: 'list_receipts', method: 'GET', path: '/api/v1/mcp/receipts' },
   { name: 'xlooop.get_document', action: 'get_document', method: 'GET', path: '/api/v1/mcp/documents' },
+  // Stage-0 cockpit reads (260806) · the operator cockpit's read models on the token plane — handlers
+  // in ./mcp-customer-reads.ts (wrappers; posture-flagged, tenant-bound). Registered here AND in
+  // mcp-rpc.ts MCP_READ_TOOLS; the parity test pins the two lists so they can never drift again.
+  { name: 'xlooop.list_packets', action: 'list_packets', method: 'GET', path: '/api/v1/packets' },
+  { name: 'xlooop.get_packet_completion', action: 'get_packet_completion', method: 'GET', path: '/api/v1/packets/:id/completion-evaluation' },
+  { name: 'xlooop.get_current_work', action: 'get_current_work', method: 'GET', path: '/api/v1/mcp/current-work' },
+  { name: 'xlooop.list_events', action: 'list_events', method: 'GET', path: '/api/v1/mcp/events' },
+  { name: 'xlooop.get_plan', action: 'get_plan', method: 'GET', path: '/api/v1/mcp/plan/:scopeId' },
 ] as const;
 
 export const FORBIDDEN_SURFACES = [
