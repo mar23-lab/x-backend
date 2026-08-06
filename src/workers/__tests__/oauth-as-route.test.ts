@@ -184,6 +184,26 @@ describe('token exchange', () => {
     expect(replay.status).toBe(400);
     expect(((await replay.json()) as any).error).toBe('invalid_grant');
   });
+  it('an invalid_grant denial emits the structured oauth_as_denied telemetry line', async () => {
+    const { req } = appFor();
+    const warned: string[] = [];
+    const original = console.warn;
+    console.warn = (message: unknown) => { warned.push(String(message)); };
+    try {
+      const res = await req('/oauth/token', {
+        method: 'POST',
+        headers: { 'content-type': 'application/x-www-form-urlencoded' },
+        body: form({ grant_type: 'authorization_code', code: 'xac_garbage', client_id: 'xlc_x', redirect_uri: 'http://127.0.0.1/cb', code_verifier: 'v' }),
+      });
+      expect(res.status).toBe(400);
+    } finally {
+      console.warn = original;
+    }
+    const line = warned.map((entry) => { try { return JSON.parse(entry); } catch { return null; } })
+      .find((entry) => entry && entry.event === 'oauth_as_denied');
+    expect(line?.error).toBe('invalid_grant');
+    expect(typeof line?.ip).toBe('string');
+  });
   it('wrong verifier, wrong client, wrong redirect, expired code — all invalid_grant', async () => {
     const { req } = appFor();
     const cid = await mintClientId(['http://127.0.0.1/callback'], SECRET, Date.now());
