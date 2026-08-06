@@ -5677,6 +5677,22 @@
           "reason": "Rate limit on origin-root /oauth/* (was unlimited) + structured invalid_grant telemetry with test pin"
         }
       ]
+    },
+    {
+      "delta_id": "oauth-as-hardening-ratchet",
+      "generated_at": "2026-08-06T06:09:04.958Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "c871b4fa05dd97a3256bbcb14f6d49d4ca3e59ec",
+      "target_base_commit": "c871b4fa05dd97a3256bbcb14f6d49d4ca3e59ec",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/index.ts",
+          "target_blob": "bebf0381f9c065e8c7d73c8e16f28e8494c54bc4",
+          "reason": "comment condensation to hold the 500-line ratchet"
+        }
+      ]
     }
   ]
 }
