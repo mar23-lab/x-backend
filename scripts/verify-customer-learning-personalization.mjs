@@ -114,7 +114,6 @@ includesAll('docs_learning_architecture_present', doc, [
   '`xcp-gateway` with `profile=customer`',
   '`xcp_session_start`',
   '`xcp.session_start/v1`',
-  '`xlooop.whoami`',
 ]);
 
 if (mcpGateway.includes('xlooop-customer-gateway')) {

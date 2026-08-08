@@ -51,12 +51,6 @@ export const MCP_READ_TOOLS: McpToolDef[] = [
     build: () => ({ method: 'GET', path: '/api/v1/mcp/session-start' }),
   },
   {
-    name: 'xlooop.whoami',
-    description: 'Compatibility-only identity alias. New clients call xcp_session_start once.',
-    inputSchema: STRING(),
-    build: () => ({ method: 'GET', path: '/api/v1/mcp/whoami' }),
-  },
-  {
     name: 'xlooop.get_task_packet',
     description: 'Read one tenant-scoped, signed task packet by id.',
     inputSchema: {

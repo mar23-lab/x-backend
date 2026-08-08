@@ -9,7 +9,12 @@ import { Hono } from 'hono';
 import { workspacesRoute } from '../routes/workspaces';
 
 const MBP_OWNER = 'user_operator_mbp';
-const BASE_ENV = { MBP_OWNER_USER_ID: MBP_OWNER, MBP_OWNER_LINKED_USER_IDS: '', DATABASE_URL: 'x' };
+const BASE_ENV = {
+  MBP_OWNER_USER_ID: MBP_OWNER,
+  MBP_OWNER_LINKED_USER_IDS: '',
+  DATABASE_URL: 'x',
+  COMMERCIAL_LIVE_CHAT_REQUIRED: 'false',
+};
 const AUTH = { user_id: MBP_OWNER, workspace_id: 'org_3EG82', role: 'owner' };
 const SCOPE = { workspace_id: 'org_3EG82', project_id: null };
 const EVENTS = [

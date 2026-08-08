@@ -4,7 +4,7 @@
 // (400/422/503), the audited default flip path, and the self-scoped override. Uses the REAL crypto lib so
 // the encrypt-on-write path is exercised end-to-end.
 
-import { describe, it, expect, vi } from 'vitest';
+import { afterEach, describe, it, expect, vi } from 'vitest';
 import { Hono } from 'hono';
 import { modelRuntimesRoute } from '../routes/model-runtimes';
 
@@ -35,6 +35,7 @@ const deleteReceipt = (over: Record<string, any> = {}) => ({
 
 function makeDal(over: Record<string, any> = {}) {
   return {
+    appendAuditLog: vi.fn(async () => undefined),
     modelRuntimes: {
       listProviders: vi.fn(async () => [] as any[]),
       getOverride: vi.fn(async () => null),
@@ -62,6 +63,8 @@ function appFor(dal: any, auth: { user_id: string; workspace_id: string; role: s
 const ENV = { MODEL_RUNTIME_ENC_KEY: KEY } as never;
 const call = (app: Hono, path: string, method: string, body?: unknown) =>
   app.request('/api/v1' + path, { method, body: body === undefined ? undefined : JSON.stringify(body), headers: { 'content-type': 'application/json' } }, ENV);
+
+afterEach(() => vi.restoreAllMocks());
 
 describe('GET /model-runtimes/providers', () => {
   it('200 — returns the 13-provider masked catalog + default + override; NEVER any ciphertext/plaintext', async () => {
@@ -100,6 +103,69 @@ describe('GET /model-runtimes/providers', () => {
   it('401 — no auth', async () => {
     const res = await call(appFor(makeDal(), { user_id: '', workspace_id: 'org_a', role: 'operator' }), '/model-runtimes/providers', 'GET');
     expect(res.status).toBe(401);
+  });
+});
+
+describe('effective runtime + live provider operations', () => {
+  it('GET effective reports the runtime customer chat will actually use', async () => {
+    const res = await appFor(makeDal()).request('/api/v1/model-runtimes/effective', { method: 'GET' }, {
+      MODEL_RUNTIME_ENC_KEY: KEY,
+      AI: { run: async () => ({ response: 'live' }) },
+    } as never);
+    expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({
+      effective: { runtime_id: 'platform:workers_ai', provider: 'workers_ai', source: 'platform_default' },
+      fallback_count: 0,
+    });
+  });
+
+  it('GET models is scoped to a configured executable provider and never reads credentials', async () => {
+    const dal = makeDal({ listProviders: vi.fn(async () => [maskedRow({ model: 'claude-live' })]) });
+    const res = await call(appFor(dal), '/model-runtimes/providers/anthropic/models', 'GET');
+    expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({
+      provider: 'anthropic',
+      models: ['claude-live', 'claude-sonnet-4-6'],
+    });
+    expect(dal.modelRuntimes.getProviderCredential).not.toHaveBeenCalled();
+  });
+
+  it('GET models returns typed provider-unavailable for an unapproved adapter', async () => {
+    const dal = makeDal({
+      listProviders: vi.fn(async () => [maskedRow({ provider: 'openai', model: 'gpt-live' })]),
+    });
+    const res = await call(appFor(dal), '/model-runtimes/providers/openai/models', 'GET');
+    expect(res.status).toBe(503);
+    expect(await res.json()).toMatchObject({ code: 'PROVIDER_UNAVAILABLE' });
+  });
+
+  it('POST validate uses a platform credential, returns an audit receipt, and never reads tenant ciphertext', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({
+      content: [{ type: 'text', text: 'Xlooop runtime ready.' }],
+      usage: { input_tokens: 9, output_tokens: 4 },
+    }), { status: 200, headers: { 'content-type': 'application/json' } })));
+    const dal = makeDal({ listProviders: vi.fn(async () => [maskedRow({ model: 'claude-live' })]) });
+    const res = await appFor(dal).request('/api/v1/model-runtimes/providers/anthropic/validate', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: '{}',
+    }, { MODEL_RUNTIME_ENC_KEY: KEY, ANTHROPIC_API_KEY: 'platform-key' } as never);
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body).toMatchObject({
+      ok: true,
+      audit_recorded: true,
+      provider: 'anthropic',
+      model: 'claude-live',
+      usage: { tokens_in: 9, tokens_out: 4 },
+    });
+    expect(body.validation_receipt_id).toMatch(/^mrv_/);
+    expect(dal.appendAuditLog).toHaveBeenCalledWith(expect.objectContaining({
+      action: 'model_runtime_validate',
+      target_type: 'model_runtime_provider',
+      workspace_id: 'org_a',
+    }));
+    expect(dal.modelRuntimes.getProviderCredential).not.toHaveBeenCalled();
   });
 });
 
@@ -151,6 +217,14 @@ describe('PUT /model-runtimes/providers/:provider — encrypt-on-write', () => {
   it('422 — a local provider without base_url is rejected', async () => {
     const res = await call(appFor(makeDal()), '/model-runtimes/providers/ollama', 'PUT', {});
     expect(res.status).toBe(422);
+  });
+
+  it('422 — a cloud provider cannot configure an arbitrary base_url', async () => {
+    const res = await call(appFor(makeDal()), '/model-runtimes/providers/anthropic', 'PUT', {
+      base_url: 'http://127.0.0.1:8787', credential: { api_key: RAW_API_KEY },
+    });
+    expect(res.status).toBe(422);
+    expect(await res.json()).toMatchObject({ code: 'UNPROCESSABLE' });
   });
 
   it('422 — a cloud provider created with no credential is rejected', async () => {

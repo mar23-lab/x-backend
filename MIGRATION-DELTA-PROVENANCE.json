@@ -5871,6 +5871,172 @@
           "reason": "marks the source-tier fixture as a deterministic-path test so production live-chat enforcement remains fail-closed"
         }
       ]
+    },
+    {
+      "delta_id": "codex-customer-session-runtime-integration-260808",
+      "generated_at": "2026-08-08T11:39:08.010Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "475599236b9c3b1c1a1926401bf5e9cf5472956d",
+      "target_base_commit": "475599236b9c3b1c1a1926401bf5e9cf5472956d",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "docs/architecture/backend/API_CONTRACT_V1.md",
+          "target_blob": "83ff264c8c6f17a3361cea34eea3d59a3da80235",
+          "reason": "Integrate canonical customer xcp_session_start discovery and approved live runtime controls from Banach without tenant credential dispatch"
+        },
+        {
+          "path": "docs/architecture/backend/CUSTOMER_LEARNING_PERSONALIZATION_ARCHITECTURE.md",
+          "target_blob": "b59702ceddf7ff273e03df58adfe490ae79d6259",
+          "reason": "Integrate canonical customer xcp_session_start discovery and approved live runtime controls from Banach without tenant credential dispatch"
+        },
+        {
+          "path": "docs/contracts/api-contract.v1.json",
+          "target_blob": "438ef88ba97e0642493ab945b3935d6b4cf62201",
+          "reason": "Integrate canonical customer xcp_session_start discovery and approved live runtime controls from Banach without tenant credential dispatch"
+        },
+        {
+          "path": "docs/contracts/model-execution-callsite-manifest.json",
+          "target_blob": "96200a86cb57d6e1225b51ea47fc893425834121",
+          "reason": "Integrate canonical customer xcp_session_start discovery and approved live runtime controls from Banach without tenant credential dispatch"
+        },
+        {
+          "path": "docs/customer-onboarding/CLAUDE_CODE_API_ONBOARDING.md",
+          "target_blob": "41c6f640e7fcf431bbd0437e1a509fae33c67615",
+          "reason": "Integrate canonical customer xcp_session_start discovery and approved live runtime controls from Banach without tenant credential dispatch"
+        },
+        {
+          "path": "docs/customer-onboarding/CONNECTOR_TOKEN_AND_MCP_ACTIVATION_RUNBOOK.md",
+          "target_blob": "8efff27aa4a6b7b3f81e34bc41e8f6907da6a272",
+          "reason": "Integrate canonical customer xcp_session_start discovery and approved live runtime controls from Banach without tenant credential dispatch"
+        },
+        {
+          "path": "docs/deployment/MODEL_RUNTIMES_ACTIVATION.md",
+          "target_blob": "07e7d37426f876238b424c8f2182bd3031628334",
+          "reason": "Integrate canonical customer xcp_session_start discovery and approved live runtime controls from Banach without tenant credential dispatch"
+        },
+        {
+          "path": "docs/governance/FEATURE_FLAGS.md",
+          "target_blob": "959532e3d39acadcd4a2ba01b142d4652d29d081",
+          "reason": "Integrate canonical customer xcp_session_start discovery and approved live runtime controls from Banach without tenant credential dispatch"
+        },
+        {
+          "path": "scripts/verify-backend-effective-template-consumption.mjs",
+          "target_blob": "362f9fc70b796708015c5a8cfdb2ed654264419e",
+          "reason": "Integrate canonical customer xcp_session_start discovery and approved live runtime controls from Banach without tenant credential dispatch"
+        },
+        {
+          "path": "scripts/verify-commercial-governance-hardening.mjs",
+          "target_blob": "eca1ab1624daa8075b420cfd0c84ac8ca88e9644",
+          "reason": "Integrate canonical customer xcp_session_start discovery and approved live runtime controls from Banach without tenant credential dispatch"
+        },
+        {
+          "path": "scripts/verify-customer-learning-personalization.mjs",
+          "target_blob": "62fdf95993749e9af5e42e72ed7447c30681e791",
+          "reason": "Integrate canonical customer xcp_session_start discovery and approved live runtime controls from Banach without tenant credential dispatch"
+        },
+        {
+          "path": "scripts/verify-customer-mcp-rpc-contract.mjs",
+          "target_blob": "b75af11fa5abd24cf92f62a893a4014c0964b329",
+          "reason": "Integrate canonical customer xcp_session_start discovery and approved live runtime controls from Banach without tenant credential dispatch"
+        },
+        {
+          "path": "scripts/verify-template-policy-suite.mjs",
+          "target_blob": "2ca1706cb7eca8425d9dfc7b18d45c3a06dd2fc2",
+          "reason": "Integrate canonical customer xcp_session_start discovery and approved live runtime controls from Banach without tenant credential dispatch"
+        },
+        {
+          "path": "src/workers/__tests__/chat-assembly-trace-operator.test.ts",
+          "target_blob": "a9f5e56ff500e246d4a1de4a92a52fbfbcad3e87",
+          "reason": "Integrate canonical customer xcp_session_start discovery and approved live runtime controls from Banach without tenant credential dispatch"
+        },
+        {
+          "path": "src/workers/__tests__/cockpit-chat-route.test.ts",
+          "target_blob": "5ccb7806132e70fd7473017903547b6f07d25ece",
+          "reason": "Integrate canonical customer xcp_session_start discovery and approved live runtime controls from Banach without tenant credential dispatch"
+        },
+        {
+          "path": "src/workers/__tests__/developer-access-route.test.ts",
+          "target_blob": "99e7241330dda3eeeb0adb5e4701708832c9d719",
+          "reason": "Integrate canonical customer xcp_session_start discovery and approved live runtime controls from Banach without tenant credential dispatch"
+        },
+        {
+          "path": "src/workers/__tests__/mcp-gateway-route.test.ts",
+          "target_blob": "03cce2d3e727207a0f010a109f8cb0fd78d5acfd",
+          "reason": "Integrate canonical customer xcp_session_start discovery and approved live runtime controls from Banach without tenant credential dispatch"
+        },
+        {
+          "path": "src/workers/__tests__/mcp-rpc-route.test.ts",
+          "target_blob": "7fddc87879e16ad0199913f79e94d83a9c22f53d",
+          "reason": "Integrate canonical customer xcp_session_start discovery and approved live runtime controls from Banach without tenant credential dispatch"
+        },
+        {
+          "path": "src/workers/__tests__/model-runtime-enforcement.test.ts",
+          "target_blob": "31fd2e4fafe39fbc2e7b0fb69850e3b4da35eeae",
+          "reason": "Integrate canonical customer xcp_session_start discovery and approved live runtime controls from Banach without tenant credential dispatch"
+        },
+        {
+          "path": "src/workers/__tests__/model-runtimes-route.test.ts",
+          "target_blob": "12565df00e6c9602d7efdbbcf1600f008dcb0fe1",
+          "reason": "Integrate canonical customer xcp_session_start discovery and approved live runtime controls from Banach without tenant credential dispatch"
+        },
+        {
+          "path": "src/workers/__tests__/route-auth-coverage.test.ts",
+          "target_blob": "c6599310b00c5273d2f7131c2398269389576ff1",
+          "reason": "Integrate canonical customer xcp_session_start discovery and approved live runtime controls from Banach without tenant credential dispatch"
+        },
+        {
+          "path": "src/workers/dal/model-execution-receipt-store.ts",
+          "target_blob": "2824c3118b79a188c6efadc474db336c8e58bb53",
+          "reason": "Integrate canonical customer xcp_session_start discovery and approved live runtime controls from Banach without tenant credential dispatch"
+        },
+        {
+          "path": "src/workers/dal/types/access.ts",
+          "target_blob": "cf1de887e2dbe067179ad3a9b4ddaf3a10220772",
+          "reason": "Integrate canonical customer xcp_session_start discovery and approved live runtime controls from Banach without tenant credential dispatch"
+        },
+        {
+          "path": "src/workers/lib/observability.ts",
+          "target_blob": "2df1f11fba1ead840a74514a0a06472bfa4cf4f8",
+          "reason": "Integrate canonical customer xcp_session_start discovery and approved live runtime controls from Banach without tenant credential dispatch"
+        },
+        {
+          "path": "src/workers/routes/customer-chat.ts",
+          "target_blob": "f279a8e1764b2794628b6e0a1c8a65841ec3f7ac",
+          "reason": "Integrate canonical customer xcp_session_start discovery and approved live runtime controls from Banach without tenant credential dispatch"
+        },
+        {
+          "path": "src/workers/routes/customer-workspace-feed.ts",
+          "target_blob": "106bf2623cab4716d02c8cf2501384aa4bf8b3df",
+          "reason": "Integrate canonical customer xcp_session_start discovery and approved live runtime controls from Banach without tenant credential dispatch"
+        },
+        {
+          "path": "src/workers/routes/developer-access.ts",
+          "target_blob": "0b011f444ada64078dcf0c07cc22192b5c74f06a",
+          "reason": "Integrate canonical customer xcp_session_start discovery and approved live runtime controls from Banach without tenant credential dispatch"
+        },
+        {
+          "path": "src/workers/routes/mcp-gateway.ts",
+          "target_blob": "e0cb5e128217019a07b596ecd0fdcfccd733e9f0",
+          "reason": "Integrate canonical customer xcp_session_start discovery and approved live runtime controls from Banach without tenant credential dispatch"
+        },
+        {
+          "path": "src/workers/routes/mcp-rpc.ts",
+          "target_blob": "37d3136fdb7898e3124d0956f38593021bb122ab",
+          "reason": "Integrate canonical customer xcp_session_start discovery and approved live runtime controls from Banach without tenant credential dispatch"
+        },
+        {
+          "path": "src/workers/routes/model-runtimes.ts",
+          "target_blob": "2dba321f0661eee9bf363ff27b6860c7a9a52083",
+          "reason": "Integrate canonical customer xcp_session_start discovery and approved live runtime controls from Banach without tenant credential dispatch"
+        },
+        {
+          "path": "src/workers/routes/workspaces.ts",
+          "target_blob": "282abd4cab5d98f5c0b30a627098d724bc8eec79",
+          "reason": "Integrate canonical customer xcp_session_start discovery and approved live runtime controls from Banach without tenant credential dispatch"
+        }
+      ]
     }
   ]
 }

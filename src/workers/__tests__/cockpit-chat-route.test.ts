@@ -8,7 +8,12 @@ import { Hono } from 'hono';
 import { workspacesRoute } from '../routes/workspaces';
 
 const MBP_OWNER = 'user_operator_mbp';
-const ENV = { MBP_OWNER_USER_ID: MBP_OWNER, MBP_OWNER_LINKED_USER_IDS: '', DATABASE_URL: 'x' };
+const ENV = {
+  MBP_OWNER_USER_ID: MBP_OWNER,
+  MBP_OWNER_LINKED_USER_IDS: '',
+  DATABASE_URL: 'x',
+  COMMERCIAL_LIVE_CHAT_REQUIRED: 'false',
+};
 
 const COCKPIT_EVENTS = [
   { id: 'e1', summary: 'fix(cockpit): legible empty/degraded project banner (#515)', status: 'completed', source_tool: 'github', approval_state: null, domain_id: null, occurred_at: '2026-06-09T03:13:34.000Z' },
@@ -25,6 +30,11 @@ function appFor(auth: Record<string, unknown>, capture: { opts?: Record<string, 
       listEventsForOperator: async (ids: string[], opts: Record<string, unknown>) => {
         capture.ids = ids; capture.opts = opts;
         return { events: COCKPIT_EVENTS, pagination: { has_more: false, next_before: null } };
+      },
+      modelRuntimes: {
+        listProviders: async () => [],
+        getOverride: async () => null,
+        getProviderCredential: async () => null,
       },
     } as never);
     await next();
@@ -84,12 +94,27 @@ describe('POST /cockpit-chat', () => {
   it('uses the LLM answer (still grounded provenance) when a Workers-AI binding is present', async () => {
     const cap: { opts?: Record<string, unknown>; ids?: string[] } = {};
     const ai = { run: async () => ({ response: 'This project has 3 events on record, recently shipping the project banner fix and the operator overlay; one item awaits your sign-off.' }) };
-    const res = await chat({ user_id: MBP_OWNER }, 'summarize', COCKPIT_SCOPE, cap, { ...ENV, AI: ai });
+    const res = await chat({ user_id: MBP_OWNER }, 'summarize', COCKPIT_SCOPE, cap, {
+      ...ENV,
+      COMMERCIAL_LIVE_CHAT_REQUIRED: 'true',
+      AI: ai,
+    });
     expect(res.status).toBe(200);
     const body = (await res.json()) as { answer: string; generated_by: string; grounded_on: { needs_review: number } };
     expect(body.generated_by).toBe('llm');
     expect(body.answer).toMatch(/operator overlay/);
     expect(body.grounded_on.needs_review).toBe(1); // provenance still from real events
+  });
+
+  it('commercial mode returns typed 503 instead of a deterministic assistant answer', async () => {
+    const res = await chat({ user_id: MBP_OWNER }, 'summarize', COCKPIT_SCOPE, {}, {
+      ...ENV,
+      COMMERCIAL_LIVE_CHAT_REQUIRED: 'true',
+    });
+    expect(res.status).toBe(503);
+    const body = await res.json() as Record<string, unknown>;
+    expect(body).toMatchObject({ code: 'PROVIDER_UNAVAILABLE', retryable: true });
+    expect(body.answer).toBeUndefined();
   });
 
   it('answers over the WHOLE workspace when no project_id is given', async () => {

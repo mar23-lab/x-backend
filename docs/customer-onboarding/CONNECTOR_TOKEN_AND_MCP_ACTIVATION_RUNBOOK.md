@@ -72,7 +72,6 @@ curl -s https://api.xlooop.com/api/v1/mcp/session-start -H "Authorization: Beare
 claude mcp add --transport http xcp-gateway https://api.xlooop.com/api/v1/mcp/rpc \
   --header "Authorization: Bearer xlk_ro_…"
 #    then in Claude Code: call xcp_session_start once.
-#    xlooop.whoami remains compatibility-only for older clients.
 ```
 
 ### 6. (Later, after proofs) Enable operator/write tokens

@@ -2,8 +2,9 @@ import { assertWorkspaceScope } from './DalAdapter';
 import { withWorkspaceRlsContext } from './operational-spine-store';
 import type { Sql } from '../db/client';
 import type { UserId, WorkspaceId } from './types';
+import type { ModelRuntimeProvider } from './model-runtime-store';
 
-export type ModelExecutionProvider = 'anthropic' | 'workers_ai';
+export type ModelExecutionProvider = ModelRuntimeProvider | 'workers_ai';
 export type ModelExecutionStatus = 'completed' | 'fallback' | 'failed';
 
 export interface ModelExecutionStartInput {

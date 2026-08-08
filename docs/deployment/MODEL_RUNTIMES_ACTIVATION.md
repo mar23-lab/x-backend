@@ -1,17 +1,19 @@
 # Wave C — model-runtimes activation runbook
 
-**STATUS (260708): LIVE, one step remains.** The worker is deployed (`api.xlooop.com`, build `a45f0c69`),
-migration 053 is applied (schema head 55), the `/api/v1/model-runtimes/*` routes are wired + auth-gated. The
-ONLY remaining step is binding the master encryption key — until then, credential **writes** return `503`
-(fail-closed; nothing stores plaintext) and **reads** degrade to `[]`. Everything else is done.
+**STATUS:** Source contract implemented; deployment activation still requires environment-specific evidence.
+Migration 053 owns provider configuration, and staged migration 098 widens execution receipts to the governed
+provider registry. The `/api/v1/model-runtimes/*` routes are auth/RBAC-gated. Credential writes remain
+fail-closed when the encryption key is unavailable.
 
-- ✅ Migration 053 applied (model_runtime_providers + user_runtime_override, RLS, audit CHECK). Verified.
-- ✅ Deployed (`npm run deploy:api` → `a45f0c69`; `/api/v1/health` build match, `sentry_active:true`, zero-5xx).
-- ⏳ **Step 1 below — bind `MODEL_RUNTIME_ENC_KEY` (YOU do this; I can't hold your master key).**
+- Migration 053: provider configuration, override, RLS, and audited writes.
+- Migration 098: staged provider-superset constraint for execution receipts.
+- Production chat: live-provider-only; typed `503 PROVIDER_UNAVAILABLE` when no approved runtime succeeds.
+- Execution boundary: Workers AI binding and platform-managed Anthropic credential only. Stored tenant
+  ciphertext is not read by chat resolution or validation.
 
 ⚠️ Note: the API is **`api.xlooop.com`**, NOT `app.xlooop.com` (that host is the Pages SPA frontend).
 
-## Step 1 — generate + bind the master key  ← THE ONLY REMAINING STEP
+## Step 1 — configure deployment secrets through the approved operator process
 The key is base64 of 32 random bytes. It never goes in git, the DB, or an agent's context — you generate +
 bind it directly. ⚠️ Run each line separately (zsh does NOT treat `#` as a comment interactively — never
 paste inline comments). First `cd` into the repo, then generate:
@@ -34,8 +36,9 @@ Confirm it is set (prints the name only; the value is never shown):
 npx wrangler secret list --config wrangler.toml | grep MODEL_RUNTIME_ENC_KEY
 ```
 
-Once bound, credential writes work immediately (the worker reads the secret at runtime — no manual redeploy).
-Then run the smoke test (Step 2) to confirm end-to-end.
+`MODEL_RUNTIME_ENC_KEY` enables encrypted configuration writes. `ANTHROPIC_API_KEY` is the separately managed
+platform execution credential; the Workers AI path uses the `AI` binding. Do not paste secret values into
+chat, tickets, logs, or repository files. Then run the smoke test to confirm the deployed contract.
 
 ## Step 2 — smoke test (needs an operator JWT for a real workspace)
 Get a JWT from the browser (logged into app.xlooop.com as an owner/operator): DevTools → Application →
@@ -69,10 +72,30 @@ curl -sS -X PUT "$API/model-runtimes/default" -H "Authorization: Bearer $JWT" -H
 Expected: list returns masked entries (never plaintext/ciphertext); the audit trail records the flip
 (`GET /api/v1/audit-log?format=csv` shows `model_runtime_default_change`).
 
+Inspect the effective runtime and supported model catalog:
+
+```
+curl -sS "$API/model-runtimes/effective" -H "Authorization: Bearer $JWT" | jq '{effective, fallback_count, resolution_attempts}'
+curl -sS "$API/model-runtimes/providers/anthropic/models" -H "Authorization: Bearer $JWT" | jq
+```
+
+Perform a bounded content-free validation call:
+
+```
+curl -sS -X POST "$API/model-runtimes/providers/anthropic/validate" -H "Authorization: Bearer $JWT" | jq '{ok, validation_receipt_id, audit_recorded, runtime_id, provider, model, latency_ms, usage}'
+```
+
+Validation must return an audit receipt and must not return credential material. Customer and operator chat
+resolve `user override -> workspace default -> platform default`. When all approved live runtimes are
+unavailable, chat returns `503 PROVIDER_UNAVAILABLE` without an `answer` field; deterministic prose is never
+substituted in commercial mode.
+
 ## Security properties (enforced by `verify:model-runtime-secret-safety`, ci-local)
 - AES-256-GCM encrypted at rest (fresh 96-bit IV per record; tamper-evident tag).
 - Reads return only `····last4` — plaintext + ciphertext never leave the worker.
 - Writes + the default flip are owner/operator-gated + audited (`target_type = model_runtime_provider`).
+- Live validation is owner/operator-gated, entitlement-aware, content-free, and audited.
+- Chat and validation never decrypt tenant-stored provider credentials.
 - Fail-closed: absent/short `MODEL_RUNTIME_ENC_KEY` → credential writes 503, never a plaintext fallback.
 
 ## Key rotation — ⚠️ NOT YET IMPLEMENTED
@@ -82,6 +105,7 @@ credential (`PUT /model-runtimes/providers/:provider`) so they re-seal under it.
 `enc_version`-keyed re-encrypt sweep is future work.
 
 ## Rollback
-Additive + inert until a key is stored. To disable: `npx wrangler secret delete MODEL_RUNTIME_ENC_KEY`
-(writes then 503; masked reads still list). Worker rollback: `npx wrangler rollback` (reverts to the prior
-version). Migration 053 is forward-only.
+Migration 098 only widens the execution-receipt provider constraint and is forward-compatible with earlier
+providers. Roll back the worker through the normal release process while preserving encryption material;
+deleting `MODEL_RUNTIME_ENC_KEY` is not an ordinary dispatcher rollback because it makes stored configuration
+credentials unreadable. Migration 053 remains forward-only.

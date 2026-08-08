@@ -49,7 +49,6 @@ export const CUSTOMER_MCP_CONNECTOR_NAMESPACE = XCP_GATEWAY_NAME;
 
 export const SAFE_TOOLS = [
   { name: 'xcp_session_start', action: 'session_start', method: 'GET', path: '/api/v1/mcp/session-start' },
-  { name: 'xlooop.whoami', action: 'whoami', method: 'GET', path: '/api/v1/mcp/whoami', compatibility_only: true },
   { name: 'xlooop.get_task_packet', action: 'get_task_packet', method: 'GET', path: '/api/v1/mcp/task-packets/:id' },
   { name: 'xlooop.get_effective_templates', action: 'get_effective_templates', method: 'GET', path: '/api/v1/template-policy/effective-snapshots' },
   { name: 'xlooop.get_effective_profile', action: 'get_effective_profile', method: 'GET', path: '/api/v1/template-policy/personalization/effective-profile' },
@@ -81,7 +80,7 @@ const GOVERNED_WRITE_ACTIONS = new Set([
 function customerScopedTools(auth: AuthContext) {
   const canGovernedWrite = auth.role === 'owner' || auth.role === 'operator';
   return SAFE_TOOLS.filter((tool) => {
-    if (tool.name === 'xcp_session_start' || tool.name === 'xlooop.whoami') return false;
+    if (tool.name === 'xcp_session_start') return false;
     if (GOVERNED_WRITE_ACTIONS.has(tool.action)) return canGovernedWrite;
     if (tool.action === 'submit_learning_signal') return !auth.service_principal;
     return true;
@@ -261,15 +260,55 @@ mcpGatewayRoute.get('/tools', (ctx) => {
 // T4/P7 · mount the customer-data READ tools on the same /mcp namespace + auth plane.
 mcpGatewayRoute.route('/', mcpCustomerReadsRoute);
 
-function customerSessionStartEnvelope(auth: AuthContext) {
+export function customerSessionStartEnvelope(auth: AuthContext) {
   const whoami = whoamiEnvelope(auth);
   return {
     schema_id: 'xcp.session_start/v1',
     contract: 'xcp.session_start/v1',
+    status: 'pass',
+    single_mcp_gateway: XCP_GATEWAY_NAME,
+    single_mcp_gateway_required: true,
     gateway: { name: XCP_GATEWAY_NAME, profile: XCP_GATEWAY_PROFILE },
     gateway_profile: XCP_GATEWAY_PROFILE,
+    effect_mode: 'observe',
+    identity_scope: {
+      actor_type: auth.service_principal ? 'service_principal' : 'human_user',
+      tenant_scope: auth.workspace_id,
+      workspace_scope: auth.workspace_id,
+      authn_method: auth.auth_method ?? (auth.service_principal ? 'service_principal' : 'clerk_jwt'),
+      subject_ref: auth.user_id,
+      scopes: [],
+    },
+    selected_route: 'not_applicable',
     detected_role: 'not_applicable',
     entry_skill: 'not_applicable',
+    role_panel: {
+      schema_id: 'xcp.role_panel/v1',
+      task_class: 'not_applicable',
+      primary_role: 'not_applicable',
+      selected_roles: [],
+      role_to_skill_map: [],
+      missing_required_roles: [],
+    },
+    required_skills: [],
+    loaded_skills: [],
+    stop_conditions: [],
+    evidence_checked: ['tenant_identity', 'workspace_scope', 'tenant_safe_tool_scope'],
+    graph_context: {
+      scope: 'tenant_safe',
+      status: 'not_requested',
+      references: [],
+    },
+    policy_decision: {
+      decision: 'allow',
+      reason_codes: [],
+    },
+    audit_lineage: {
+      lineage_id: null,
+      audit_refs: [],
+    },
+    prior_work_digest: null,
+    prior_work_discovery_executed: false,
     identity: whoami.identity,
     context: {
       tenant_id: auth.workspace_id,
@@ -287,17 +326,20 @@ mcpGatewayRoute.get('/session-start', (ctx) => {
   return ctx.json(customerSessionStartEnvelope(ctx.get('auth')));
 });
 
-// Compatibility only. New clients use xcp_session_start and receive identity plus scoped tools/context.
+// Undocumented REST compatibility only. It is intentionally absent from SAFE_TOOLS and MCP discovery.
 mcpGatewayRoute.get('/whoami', (ctx) => {
+  ctx.header('Deprecation', 'true');
+  ctx.header('Sunset', 'Sat, 31 Oct 2026 00:00:00 GMT');
+  ctx.header('Link', '</api/v1/mcp/session-start>; rel="successor-version"');
   return ctx.json({
     ...whoamiEnvelope(ctx.get('auth')),
     schema_id: 'xlooop.mcp_whoami.v1',
     connector_namespace: CUSTOMER_MCP_CONNECTOR_NAMESPACE,
     profile: XCP_GATEWAY_PROFILE,
-    allowed_tools: SAFE_TOOLS,
     compatibility: {
       alias_of: 'xcp_session_start',
       deprecated: true,
+      sunset: '2026-10-31T00:00:00Z',
     },
   });
 });

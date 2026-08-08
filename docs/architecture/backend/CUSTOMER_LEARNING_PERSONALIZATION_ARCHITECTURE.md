@@ -98,7 +98,7 @@ Recommended connector posture:
 - Advertise the canonical `xcp-gateway` with `profile=customer` for customer sessions.
 - Start each customer session once with `xcp_session_start`; it returns
   `xcp.session_start/v1`, tenant identity, scoped context, and tools without another gateway hop.
-- Keep `xlooop.whoami` only as a compatibility tool; live config and discovery advertise no legacy gateway name.
+- `xcp_session_start` is the only discoverable intake; live config and discovery advertise no legacy peer tool or gateway name.
 - Every request must re-check token validity, tenant membership, DB RBAC, and
   scope.
 - Allowed customer-profile tools are limited to scoped packet read,

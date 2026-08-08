@@ -47,6 +47,13 @@ import { envFlagTrue } from '../lib/env-flag';
 import { idempotencyMiddleware } from '../lib/idempotency'; // J-W1/IDEM-4
 import { persistAssistantContextLineage, completeAssistantSkillLineage, type AssistantContextLineage } from '../lib/assistant-context-lineage';
 import { createModelExecutionObserver } from '../lib/model-execution-lineage';
+import {
+  commercialLiveChatRequired,
+  ProviderUnavailableError,
+  resolveEffectiveRuntimePlan,
+  resolvePlatformRuntimePlan,
+  type EffectiveRuntimePlan,
+} from '../services/model-runtime-execution';
 import { listDocumentsRow } from '../dal/document-store';
 import { lineageFor } from '../lib/actor-lineage';
 import type { EventListOpts, HarnessFlowEvent } from '../dal/types/event';
@@ -63,6 +70,9 @@ export interface WorkspacesEnv extends AuthEnv {
   RESOLUTION_RECEIPT_SIGNING_SECRET?: string;
   RESOLUTION_RECEIPT_SIGNING_KEY_ID?: string;
   XLOOOP_DEPLOY_SHA?: string;
+  AI?: AiRunner;
+  ANTHROPIC_API_KEY?: string;
+  COMMERCIAL_LIVE_CHAT_REQUIRED?: string;
 }
 
 export interface WorkspacesVariables extends AuthVariables {
@@ -409,6 +419,30 @@ workspacesRoute.post('/cockpit-chat', async (ctx) => {
       events = events.filter((e) => e && ((e as { domain_id?: string | null }).domain_id ?? null) === domainId);
     }
 
+    const liveChatRequired = commercialLiveChatRequired(ctx.env.COMMERCIAL_LIVE_CHAT_REQUIRED);
+    let liveRuntimePlan: EffectiveRuntimePlan | undefined;
+    if (liveChatRequired) {
+      try {
+        liveRuntimePlan = workspaceId
+          ? await resolveEffectiveRuntimePlan({
+              facade: dal.modelRuntimes,
+              env: ctx.env,
+              userId: user_id,
+              workspaceId,
+            })
+          : resolvePlatformRuntimePlan(ctx.env);
+      } catch (err) {
+        if (!(err instanceof ProviderUnavailableError)) throw err;
+        ctx.status(503);
+        return ctx.json({
+          error: 'no live model runtime is available',
+          code: 'PROVIDER_UNAVAILABLE',
+          request_id: ctx.get('request_id'),
+          retryable: true,
+        });
+      }
+    }
+
     // Plane B — the governance plane (operations-live-stream packets/decisions). Wave 5a: read the
     // DURABLE operations_unified read-model FIRST (a queryable, provenance-stamped table). Fall back to
     // the live MB-P snapshot (Wave-1 path) and then the build-time bundle, and LAZILY materialize the
@@ -679,15 +713,31 @@ workspacesRoute.post('/cockpit-chat', async (ctx) => {
     const executionObserver = assistantLineage && lineageSql
       ? createModelExecutionObserver(lineageSql, workspaceId, user_id, assistantLineage)
       : undefined;
-    const result = await answerCockpitChat(
-      message,
-      { events, governance, pinned, lineage, documents, total: events.length, scope, companyContext },
-      ai,
-      mode,
-      claudeKey,
-      llm,
-      executionObserver,
-    );
+    let result;
+    try {
+      result = await answerCockpitChat(
+        message,
+        { events, governance, pinned, lineage, documents, total: events.length, scope, companyContext },
+        ai,
+        mode,
+        claudeKey,
+        llm,
+        executionObserver,
+        liveRuntimePlan,
+      );
+    } catch (err) {
+      if (!(err instanceof ProviderUnavailableError)) throw err;
+      ctx.status(503);
+      return ctx.json({
+        error: 'configured live model providers are temporarily unavailable',
+        code: 'PROVIDER_UNAVAILABLE',
+        request_id: ctx.get('request_id'),
+        retryable: true,
+      });
+    }
+    if (liveChatRequired && result.generated_by !== 'llm') {
+      throw new Error('commercial live chat returned a non-LLM assistant result');
+    }
     if (assistantLineage && lineageSql) {
       await completeAssistantSkillLineage(lineageSql, ctx.env, assistantLineage, {
         workspace_id: workspaceId,
@@ -736,12 +786,24 @@ workspacesRoute.post('/cockpit-chat', async (ctx) => {
     } catch (_) { /* persistence is best-effort; the answer already stands */ }
 
     return ctx.json({
+      request_id: ctx.get('request_id'),
       answer: result.answer,
       generated_by: result.generated_by,
       model: result.model ?? null,
       grounded_on: result.grounded_on,
       scope,
       mode,
+      execution: result.execution ? {
+        receipt_id: result.execution.receipt_id,
+        runtime_id: result.execution.runtime_id,
+        provider: result.execution.provider,
+        model: result.execution.model,
+        source: result.execution.source,
+        provider_config_version_id: result.execution.provider_config_version_id,
+        latency_ms: result.execution.latency_ms,
+        attempts: result.execution.attempts,
+        usage: result.usage ?? null,
+      } : null,
     });
   } catch (err) {
     return errorEnvelope(ctx, err);

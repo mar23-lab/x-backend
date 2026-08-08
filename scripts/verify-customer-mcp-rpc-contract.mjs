@@ -15,6 +15,8 @@ const files = {
   gateway: 'src/workers/routes/mcp-gateway.ts',
   index: 'src/workers/index.ts',
   test: 'src/workers/__tests__/mcp-rpc-route.test.ts',
+  pluginReadme: 'packages/xlooop-claude-plugin/README.md',
+  onboarding: 'docs/customer-onboarding/CLAUDE_CODE_API_ONBOARDING.md',
   packageJson: 'package.json',
 };
 const src = Object.fromEntries(Object.entries(files).map(([k, rel]) => [k, read(rel)]));
@@ -33,16 +35,39 @@ check(src.rpc.includes('-32602'), 'rpc_invalid_params', 'Bad/unknown tool calls 
 for (const writeTool of ['submit_evidence', 'report_tool_event', 'request_approval', 'submit_learning_signal']) {
   check(!src.rpc.includes(`xlooop.${writeTool}`), `rpc_no_write_${writeTool}`, `MCP endpoint must not expose the write tool xlooop.${writeTool}.`);
 }
-for (const readTool of ['xcp_session_start', 'xlooop.whoami', 'xlooop.get_task_packet', 'xlooop.get_workflow_status', 'xlooop.get_effective_templates', 'xlooop.get_effective_profile']) {
+for (const readTool of ['xcp_session_start', 'xlooop.get_task_packet', 'xlooop.get_workflow_status', 'xlooop.get_effective_templates', 'xlooop.get_effective_profile']) {
   check(src.rpc.includes(readTool), `rpc_has_read_${readTool.replace(/\W+/g, '_')}`, `MCP endpoint must expose ${readTool}.`);
 }
+check(!src.rpc.includes('xlooop.whoami'), 'rpc_no_legacy_whoami_tool', 'MCP discovery must expose xcp_session_start as the only intake tool.');
+check(src.pluginReadme.includes('`xcp_session_start`') && !src.pluginReadme.includes('`xlooop.whoami`'), 'plugin_single_intake_docs', 'Plugin setup must direct clients to xcp_session_start only.');
+check(src.onboarding.includes('`xcp_session_start`') && !src.onboarding.includes('`xlooop.whoami`'), 'onboarding_single_intake_docs', 'Customer onboarding must direct clients to xcp_session_start only.');
 
 // ---- Single-sourced: tools/call dispatches to the REST handlers, with auth forwarded ----
 check(src.rpc.includes('dispatch(') && src.rpc.includes("path: '/api/v1/mcp/session-start'"), 'rpc_dispatch_reuse', 'xcp_session_start must dispatch to the existing authenticated REST path, not re-implement tenant intake.');
 check(/headers\.set\('Authorization', auth\)/.test(src.rpc) || src.rpc.includes("headers.set('Authorization'"), 'rpc_forwards_auth', 'tools/call must forward the caller Authorization header.');
 check(src.rpc.includes("name: 'xcp-gateway'") && src.rpc.includes("profile: 'customer'"), 'rpc_canonical_customer_profile', 'Server metadata must advertise canonical xcp-gateway with profile=customer.');
 check(src.test.includes('requires_additional_gateway: false'), 'rpc_single_hop_test', 'Behavior tests must prove customer session intake needs no second gateway hop.');
-for (const marker of ["schema_id: 'xcp.session_start/v1'", "gateway_profile: XCP_GATEWAY_PROFILE", "detected_role: 'not_applicable'", "entry_skill: 'not_applicable'"]) {
+for (const marker of [
+  "schema_id: 'xcp.session_start/v1'",
+  "status: 'pass'",
+  'single_mcp_gateway: XCP_GATEWAY_NAME',
+  'single_mcp_gateway_required: true',
+  "gateway_profile: XCP_GATEWAY_PROFILE",
+  "effect_mode: 'observe'",
+  'identity_scope: {',
+  "selected_route: 'not_applicable'",
+  "detected_role: 'not_applicable'",
+  "entry_skill: 'not_applicable'",
+  'role_panel: {',
+  'required_skills: []',
+  'loaded_skills: []',
+  'stop_conditions: []',
+  'graph_context: {',
+  'policy_decision: {',
+  'audit_lineage: {',
+  'prior_work_digest: null',
+  'prior_work_discovery_executed: false',
+]) {
   check(src.gateway.includes(marker), `session_contract_${marker.replace(/\W+/g, '_')}`, `Customer session-start contract must include ${marker}.`);
 }
 check(!src.rpc.includes('xlooop-customer-gateway') && !src.gateway.includes('xlooop-customer-gateway'), 'legacy_gateway_absent', 'Legacy connector names must not appear in live config or discovery.');

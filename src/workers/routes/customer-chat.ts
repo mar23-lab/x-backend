@@ -38,6 +38,7 @@ import { parseContextReferences } from '../lib/context-reference';
 import { resolveDocumentContext } from '../services/document-context';
 import { recordChatGroundingReads } from '../dal/document-access-store';
 import {
+  commercialLiveChatRequired,
   ProviderUnavailableError,
   resolveEffectiveRuntimePlan,
   type EffectiveRuntimePlan,
@@ -91,11 +92,6 @@ export interface CustomerChatVariables extends AuthVariables {
 
 const ALLOWED_MODES: CockpitChatMode[] = ['ask', 'plan', 'recommend', 'deep-research'];
 const MAX_EVENTS = 40;
-
-function commercialLiveChatRequired(raw: string | undefined): boolean {
-  const value = String(raw ?? '').trim().toLowerCase();
-  return !['false', 'off', '0', 'no', 'disabled'].includes(value);
-}
 
 export const customerChatRoute = new Hono<{ Bindings: CustomerChatEnv; Variables: CustomerChatVariables }>();
 

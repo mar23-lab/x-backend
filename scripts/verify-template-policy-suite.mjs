@@ -250,9 +250,10 @@ async function verifyClaudeCodeUserBinding() {
   const route = requireFile('src/workers/routes/template-policy-registry.ts');
   const auth = requireFile('src/workers/middleware/auth.ts');
   const parity = requireFile('scripts/verify-api-mcp-parity.mjs');
-  requireIncludes('whoami_api_mcp_present', `${mcp}\n${route}`, [
-    'xlooop.whoami',
-    '/whoami',
+  requireIncludes('session_start_api_mcp_present', `${mcp}\n${route}`, [
+    'xcp_session_start',
+    '/session-start',
+    'xcp.session_start/v1',
     'xlooop.identity_whoami.v1',
     'token_expires_at',
     'auth_method',
@@ -266,9 +267,9 @@ async function verifyClaudeCodeUserBinding() {
     'token_expires_at',
     'service_principal',
   ]);
-  requireIncludes('parity_checks_whoami', parity, [
-    '/api/v1/mcp/whoami',
-    'mcp_whoami_ok',
+  requireIncludes('parity_checks_session_start', parity, [
+    '/api/v1/mcp/session-start',
+    'mcp_session_start_ok',
     'tenant_id',
     'auth_method',
   ]);
@@ -304,7 +305,7 @@ async function verifyPromptInjectionRegression() {
   else fail('malicious_fixture_corpus_invalid', 'fixture corpus failed to include forbidden surfaces', { unsafeAllowed });
   requireRegex('safe_tool_allowlist_excludes_broad_memory', mcp, [
     /SAFE_TOOLS[\s\S]*xlooop\.get_task_packet/,
-    /SAFE_TOOLS[\s\S]*xlooop\.whoami/,
+    /SAFE_TOOLS[\s\S]*xcp_session_start/,
     /FORBIDDEN_SURFACES[\s\S]*search_all_memory/,
   ]);
   if (exists('docs/security/PROMPT_INJECTION_E2E_FIXTURES.json')) pass('prompt_injection_e2e_fixture_manifest_present');

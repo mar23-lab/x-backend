@@ -15,6 +15,7 @@ import type { DalAdapter } from '../dal/DalAdapter';
 import { isOperatorContext } from '../lib/permissions';
 import { authorizeGovernedWrite, entitlementEnforcementOn } from '../lib/spine-authority';
 import { withAuthority } from '../lib/allowed-actions';
+import { emitEvent } from '../lib/observability';
 import { encryptCredential, lastFour, renderMaskedCredential, isEncryptionConfigured } from '../lib/model-runtime-crypto';
 import {
   isModelRuntimeProvider,
@@ -24,11 +25,22 @@ import {
   type ProviderConfigRow,
   type ProviderSpec,
 } from '../dal/model-runtime-store';
+import {
+  ProviderUnavailableError,
+  isExecutableRuntimeProvider,
+  resolveConfiguredRuntime,
+  resolveEffectiveRuntimePlan,
+  supportedModels,
+  validateRuntime,
+} from '../services/model-runtime-execution';
+import type { AiRunner } from '../services/agent-digest';
 
 export interface ModelRuntimesEnv extends AuthEnv {
   MODEL_RUNTIME_ENC_KEY?: string; // AES-256 master key (base64 32 bytes) — worker secret; NEVER in the DB
   MBP_OWNER_USER_ID?: string;
   MBP_OWNER_LINKED_USER_IDS?: string;
+  AI?: AiRunner;
+  ANTHROPIC_API_KEY?: string;
 }
 export interface ModelRuntimesVariables extends AuthVariables {
   dal: DalAdapter;
@@ -140,6 +152,115 @@ modelRuntimesRoute.get('/model-runtimes/providers', async (ctx) => {
   }
 });
 
+// The runtime customer chat will use after user override -> workspace default -> platform default.
+// Credentials and fallback internals never leave the worker.
+modelRuntimesRoute.get('/model-runtimes/effective', async (ctx) => {
+  try {
+    const auth = ctx.get('auth');
+    if (!auth?.user_id) return errorEnvelope(ctx, { status: 401, code: 'UNAUTHORIZED', message: 'auth required' });
+    if (!auth.workspace_id) return errorEnvelope(ctx, { status: 403, code: 'FORBIDDEN', message: 'no workspace in session' });
+    if (auth.role === 'client') return errorEnvelope(ctx, { status: 403, code: 'FORBIDDEN', message: 'client role cannot read model-runtime config' });
+    const plan = await resolveEffectiveRuntimePlan({
+      facade: ctx.get('dal').modelRuntimes,
+      env: ctx.env,
+      userId: auth.user_id,
+      workspaceId: auth.workspace_id,
+    });
+    return ctx.json({
+      effective: {
+        runtime_id: plan.primary.runtime_id,
+        provider: plan.primary.provider,
+        model: plan.primary.model,
+        source: plan.primary.source,
+        provider_config_version_id: plan.primary.provider_config_version_id,
+      },
+      fallback_count: plan.fallbacks.length,
+      resolution_attempts: plan.resolution_attempts,
+    });
+  } catch (err) {
+    return errorEnvelope(ctx, err);
+  }
+});
+
+// Honest configured/supported catalog. Providers without an approved cloud adapter remain 503.
+modelRuntimesRoute.get('/model-runtimes/providers/:provider/models', async (ctx) => {
+  try {
+    const auth = ctx.get('auth');
+    if (!auth?.user_id) return errorEnvelope(ctx, { status: 401, code: 'UNAUTHORIZED', message: 'auth required' });
+    if (!auth.workspace_id) return errorEnvelope(ctx, { status: 403, code: 'FORBIDDEN', message: 'no workspace in session' });
+    if (!isOperatorContext(auth, ctx.env)) return errorEnvelope(ctx, { status: 403, code: 'FORBIDDEN', message: 'only an owner or operator can inspect model runtimes' });
+    const provider = ctx.req.param('provider');
+    if (!isModelRuntimeProvider(provider)) return errorEnvelope(ctx, { status: 400, code: 'VALIDATION_ERROR', message: 'unknown provider' });
+    const row = (await ctx.get('dal').modelRuntimes.listProviders(auth.workspace_id))
+      .find((candidate) => candidate.provider === provider);
+    if (!row) return errorEnvelope(ctx, { status: 404, code: 'NOT_FOUND', message: 'provider not configured' });
+    if (!row.enabled || !isExecutableRuntimeProvider(provider)) {
+      throw new ProviderUnavailableError('configured provider is not executable by customer chat');
+    }
+    return ctx.json({
+      provider,
+      runtime_id: row.id,
+      models: supportedModels(provider, row.model),
+      catalog_source: 'configured_and_supported_defaults',
+    });
+  } catch (err) {
+    return errorEnvelope(ctx, err);
+  }
+});
+
+// A real content-free probe using an approved platform credential. Stored tenant credential material
+// is intentionally not read by this route or by chat execution.
+modelRuntimesRoute.post('/model-runtimes/providers/:provider/validate', async (ctx) => {
+  try {
+    const auth = ctx.get('auth');
+    if (!auth?.user_id) return errorEnvelope(ctx, { status: 401, code: 'UNAUTHORIZED', message: 'auth required' });
+    if (!auth.workspace_id) return errorEnvelope(ctx, { status: 403, code: 'FORBIDDEN', message: 'no workspace in session' });
+    if (!isOperatorContext(auth, ctx.env)) return errorEnvelope(ctx, { status: 403, code: 'FORBIDDEN', message: 'only an owner or operator can validate model runtimes' });
+    { const rg = await runtimeEnforcementGate(ctx); if (rg) return rg; }
+    const provider = ctx.req.param('provider');
+    if (!isModelRuntimeProvider(provider)) return errorEnvelope(ctx, { status: 400, code: 'VALIDATION_ERROR', message: 'unknown provider' });
+    const runtime = await resolveConfiguredRuntime({
+      facade: ctx.get('dal').modelRuntimes,
+      env: ctx.env,
+      workspaceId: auth.workspace_id,
+      provider,
+    });
+    const result = await validateRuntime(runtime);
+    const validationReceiptId = `mrv_${crypto.randomUUID()}`;
+    await ctx.get('dal').appendAuditLog({
+      actor_user_id: auth.user_id,
+      action: 'model_runtime_validate',
+      target_type: 'model_runtime_provider',
+      target_id: runtime.runtime_id,
+      workspace_id: auth.workspace_id,
+      reason: 'live provider validation passed',
+      metadata: {
+        validation_receipt_id: validationReceiptId,
+        provider,
+        model: runtime.model,
+        latency_ms: result.latency_ms,
+      },
+    });
+    emitEvent('model_runtime_validated', {
+      workspace_id: auth.workspace_id,
+      provider,
+      latency_ms: result.latency_ms,
+    });
+    return ctx.json({
+      ok: true,
+      validation_receipt_id: validationReceiptId,
+      audit_recorded: true,
+      runtime_id: runtime.runtime_id,
+      provider,
+      model: runtime.model,
+      latency_ms: result.latency_ms,
+      usage: result.usage,
+    });
+  } catch (err) {
+    return errorEnvelope(ctx, err);
+  }
+});
+
 // ── writes (owner/operator, audited) ──────────────────────────────────────────
 
 // PUT /model-runtimes/providers/:provider — upsert config + (optional) credential.
@@ -162,6 +283,9 @@ modelRuntimesRoute.put('/model-runtimes/providers/:provider', async (ctx) => {
 
     if (spec.requires_base_url && !base_url) {
       return errorEnvelope(ctx, { status: 422, code: 'UNPROCESSABLE', message: `${provider} requires a base_url` });
+    }
+    if (!spec.requires_base_url && base_url) {
+      return errorEnvelope(ctx, { status: 422, code: 'UNPROCESSABLE', message: `${provider} does not accept a base_url` });
     }
 
     const dal = ctx.get('dal');

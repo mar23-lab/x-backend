@@ -46,7 +46,6 @@ const READ_ONLY_ENDPOINTS = [
   '/api/v1/developer-access/status',
   '/api/v1/developer-access/test',
   '/api/v1/mcp/session-start',
-  '/api/v1/mcp/whoami',
   '/api/v1/mcp/tools',
 ] as const;
 const FULL_API_BLOCKERS = [
@@ -95,7 +94,7 @@ developerAccessRoute.post('/developer-access/test', async (ctx) => {
       },
       checks: [
         { id: 'session', label: 'Session is authenticated', status: 'pass' },
-        { id: 'whoami', label: 'Identity is bound to this workspace', status: 'pass' },
+        { id: 'session_start', label: 'Session intake is bound to this workspace', status: 'pass' },
         { id: 'tools', label: 'Tool allowlist is visible', status: 'pass' },
         { id: 'full_api', label: 'Full API remains blocked until live proof passes', status: 'blocked' },
       ],
@@ -154,7 +153,7 @@ function humanizeTenant(value: string): string {
 }
 
 function describeTool(name: string): string {
-  if (name === 'xlooop.whoami') return 'Confirm the connected user and workspace.';
+  if (name === 'xcp_session_start') return 'Start one tenant-bound customer session.';
   if (name === 'xlooop.get_task_packet') return 'Read a scoped task packet.';
   if (name === 'xlooop.get_workflow_status') return 'Read workflow status for an allowed packet.';
   if (name === 'xlooop.get_effective_templates') return 'Read redacted effective templates.';
@@ -265,7 +264,6 @@ developerAccessRoute.post('/developer-access/tokens', async (ctx) => {
         profile: XCP_GATEWAY_PROFILE,
         endpoint: 'https://api.xlooop.com/api/v1/mcp/rpc',
         session_start_check: `curl -s https://api.xlooop.com/api/v1/mcp/session-start -H "Authorization: Bearer ${raw}"`,
-        compatibility_whoami_check: `curl -s https://api.xlooop.com/api/v1/mcp/whoami -H "Authorization: Bearer ${raw}"`,
       },
     });
   } catch (err) {

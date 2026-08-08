@@ -44,6 +44,10 @@ describe('GET /customer/workspace-feed · provisioning + tenant binding', () => 
       .request('/api/v1/customer/workspace-feed?workspace_id=org_VICTIM', {}, { DATABASE_URL: 'p' } as never);
     expect(res.status).toBe(200);
     expect(dal.listEvents.mock.calls[0][0]).toBe('org_MINE'); // the query param is ignored
+    const body = await res.json() as Record<string, unknown>;
+    expect(JSON.stringify(body)).toContain('/api/v1/mcp/session-start');
+    expect(JSON.stringify(body)).not.toContain('/api/v1/mcp/whoami');
+    expect(JSON.stringify(body)).not.toContain('xlooop-customer-gateway');
   });
 });
 

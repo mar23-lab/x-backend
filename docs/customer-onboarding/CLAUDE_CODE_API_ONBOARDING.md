@@ -4,9 +4,9 @@ This guide is the customer-safe path for connecting Claude Code, Codex, Cursor, 
 
 ## Architecture
 
-Customers do not connect Claude, Codex, or Cursor to raw MB-P governance files, private graph schema, full tenant memory, internal scoring templates, or broad search tools. Each assistant connects to Xlooop as an authenticated customer client and receives only tenant-scoped projections:
+Customers do not connect Claude, Codex, or Cursor to internal control-plane files, private graph schema, full tenant memory, internal scoring templates, or broad search tools. Each assistant connects to Xlooop as an authenticated customer client and receives only tenant-scoped projections:
 
-- `xlooop.whoami`
+- `xcp_session_start`
 - scoped task packets
 - scoped workflow/status/metrics
 - evidence submission
@@ -26,7 +26,7 @@ Forbidden surfaces stay server-side: raw graph, full tenant memory, Xlooop inter
 4. Employee opens Xlooop Profile and uses **Developer Access Center** for tenant-scoped directions.
 5. Employee runs **Run connection check** and confirms the redacted receipt identifies only their company and user.
 6. Employee connects Claude Code, Codex, or Cursor through Xlooop OAuth/device flow when the connector is available; any scoped Xlooop connector token remains a controlled fallback only after lifecycle and revocation proof passes.
-7. The first assistant call must be `xlooop.whoami`.
+7. The first and only intake call must be `xcp_session_start`.
 8. The user confirms that the returned redacted identity matches their Xlooop account.
 9. Every packet, evidence item, tool event, approval request, and metric delta records the actor, tenant, auth method, client id, and token hash or JTI.
 10. Revoking the connector token must make Claude Code, Codex, and Cursor access fail.
@@ -42,7 +42,7 @@ This panel is personalized from the active Clerk/Xlooop session and shows:
 - the signed-in customer identity and workspace;
 - the read-only validation status;
 - tool-specific setup tabs for Claude Code, Codex, Cursor, and Browser test;
-- a server-side **Run connection check** that validates `/api/v1/session`, `xlooop.whoami`, and the read-only customer MCP allowlist without asking the customer to copy a raw token;
+- a server-side **Run connection check** that validates `/api/v1/session`, `xcp_session_start`, and the read-only customer MCP allowlist without asking the customer to copy a raw token;
 - a copyable human setup note for the selected tool;
 - the token safety rule: never paste token values into chat, feedback, docs, tickets, or email;
 - the blocked surfaces: database credentials, Clerk secrets, operator tokens, raw graph authority, full memory search, internal governance templates, and cross-tenant data.
@@ -81,9 +81,9 @@ preferences, skill ordering, and evidence presentation. It must never weaken
 tenant isolation, redaction, retention, approvals, tool permissions, evidence,
 RCA, or forbidden API/MCP surfaces.
 
-## Required `whoami` Evidence
+## Required Session-Start Evidence
 
-The `xlooop.whoami` response must include:
+The `xcp_session_start` response must include:
 
 - `user_id`
 - `tenant_id`
@@ -124,7 +124,7 @@ Run this scenario before calling the Claude/Codex/Cursor customer path productio
 1. Create synthetic `company_a` and `company_b`.
 2. Add `employee_a`, `employee_b`, and `admin`.
 3. Connect Claude Code as `employee_a` through the read-only customer MCP path, then repeat the same identity check for Codex and Cursor when their connectors are installed.
-4. Call `xlooop.whoami` and verify the returned identity maps to `employee_a` and `company_a`.
+4. Call `xcp_session_start` and verify the returned identity maps to `employee_a` and `company_a`.
 5. Confirm `employee_a` can read only scoped packets and effective templates for `company_a`.
 6. Confirm `employee_a` cannot access `company_b`.
 7. Confirm `employee_a` cannot access raw graph, governance scoring, private graph schema, secrets, or broad memory search.

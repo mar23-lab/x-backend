@@ -269,7 +269,7 @@ async function verifyClaudeCodeOnboardingDoc() {
     'Claude Code',
     'OAuth/device flow',
     'scoped Xlooop connector token',
-    'xlooop.whoami',
+    'xcp_session_start',
     'user_id',
     'tenant_id',
     'membership_ref',
@@ -290,7 +290,7 @@ async function verifyCustomerClaudeCodeOauthBinding() {
   const auth = requireFile('src/workers/middleware/auth.ts');
   const parity = requireFile('scripts/verify-api-mcp-parity.mjs');
   requireIncludes('customer_oauth_identity_binding_markers_present', `${doc}\n${route}\n${mcp}\n${auth}\n${parity}`, [
-    'xlooop.whoami',
+    'xcp_session_start',
     'xlooop.identity_whoami.v1',
     'tenant_id',
     'membership_ref',
@@ -299,7 +299,7 @@ async function verifyCustomerClaudeCodeOauthBinding() {
     'client_id',
     'token_expires_at',
     'service_principal',
-    'mcp_whoami_ok',
+    'mcp_session_start_ok',
     'token revocation',
   ]);
   requireIncludes('customer_token_is_not_prompt_supplied_tenant_authority', doc, [
@@ -332,7 +332,7 @@ async function verifyPromptInjectionE2e() {
     'search_all_memory',
   ]);
   requireIncludes('safe_mcp_tool_surface_only', mcp, [
-    'xlooop.whoami',
+    'xcp_session_start',
     'xlooop.get_task_packet',
     'xlooop.submit_evidence',
     'xlooop.report_tool_event',
@@ -781,7 +781,7 @@ async function verifyConnectorTokenRevocation() {
     'must never impersonate a customer employee',
   ]);
   requireIncludes('whoami_identity_fields_available_for_revocation_probe', `${mcp}\n${template}\n${auth}\n${parity}`, [
-    'xlooop.whoami',
+    'xcp_session_start',
     'tenant_id',
     'membership_ref',
     'membership_resolution',
@@ -789,7 +789,7 @@ async function verifyConnectorTokenRevocation() {
     'client_id',
     'token_expires_at',
     'service_principal',
-    'mcp_whoami_ok',
+    'mcp_session_start_ok',
   ]);
   requireIncludes('service_principal_scoped_not_employee_impersonation', `${auth}\n${mcp}`, [
     'xlooop-canary-read',
@@ -818,7 +818,7 @@ async function verifyNewUserApiMcpOnboardingScenario() {
     'Create synthetic `company_a` and `company_b`',
     'Add `employee_a`, `employee_b`, and `admin`',
     'Connect Claude Code as `employee_a`',
-    'Call `xlooop.whoami`',
+    'Call `xcp_session_start`',
     'Confirm `employee_a` cannot access `company_b`',
     'Submit a metadata-only evidence item and tool event',
     'Revoke the connector token',
@@ -853,7 +853,7 @@ async function verifyNewUserApiMcpOnboardingScenario() {
     'pending_access',
   ]);
   requireIncludes('api_mcp_new_user_surfaces_are_scoped', `${mcp}\n${registryRoute}`, [
-    'xlooop.whoami',
+    'xcp_session_start',
     'xlooop.get_task_packet',
     'xlooop.submit_evidence',
     'xlooop.report_tool_event',

@@ -130,7 +130,6 @@ describe('safe MCP gateway routes', () => {
     expect(JSON.stringify(body)).not.toContain('xlooop-customer-gateway');
     expect(body.tools.map((tool) => tool.name)).toEqual([
       'xcp_session_start',
-      'xlooop.whoami',
       'xlooop.get_task_packet',
       'xlooop.get_effective_templates',
       'xlooop.get_effective_profile',
@@ -163,10 +162,40 @@ describe('safe MCP gateway routes', () => {
     expect(body).toMatchObject({
       schema_id: 'xcp.session_start/v1',
       contract: 'xcp.session_start/v1',
+      status: 'pass',
+      single_mcp_gateway: 'xcp-gateway',
+      single_mcp_gateway_required: true,
       gateway: { name: 'xcp-gateway', profile: 'customer' },
       gateway_profile: 'customer',
+      effect_mode: 'observe',
+      identity_scope: {
+        actor_type: 'human_user',
+        tenant_scope: 'tenant_a',
+        workspace_scope: 'tenant_a',
+        authn_method: 'clerk_jwt',
+        subject_ref: 'user_viewer',
+        scopes: [],
+      },
+      selected_route: 'not_applicable',
       detected_role: 'not_applicable',
       entry_skill: 'not_applicable',
+      role_panel: {
+        schema_id: 'xcp.role_panel/v1',
+        task_class: 'not_applicable',
+        primary_role: 'not_applicable',
+        selected_roles: [],
+        role_to_skill_map: [],
+        missing_required_roles: [],
+      },
+      required_skills: [],
+      loaded_skills: [],
+      stop_conditions: [],
+      evidence_checked: ['tenant_identity', 'workspace_scope', 'tenant_safe_tool_scope'],
+      graph_context: { scope: 'tenant_safe', status: 'not_requested', references: [] },
+      policy_decision: { decision: 'allow', reason_codes: [] },
+      audit_lineage: { lineage_id: null, audit_refs: [] },
+      prior_work_digest: null,
+      prior_work_discovery_executed: false,
       identity: { user_id: 'user_viewer', tenant_id: 'tenant_a', role: 'viewer' },
       context: { tenant_id: 'tenant_a', workspace_id: 'tenant_a', role: 'viewer' },
       requires_additional_gateway: false,
@@ -175,7 +204,7 @@ describe('safe MCP gateway routes', () => {
     expect(body.scoped_tools.map((tool: { name: string }) => tool.name)).toContain('xlooop.get_task_packet');
     expect(body.scoped_tools.map((tool: { name: string }) => tool.name)).not.toContain('xlooop.submit_evidence');
     expect(body.scoped_tools.map((tool: { name: string }) => tool.name)).not.toContain('xcp_session_start');
-    expect(body.scoped_tools.map((tool: { name: string }) => tool.name)).not.toContain('xlooop.whoami');
+    expect(JSON.stringify(body)).not.toContain('xlooop.whoami');
     expect(JSON.stringify(body)).not.toContain('xlooop-customer-gateway');
     expect(calls).toEqual([]);
   });
@@ -190,17 +219,19 @@ describe('safe MCP gateway routes', () => {
     ]));
   });
 
-  it('GET /whoami remains a compatibility-only identity alias', async () => {
+  it('GET /whoami remains an undiscoverable, sunset REST compatibility alias', async () => {
     const { res } = await request('GET', '/whoami', VIEWER);
     expect(res.status).toBe(200);
+    expect(res.headers.get('Deprecation')).toBe('true');
+    expect(res.headers.get('Sunset')).toBe('Sat, 31 Oct 2026 00:00:00 GMT');
+    expect(res.headers.get('Link')).toBe('</api/v1/mcp/session-start>; rel="successor-version"');
     const body = await res.json() as {
       schema_id: string;
       connector_namespace: string;
       profile: string;
       identity: { user_id: string; tenant_id: string; role: string; auth_method: string };
-      allowed_tools: Array<{ name: string }>;
       forbidden_surfaces: string[];
-      compatibility: { alias_of: string; deprecated: boolean };
+      compatibility: { alias_of: string; deprecated: boolean; sunset: string };
     };
     expect(body.schema_id).toBe('xlooop.mcp_whoami.v1');
     expect(body.connector_namespace).toBe('xcp-gateway');
@@ -211,11 +242,12 @@ describe('safe MCP gateway routes', () => {
       role: 'viewer',
       auth_method: 'clerk_jwt',
     });
-    expect(body.allowed_tools.map((tool) => tool.name)).toContain('xlooop.whoami');
+    expect(body).not.toHaveProperty('allowed_tools');
     expect(body.forbidden_surfaces).toContain('governance_scoring');
     expect(body.compatibility).toEqual({
       alias_of: 'xcp_session_start',
       deprecated: true,
+      sunset: '2026-10-31T00:00:00Z',
     });
     expect(JSON.stringify(body)).not.toContain('xlooop-customer-gateway');
   });

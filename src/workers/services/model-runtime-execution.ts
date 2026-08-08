@@ -1,5 +1,5 @@
 import type { ModelRuntimesFacade } from '../dal/model-runtime-facade';
-import type { ProviderConfigRow } from '../dal/model-runtime-store';
+import type { ModelRuntimeProvider, ProviderConfigRow } from '../dal/model-runtime-store';
 import type { ModelExecutionObserver } from '../lib/model-execution-lineage';
 import type { AiRunner } from './agent-digest';
 
@@ -73,6 +73,33 @@ export class ProviderUnavailableError extends Error {
   }
 }
 
+export function commercialLiveChatRequired(raw: string | undefined): boolean {
+  const value = String(raw ?? '').trim().toLowerCase();
+  return !['false', 'off', '0', 'no', 'disabled'].includes(value);
+}
+
+const DEFAULT_MODELS: Partial<Record<ModelRuntimeProvider | 'workers_ai', string>> = {
+  workers_ai: PLATFORM_WORKERS_AI_MODEL,
+  anthropic: PLATFORM_ANTHROPIC_MODEL,
+  openai: 'gpt-4o-mini',
+  google: 'gemini-2.0-flash',
+  mistral: 'mistral-small-latest',
+  deepseek: 'deepseek-chat',
+  openrouter: 'openai/gpt-4o-mini',
+};
+
+export function isExecutableRuntimeProvider(provider: ModelRuntimeProvider | 'workers_ai'): boolean {
+  return provider === 'workers_ai' || provider === 'anthropic';
+}
+
+export function supportedModels(
+  provider: ModelRuntimeProvider | 'workers_ai',
+  configuredModel?: string | null,
+): string[] {
+  const models = [configuredModel, DEFAULT_MODELS[provider]].filter((value): value is string => Boolean(value));
+  return [...new Set(models)];
+}
+
 function providerConfigVersion(row: ProviderConfigRow): string {
   return `model-runtime-provider:${row.id}:${row.updated_at}`;
 }
@@ -121,6 +148,22 @@ function platformRuntimes(env: LiveRuntimeEnv): ResolvedRuntime[] {
     });
   }
   return runtimes;
+}
+
+export function resolvePlatformRuntimePlan(env: LiveRuntimeEnv): EffectiveRuntimePlan {
+  const candidates = platformRuntimes(env);
+  if (!candidates.length) throw new ProviderUnavailableError();
+  return {
+    primary: candidates[0],
+    fallbacks: candidates.slice(1),
+    resolution_attempts: candidates.map((runtime, index) => ({
+      source: runtime.source,
+      runtime_id: runtime.runtime_id,
+      provider: runtime.provider,
+      outcome: index === 0 ? 'selected' : 'fallback',
+      code: null,
+    })),
+  };
 }
 
 export async function resolveEffectiveRuntimePlan(input: {
@@ -183,6 +226,22 @@ export async function resolveEffectiveRuntimePlan(input: {
     code: null,
   })));
   return { primary: candidates[0], fallbacks: candidates.slice(1), resolution_attempts: resolutionAttempts };
+}
+
+export async function resolveConfiguredRuntime(input: {
+  facade: ModelRuntimesFacade;
+  env: LiveRuntimeEnv;
+  workspaceId: string;
+  provider: ModelRuntimeProvider;
+}): Promise<ResolvedRuntime> {
+  const row = (await input.facade.listProviders(input.workspaceId))
+    .find((candidate) => candidate.provider === input.provider);
+  if (!row) throw new ProviderUnavailableError('provider is not configured');
+  const resolved = resolveConfiguredRow(row, 'workspace_default', input.env);
+  if (!resolved.runtime) {
+    throw new ProviderUnavailableError(`provider is unavailable: ${resolved.code ?? 'RUNTIME_UNAVAILABLE'}`);
+  }
+  return resolved.runtime;
 }
 
 function liveFetch(input: RequestInfo | URL, init: RequestInit): Promise<Response> {
@@ -295,4 +354,18 @@ export async function executeEffectiveRuntimePlan(input: {
     }
   }
   throw new ProviderUnavailableError('all configured live model runtimes failed', attempts);
+}
+
+export async function validateRuntime(
+  runtime: ResolvedRuntime,
+  observer?: ModelExecutionObserver,
+): Promise<RuntimeExecutionResult> {
+  return executeEffectiveRuntimePlan({
+    plan: { primary: runtime, fallbacks: [], resolution_attempts: [] },
+    system: 'You are validating a model-runtime connection. Follow the user instruction exactly.',
+    user: 'Reply with exactly: Xlooop runtime ready. This is a connection test and contains no customer data.',
+    maxTokens: 32,
+    minTextLength: 1,
+    observer,
+  });
 }
