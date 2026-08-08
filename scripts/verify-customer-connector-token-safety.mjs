@@ -22,6 +22,7 @@ const files = {
 };
 const src = Object.fromEntries(Object.entries(files).map(([k, rel]) => [k, read(rel)]));
 const pkg = JSON.parse(src.packageJson);
+const mintRoute = src.route.match(/developerAccessRoute\.post\('\/developer-access\/tokens',[\s\S]*?\n}\);/)?.[0] || '';
 
 // ---- Migration: hash-only storage, mandatory expiry, revocation, explicit role ----
 check(src.migration.includes('token_sha256') && /token_sha256\s+TEXT[^\n]*UNIQUE/.test(src.migration),
@@ -50,19 +51,19 @@ check(!/RETURNING[\s\S]{0,200}token_sha256/.test(src.store) && !/SELECT[\s\S]{0,
 // ---- Auth: inert by default, scoped, fail-closed ----
 check(/customerTokenAuth[\s\S]*if \(!opts\.allowCustomerToken\) return 'miss'/.test(src.auth),
   'auth_route_opt_in', 'customerTokenAuth must be gated by opts.allowCustomerToken.');
-check(/customerTokenAuth[\s\S]*CUSTOMER_API_TOKENS_ENABLED !== 'true'[\s\S]*return 'miss'/.test(src.auth),
+check(/customerTokenAuth[\s\S]*!envFlagTrue\(ctx\.env\.CUSTOMER_API_TOKENS_ENABLED\)[\s\S]*return 'miss'/.test(src.auth),
   'auth_flag_inert', 'customerTokenAuth must be inert unless CUSTOMER_API_TOKENS_ENABLED=true.');
 check(src.auth.includes("service_principal: 'customer_token'"),
   'auth_marks_principal', 'customerTokenAuth must mark the auth context as customer_token.');
 
 // ---- Issuer: human owner/operator only, flag-gated, one-time reveal ----
-check(/post\('\/developer-access\/tokens'[\s\S]*auth\.auth_method !== 'clerk_jwt'[\s\S]*403/.test(src.route),
+check(/auth\.auth_method !== 'clerk_jwt'[\s\S]*403/.test(mintRoute),
   'mint_human_only', 'Token mint must reject non-human (service-principal) sessions.');
-check(/post\('\/developer-access\/tokens'[\s\S]*auth\.role !== 'owner' && auth\.role !== 'operator'/.test(src.route),
-  'mint_role_gated', 'Token mint must require owner/operator role.');
-check(/CUSTOMER_API_TOKENS_ENABLED !== 'true'[\s\S]*409/.test(src.route),
+check(/authorizeGovernedWrite\(ctx, 'token:create'\)[\s\S]*403/.test(mintRoute),
+  'mint_role_gated', 'Token mint must use the governed owner/operator authorization path.');
+check(/!envFlagTrue\(ctx\.env\.CUSTOMER_API_TOKENS_ENABLED\)[\s\S]*409/.test(mintRoute),
   'mint_feature_gated', 'Token mint must be disabled unless CUSTOMER_API_TOKENS_ENABLED=true.');
-check(/role === 'operator' && ctx\.env\.CUSTOMER_OPERATIONAL_TOKENS_ENABLED !== 'true'[\s\S]*409/.test(src.route),
+check(/role === 'operator' && !envFlagTrue\(ctx\.env\.CUSTOMER_OPERATIONAL_TOKENS_ENABLED\)[\s\S]*409/.test(mintRoute),
   'mint_operator_double_gated', 'Operator (write) tokens must require CUSTOMER_OPERATIONAL_TOKENS_ENABLED.');
 check(src.route.includes('shown once') || src.route.includes('shown once and never again'),
   'mint_one_time_reveal', 'Mint response must warn the raw token is shown once.');
@@ -75,7 +76,7 @@ check(src.route.includes("customer_token_fallback_status: 'not_enabled_until_rev
 // ---- Gateway write sandbox ----
 check(/ensureCustomerWriteScope[\s\S]*service_principal !== 'customer_token'/.test(src.gateway),
   'gateway_write_sandbox', 'Gateway must scope customer_token writes to the token workspace.');
-check((src.gateway.match(/ensureCustomerWriteScope\(ctx, auth, body\.packet_id\)/g) || []).length >= 3,
+check((src.gateway.match(/ensureCustomerWriteScope\(ctx, auth, body\.packet_id(?:,[^)]*)?\)/g) || []).length >= 3,
   'gateway_write_sandbox_wired', 'Write sandbox must be wired into evidence, tool-event, and approval writes.');
 
 // ---- Index: customer tokens reach ONLY the MCP surface ----

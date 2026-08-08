@@ -1,0 +1,105 @@
+{
+  "schema_version": "xlooop.generated_artifact_policy.v1",
+  "authority": {
+    "owner": "Xlooop backend engineering",
+    "purpose": "Classify tracked and generated worktree changes before commit, deploy, or cleanup.",
+    "default_for_unmatched_paths": "owner_disposition_required"
+  },
+  "rules": [
+    {
+      "class": "verifier",
+      "patterns": [
+        "scripts/**",
+        "src/workers/__tests__/**"
+      ],
+      "commit_disposition": "commit_with_behavioral_evidence",
+      "read_only_behavior": "must_not_change"
+    },
+    {
+      "class": "operator-runbook",
+      "patterns": [
+        "docs/customer-onboarding/**",
+        "docs/onboarding/**",
+        "docs/deployment/*.md"
+      ],
+      "commit_disposition": "commit_when_current_and_source_linked",
+      "read_only_behavior": "must_not_change"
+    },
+    {
+      "class": "architecture-review",
+      "patterns": [
+        "docs/adrs/**",
+        "docs/architecture/**",
+        "docs/engineering/**"
+      ],
+      "commit_disposition": "commit_with_contract_or_decision_lineage",
+      "read_only_behavior": "must_not_change"
+    },
+    {
+      "class": "generated-runtime-deliverable",
+      "patterns": [
+        "dist/**",
+        "dist-workers-dryrun/**"
+      ],
+      "commit_disposition": "commit_only_in_explicit_build_artifact_lane",
+      "read_only_behavior": "must_not_change"
+    },
+    {
+      "class": "generated-read-model-snapshot",
+      "patterns": [
+        "docs/contracts/**",
+        "docs/architecture/backend/*-manifest.json",
+        "docs/architecture/backend/*-results.json"
+      ],
+      "commit_disposition": "regenerate_then_commit_with_source",
+      "read_only_behavior": "must_not_change"
+    },
+    {
+      "class": "generated-doc-index",
+      "patterns": [
+        "docs/generated/**",
+        "docs/architecture/*-index.md"
+      ],
+      "commit_disposition": "regenerate_then_commit_with_source",
+      "read_only_behavior": "must_not_change"
+    },
+    {
+      "class": "mutable-receipt",
+      "patterns": [
+        "MIGRATION-DELTA-PROVENANCE.json",
+        "docs/deployment/evidence/**"
+      ],
+      "commit_disposition": "commit_only_when_sanitized_and_authoritative",
+      "read_only_behavior": "write_only_in_explicit_evidence_mode"
+    },
+    {
+      "class": "customer-evidence",
+      "patterns": [
+        "docs/customer-evidence/**",
+        "evidence/**"
+      ],
+      "commit_disposition": "commit_only_when_redacted_and_owner_approved",
+      "read_only_behavior": "write_only_in_explicit_evidence_mode"
+    },
+    {
+      "class": "source-runtime",
+      "patterns": [
+        "package.json",
+        "package-lock.json",
+        "tsconfig*.json",
+        "vitest*.ts",
+        "wrangler*.toml",
+        "packages/**",
+        "src/**"
+      ],
+      "commit_disposition": "commit_with_tests_and_review",
+      "read_only_behavior": "must_not_change"
+    }
+  ],
+  "closeout_gate": {
+    "unclassified_dirty_files": 0,
+    "read_only_verifiers_tracked_changes": 0,
+    "generated_files_without_source": 0,
+    "customer_evidence_without_redaction_review": 0
+  }
+}
