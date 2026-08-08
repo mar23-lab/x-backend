@@ -307,6 +307,9 @@ CHAT_SOURCE_TRUTH_OVERRIDE_ENABLED = "true"
 # 2. §168 role-scoped grounding (D-5/6/7): visibility ceiling + admissibility + client-empty bundle,
 #    now including the sources axis (T1).
 CHAT_ROLE_SCOPED_CONTEXT_ENABLED = "true"
+# Commercial customer chat is live-provider-only. The route also defaults fail-closed when this
+# variable is absent; the explicit production value prevents configuration ambiguity.
+COMMERCIAL_LIVE_CHAT_REQUIRED = "true"
 # 3. W1/G2 spine unification: tool events emit their companion operation_events row (migration 057).
 SPINE_TOOL_EVENT_UNIFICATION_ENABLED = "true"
 # 4. W4/G3 document-read audit: day-grain deduped access log (migration 059).
@@ -392,8 +395,8 @@ XLOOOP_JOURNEY_SEED_ENABLED = "true"
 
 # ---- Secrets (NOT committed; set via `wrangler secret put <NAME>`) ----
 # DEP-3 (260711-J): this block was missing several live-feature secrets the code reads. Full set:
-#   ANTHROPIC_API_KEY       — Claude API key for the chat chief-of-staff ladder. Absent → the ladder
-#                             falls back to Workers-AI / deterministic (no Claude tier). OPTIONAL.
+#   ANTHROPIC_API_KEY       — platform-managed Claude fallback for live chat. Absent → configured
+#                             tenant runtime or Workers AI; customer chat never falls back to canned text.
 #   SENTRY_DSN              — error/observability sink. Absent → sentry.ts console-fallback (dormant-safe).
 #                             Companion tuning vars (all OPTIONAL): SENTRY_* (sample rates / environment).
 #   RESEND_API_KEY          — transactional email (admin notify, investor invite). Absent → notifier

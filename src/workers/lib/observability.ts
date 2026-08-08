@@ -34,6 +34,7 @@ export type ObservabilityKind =
   | 'chat_workspace_identity_failed' // an explicit workspace-name question could not load the tenant session identity
   | 'chat_project_plan_failed' // selected project plan facts could not be loaded; project-scoped answer fails closed
   | 'chat_project_sources_failed' // selected project source bindings could not be verified; answer marks them unavailable
+  | 'chat_provider_unavailable' // no effective live runtime resolved or all live execution attempts failed
   | 'role_skill_receipt_write_failed'; // a shadow receipt write rejected — telemetry so evidence loss is never silent (role-skill-shadow · Track A 260713)
 
 /** Emit one structured observability event. Never throws; never blocks. */

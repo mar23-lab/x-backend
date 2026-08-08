@@ -83,7 +83,7 @@ function chatApp(sqlSpy: { calls: string[] } | null) {
 // internal-builder suite: asserts raw generated_by/model — opt out of the default-ON customer-safe
 // serializer (P3 260714) so the pre-serializer contract stays testable.
 const askChat = (app: Hono, env: Record<string, unknown>) => app.request('/api/v1/customer-chat',
-  { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ message: 'hi' }) }, { CUSTOMER_SAFE_SERIALIZER_ENABLED: 'false', ...env } as never);
+  { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ message: 'hi' }) }, { CUSTOMER_SAFE_SERIALIZER_ENABLED: 'false', COMMERCIAL_LIVE_CHAT_REQUIRED: 'false', ...env } as never);
 
 describe('customer-chat metering integration', () => {
   it('flag OFF: 200 and the response has no metering side effects (deterministic floor, no AI env)', async () => {

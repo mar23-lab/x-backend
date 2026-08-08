@@ -616,20 +616,33 @@ returns zero rows and the API returns `409 CONFLICT`; no sign-off or receipt is 
 
 ---
 
-## Safe MCP Gateway
+## XCP Gateway — Customer Profile
 
-The `/api/v1/mcp/*` routes are the external execution-client gateway for Codex,
-Claude, MCP clients, and product automation. They consume the same backend
-operational spine as `/packets`, `/evidence`, `/approvals`, `/tool-events`, and
-`/metric-deltas`, but expose a narrower, packet-first contract.
+The `/api/v1/mcp/*` routes are the `customer` profile of the canonical
+agent-facing `xcp-gateway`. This tenant data-plane/resource server consumes the
+same backend operational spine as `/packets`, `/evidence`, `/approvals`,
+`/tool-events`, and `/metric-deltas`; it is not a second governance authority.
+
+### GET /api/v1/mcp/session-start
+
+**Auth:** Required
+**Tool:** `xcp_session_start`
+**Purpose:** Performs tenant identity/whoami and returns the customer-profile
+context and scoped tool manifest in one session-intake call. The response uses
+`schema_id: xcp.session_start/v1`, `gateway_profile: customer`,
+`detected_role: not_applicable`, and `entry_skill: not_applicable`, and sets
+`requires_additional_gateway: false`; clients do not traverse another gateway.
+
+`xlooop.whoami` remains available only as a deprecated compatibility tool.
 
 ### GET /api/v1/mcp/tools
 
 **Auth:** Required
-**Purpose:** Returns the allowlisted tools and forbidden surfaces for external
-execution clients.
+**Purpose:** Returns canonical `xcp-gateway` metadata with `profile=customer`,
+the allowlisted tools, compatibility aliases, and forbidden surfaces.
 
-**Allowed tools:** `xlooop.get_task_packet`, `xlooop.submit_evidence`,
+**Allowed tools:** `xcp_session_start`, compatibility-only `xlooop.whoami`,
+`xlooop.get_task_packet`, `xlooop.submit_evidence`,
 `xlooop.report_tool_event`, `xlooop.request_approval`,
 `xlooop.get_workflow_status`.
 

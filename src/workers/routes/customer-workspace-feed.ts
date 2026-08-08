@@ -83,6 +83,7 @@ customerWorkspaceFeedRoute.get('/customer/workspace-feed', async (ctx) => {
           '/api/v1/customer/workspace-feed',
           '/api/v1/developer-access/status',
           '/api/v1/developer-access/test',
+          '/api/v1/mcp/session-start',
           '/api/v1/mcp/whoami',
           '/api/v1/mcp/tools',
         ],

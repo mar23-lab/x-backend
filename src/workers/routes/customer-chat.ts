@@ -3,8 +3,8 @@
 // The operator cockpit chat (workspaces.ts POST /cockpit-chat) is operator-only — it 403s a customer
 // and reads the OPERATOR's events. This is the CUSTOMER counterpart: a signed-in customer asks about
 // THEIR OWN workspace and the AI chief-of-staff answers grounded in their events + their captured
-// company context (S1), reusing the SAME answerCockpitChat service + the Workers-AI → Claude →
-// deterministic ladder.
+// company context (S1), reusing the SAME answerCockpitChat service. Commercial mode resolves the
+// effective tenant/user runtime and returns a typed 503 when no live provider can answer.
 //
 // Why this exists: before this route, the in-app customer chat panel (CockpitChatPanel.jsx) short-
 // circuited to a hardcoded CLIENT-SIDE stub ("read-only validation / Available / Blocked") and NEVER
@@ -38,6 +38,11 @@ import { parseContextReferences } from '../lib/context-reference';
 import { resolveDocumentContext } from '../services/document-context';
 import { recordChatGroundingReads } from '../dal/document-access-store';
 import {
+  ProviderUnavailableError,
+  resolveEffectiveRuntimePlan,
+  type EffectiveRuntimePlan,
+} from '../services/model-runtime-execution';
+import {
   answerCockpitChat,
   classifyRequestedProjectFacts,
   classifyRequestedWorkspaceInventoryFacts,
@@ -55,6 +60,8 @@ export interface CustomerChatEnv extends AuthEnv {
   DATABASE_URL: string;
   AI?: AiRunner;
   ANTHROPIC_API_KEY?: string;
+  /** Fail-closed by default. Only explicit false is permitted for legacy test/dev compatibility. */
+  COMMERCIAL_LIVE_CHAT_REQUIRED?: string;
   // D-16 · grounding-tier consumer. Default OFF → byte-identical (no access_tier, no reorder). When on,
   // each source's effective per-project read_policy tier weights its place in the grounding fact bundle.
   SOURCE_TIER_GROUNDING_ENABLED?: string;
@@ -84,6 +91,11 @@ export interface CustomerChatVariables extends AuthVariables {
 
 const ALLOWED_MODES: CockpitChatMode[] = ['ask', 'plan', 'recommend', 'deep-research'];
 const MAX_EVENTS = 40;
+
+function commercialLiveChatRequired(raw: string | undefined): boolean {
+  const value = String(raw ?? '').trim().toLowerCase();
+  return !['false', 'off', '0', 'no', 'disabled'].includes(value);
+}
 
 export const customerChatRoute = new Hono<{ Bindings: CustomerChatEnv; Variables: CustomerChatVariables }>();
 
@@ -295,6 +307,28 @@ customerChatRoute.post('/customer-chat', async (ctx) => {
     }
     // User-selected model (the chat's model switcher). Default = free Llama; 'claude' uses the premium tier.
     const llm: CockpitChatLLM = body?.llm === 'claude' ? 'claude' : 'llama';
+    const liveChatRequired = commercialLiveChatRequired(ctx.env.COMMERCIAL_LIVE_CHAT_REQUIRED);
+    let liveRuntimePlan: EffectiveRuntimePlan | undefined;
+    if (liveChatRequired) {
+      try {
+        liveRuntimePlan = await resolveEffectiveRuntimePlan({
+          facade: dal.modelRuntimes,
+          env: ctx.env,
+          userId: auth.user_id,
+          workspaceId,
+        });
+      } catch (err) {
+        if (!(err instanceof ProviderUnavailableError)) throw err;
+        emitEvent('chat_provider_unavailable', { workspace_id: workspaceId, stage: 'resolution' });
+        ctx.status(503);
+        return ctx.json({
+          error: 'no live model runtime is available',
+          code: 'PROVIDER_UNAVAILABLE',
+          request_id: ctx.get('request_id'),
+          retryable: true,
+        });
+      }
+    }
     const chatHistoryPersistenceRequired = envFlagTrue(ctx.env.CHAT_HISTORY_PERSISTENCE_REQUIRED);
     const appendChatExchange = (dal as unknown as {
       appendChatExchange?: (
@@ -605,26 +639,47 @@ customerChatRoute.post('/customer-chat', async (ctx) => {
     const executionObserver = assistantLineage && lineageSql
       ? createModelExecutionObserver(lineageSql, workspaceId, auth.user_id, assistantLineage)
       : undefined;
-    const result = await answerCockpitChat(
-      message,
-      // 260805 · `total` is the WHOLE-WORKSPACE count from a SQL aggregate, not `events.length`.
-      // `events` is a 40-row RECENCY page (MAX_EVENTS), and cockpit-chat.ts documents this field as
-      // "Total Plane-A count for the scope (may exceed events.length when capped)" — passing the
-      // page length made that promise false on every call, so the honesty hedge at
-      // cockpit-chat.ts:1059 ("I looked at the N most recent") was structurally dead: it compares
-      // events_considered against events_total, and both were the same number. Chat could state
-      // "1 item needs your sign-off" for a workspace holding eleven, and never disclose the cap.
-      //
-      // THE FALLBACK IS THE PAGE LENGTH, NEVER 0. cockpit-chat.ts:1032 switches to the empty-state
-      // narrative when events_total === 0, which drops source facts entirely. A degraded aggregate
-      // read must not under-report below what we can already see.
-      { workspaceName, companyContext, events, documents, projects, plan, projectSources, sources, total: chatTotals.total, scope, charter, personalizationProfile },
-      ai,
-      mode,
-      claudeKey,
-      llm,
-      executionObserver,
-    );
+    let result;
+    try {
+      result = await answerCockpitChat(
+        message,
+        // 260805 · `total` is the WHOLE-WORKSPACE count from a SQL aggregate, not `events.length`.
+        // `events` is a 40-row RECENCY page (MAX_EVENTS), and cockpit-chat.ts documents this field as
+        // "Total Plane-A count for the scope (may exceed events.length when capped)" — passing the
+        // page length made that promise false on every call, so the honesty hedge at
+        // cockpit-chat.ts:1059 ("I looked at the N most recent") was structurally dead: it compares
+        // events_considered against events_total, and both were the same number. Chat could state
+        // "1 item needs your sign-off" for a workspace holding eleven, and never disclose the cap.
+        //
+        // THE FALLBACK IS THE PAGE LENGTH, NEVER 0. cockpit-chat.ts:1032 switches to the empty-state
+        // narrative when events_total === 0, which drops source facts entirely. A degraded aggregate
+        // read must not under-report below what we can already see.
+        { workspaceName, companyContext, events, documents, projects, plan, projectSources, sources, total: chatTotals.total, scope, charter, personalizationProfile },
+        ai,
+        mode,
+        claudeKey,
+        llm,
+        executionObserver,
+        liveRuntimePlan,
+      );
+    } catch (err) {
+      if (!(err instanceof ProviderUnavailableError)) throw err;
+      emitEvent('chat_provider_unavailable', {
+        workspace_id: workspaceId,
+        stage: 'execution',
+        attempts: err.attempts.length,
+      });
+      ctx.status(503);
+      return ctx.json({
+        error: 'configured live model providers are temporarily unavailable',
+        code: 'PROVIDER_UNAVAILABLE',
+        request_id: ctx.get('request_id'),
+        retryable: true,
+      });
+    }
+    if (liveChatRequired && result.generated_by !== 'llm') {
+      throw new Error('commercial live chat returned a non-LLM assistant result');
+    }
     if (assistantLineage && lineageSql) {
       const receipts = await completeAssistantSkillLineage(lineageSql, ctx.env, assistantLineage, {
         workspace_id: workspaceId,
@@ -726,8 +781,10 @@ customerChatRoute.post('/customer-chat', async (ctx) => {
     }
 
     // AR-0.2 · customer-safe projection (flag-gated). OFF (default) = payload unchanged (byte-identical);
-    // ON collapses the engine name, drops the internal model id, reduces grounded_on to an evidence count.
+    // ON collapses legacy engine fields, keeps explicit live-runtime provenance, and reduces grounded_on
+    // to an evidence count.
     return ctx.json(customerSafeChat({
+      request_id: ctx.get('request_id'),
       interaction_id: interactionId,
       scope,
       answer: result.answer,
@@ -752,6 +809,17 @@ customerChatRoute.post('/customer-chat', async (ctx) => {
         role_skill_resolution_id: assistantLineage.resolution_id,
       } : null,
       conversation,
+      execution: result.execution ? {
+        receipt_id: result.execution.receipt_id,
+        runtime_id: result.execution.runtime_id,
+        provider: result.execution.provider,
+        model: result.execution.model,
+        source: result.execution.source,
+        provider_config_version_id: result.execution.provider_config_version_id,
+        latency_ms: result.execution.latency_ms,
+        attempts: result.execution.attempts,
+        usage: result.usage ?? null,
+      } : null,
     }, customerSafeSerializerEnabled((ctx.env as { CUSTOMER_SAFE_SERIALIZER_ENABLED?: string }).CUSTOMER_SAFE_SERIALIZER_ENABLED))); // P3 (260714): DEFAULT-SAFE — a missing/malformed flag serializes; only an explicit 'false' (internal testing) yields raw. Was envFlagTrue = fail-open when the wrangler var vanished.
   } catch (err) {
     return errorEnvelope(ctx, err);

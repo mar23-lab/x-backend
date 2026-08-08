@@ -115,15 +115,37 @@ describe('leak-boundary regression guard · novel internal fields', () => {
     expect(Object.keys(out).sort()).toEqual([
       'answer',
       'conversation',
+      'execution',
       'generated_by',
       'grounded_on',
       'grounding',
       'interaction_id',
       'lineage',
       'mode',
+      'request_id',
       'requested_facts',
       'scope',
     ]);
+  });
+
+  it('customer-safe execution provenance keeps runtime identity/usage but strips attempt details', () => {
+    const out = customerSafeChat({
+      answer: 'live answer', generated_by: 'llm', mode: 'ask', grounded_on: { event_ids: [] },
+      execution: {
+        receipt_id: 'mer_safe', runtime_id: 'runtime_customer_owned', source: 'workspace_default',
+        provider: 'openai', model: 'gpt-customer-selected',
+        provider_config_version_id: 'model-runtime-provider:runtime_customer_owned:v1', latency_ms: 123,
+        attempts: [{ provider: 'openai', error_code: null }],
+        usage: { tokens_in: 11, tokens_out: 7 },
+      },
+    }, true) as Record<string, any>;
+    expect(out.execution).toEqual({
+      receipt_id: 'mer_safe', runtime_id: 'runtime_customer_owned', source: 'workspace_default',
+      provider: 'openai', model: 'gpt-customer-selected',
+      provider_config_version_id: 'model-runtime-provider:runtime_customer_owned:v1',
+      latency_ms: 123, attempts: 1, usage: { tokens_in: 11, tokens_out: 7 },
+    });
+    expect(JSON.stringify(out)).not.toMatch(/error_code/);
   });
 
   it('stripInternalProvisioning ON keeps the deny-list current: every declared internal key is actually removed', () => {

@@ -118,6 +118,8 @@
     "verify:cross-tenant-rls-proof:self-test": "node scripts/verify-cross-tenant-rls-proof.mjs --self-test",
     "verify:customer-revocation-authority": "node scripts/verify-customer-revocation-authority.mjs",
     "verify:customer-revocation-authority:self-test": "node scripts/verify-customer-revocation-authority.mjs --self-test",
+    "verify:customer-learning-personalization": "node scripts/verify-customer-learning-personalization.mjs",
+    "verify:customer-mcp-rpc-contract": "node scripts/verify-customer-mcp-rpc-contract.mjs",
     "verify:boundary": "node scripts/verify-backend-boundary.mjs",
     "verify:boundary:self-test": "node scripts/verify-backend-boundary.mjs --self-test",
     "verify:customer-ecosystem-template": "node scripts/verify-customer-ecosystem-template.mjs",

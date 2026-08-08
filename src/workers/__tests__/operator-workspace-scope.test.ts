@@ -130,7 +130,7 @@ function chApp(spy: any) {
 }
 const chSpy = () => ({ eventsFor: [] as string[], ctxFor: [] as string[], canScopeCalls: [] as Array<[string, string]>, canScope: true });
 function chAsk(app: Hono, body: Record<string, unknown>, env: Record<string, unknown>) {
-  return app.request('/api/v1/customer-chat', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }, { CUSTOMER_SAFE_SERIALIZER_ENABLED: 'false', ...env });
+  return app.request('/api/v1/customer-chat', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }, { CUSTOMER_SAFE_SERIALIZER_ENABLED: 'false', COMMERCIAL_LIVE_CHAT_REQUIRED: 'false', ...env });
 }
 
 describe('customer-chat · operator-workspace-scope (OPERATOR_WORKSPACE_SCOPE_ENABLED)', () => {

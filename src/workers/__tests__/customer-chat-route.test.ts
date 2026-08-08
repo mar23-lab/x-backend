@@ -82,7 +82,7 @@ function ask(app: Hono, body: Record<string, unknown>) {
     { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) },
     // internal-builder suite: assert the RAW pre-serializer contract. P3 (260714) made the customer-safe
     // serializer DEFAULT-ON (missing flag = safe), so these tests opt out explicitly.
-    { CUSTOMER_SAFE_SERIALIZER_ENABLED: 'false' },
+    { CUSTOMER_SAFE_SERIALIZER_ENABLED: 'false', COMMERCIAL_LIVE_CHAT_REQUIRED: 'false' },
   );
 }
 
@@ -93,6 +93,52 @@ function history(app: Hono, query = '', env: Record<string, unknown> = {}) {
 const AUTH = { user_id: 'u1', workspace_id: 'org_hy', email: 'a@honestyoung.example', role: 'member' };
 
 describe('POST /api/v1/customer-chat', () => {
+  it('commercial default returns typed 503 when no live runtime exists, never a deterministic answer', async () => {
+    const dal = dalStub({
+      modelRuntimes: {
+        listProviders: vi.fn(async () => []),
+        getOverride: vi.fn(async () => null),
+        getProviderCredential: vi.fn(async () => null),
+      },
+    });
+    const res = await appFor(AUTH, dal).request('/api/v1/customer-chat', {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ message: 'What should I do next?' }),
+    }, { CUSTOMER_SAFE_SERIALIZER_ENABLED: 'false' });
+    expect(res.status).toBe(503);
+    const body = await res.json() as Record<string, unknown>;
+    expect(body).toMatchObject({ code: 'PROVIDER_UNAVAILABLE', retryable: true });
+    expect(body.answer).toBeUndefined();
+  });
+
+  it('commercial default uses a live effective runtime and returns execution provenance', async () => {
+    const dal = dalStub({
+      modelRuntimes: {
+        listProviders: vi.fn(async () => []),
+        getOverride: vi.fn(async () => null),
+        getProviderCredential: vi.fn(async () => null),
+      },
+    });
+    const res = await appFor(AUTH, dal).request('/api/v1/customer-chat', {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ message: 'What should I do next?' }),
+    }, {
+      CUSTOMER_SAFE_SERIALIZER_ENABLED: 'false',
+      AI: { run: async () => ({
+        response: 'A live provider answer grounded in Honest & Young and its current operating context.',
+        usage: { prompt_tokens: 23, completion_tokens: 15 },
+      }) },
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json() as Record<string, any>;
+    expect(body.generated_by).toBe('llm');
+    expect(body.execution).toMatchObject({
+      runtime_id: 'platform:workers_ai', provider: 'workers_ai', source: 'platform_default',
+      usage: { tokens_in: 23, tokens_out: 15 },
+    });
+    expect(body.answer).not.toMatch(/deterministic|fixture/i);
+  });
+
   it('answers COMPANY-AWARE from the captured profile (no LLM binding, 0 events → deterministic floor)', async () => {
     const res = await ask(appFor(AUTH, dalStub()), { message: 'what should I do?' });
     expect(res.status).toBe(200);
@@ -730,7 +776,7 @@ const GMAIL_ROW = {
   connected_at: '2026-07-01T00:00:00Z', last_sync_at: '2026-07-09T00:00:00Z', last_sync_error: null,
 };
 const askEnv = (app: Hono, body: Record<string, unknown>, env: Record<string, unknown>) =>
-  app.request('/api/v1/customer-chat', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }, { CUSTOMER_SAFE_SERIALIZER_ENABLED: 'false', ...env }); // raw pre-serializer contract (P3 opt-out)
+  app.request('/api/v1/customer-chat', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }, { CUSTOMER_SAFE_SERIALIZER_ENABLED: 'false', COMMERCIAL_LIVE_CHAT_REQUIRED: 'false', ...env }); // raw pre-serializer contract (P3 opt-out)
 
 describe('T1 · source-truth override (CHAT_SOURCE_TRUTH_OVERRIDE_ENABLED)', () => {
   const dal = () => dalStub({

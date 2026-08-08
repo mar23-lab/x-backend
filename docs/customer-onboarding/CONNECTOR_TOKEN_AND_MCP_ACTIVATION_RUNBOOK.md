@@ -56,19 +56,23 @@ curl -s -X POST https://api.xlooop.com/api/v1/developer-access/tokens \
   -H "Authorization: Bearer <owner-clerk-jwt>" \
   -H "content-type: application/json" \
   -d '{"role":"viewer","label":"Claude Code · read-only"}'
-# → { token: "xlk_ro_…", token_id, expires_at, connect: { whoami_check } }   (token shown ONCE)
+# → { token: "xlk_ro_…", token_id, expires_at, connect: { gateway_name: "xcp-gateway", profile: "customer", session_start_check } }
+#   (token shown ONCE)
 ```
 
 ### 5. Smoke the live connection  (the verification only the live endpoint can give)
 ```bash
 # A. direct REST
-curl -s https://api.xlooop.com/api/v1/mcp/whoami -H "Authorization: Bearer xlk_ro_…"
-#    expect: xlooop.mcp_whoami.v1, allowed_tools = 5, no forbidden surface.
+curl -s https://api.xlooop.com/api/v1/mcp/session-start -H "Authorization: Bearer xlk_ro_…"
+#    expect: xcp.session_start/v1, gateway.name = xcp-gateway, gateway_profile = customer,
+#    detected_role = not_applicable, entry_skill = not_applicable,
+#    tenant identity + scoped tools, requires_additional_gateway = false.
 
 # B. native MCP (the #744 endpoint)
-claude mcp add --transport http xlooop https://api.xlooop.com/api/v1/mcp/rpc \
+claude mcp add --transport http xcp-gateway https://api.xlooop.com/api/v1/mcp/rpc \
   --header "Authorization: Bearer xlk_ro_…"
-#    then in Claude Code: call xlooop.whoami → confirm identity + workspace.
+#    then in Claude Code: call xcp_session_start once.
+#    xlooop.whoami remains compatibility-only for older clients.
 ```
 
 ### 6. (Later, after proofs) Enable operator/write tokens

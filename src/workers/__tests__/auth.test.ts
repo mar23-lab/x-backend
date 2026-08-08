@@ -110,7 +110,9 @@ describe('Clerk JWT auth middleware', () => {
     const res = await app.fetch(req, stubEnvWithCanary());
     expect(res.status).toBe(200);
     const body = await getBody(res);
-    expect(body.schema_id).toBe('xlooop.mcp_gateway_tools.v1');
+    expect(body.schema_id).toBe('xcp.gateway_tools.v1');
+    expect(body.gateway_name).toBe('xcp-gateway');
+    expect(body.profile).toBe('customer');
     expect(Array.isArray(body.tools)).toBe(true);
     expect(Array.isArray(body.forbidden_surfaces)).toBe(true);
   });

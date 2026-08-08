@@ -6,7 +6,7 @@
   "strict_flag": "CONTEXT_PACKET_PERSISTENCE_ENABLED",
   "content_storage_policy": "No prompt, response, source body, document body, or customer content is stored in model_execution_receipts.",
   "callsites": [
-    { "id": "customer-chat", "path": "src/workers/routes/customer-chat.ts", "function": "answerCockpitChat", "anchor": "const result = await answerCockpitChat(", "observer_token": "executionObserver", "principal": "authenticated_customer", "action": "assistant:answer" },
+    { "id": "customer-chat", "path": "src/workers/routes/customer-chat.ts", "function": "answerCockpitChat", "anchor": "result = await answerCockpitChat(", "observer_token": "executionObserver", "principal": "authenticated_customer", "action": "assistant:answer" },
     { "id": "operator-chat", "path": "src/workers/routes/workspaces.ts", "function": "answerCockpitChat", "anchor": "const result = await answerCockpitChat(", "observer_token": "executionObserver", "principal": "authenticated_operator", "action": "assistant:answer" },
     { "id": "manual-workspace-digest", "path": "src/workers/routes/workspaces.ts", "function": "buildWorkspaceDigestLLM", "anchor": "const digest = await buildWorkspaceDigestLLM(", "observer_token": "digestObserver", "principal": "authenticated_operator", "action": "assistant:digest" },
     { "id": "scheduled-workspace-digest", "path": "src/workers/services/scheduled-digest-sweep.ts", "function": "buildWorkspaceDigestLLM", "anchor": "const digest = await buildWorkspaceDigestLLM(", "observer_token": "governed?.observer", "principal": "xlooop:digest-agent", "action": "assistant:digest" },

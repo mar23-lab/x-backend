@@ -86,7 +86,8 @@ function appWith(sqlStub: unknown) {
   return app;
 }
 const askEnv = (app: Hono, env: Record<string, unknown>) => app.request('/api/v1/customer-chat',
-  { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ message: 'hi' }) }, env);
+  { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ message: 'hi' }) },
+  { COMMERCIAL_LIVE_CHAT_REQUIRED: false, ...env });
 
 describe('D-16 · route flag gate (SOURCE_TIER_GROUNDING_ENABLED)', () => {
   it('flag ON: the injected sql read is threaded and the answer still grounds on the source', async () => {

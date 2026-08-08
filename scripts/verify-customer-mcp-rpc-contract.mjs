@@ -12,6 +12,7 @@ const failures = [];
 
 const files = {
   rpc: 'src/workers/routes/mcp-rpc.ts',
+  gateway: 'src/workers/routes/mcp-gateway.ts',
   index: 'src/workers/index.ts',
   test: 'src/workers/__tests__/mcp-rpc-route.test.ts',
   packageJson: 'package.json',
@@ -32,13 +33,19 @@ check(src.rpc.includes('-32602'), 'rpc_invalid_params', 'Bad/unknown tool calls 
 for (const writeTool of ['submit_evidence', 'report_tool_event', 'request_approval', 'submit_learning_signal']) {
   check(!src.rpc.includes(`xlooop.${writeTool}`), `rpc_no_write_${writeTool}`, `MCP endpoint must not expose the write tool xlooop.${writeTool}.`);
 }
-for (const readTool of ['xlooop.whoami', 'xlooop.get_task_packet', 'xlooop.get_workflow_status', 'xlooop.get_effective_templates', 'xlooop.get_effective_profile']) {
+for (const readTool of ['xcp_session_start', 'xlooop.whoami', 'xlooop.get_task_packet', 'xlooop.get_workflow_status', 'xlooop.get_effective_templates', 'xlooop.get_effective_profile']) {
   check(src.rpc.includes(readTool), `rpc_has_read_${readTool.replace(/\W+/g, '_')}`, `MCP endpoint must expose ${readTool}.`);
 }
 
 // ---- Single-sourced: tools/call dispatches to the REST handlers, with auth forwarded ----
-check(src.rpc.includes('dispatch(') && src.rpc.includes("path: '/api/v1/mcp/whoami'"), 'rpc_dispatch_reuse', 'tools/call must dispatch to the existing REST tool paths, not re-implement them.');
+check(src.rpc.includes('dispatch(') && src.rpc.includes("path: '/api/v1/mcp/session-start'"), 'rpc_dispatch_reuse', 'xcp_session_start must dispatch to the existing authenticated REST path, not re-implement tenant intake.');
 check(/headers\.set\('Authorization', auth\)/.test(src.rpc) || src.rpc.includes("headers.set('Authorization'"), 'rpc_forwards_auth', 'tools/call must forward the caller Authorization header.');
+check(src.rpc.includes("name: 'xcp-gateway'") && src.rpc.includes("profile: 'customer'"), 'rpc_canonical_customer_profile', 'Server metadata must advertise canonical xcp-gateway with profile=customer.');
+check(src.test.includes('requires_additional_gateway: false'), 'rpc_single_hop_test', 'Behavior tests must prove customer session intake needs no second gateway hop.');
+for (const marker of ["schema_id: 'xcp.session_start/v1'", "gateway_profile: XCP_GATEWAY_PROFILE", "detected_role: 'not_applicable'", "entry_skill: 'not_applicable'"]) {
+  check(src.gateway.includes(marker), `session_contract_${marker.replace(/\W+/g, '_')}`, `Customer session-start contract must include ${marker}.`);
+}
+check(!src.rpc.includes('xlooop-customer-gateway') && !src.gateway.includes('xlooop-customer-gateway'), 'legacy_gateway_absent', 'Legacy connector names must not appear in live config or discovery.');
 
 // ---- Auth-protected mount (under the operational route group; never a public route) ----
 check(src.index.includes('createMcpRpcRoute('), 'index_mounts_rpc', 'index.ts must mount the MCP-RPC route.');

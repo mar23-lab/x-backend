@@ -1,8 +1,8 @@
-// mcp-gateway.ts · safe execution gateway for scoped packets and evidence.
+// mcp-gateway.ts · customer profile of the canonical xcp-gateway.
 //
-// This is not a raw graph or memory API. MCP-style clients receive signed,
-// tenant-scoped task packets, then report evidence, tool events, approvals, and
-// status against the operational spine.
+// This is a tenant data-plane/resource server, not a second governance or session-intake
+// authority. xcp_session_start performs the one customer session intake and returns identity,
+// scoped context, and tools; clients never need to traverse another gateway first.
 
 import { Hono } from 'hono';
 import { envFlagTrue } from '../lib/env-flag';
@@ -43,10 +43,13 @@ export const mcpGatewayRoute = new Hono<{
 // it group-wide like operational-spine.ts:39 (flag-off ⇒ passthrough, byte-identical).
 mcpGatewayRoute.use('*', idempotencyMiddleware());
 
-export const CUSTOMER_MCP_CONNECTOR_NAMESPACE = 'xlooop-customer-gateway';
+export const XCP_GATEWAY_NAME = 'xcp-gateway';
+export const XCP_GATEWAY_PROFILE = 'customer';
+export const CUSTOMER_MCP_CONNECTOR_NAMESPACE = XCP_GATEWAY_NAME;
 
 export const SAFE_TOOLS = [
-  { name: 'xlooop.whoami', action: 'whoami', method: 'GET', path: '/api/v1/mcp/whoami' },
+  { name: 'xcp_session_start', action: 'session_start', method: 'GET', path: '/api/v1/mcp/session-start' },
+  { name: 'xlooop.whoami', action: 'whoami', method: 'GET', path: '/api/v1/mcp/whoami', compatibility_only: true },
   { name: 'xlooop.get_task_packet', action: 'get_task_packet', method: 'GET', path: '/api/v1/mcp/task-packets/:id' },
   { name: 'xlooop.get_effective_templates', action: 'get_effective_templates', method: 'GET', path: '/api/v1/template-policy/effective-snapshots' },
   { name: 'xlooop.get_effective_profile', action: 'get_effective_profile', method: 'GET', path: '/api/v1/template-policy/personalization/effective-profile' },
@@ -70,6 +73,20 @@ export const SAFE_TOOLS = [
   { name: 'xlooop.list_events', action: 'list_events', method: 'GET', path: '/api/v1/mcp/events' },
   { name: 'xlooop.get_plan', action: 'get_plan', method: 'GET', path: '/api/v1/mcp/plan/:scopeId' },
 ] as const;
+
+const GOVERNED_WRITE_ACTIONS = new Set([
+  'submit_evidence', 'report_tool_event', 'request_approval',
+]);
+
+function customerScopedTools(auth: AuthContext) {
+  const canGovernedWrite = auth.role === 'owner' || auth.role === 'operator';
+  return SAFE_TOOLS.filter((tool) => {
+    if (tool.name === 'xcp_session_start' || tool.name === 'xlooop.whoami') return false;
+    if (GOVERNED_WRITE_ACTIONS.has(tool.action)) return canGovernedWrite;
+    if (tool.action === 'submit_learning_signal') return !auth.service_principal;
+    return true;
+  });
+}
 
 export const FORBIDDEN_SURFACES = [
   'raw_graph',
@@ -232,7 +249,9 @@ async function signPacket(secret: string, payload: string): Promise<string> {
 
 mcpGatewayRoute.get('/tools', (ctx) => {
   return ctx.json({
-    schema_id: 'xlooop.mcp_gateway_tools.v1',
+    schema_id: 'xcp.gateway_tools.v1',
+    gateway_name: XCP_GATEWAY_NAME,
+    profile: XCP_GATEWAY_PROFILE,
     connector_namespace: CUSTOMER_MCP_CONNECTOR_NAMESPACE,
     tools: SAFE_TOOLS,
     forbidden_surfaces: FORBIDDEN_SURFACES,
@@ -242,12 +261,44 @@ mcpGatewayRoute.get('/tools', (ctx) => {
 // T4/P7 · mount the customer-data READ tools on the same /mcp namespace + auth plane.
 mcpGatewayRoute.route('/', mcpCustomerReadsRoute);
 
+function customerSessionStartEnvelope(auth: AuthContext) {
+  const whoami = whoamiEnvelope(auth);
+  return {
+    schema_id: 'xcp.session_start/v1',
+    contract: 'xcp.session_start/v1',
+    gateway: { name: XCP_GATEWAY_NAME, profile: XCP_GATEWAY_PROFILE },
+    gateway_profile: XCP_GATEWAY_PROFILE,
+    detected_role: 'not_applicable',
+    entry_skill: 'not_applicable',
+    identity: whoami.identity,
+    context: {
+      tenant_id: auth.workspace_id,
+      workspace_id: auth.workspace_id,
+      role: auth.role,
+      scopes: whoami.identity.scopes,
+      forbidden_surfaces: FORBIDDEN_SURFACES,
+    },
+    scoped_tools: customerScopedTools(auth),
+    requires_additional_gateway: false,
+  };
+}
+
+mcpGatewayRoute.get('/session-start', (ctx) => {
+  return ctx.json(customerSessionStartEnvelope(ctx.get('auth')));
+});
+
+// Compatibility only. New clients use xcp_session_start and receive identity plus scoped tools/context.
 mcpGatewayRoute.get('/whoami', (ctx) => {
   return ctx.json({
     ...whoamiEnvelope(ctx.get('auth')),
     schema_id: 'xlooop.mcp_whoami.v1',
     connector_namespace: CUSTOMER_MCP_CONNECTOR_NAMESPACE,
+    profile: XCP_GATEWAY_PROFILE,
     allowed_tools: SAFE_TOOLS,
+    compatibility: {
+      alias_of: 'xcp_session_start',
+      deprecated: true,
+    },
   });
 });
 

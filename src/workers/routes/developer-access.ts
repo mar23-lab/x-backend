@@ -16,6 +16,7 @@ import {
   CUSTOMER_MCP_CONNECTOR_NAMESPACE,
   FORBIDDEN_SURFACES as MCP_FORBIDDEN_SURFACES,
   SAFE_TOOLS,
+  XCP_GATEWAY_PROFILE,
 } from './mcp-gateway';
 import { whoamiEnvelope } from './template-policy-registry';
 import { hashToken } from '../dal/customer-token-store';
@@ -44,6 +45,7 @@ const READ_ONLY_ENDPOINTS = [
   '/api/v1/customer/workspace-feed',
   '/api/v1/developer-access/status',
   '/api/v1/developer-access/test',
+  '/api/v1/mcp/session-start',
   '/api/v1/mcp/whoami',
   '/api/v1/mcp/tools',
 ] as const;
@@ -112,6 +114,7 @@ function buildStatus(auth: AuthContext, workspaceName: string) {
     public_api_ready: false,
     full_api_blocked: true,
     connector_namespace: CUSTOMER_MCP_CONNECTOR_NAMESPACE,
+    profile: XCP_GATEWAY_PROFILE,
     workspace_label: workspaceName,
     user_label: labelUser(auth),
     supported_clients: SUPPORTED_CLIENTS,
@@ -258,8 +261,11 @@ developerAccessRoute.post('/developer-access/tokens', async (ctx) => {
       warning:
         'Store this token in your agent config now. It is shown once and never again. Never paste it into chat, docs, tickets, or email.',
       connect: {
-        endpoint: 'https://api.xlooop.com/api/v1/mcp',
-        whoami_check: `curl -s https://api.xlooop.com/api/v1/mcp/whoami -H "Authorization: Bearer ${raw}"`,
+        gateway_name: CUSTOMER_MCP_CONNECTOR_NAMESPACE,
+        profile: XCP_GATEWAY_PROFILE,
+        endpoint: 'https://api.xlooop.com/api/v1/mcp/rpc',
+        session_start_check: `curl -s https://api.xlooop.com/api/v1/mcp/session-start -H "Authorization: Bearer ${raw}"`,
+        compatibility_whoami_check: `curl -s https://api.xlooop.com/api/v1/mcp/whoami -H "Authorization: Bearer ${raw}"`,
       },
     });
   } catch (err) {

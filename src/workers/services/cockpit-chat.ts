@@ -16,6 +16,13 @@ import type { HarnessFlowEvent, EventStatus } from '../dal/types/event';
 import type { AiRunner } from './agent-digest';
 import { companyContextPreamble } from '../dal/customer-context-store';
 import type { ModelExecutionObserver } from '../lib/model-execution-lineage';
+import {
+  executeEffectiveRuntimePlan,
+  type EffectiveRuntimePlan,
+  type RuntimeExecutionAttempt,
+  type RuntimeResolutionSource,
+  type LiveRuntimeProvider,
+} from './model-runtime-execution';
 
 /** The Workers-AI text model — same small instruct model the digest agent uses (free-tier friendly). */
 export const COCKPIT_CHAT_LLM_MODEL = '@cf/meta/llama-3.1-8b-instruct';
@@ -224,6 +231,17 @@ export interface CockpitChatResult {
    *  dal/llm-usage-store.ts behind LLM_USAGE_METERING_ENABLED. undefined on deterministic answers; token
    *  fields null when the provider didn't report usage (Workers-AI usage is optional). */
   usage?: { tokens_in: number | null; tokens_out: number | null } | null;
+  /** Commercial live-runtime provenance. Credentials and raw prompts are never included. */
+  execution?: {
+    receipt_id: string | null;
+    runtime_id: string;
+    provider: LiveRuntimeProvider;
+    model: string;
+    source: RuntimeResolutionSource;
+    provider_config_version_id: string | null;
+    latency_ms: number;
+    attempts: RuntimeExecutionAttempt[];
+  };
   /** Provenance the UI shows so the answer visibly references the real record. */
   grounded_on: {
     /** W1 (260708) · the operation_events/governance ids the answer grounded on — the LIVE-link source the
@@ -1324,6 +1342,7 @@ export async function answerCockpitChat(
   claudeKey?: string,
   llmChoice: CockpitChatLLM = 'llama',
   executionObserver?: ModelExecutionObserver,
+  liveRuntimePlan?: EffectiveRuntimePlan,
 ): Promise<CockpitChatResult> {
   const grounded = compileChatFacts(facts, message);
   // P0.1 · the deterministic FLOOR must be honest about staleness too (it is the guaranteed fallback).
@@ -1346,7 +1365,7 @@ export async function answerCockpitChat(
       : projectPlanQuestion
       ? buildProjectPlanAnswer(grounded)
       : buildDeterministicChatAnswer(message, grounded, facts.scope, mode, facts.companyContext));
-  if (projectInventoryQuestion || projectPlanQuestion) {
+  if ((projectInventoryQuestion || projectPlanQuestion) && !liveRuntimePlan) {
     return {
       answer: deterministic,
       generated_by: 'deterministic',
@@ -1482,6 +1501,37 @@ export async function answerCockpitChat(
   // reasons over the records for per-item precision; the prose above is the same data, summarized.
   const structuredBlock = buildStructuredFactBlock(facts, grounded);
   const userPrompt = `Event facts:\n${factLines.join('\n')}\n\nStructured facts (typed records of the SAME items — reason over these for precise, per-item answers; never invent fields):\n${structuredBlock}\n\nOperator question: ${String(message || '').slice(0, 600)}`;
+
+  // Commercial live-AI path. The route resolves tenant/user runtime precedence before entering this
+  // service. Every candidate is a real provider; failures remain typed failures and can never become
+  // deterministic assistant prose. The legacy ladder below remains available only to explicitly
+  // non-commercial callers while they migrate to the resolver.
+  if (liveRuntimePlan) {
+    const live = await executeEffectiveRuntimePlan({
+      plan: liveRuntimePlan,
+      system: systemPrompt,
+      user: userPrompt,
+      maxTokens: mode === 'deep-research' ? 900 : 700,
+      observer: executionObserver,
+    });
+    return {
+      answer: live.text,
+      generated_by: 'llm',
+      grounded_on: grounded,
+      model: live.runtime.model,
+      usage: live.usage,
+      execution: {
+        receipt_id: live.execution_receipt_id,
+        runtime_id: live.runtime.runtime_id,
+        provider: live.runtime.provider,
+        model: live.runtime.model,
+        source: live.runtime.source,
+        provider_config_version_id: live.runtime.provider_config_version_id,
+        latency_ms: live.latency_ms,
+        attempts: live.attempts,
+      },
+    };
+  }
 
   // 260805 · THESE TWO PARAGRAPHS USED TO CONTRADICT EACH OTHER, IN ADJACENT LINES.
   // The first said Claude is primary "for EVERY read mode whenever ANTHROPIC_API_KEY is configured";

@@ -5693,6 +5693,184 @@
           "reason": "comment condensation to hold the 500-line ratchet"
         }
       ]
+    },
+    {
+      "delta_id": "customer-profile-live-chat-callsite-260808",
+      "generated_at": "2026-08-08T10:44:52.929Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "60d9320d0e840845bc286ad153f99d9d38f4f706",
+      "target_base_commit": "60d9320d0e840845bc286ad153f99d9d38f4f706",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "docs/contracts/model-execution-callsite-manifest.json",
+          "target_blob": "c3709ad28ba8b99e0349bf69424118ce15b4db31",
+          "reason": "Update customer chat model-execution anchor after live-only dispatch"
+        }
+      ]
+    },
+    {
+      "delta_id": "customer-profile-live-chat-260808",
+      "generated_at": "2026-08-08T10:52:16.831Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "60d9320d0e840845bc286ad153f99d9d38f4f706",
+      "target_base_commit": "60d9320d0e840845bc286ad153f99d9d38f4f706",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "docs/architecture/backend/API_CONTRACT_V1.md",
+          "target_blob": "7e3bd68f1c6541249b152f18db647112a40d7906",
+          "reason": "Canonical xcp-gateway customer profile and production live-only chat runtime"
+        },
+        {
+          "path": "docs/architecture/backend/CUSTOMER_LEARNING_PERSONALIZATION_ARCHITECTURE.md",
+          "target_blob": "0b01db856ecf9cfaeb2995b19c9a4a24a751e03b",
+          "reason": "Canonical xcp-gateway customer profile and production live-only chat runtime"
+        },
+        {
+          "path": "docs/contracts/api-contract.v1.json",
+          "target_blob": "e536afc65f46a41c914bc5e215c6648cf15a0e3a",
+          "reason": "Canonical xcp-gateway customer profile and production live-only chat runtime"
+        },
+        {
+          "path": "docs/customer-onboarding/CONNECTOR_TOKEN_AND_MCP_ACTIVATION_RUNBOOK.md",
+          "target_blob": "c1de700584800bddebb1477976a3d20272118956",
+          "reason": "Canonical xcp-gateway customer profile and production live-only chat runtime"
+        },
+        {
+          "path": "package.json",
+          "target_blob": "3159a184e699d72f20151f208bf31856c41df1ec",
+          "reason": "Canonical xcp-gateway customer profile and production live-only chat runtime"
+        },
+        {
+          "path": "scripts/verify-customer-learning-personalization.mjs",
+          "target_blob": "2ebd741d2bed785d7856e6e74887b208bdae0e37",
+          "reason": "Canonical xcp-gateway customer profile and production live-only chat runtime"
+        },
+        {
+          "path": "scripts/verify-customer-mcp-rpc-contract.mjs",
+          "target_blob": "3181bc7a4e1328879f01f1f1a55d05ca0a6e8618",
+          "reason": "Canonical xcp-gateway customer profile and production live-only chat runtime"
+        },
+        {
+          "path": "src/workers/__tests__/auth.test.ts",
+          "target_blob": "c436c238832dd865db762a50c92b882aff247e7c",
+          "reason": "Canonical xcp-gateway customer profile and production live-only chat runtime"
+        },
+        {
+          "path": "src/workers/__tests__/chat-assembly-trace.test.ts",
+          "target_blob": "342fb1d20af2d74b6637f41c1fe812a0d5aa82a3",
+          "reason": "Canonical xcp-gateway customer profile and production live-only chat runtime"
+        },
+        {
+          "path": "src/workers/__tests__/customer-chat-route.test.ts",
+          "target_blob": "51d1ae8a5148f83c464855744c70729fdc3d8fe0",
+          "reason": "Canonical xcp-gateway customer profile and production live-only chat runtime"
+        },
+        {
+          "path": "src/workers/__tests__/customer-safe-decision.test.ts",
+          "target_blob": "b1d73f2175f2eb8932aaaeaa7df9f194b4870833",
+          "reason": "Canonical xcp-gateway customer profile and production live-only chat runtime"
+        },
+        {
+          "path": "src/workers/__tests__/llm-usage-metering.test.ts",
+          "target_blob": "e535f56994d19a01407d65f15447c7f4afdc180e",
+          "reason": "Canonical xcp-gateway customer profile and production live-only chat runtime"
+        },
+        {
+          "path": "src/workers/__tests__/mcp-gateway-route.test.ts",
+          "target_blob": "8ded563eff63f2f653affc19cbb6451619d064ba",
+          "reason": "Canonical xcp-gateway customer profile and production live-only chat runtime"
+        },
+        {
+          "path": "src/workers/__tests__/mcp-rpc-route.test.ts",
+          "target_blob": "0bae7586e9e7668f982aa540404940ef38bfc36d",
+          "reason": "Canonical xcp-gateway customer profile and production live-only chat runtime"
+        },
+        {
+          "path": "src/workers/__tests__/operator-workspace-scope.test.ts",
+          "target_blob": "1701264436f03d741c77099431b76dde3cc0e3a0",
+          "reason": "Canonical xcp-gateway customer profile and production live-only chat runtime"
+        },
+        {
+          "path": "src/workers/dal/types/auth.ts",
+          "target_blob": "18621ed9cefd8d4b5ea104a3e02e5ea9171157bc",
+          "reason": "Canonical xcp-gateway customer profile and production live-only chat runtime"
+        },
+        {
+          "path": "src/workers/lib/customer-safe-decision.ts",
+          "target_blob": "7f690c1742bae5a06ddf58bfbb8e5ff553e443c8",
+          "reason": "Canonical xcp-gateway customer profile and production live-only chat runtime"
+        },
+        {
+          "path": "src/workers/lib/model-execution-lineage.ts",
+          "target_blob": "dbf388897b1a70d9e84c5debbc63cf321211ab78",
+          "reason": "Canonical xcp-gateway customer profile and production live-only chat runtime"
+        },
+        {
+          "path": "src/workers/lib/observability.ts",
+          "target_blob": "7112280022da8eb4de860f5be967b42414591323",
+          "reason": "Canonical xcp-gateway customer profile and production live-only chat runtime"
+        },
+        {
+          "path": "src/workers/middleware/error.ts",
+          "target_blob": "4bc0e51ef9a6664b436c51ec32597c2f961f9f07",
+          "reason": "Canonical xcp-gateway customer profile and production live-only chat runtime"
+        },
+        {
+          "path": "src/workers/routes/customer-chat.ts",
+          "target_blob": "4e17b7a524d5a47f330e63bbb0c87a79460250d7",
+          "reason": "Canonical xcp-gateway customer profile and production live-only chat runtime"
+        },
+        {
+          "path": "src/workers/routes/customer-workspace-feed.ts",
+          "target_blob": "5ccd31173ad82a305c48f100d2dc7afe02c255fd",
+          "reason": "Canonical xcp-gateway customer profile and production live-only chat runtime"
+        },
+        {
+          "path": "src/workers/routes/developer-access.ts",
+          "target_blob": "e4dfc4faa1a7b8d2b943eedbac662f7f8da96957",
+          "reason": "Canonical xcp-gateway customer profile and production live-only chat runtime"
+        },
+        {
+          "path": "src/workers/routes/mcp-gateway.ts",
+          "target_blob": "ff9e4ab595fdf2abf88c37362494b45c17f67539",
+          "reason": "Canonical xcp-gateway customer profile and production live-only chat runtime"
+        },
+        {
+          "path": "src/workers/routes/mcp-rpc.ts",
+          "target_blob": "1a29c2f7af574039806cf9033174c6f4ffbade8b",
+          "reason": "Canonical xcp-gateway customer profile and production live-only chat runtime"
+        },
+        {
+          "path": "src/workers/services/cockpit-chat.ts",
+          "target_blob": "6969370b679a7798222b6551a93c0f0ec0d135fb",
+          "reason": "Canonical xcp-gateway customer profile and production live-only chat runtime"
+        },
+        {
+          "path": "wrangler.toml",
+          "target_blob": "0520f515ff3445ef4d54dd8377da79e7f82b2f05",
+          "reason": "Canonical xcp-gateway customer profile and production live-only chat runtime"
+        }
+      ]
+    },
+    {
+      "delta_id": "customer-profile-live-chat-source-tier-fixture-260808",
+      "generated_at": "2026-08-08T11:00:57.903Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "60d9320d0e840845bc286ad153f99d9d38f4f706",
+      "target_base_commit": "60d9320d0e840845bc286ad153f99d9d38f4f706",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/__tests__/source-tier-grounding.test.ts",
+          "target_blob": "3f39bdce0e24b0a3154ad60a6a00a034b5ed0176",
+          "reason": "marks the source-tier fixture as a deterministic-path test so production live-chat enforcement remains fail-closed"
+        }
+      ]
     }
   ]
 }

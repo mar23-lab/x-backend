@@ -111,7 +111,7 @@ function appWithCapture(captured: { messages: unknown[] }) {
 // internal-builder suite: asserts the raw grounded_on trace — opt out of the default-ON customer-safe
 // serializer (P3 260714) so the pre-serializer contract stays testable.
 const ask = (app: Hono, env: Record<string, unknown>) => app.request('/api/v1/customer-chat',
-  { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ message: 'hi' }) }, { CUSTOMER_SAFE_SERIALIZER_ENABLED: 'false', ...env });
+  { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ message: 'hi' }) }, { CUSTOMER_SAFE_SERIALIZER_ENABLED: 'false', COMMERCIAL_LIVE_CHAT_REQUIRED: 'false', ...env });
 
 describe('L1 · route flag gate (CHAT_ASSEMBLY_TRACE_ENABLED)', () => {
   it('flag OFF: the persisted grounded_on is the result grounded_on UNCHANGED (no assembly key)', async () => {

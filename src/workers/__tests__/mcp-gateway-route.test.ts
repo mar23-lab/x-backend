@@ -110,12 +110,26 @@ function request(
 }
 
 describe('safe MCP gateway routes', () => {
-  it('GET /tools exposes only safe scoped tools and explicit forbidden surfaces', async () => {
+  it('GET /tools exposes canonical xcp-gateway customer-profile metadata and safe tools', async () => {
     const { res } = await request('GET', '/tools', VIEWER);
     expect(res.status).toBe(200);
-    const body = await res.json() as { connector_namespace: string; tools: Array<{ name: string }>; forbidden_surfaces: string[] };
-    expect(body.connector_namespace).toBe('xlooop-customer-gateway');
+    const body = await res.json() as {
+      schema_id: string;
+      gateway_name: string;
+      profile: string;
+      connector_namespace: string;
+      tools: Array<{ name: string }>;
+      forbidden_surfaces: string[];
+    };
+    expect(body).toMatchObject({
+      schema_id: 'xcp.gateway_tools.v1',
+      gateway_name: 'xcp-gateway',
+      profile: 'customer',
+      connector_namespace: 'xcp-gateway',
+    });
+    expect(JSON.stringify(body)).not.toContain('xlooop-customer-gateway');
     expect(body.tools.map((tool) => tool.name)).toEqual([
+      'xcp_session_start',
       'xlooop.whoami',
       'xlooop.get_task_packet',
       'xlooop.get_effective_templates',
@@ -142,18 +156,55 @@ describe('safe MCP gateway routes', () => {
     expect(body.forbidden_surfaces).toContain('graph_authority');
   });
 
-  it('GET /whoami returns redacted identity binding for API/MCP customers', async () => {
+  it('GET /session-start performs tenant whoami and returns scoped context/tools in one hop', async () => {
+    const { res, calls } = await request('GET', '/session-start', VIEWER);
+    expect(res.status).toBe(200);
+    const body = await res.json() as any;
+    expect(body).toMatchObject({
+      schema_id: 'xcp.session_start/v1',
+      contract: 'xcp.session_start/v1',
+      gateway: { name: 'xcp-gateway', profile: 'customer' },
+      gateway_profile: 'customer',
+      detected_role: 'not_applicable',
+      entry_skill: 'not_applicable',
+      identity: { user_id: 'user_viewer', tenant_id: 'tenant_a', role: 'viewer' },
+      context: { tenant_id: 'tenant_a', workspace_id: 'tenant_a', role: 'viewer' },
+      requires_additional_gateway: false,
+    });
+    expect(body.context.scopes).toContain('read:status');
+    expect(body.scoped_tools.map((tool: { name: string }) => tool.name)).toContain('xlooop.get_task_packet');
+    expect(body.scoped_tools.map((tool: { name: string }) => tool.name)).not.toContain('xlooop.submit_evidence');
+    expect(body.scoped_tools.map((tool: { name: string }) => tool.name)).not.toContain('xcp_session_start');
+    expect(body.scoped_tools.map((tool: { name: string }) => tool.name)).not.toContain('xlooop.whoami');
+    expect(JSON.stringify(body)).not.toContain('xlooop-customer-gateway');
+    expect(calls).toEqual([]);
+  });
+
+  it('GET /session-start advertises governed writes only for an eligible role', async () => {
+    const { res } = await request('GET', '/session-start', OPERATOR);
+    const body = await res.json() as any;
+    expect(body.scoped_tools.map((tool: { name: string }) => tool.name)).toEqual(expect.arrayContaining([
+      'xlooop.submit_evidence',
+      'xlooop.report_tool_event',
+      'xlooop.request_approval',
+    ]));
+  });
+
+  it('GET /whoami remains a compatibility-only identity alias', async () => {
     const { res } = await request('GET', '/whoami', VIEWER);
     expect(res.status).toBe(200);
     const body = await res.json() as {
       schema_id: string;
       connector_namespace: string;
+      profile: string;
       identity: { user_id: string; tenant_id: string; role: string; auth_method: string };
       allowed_tools: Array<{ name: string }>;
       forbidden_surfaces: string[];
+      compatibility: { alias_of: string; deprecated: boolean };
     };
     expect(body.schema_id).toBe('xlooop.mcp_whoami.v1');
-    expect(body.connector_namespace).toBe('xlooop-customer-gateway');
+    expect(body.connector_namespace).toBe('xcp-gateway');
+    expect(body.profile).toBe('customer');
     expect(body.identity).toMatchObject({
       user_id: 'user_viewer',
       tenant_id: 'tenant_a',
@@ -162,6 +213,11 @@ describe('safe MCP gateway routes', () => {
     });
     expect(body.allowed_tools.map((tool) => tool.name)).toContain('xlooop.whoami');
     expect(body.forbidden_surfaces).toContain('governance_scoring');
+    expect(body.compatibility).toEqual({
+      alias_of: 'xcp_session_start',
+      deprecated: true,
+    });
+    expect(JSON.stringify(body)).not.toContain('xlooop-customer-gateway');
   });
 
   it('GET /task-packets/:id returns a signed scoped packet envelope', async () => {

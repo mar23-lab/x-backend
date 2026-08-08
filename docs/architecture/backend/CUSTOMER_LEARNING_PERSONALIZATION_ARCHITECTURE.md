@@ -89,21 +89,19 @@ tools, but they are not graph authority. They may read effective profiles and
 submit learning signals. Company-level promotion remains native, approved, and
 audited.
 
-Current Codex desktop sessions still enter through `mb-p-gateway` because MB-P
-is the governance SSOT. Xlooop API/MCP is the customer/product runtime
-projection. Switching a Codex session to native Xlooop tools requires a
-separate exposed connector/tool namespace; until then the safe path is the
-terminal/API parity harness with scoped service-principal tokens.
+MB-P remains the governance SSOT. The agent-facing runtime exposes one canonical
+`xcp-gateway`; Xlooop customer capabilities are its `customer` profile and remain a
+tenant-scoped product data plane, not a second governance or session-intake authority.
 
 Recommended connector posture:
 
-- Keep `mb-p-gateway` as the required governance entrypoint for MB-P/XCP work.
-- Expose Xlooop as a separate customer connector, for example
-  `xlooop-customer-gateway`, once the runtime can load it.
-- First call through that connector must be `xlooop.whoami`.
+- Advertise the canonical `xcp-gateway` with `profile=customer` for customer sessions.
+- Start each customer session once with `xcp_session_start`; it returns
+  `xcp.session_start/v1`, tenant identity, scoped context, and tools without another gateway hop.
+- Keep `xlooop.whoami` only as a compatibility tool; live config and discovery advertise no legacy gateway name.
 - Every request must re-check token validity, tenant membership, DB RBAC, and
   scope.
-- Allowed connector tools are limited to `xlooop.whoami`, scoped packet read,
+- Allowed customer-profile tools are limited to scoped packet read,
   effective template/profile read, private learning-signal submission, status
   and metrics, evidence submission, tool-event reporting, and approval request.
 - Xlooop MCP tools may call scoped customer APIs, but they must not return raw
