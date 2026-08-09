@@ -4,6 +4,13 @@ import type { ModelExecutionObserver } from '../lib/model-execution-lineage';
 import { decryptCredential, modelRuntimeEncryptionConfig } from '../lib/model-runtime-crypto';
 import type { AiRunner } from './agent-digest';
 import {
+  defaultModelFor,
+  PLATFORM_ANTHROPIC_MODEL,
+  PLATFORM_WORKERS_AI_MODEL,
+  runtimeProviderCapability,
+  supportedModels,
+} from './model-runtime-capabilities';
+import {
   CLOUD_EXECUTABLE_PROVIDERS,
   discoverCloudRuntimeModels,
   executeCloudRuntime,
@@ -11,9 +18,13 @@ import {
   type CloudRuntimeProvider,
 } from './model-runtime-provider-adapters';
 
-export const PLATFORM_WORKERS_AI_MODEL = '@cf/meta/llama-3.1-8b-instruct';
-const PLATFORM_ANTHROPIC_MODEL = 'claude-sonnet-4-6';
-const RELAY_REQUIRED_PROVIDERS = ['ollama', 'lm_studio', 'vllm', 'llama_cpp', 'custom'] as const;
+export {
+  commercialLiveChatRequired,
+  isExecutableRuntimeProvider,
+  PLATFORM_WORKERS_AI_MODEL,
+  runtimeProviderCapability,
+  supportedModels,
+} from './model-runtime-capabilities';
 
 export type LiveRuntimeProvider = 'workers_ai' | CloudRuntimeProvider;
 export type RuntimeResolutionSource = 'request_preference' | 'user_override' | 'workspace_default' | 'platform_default';
@@ -111,43 +122,8 @@ export class RuntimePreferenceError extends Error {
   }
 }
 
-export function commercialLiveChatRequired(raw: string | undefined): boolean {
-  const value = String(raw ?? '').trim().toLowerCase();
-  return !['false', 'off', '0', 'no', 'disabled'].includes(value);
-}
-
-const DEFAULT_MODELS: Partial<Record<ModelRuntimeProvider | 'workers_ai', string>> = {
-  workers_ai: PLATFORM_WORKERS_AI_MODEL,
-  anthropic: PLATFORM_ANTHROPIC_MODEL,
-  openai: 'gpt-4o-mini',
-  google: 'gemini-3.5-flash',
-  mistral: 'mistral-small-latest',
-  deepseek: 'deepseek-v4-flash',
-  openrouter: 'openai/gpt-4o-mini',
-};
-
-export function isExecutableRuntimeProvider(provider: ModelRuntimeProvider | 'workers_ai'): boolean {
-  return provider === 'workers_ai' || (CLOUD_EXECUTABLE_PROVIDERS as readonly string[]).includes(provider);
-}
-
 function isCloudRuntimeProvider(provider: ModelRuntimeProvider): provider is CloudRuntimeProvider {
   return (CLOUD_EXECUTABLE_PROVIDERS as readonly string[]).includes(provider);
-}
-
-export function runtimeProviderCapability(
-  provider: ModelRuntimeProvider | 'workers_ai',
-): 'EXECUTABLE' | 'RELAY_REQUIRED' | 'ADAPTER_UNAVAILABLE' {
-  if (isExecutableRuntimeProvider(provider)) return 'EXECUTABLE';
-  if ((RELAY_REQUIRED_PROVIDERS as readonly string[]).includes(provider)) return 'RELAY_REQUIRED';
-  return 'ADAPTER_UNAVAILABLE';
-}
-
-export function supportedModels(
-  provider: ModelRuntimeProvider | 'workers_ai',
-  configuredModel?: string | null,
-): string[] {
-  const models = [configuredModel, DEFAULT_MODELS[provider]].filter((value): value is string => Boolean(value));
-  return [...new Set(models)];
 }
 
 function providerConfigVersion(row: ProviderConfigRow): string {
@@ -199,7 +175,7 @@ async function resolveConfiguredRow(
     runtime: {
       runtime_id: row.id,
       provider: row.provider,
-      model: row.model?.trim() || DEFAULT_MODELS[row.provider] || '',
+      model: row.model?.trim() || defaultModelFor(row.provider),
       source,
       provider_config_version_id: providerConfigVersion(row),
       base_url: row.base_url,
