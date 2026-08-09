@@ -84,6 +84,19 @@ export interface SealedCredential {
   iv: string; // base64 of the 12-byte IV
 }
 
+/** Key id carried by a versioned envelope, or null for legacy unversioned ciphertext. */
+export function credentialEnvelopeKeyId(sealed: Pick<SealedCredential, 'ciphertext'>): string | null {
+  const match = sealed.ciphertext.match(/^xcp1\.([^.]+)\./);
+  return match ? decodeURIComponent(match[1]) : null;
+}
+
+/** Active key id for rotation workflows. Legacy single-key deployments return null. */
+export function modelRuntimeActiveKeyId(config: ModelRuntimeEncryptionConfig): string | null {
+  if (!config || typeof config === 'string') return null;
+  const keyId = config.active_key_id.trim();
+  return keyId && config.keys[keyId] ? keyId : null;
+}
+
 /** Encrypt a plaintext credential (typically a JSON string) with a fresh IV. Fail-closed on a bad key. */
 export async function encryptCredential(config: ModelRuntimeEncryptionConfig, plaintext: string): Promise<SealedCredential> {
   const keyId = typeof config === 'object' && config ? config.active_key_id.trim() : '';

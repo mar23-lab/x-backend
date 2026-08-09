@@ -9,6 +9,7 @@ import {
   listProvidersRow,
   getProviderCredentialRow,
   upsertProviderRow,
+  rotateProviderCredentialRow,
   deleteProviderRow,
   setDefaultProviderRow,
   getOverrideRow,
@@ -19,6 +20,7 @@ import {
   type ProviderConfigWriteReceipt,
   type ProviderConfigDeleteReceipt,
   type ProviderDefaultWriteReceipt,
+  type ProviderCredentialRotationReceipt,
   type ProviderUpsertInput,
   type SealedProviderCredential,
 } from './model-runtime-store';
@@ -30,6 +32,15 @@ export interface ModelRuntimesFacade {
   getProviderCredential(workspaceId: WorkspaceId, provider: ModelRuntimeProvider): Promise<SealedProviderCredential | null>;
   /** Upsert a provider config (audited). input.sealed null → metadata-only update, credential preserved. */
   upsertProvider(workspaceId: WorkspaceId, provider: ModelRuntimeProvider, input: ProviderUpsertInput, actorUserId: UserId): Promise<ProviderConfigWriteReceipt>;
+  /** Re-encrypt one stored credential under the active versioned key (audited). */
+  rotateProviderCredential(
+    workspaceId: WorkspaceId,
+    provider: ModelRuntimeProvider,
+    sealed: { ciphertext: string; iv: string },
+    actorUserId: UserId,
+    fromKeyId: string | null,
+    toKeyId: string,
+  ): Promise<ProviderCredentialRotationReceipt | null>;
   /** Delete a provider config (audited). null when no row was removed. */
   deleteProvider(workspaceId: WorkspaceId, provider: ModelRuntimeProvider, actorUserId: UserId): Promise<ProviderConfigDeleteReceipt | null>;
   /** Flip the workspace default (audited governed change). null when the id is not in the workspace. */
@@ -47,6 +58,8 @@ export function makeModelRuntimesFacade(getSql: () => Sql): ModelRuntimesFacade 
     listProviders: (workspaceId) => listProvidersRow(getSql(), workspaceId),
     getProviderCredential: (workspaceId, provider) => getProviderCredentialRow(getSql(), workspaceId, provider),
     upsertProvider: (workspaceId, provider, input, actorUserId) => upsertProviderRow(getSql(), workspaceId, provider, input, actorUserId),
+    rotateProviderCredential: (workspaceId, provider, sealed, actorUserId, fromKeyId, toKeyId) =>
+      rotateProviderCredentialRow(getSql(), workspaceId, provider, sealed, actorUserId, fromKeyId, toKeyId),
     deleteProvider: (workspaceId, provider, actorUserId) => deleteProviderRow(getSql(), workspaceId, provider, actorUserId),
     setDefaultProvider: (workspaceId, providerId, actorUserId) => setDefaultProviderRow(getSql(), workspaceId, providerId, actorUserId),
     getOverride: (userId, workspaceId) => getOverrideRow(getSql(), userId, workspaceId),

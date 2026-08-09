@@ -10,6 +10,8 @@ import {
   renderMaskedCredential,
   isEncryptionConfigured,
   modelRuntimeEncryptionConfig,
+  credentialEnvelopeKeyId,
+  modelRuntimeActiveKeyId,
 } from '../lib/model-runtime-crypto';
 
 // A deterministic, valid 32-byte (AES-256) base64 key for the tests.
@@ -49,15 +51,24 @@ describe('model-runtime-crypto', () => {
     const v1 = { active_key_id: 'tenant-v1', keys: { 'tenant-v1': KEY } };
     const sealedV1 = await encryptCredential(v1, 'rotatable-secret');
     expect(sealedV1.ciphertext).toMatch(/^xcp1\.tenant-v1\./);
+    expect(credentialEnvelopeKeyId(sealedV1)).toBe('tenant-v1');
+    expect(modelRuntimeActiveKeyId(v1)).toBe('tenant-v1');
     expect(await decryptCredential(v1, sealedV1)).toBe('rotatable-secret');
 
     const rotation = { active_key_id: 'tenant-v2', keys: { 'tenant-v1': KEY, 'tenant-v2': KEY_2 } };
     expect(await decryptCredential(rotation, sealedV1)).toBe('rotatable-secret');
     const sealedV2 = await encryptCredential(rotation, await decryptCredential(rotation, sealedV1));
     expect(sealedV2.ciphertext).toMatch(/^xcp1\.tenant-v2\./);
+    expect(credentialEnvelopeKeyId(sealedV2)).toBe('tenant-v2');
     expect(await decryptCredential(rotation, sealedV2)).toBe('rotatable-secret');
     await expect(decryptCredential({ active_key_id: 'tenant-v2', keys: { 'tenant-v2': KEY_2 } }, sealedV1))
       .rejects.toThrow(/tenant-v1/);
+  });
+
+  it('reports legacy ciphertext and single-key deployments as unversioned', async () => {
+    const sealed = await encryptCredential(KEY, 'legacy-secret');
+    expect(credentialEnvelopeKeyId(sealed)).toBeNull();
+    expect(modelRuntimeActiveKeyId(KEY)).toBeNull();
   });
 
   it('builds a fail-closed keyring from versioned environment secrets', async () => {

@@ -16,7 +16,16 @@ import { isOperatorContext } from '../lib/permissions';
 import { authorizeGovernedWrite, entitlementEnforcementOn } from '../lib/spine-authority';
 import { withAuthority } from '../lib/allowed-actions';
 import { emitEvent } from '../lib/observability';
-import { encryptCredential, lastFour, renderMaskedCredential, isEncryptionConfigured, modelRuntimeEncryptionConfig } from '../lib/model-runtime-crypto';
+import {
+  credentialEnvelopeKeyId,
+  decryptCredential,
+  encryptCredential,
+  isEncryptionConfigured,
+  lastFour,
+  modelRuntimeActiveKeyId,
+  modelRuntimeEncryptionConfig,
+  renderMaskedCredential,
+} from '../lib/model-runtime-crypto';
 import {
   isModelRuntimeProvider,
   PROVIDER_SPECS,
@@ -331,6 +340,73 @@ modelRuntimesRoute.put('/model-runtimes/providers/:provider', async (ctx) => {
       provider: toClientProvider(saved.provider),
       provider_config_version_id: providerConfigVersionId,
       audit_event_id: auditEventId,
+    });
+  } catch (err) {
+    return errorEnvelope(ctx, err);
+  }
+});
+
+// POST /model-runtimes/providers/:provider/rotate-credential — re-encrypt one credential under the
+// active keyring key. Per-provider rotation is deliberate: each write is atomic, audited and safely
+// replayable, so a workspace-wide workflow cannot hide partial completion.
+modelRuntimesRoute.post('/model-runtimes/providers/:provider/rotate-credential', async (ctx) => {
+  try {
+    const auth = ctx.get('auth');
+    if (!auth?.user_id) return errorEnvelope(ctx, { status: 401, code: 'UNAUTHORIZED', message: 'auth required' });
+    if (!auth.workspace_id) return errorEnvelope(ctx, { status: 403, code: 'FORBIDDEN', message: 'no workspace in session' });
+    if (!isOperatorContext(auth, ctx.env)) return errorEnvelope(ctx, { status: 403, code: 'FORBIDDEN', message: 'only an owner or operator can rotate model-runtime credentials' });
+    { const rg = await runtimeEnforcementGate(ctx); if (rg) return rg; }
+    const provider = ctx.req.param('provider');
+    if (!isModelRuntimeProvider(provider)) return errorEnvelope(ctx, { status: 400, code: 'VALIDATION_ERROR', message: 'unknown provider' });
+    if (!PROVIDER_SPECS[provider].requires_key) {
+      return errorEnvelope(ctx, { status: 422, code: 'UNPROCESSABLE', message: `${provider} has no stored credential to rotate` });
+    }
+
+    const encryption = modelRuntimeEncryptionConfig(ctx.env);
+    const activeKeyId = modelRuntimeActiveKeyId(encryption);
+    if (!activeKeyId || !(await isEncryptionConfigured(encryption))) {
+      return errorEnvelope(ctx, {
+        status: 503,
+        code: 'SERVICE_UNAVAILABLE',
+        message: 'versioned credential rotation is not configured',
+      });
+    }
+    const dal = ctx.get('dal');
+    const stored = await dal.modelRuntimes.getProviderCredential(auth.workspace_id, provider);
+    if (!stored?.ciphertext || !stored.iv) {
+      return errorEnvelope(ctx, { status: 404, code: 'NOT_FOUND', message: 'provider credential is not configured' });
+    }
+    const sealedStored = { ciphertext: stored.ciphertext, iv: stored.iv };
+    const fromKeyId = credentialEnvelopeKeyId(sealedStored);
+    if (fromKeyId === activeKeyId) {
+      return errorEnvelope(ctx, { status: 409, code: 'CREDENTIAL_ALREADY_ACTIVE', message: 'provider credential already uses the active key' });
+    }
+
+    const plaintext = await decryptCredential(encryption, sealedStored);
+    const rotated = await encryptCredential(encryption, plaintext);
+    const receipt = await dal.modelRuntimes.rotateProviderCredential(
+      auth.workspace_id,
+      provider,
+      rotated,
+      auth.user_id,
+      fromKeyId,
+      activeKeyId,
+    );
+    if (!receipt) return errorEnvelope(ctx, { status: 404, code: 'NOT_FOUND', message: 'provider credential is not configured' });
+    emitEvent('model_runtime_credential_rotated', {
+      workspace_id: auth.workspace_id,
+      provider,
+      from_key_id: fromKeyId ?? 'legacy',
+      to_key_id: activeKeyId,
+    });
+    return ctx.json({
+      ok: true,
+      provider,
+      from_key_id: fromKeyId ?? 'legacy',
+      to_key_id: activeKeyId,
+      provider_config_version_id: receipt.provider_config_version_id,
+      credential_rotation_receipt_id: receipt.credential_rotation_receipt_id,
+      audit_event_id: receipt.audit_event_id,
     });
   } catch (err) {
     return errorEnvelope(ctx, err);

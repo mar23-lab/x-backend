@@ -7,9 +7,10 @@
 import { afterEach, describe, it, expect, vi } from 'vitest';
 import { Hono } from 'hono';
 import { modelRuntimesRoute } from '../routes/model-runtimes';
-import { encryptCredential } from '../lib/model-runtime-crypto';
+import { credentialEnvelopeKeyId, decryptCredential, encryptCredential } from '../lib/model-runtime-crypto';
 
 const KEY = btoa(String.fromCharCode(...Array.from({ length: 32 }, (_, i) => (i * 7 + 3) & 0xff)));
+const KEY_2 = btoa(String.fromCharCode(...Array.from({ length: 32 }, (_, i) => (i * 11 + 5) & 0xff)));
 const RAW_API_KEY = 'sk-ant-FIXTURE-PLAINTEXT-not-a-real-key-wxyz'; // fixture — synthetic, not a real Anthropic key
 
 const maskedRow = (over: Record<string, any> = {}) => ({
@@ -42,6 +43,13 @@ function makeDal(over: Record<string, any> = {}) {
       getOverride: vi.fn(async () => null),
       getProviderCredential: vi.fn(async () => null),
       upsertProvider: vi.fn(async () => providerReceipt()),
+      rotateProviderCredential: vi.fn(async () => ({
+        provider: 'anthropic',
+        provider_config_id: 'mrp_1',
+        provider_config_version_id: 'model-runtime-provider:mrp_1:2026-08-09T00:00:00Z',
+        credential_rotation_receipt_id: 'model-runtime-credential-rotation:mrp_1:audit_rotate_1',
+        audit_event_id: 'audit_rotate_1',
+      })),
       deleteProvider: vi.fn(async () => deleteReceipt()),
       setDefaultProvider: vi.fn(async () => defaultReceipt()),
       setOverride: vi.fn(async (_u: string, _w: string, id: string) => id),
@@ -269,6 +277,60 @@ describe('PUT /model-runtimes/providers/:provider — encrypt-on-write', () => {
     }, {} as never); // env WITHOUT the key
     expect(res.status).toBe(503);
     expect(dal.modelRuntimes.upsertProvider).not.toHaveBeenCalled();
+  });
+});
+
+describe('POST /model-runtimes/providers/:provider/rotate-credential', () => {
+  it('re-encrypts a tenant credential under the active key and returns only audited metadata', async () => {
+    const oldConfig = { active_key_id: 'tenant-v1', keys: { 'tenant-v1': KEY } };
+    const rotationConfig = { active_key_id: 'tenant-v2', keys: { 'tenant-v1': KEY, 'tenant-v2': KEY_2 } };
+    const oldSealed = await encryptCredential(oldConfig, JSON.stringify({ api_key: RAW_API_KEY }));
+    const dal = makeDal({ getProviderCredential: vi.fn(async () => oldSealed) });
+    const response = await appFor(dal).request(
+      '/api/v1/model-runtimes/providers/anthropic/rotate-credential',
+      { method: 'POST' },
+      {
+        MODEL_RUNTIME_ENC_KEYS: JSON.stringify(rotationConfig.keys),
+        MODEL_RUNTIME_ACTIVE_KEY_ID: rotationConfig.active_key_id,
+      } as never,
+    );
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body).toMatchObject({
+      ok: true,
+      provider: 'anthropic',
+      from_key_id: 'tenant-v1',
+      to_key_id: 'tenant-v2',
+      credential_rotation_receipt_id: 'model-runtime-credential-rotation:mrp_1:audit_rotate_1',
+      audit_event_id: 'audit_rotate_1',
+    });
+    const rotated = dal.modelRuntimes.rotateProviderCredential.mock.calls[0][2];
+    expect(credentialEnvelopeKeyId(rotated)).toBe('tenant-v2');
+    expect(await decryptCredential(rotationConfig, rotated)).toBe(JSON.stringify({ api_key: RAW_API_KEY }));
+    expect(JSON.stringify(body)).not.toContain(RAW_API_KEY);
+    expect(JSON.stringify(body)).not.toContain(rotated.ciphertext);
+  });
+
+  it('returns 409 and performs no write when the credential already uses the active key', async () => {
+    const config = { active_key_id: 'tenant-v2', keys: { 'tenant-v2': KEY_2 } };
+    const sealed = await encryptCredential(config, JSON.stringify({ api_key: RAW_API_KEY }));
+    const dal = makeDal({ getProviderCredential: vi.fn(async () => sealed) });
+    const response = await appFor(dal).request(
+      '/api/v1/model-runtimes/providers/anthropic/rotate-credential',
+      { method: 'POST' },
+      { MODEL_RUNTIME_ENC_KEYS: JSON.stringify(config.keys), MODEL_RUNTIME_ACTIVE_KEY_ID: config.active_key_id } as never,
+    );
+    expect(response.status).toBe(409);
+    expect(await response.json()).toMatchObject({ code: 'CREDENTIAL_ALREADY_ACTIVE' });
+    expect(dal.modelRuntimes.rotateProviderCredential).not.toHaveBeenCalled();
+  });
+
+  it('fails closed when only the legacy single encryption key is configured', async () => {
+    const dal = makeDal({ getProviderCredential: vi.fn(async () => null) });
+    const response = await call(appFor(dal), '/model-runtimes/providers/anthropic/rotate-credential', 'POST');
+    expect(response.status).toBe(503);
+    expect(await response.json()).toMatchObject({ code: 'SERVICE_UNAVAILABLE' });
+    expect(dal.modelRuntimes.getProviderCredential).not.toHaveBeenCalled();
   });
 });
 

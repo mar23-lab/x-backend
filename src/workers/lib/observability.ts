@@ -36,6 +36,7 @@ export type ObservabilityKind =
   | 'chat_project_sources_failed' // selected project source bindings could not be verified; answer marks them unavailable
   | 'chat_provider_unavailable' // no effective live runtime resolved or all live execution attempts failed
   | 'model_runtime_validated' // a configured provider passed the content-free live validation probe
+  | 'model_runtime_credential_rotated' // a tenant provider credential was re-encrypted under the active versioned key
   | 'role_skill_receipt_write_failed'; // a shadow receipt write rejected — telemetry so evidence loss is never silent (role-skill-shadow · Track A 260713)
 
 /** Emit one structured observability event. Never throws; never blocks. */

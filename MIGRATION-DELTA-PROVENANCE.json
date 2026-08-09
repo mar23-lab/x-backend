@@ -6372,6 +6372,62 @@
           "reason": "Port reviewed external capability live and semantic contracts into canonical x-backend"
         }
       ]
+    },
+    {
+      "delta_id": "runtime-credential-rotation-260809",
+      "generated_at": "2026-08-09T13:20:00.735Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "758a86d20cef4a2c2007727d8599c0415cbd7702",
+      "target_base_commit": "758a86d20cef4a2c2007727d8599c0415cbd7702",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/lib/model-runtime-crypto.ts",
+          "target_blob": "b627fb129b03f4f05824411173c07fd9250b02ca",
+          "reason": "Add tenant-scoped, versioned model-runtime credential rotation with atomic audit receipts"
+        },
+        {
+          "path": "src/workers/lib/observability.ts",
+          "target_blob": "17d620908c0a5ae24e94a7f8625e7dc7c7a134e7",
+          "reason": "Add tenant-scoped, versioned model-runtime credential rotation with atomic audit receipts"
+        },
+        {
+          "path": "src/workers/dal/model-runtime-store.ts",
+          "target_blob": "7f08d30120ec0531aaa6d9fad91347fe0b89b63e",
+          "reason": "Add tenant-scoped, versioned model-runtime credential rotation with atomic audit receipts"
+        },
+        {
+          "path": "src/workers/dal/model-runtime-facade.ts",
+          "target_blob": "a67f3901bc8585148214753a4ca5a587fc678310",
+          "reason": "Add tenant-scoped, versioned model-runtime credential rotation with atomic audit receipts"
+        },
+        {
+          "path": "src/workers/routes/model-runtimes.ts",
+          "target_blob": "351d3bf46b0edcbf4955b9f71dfa3f73014f8ab7",
+          "reason": "Add tenant-scoped, versioned model-runtime credential rotation with atomic audit receipts"
+        },
+        {
+          "path": "src/workers/__tests__/model-runtime-crypto.test.ts",
+          "target_blob": "0164225e6eb867a21326b362909c33fe854850f3",
+          "reason": "Add tenant-scoped, versioned model-runtime credential rotation with atomic audit receipts"
+        },
+        {
+          "path": "src/workers/__tests__/model-runtime-store.test.ts",
+          "target_blob": "1c15af787e33f6e6a86160206702953f5b4b1ef5",
+          "reason": "Add tenant-scoped, versioned model-runtime credential rotation with atomic audit receipts"
+        },
+        {
+          "path": "src/workers/__tests__/model-runtimes-route.test.ts",
+          "target_blob": "0f64b665a93662d6e41ee00fdc62c5d9a7d06738",
+          "reason": "Add tenant-scoped, versioned model-runtime credential rotation with atomic audit receipts"
+        },
+        {
+          "path": "docs/contracts/api-contract.v1.json",
+          "target_blob": "cfe34edb99b9ff6f7eabb15b8410db0dabbd11aa",
+          "reason": "Add tenant-scoped, versioned model-runtime credential rotation with atomic audit receipts"
+        }
+      ]
     }
   ]
 }

@@ -87,6 +87,14 @@ export interface ProviderDefaultWriteReceipt {
   audit_event_id: string;
 }
 
+export interface ProviderCredentialRotationReceipt {
+  provider: ModelRuntimeProvider;
+  provider_config_id: string;
+  provider_config_version_id: string;
+  credential_rotation_receipt_id: string;
+  audit_event_id: string;
+}
+
 /** The sealed credential (base64 ciphertext + iv), plus its auth_kind. Internal-only — never serialized. */
 export interface SealedProviderCredential {
   auth_kind: RuntimeAuthKind;
@@ -198,6 +206,54 @@ export async function upsertProviderRow(
   if (!row?.audit_event_id) throw new Error('model runtime provider write missing audit receipt');
   const { audit_event_id, ...providerRow } = row;
   return { provider: providerRow, provider_config_version_id: providerConfigVersion(providerRow), audit_event_id };
+}
+
+/** Replace one workspace provider's sealed credential and audit the key rotation atomically. */
+export async function rotateProviderCredentialRow(
+  sql: Sql,
+  workspaceId: WorkspaceId,
+  provider: ModelRuntimeProvider,
+  sealed: { ciphertext: string; iv: string },
+  actorUserId: UserId,
+  fromKeyId: string | null,
+  toKeyId: string,
+): Promise<ProviderCredentialRotationReceipt | null> {
+  const reason = `rotate credential key ${fromKeyId ?? 'legacy'} -> ${toKeyId}`;
+  const rows = (await sql/*sql*/`
+    WITH credential_rotated AS (
+      UPDATE model_runtime_providers
+      SET credential_ciphertext = ${sealed.ciphertext}, credential_iv = ${sealed.iv}, updated_at = now()
+      WHERE workspace_id = ${workspaceId} AND provider = ${provider}
+        AND credential_ciphertext IS NOT NULL AND credential_iv IS NOT NULL
+      RETURNING id, provider, updated_at
+    ),
+    audit_written AS (
+      INSERT INTO audit_logs (actor_user_id, action, target_type, target_id, workspace_id, reason)
+      SELECT ${actorUserId}, 'model_runtime_credential_rotate'::text,
+             'model_runtime_provider', credential_rotated.id, ${workspaceId}, ${reason}
+      FROM credential_rotated
+      RETURNING id::text AS audit_event_id
+    )
+    SELECT credential_rotated.id AS provider_config_id, credential_rotated.provider,
+           credential_rotated.updated_at, audit_written.audit_event_id
+    FROM credential_rotated
+    JOIN audit_written ON TRUE
+  `) as Array<{
+    provider_config_id: string;
+    provider: ModelRuntimeProvider;
+    updated_at: string;
+    audit_event_id: string;
+  }>;
+  const row = rows[0];
+  if (!row) return null;
+  if (!row.audit_event_id) throw new Error('model runtime credential rotation missing audit receipt');
+  return {
+    provider: row.provider,
+    provider_config_id: row.provider_config_id,
+    provider_config_version_id: providerConfigVersion({ id: row.provider_config_id, updated_at: row.updated_at }),
+    credential_rotation_receipt_id: `model-runtime-credential-rotation:${row.provider_config_id}:${row.audit_event_id}`,
+    audit_event_id: row.audit_event_id,
+  };
 }
 
 /** Delete a provider config (audited). Returns true iff a row was removed. */
