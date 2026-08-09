@@ -923,7 +923,9 @@ sync, not a false-green success.
 
 | Route file | Surfaces | Auth class | Purpose |
 |---|---|---|---|
-| `customer-chat.ts` | POST /customer-chat | tenant JWT | tenant-scoped, live-provider-only assistant; typed `503 PROVIDER_UNAVAILABLE` and no answer when unavailable |
+| `customer-chat.ts` | POST /customer-chat; POST /chat/turns | tenant JWT | tenant-scoped, live-provider-only assistant; `/chat/turns` is the durable commercial facade with validated runtime preferences and typed `503` without an answer |
+| `chat-receipt.ts` | GET /chat/receipt/:receipt_uid; GET /chat/turns/:id/receipt | tenant JWT | tenant-safe answer receipt; the commercial facade is JSON-only and distinguishes policy resolution from a persisted audit event |
+| `settings-readiness.ts` | GET /settings/readiness | tenant JWT | live customer-safe readiness matrix; unknown or incomplete proof remains `attention`/`unavailable` |
 | `documents.ts` | POST/GET /documents | tenant JWT | Stage-2 source-intake documents (bytea storage; metadata list is RLS-routed, 046) |
 | `sources.ts` | GET/POST /sources/* | tenant JWT | Clerk-OAuth source connectors (github/google/dropbox/microsoft); disconnect is SOFT (044) |
 | `workspaces.ts` | GET/POST /workspaces/* | operator/tenant | workspace create/list, activity-summary, doc grounding, and live-provider-only operator cockpit chat |
@@ -946,13 +948,24 @@ sync, not a false-green success.
 | `customer-workspace-feed.ts` | GET | tenant JWT | customer-safe starter feed |
 | `mcp-rpc.ts` | POST /mcp/rpc | service token | native MCP JSON-RPC transport |
 
-Commercial customer and operator chat resolve `user override -> workspace default -> platform default` and
-dispatch only adapters implemented by the live execution service. The approved execution paths in this
-contract are the Workers AI binding and the platform-managed Anthropic credential. Configured providers
-without an approved adapter remain visible in the registry but return typed `503 PROVIDER_UNAVAILABLE` when
-selected for execution or validation. Chat and validation do not read tenant-stored credential ciphertext.
-Successful chat responses include runtime/model/config-version provenance and an execution receipt reference;
-no deterministic or fixture assistant text is returned as a successful commercial response.
+Commercial customer and operator chat resolve `request preference -> user override -> workspace default ->
+platform default`. `runtime_id` and `model_id` are optional preferences, never client authority: the server
+validates runtime tenancy and model availability. The legacy `llm` field is ignored and omitted by
+`POST /chat/turns`.
+
+The server-only execution boundary decrypts the selected tenant credential in memory and supports fixed
+adapters for Anthropic, OpenAI, Google Gemini, Mistral, DeepSeek, OpenRouter, and allowlisted Azure OpenAI
+hosts. Workers AI remains the platform fallback. Ollama, LM Studio, vLLM, llama.cpp, and custom runtimes
+return `503 RELAY_REQUIRED` until an authenticated outbound relay exists; the cloud Worker never fetches
+their tenant URLs. Bedrock returns `503 ADAPTER_UNAVAILABLE` until a reviewed SigV4 adapter exists.
+Discovery and validation use the stored tenant credential when configured. Plaintext and ciphertext never
+leave the server execution boundary.
+
+Successful `POST /chat/turns` responses include answer, execution, context, policy-resolution, and skill
+receipt references. `audit_event_id` is `null` until a distinct audit event is persisted; a policy resolution
+is never mislabeled as an audit event. Streaming is explicitly deferred because the current contract returns
+JSON only after durable completion persistence. No deterministic or fixture assistant text is returned as a
+successful commercial response.
 
 Tenant-isolation note: all tenant-scoped reads carry the app-level `WHERE workspace_id` guard, and the
 five core customer tables (`operation_events`, `projects`, `documents`, `board_cards`,

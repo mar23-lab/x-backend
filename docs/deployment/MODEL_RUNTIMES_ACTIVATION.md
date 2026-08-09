@@ -8,8 +8,11 @@ fail-closed when the encryption key is unavailable.
 - Migration 053: provider configuration, override, RLS, and audited writes.
 - Migration 098: staged provider-superset constraint for execution receipts.
 - Production chat: live-provider-only; typed `503 PROVIDER_UNAVAILABLE` when no approved runtime succeeds.
-- Execution boundary: Workers AI binding and platform-managed Anthropic credential only. Stored tenant
-  ciphertext is not read by chat resolution or validation.
+- Execution boundary: tenant credentials are decrypted only in memory inside fixed server adapters for
+  Anthropic, OpenAI, Google Gemini, Mistral, DeepSeek, OpenRouter, and allowlisted Azure OpenAI hosts.
+  Workers AI and the platform-managed Anthropic credential remain platform fallbacks.
+- Local/custom runtimes return `RELAY_REQUIRED` until an authenticated outbound relay exists; Bedrock returns
+  `ADAPTER_UNAVAILABLE` until a reviewed SigV4 adapter exists. No arbitrary tenant URL is fetched by cloud code.
 
 ⚠️ Note: the API is **`api.xlooop.com`**, NOT `app.xlooop.com` (that host is the Pages SPA frontend).
 
@@ -36,8 +39,9 @@ Confirm it is set (prints the name only; the value is never shown):
 npx wrangler secret list --config wrangler.toml | grep MODEL_RUNTIME_ENC_KEY
 ```
 
-`MODEL_RUNTIME_ENC_KEY` enables encrypted configuration writes. `ANTHROPIC_API_KEY` is the separately managed
-platform execution credential; the Workers AI path uses the `AI` binding. Do not paste secret values into
+`MODEL_RUNTIME_ENC_KEY` enables encrypted configuration writes and in-memory decryption for tenant execution.
+`ANTHROPIC_API_KEY` is the separately managed platform fallback credential; the Workers AI path uses the
+`AI` binding. Do not paste secret values into
 chat, tickets, logs, or repository files. Then run the smoke test to confirm the deployed contract.
 
 ## Step 2 — smoke test (needs an operator JWT for a real workspace)
@@ -86,7 +90,8 @@ curl -sS -X POST "$API/model-runtimes/providers/anthropic/validate" -H "Authoriz
 ```
 
 Validation must return an audit receipt and must not return credential material. Customer and operator chat
-resolve `user override -> workspace default -> platform default`. When all approved live runtimes are
+resolve `request preference -> user override -> workspace default -> platform default`. A request preference
+is accepted only after tenant and model validation. When all approved live runtimes are
 unavailable, chat returns `503 PROVIDER_UNAVAILABLE` without an `answer` field; deterministic prose is never
 substituted in commercial mode.
 
@@ -95,7 +100,8 @@ substituted in commercial mode.
 - Reads return only `····last4` — plaintext + ciphertext never leave the worker.
 - Writes + the default flip are owner/operator-gated + audited (`target_type = model_runtime_provider`).
 - Live validation is owner/operator-gated, entitlement-aware, content-free, and audited.
-- Chat and validation never decrypt tenant-stored provider credentials.
+- Chat, discovery, and validation decrypt only the selected tenant credential in server memory; responses,
+  audit metadata, and logs contain neither plaintext nor ciphertext.
 - Fail-closed: absent/short `MODEL_RUNTIME_ENC_KEY` → credential writes 503, never a plaintext fallback.
 
 ## Key rotation — ⚠️ NOT YET IMPLEMENTED

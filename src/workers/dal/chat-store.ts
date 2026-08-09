@@ -114,7 +114,9 @@ export async function appendChatExchangeRow(
       generated_by: m.generated_by ?? null,
       grounded_on: m.grounded_on ?? null,
       grounding_event_ids: links,
-      receipt_uid: links?.length ? `rcpt_${crypto.randomUUID().replace(/-/g, '')}` : null,
+      // Commercial chat turns require a durable answer receipt even when the answer did not cite an
+      // operation event. Grounding links explain evidence; they are not the identity of the answer.
+      receipt_uid: m.role === 'assistant' ? `rcpt_${crypto.randomUUID().replace(/-/g, '')}` : null,
       interaction_id: m.interaction_id ?? null,
       entry_type: m.entry_type ?? null,
       resolution_id: m.resolution_id ?? null,
@@ -268,6 +270,11 @@ export interface ReceiptMessageRow {
   generated_by: string | null;
   grounded_on: unknown;
   grounding_event_ids: string[] | null;
+  interaction_id: string | null;
+  resolution_id: string | null;
+  execution_receipt_id: string | null;
+  packet_id: string | null;
+  audit_event_id: string | null;
   created_at: string | null;
 }
 export async function getMessageByReceiptUidRow(sql: Sql, receiptUid: string): Promise<ReceiptMessageRow | null> {
@@ -276,7 +283,8 @@ export async function getMessageByReceiptUidRow(sql: Sql, receiptUid: string): P
   try {
     const rows = (await sql/*sql*/`
       SELECT t.workspace_id, t.user_id AS thread_user_id, m.role, m.body, m.mode, m.generated_by,
-             m.grounded_on, m.grounding_event_ids, m.created_at
+             m.grounded_on, m.grounding_event_ids, m.interaction_id, m.resolution_id,
+             m.execution_receipt_id, m.packet_id, m.audit_event_id, m.created_at
       FROM chat_messages m JOIN chat_threads t ON t.id = m.thread_id
       WHERE m.receipt_uid = ${uid} LIMIT 1
     `) as Array<Record<string, unknown>>;
@@ -291,6 +299,11 @@ export async function getMessageByReceiptUidRow(sql: Sql, receiptUid: string): P
       generated_by: r.generated_by == null ? null : String(r.generated_by),
       grounded_on: r.grounded_on ?? null,
       grounding_event_ids: Array.isArray(r.grounding_event_ids) ? (r.grounding_event_ids as string[]) : null,
+      interaction_id: r.interaction_id == null ? null : String(r.interaction_id),
+      resolution_id: r.resolution_id == null ? null : String(r.resolution_id),
+      execution_receipt_id: r.execution_receipt_id == null ? null : String(r.execution_receipt_id),
+      packet_id: r.packet_id == null ? null : String(r.packet_id),
+      audit_event_id: r.audit_event_id == null ? null : String(r.audit_event_id),
       created_at: r.created_at == null ? null : new Date(r.created_at as string).toISOString(),
     };
   } catch (err) {

@@ -7,6 +7,7 @@
 import { afterEach, describe, it, expect, vi } from 'vitest';
 import { Hono } from 'hono';
 import { modelRuntimesRoute } from '../routes/model-runtimes';
+import { encryptCredential } from '../lib/model-runtime-crypto';
 
 const KEY = btoa(String.fromCharCode(...Array.from({ length: 32 }, (_, i) => (i * 7 + 3) & 0xff)));
 const RAW_API_KEY = 'sk-ant-FIXTURE-PLAINTEXT-not-a-real-key-wxyz'; // fixture — synthetic, not a real Anthropic key
@@ -44,6 +45,7 @@ function makeDal(over: Record<string, any> = {}) {
       deleteProvider: vi.fn(async () => deleteReceipt()),
       setDefaultProvider: vi.fn(async () => defaultReceipt()),
       setOverride: vi.fn(async (_u: string, _w: string, id: string) => id),
+      clearOverride: vi.fn(async () => undefined),
       ...over,
     },
   };
@@ -119,32 +121,50 @@ describe('effective runtime + live provider operations', () => {
     });
   });
 
-  it('GET models is scoped to a configured executable provider and never reads credentials', async () => {
-    const dal = makeDal({ listProviders: vi.fn(async () => [maskedRow({ model: 'claude-live' })]) });
+  it('GET models uses the stored tenant credential and never returns it', async () => {
+    const sealed = await encryptCredential(KEY, JSON.stringify({ api_key: RAW_API_KEY }));
+    const fetchSpy = vi.fn(async (_url: string, init: RequestInit) => {
+      expect((init.headers as Record<string, string>)['x-api-key']).toBe(RAW_API_KEY);
+      return new Response(JSON.stringify({ data: [{ id: 'claude-live' }, { id: 'claude-other' }] }), { status: 200 });
+    });
+    vi.stubGlobal('fetch', fetchSpy);
+    const dal = makeDal({
+      listProviders: vi.fn(async () => [maskedRow({ model: 'claude-live' })]),
+      getProviderCredential: vi.fn(async () => sealed),
+    });
     const res = await call(appFor(dal), '/model-runtimes/providers/anthropic/models', 'GET');
     expect(res.status).toBe(200);
-    expect(await res.json()).toMatchObject({
+    const body = await res.json();
+    expect(body).toMatchObject({
       provider: 'anthropic',
-      models: ['claude-live', 'claude-sonnet-4-6'],
+      models: expect.arrayContaining(['claude-live', 'claude-other']),
     });
-    expect(dal.modelRuntimes.getProviderCredential).not.toHaveBeenCalled();
+    expect(dal.modelRuntimes.getProviderCredential).toHaveBeenCalledWith('org_a', 'anthropic');
+    expect(JSON.stringify(body)).not.toContain(RAW_API_KEY);
   });
 
-  it('GET models returns typed provider-unavailable for an unapproved adapter', async () => {
+  it('GET models returns typed relay-required for a customer-side runtime', async () => {
     const dal = makeDal({
-      listProviders: vi.fn(async () => [maskedRow({ provider: 'openai', model: 'gpt-live' })]),
+      listProviders: vi.fn(async () => [maskedRow({ provider: 'ollama', model: 'llama-live', base_url: 'http://localhost:11434' })]),
     });
-    const res = await call(appFor(dal), '/model-runtimes/providers/openai/models', 'GET');
+    const res = await call(appFor(dal), '/model-runtimes/providers/ollama/models', 'GET');
     expect(res.status).toBe(503);
-    expect(await res.json()).toMatchObject({ code: 'PROVIDER_UNAVAILABLE' });
+    expect(await res.json()).toMatchObject({ code: 'RELAY_REQUIRED' });
   });
 
-  it('POST validate uses a platform credential, returns an audit receipt, and never reads tenant ciphertext', async () => {
-    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({
+  it('POST validate uses the stored tenant credential and returns a redacted audit receipt', async () => {
+    const sealed = await encryptCredential(KEY, JSON.stringify({ api_key: RAW_API_KEY }));
+    vi.stubGlobal('fetch', vi.fn(async (_url: string, init: RequestInit) => {
+      expect((init.headers as Record<string, string>)['x-api-key']).toBe(RAW_API_KEY);
+      return new Response(JSON.stringify({
       content: [{ type: 'text', text: 'Xlooop runtime ready.' }],
       usage: { input_tokens: 9, output_tokens: 4 },
-    }), { status: 200, headers: { 'content-type': 'application/json' } })));
-    const dal = makeDal({ listProviders: vi.fn(async () => [maskedRow({ model: 'claude-live' })]) });
+      }), { status: 200, headers: { 'content-type': 'application/json' } });
+    }));
+    const dal = makeDal({
+      listProviders: vi.fn(async () => [maskedRow({ model: 'claude-live' })]),
+      getProviderCredential: vi.fn(async () => sealed),
+    });
     const res = await appFor(dal).request('/api/v1/model-runtimes/providers/anthropic/validate', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
@@ -165,7 +185,8 @@ describe('effective runtime + live provider operations', () => {
       target_type: 'model_runtime_provider',
       workspace_id: 'org_a',
     }));
-    expect(dal.modelRuntimes.getProviderCredential).not.toHaveBeenCalled();
+    expect(dal.modelRuntimes.getProviderCredential).toHaveBeenCalledWith('org_a', 'anthropic');
+    expect(JSON.stringify(body)).not.toContain(RAW_API_KEY);
   });
 });
 
@@ -318,5 +339,13 @@ describe('DELETE + override', () => {
   it('PUT override — a client cannot set an override', async () => {
     const res = await call(appFor(makeDal(), { user_id: 'c', workspace_id: 'org_a', role: 'client' }), '/model-runtimes/override', 'PUT', { provider_id: 'mrp_1' });
     expect(res.status).toBe(403);
+  });
+
+  it('PUT override clearOverride returns the caller to the workspace default', async () => {
+    const dal = makeDal();
+    const res = await call(appFor(dal), '/model-runtimes/override', 'PUT', { clear_override: true });
+    expect(res.status).toBe(200);
+    expect(dal.modelRuntimes.clearOverride).toHaveBeenCalledWith('u1', 'org_a');
+    expect(await res.json()).toMatchObject({ session_override: null, effective_source: 'workspace_default' });
   });
 });

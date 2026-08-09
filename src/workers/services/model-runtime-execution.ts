@@ -1,21 +1,26 @@
 import type { ModelRuntimesFacade } from '../dal/model-runtime-facade';
 import type { ModelRuntimeProvider, ProviderConfigRow } from '../dal/model-runtime-store';
 import type { ModelExecutionObserver } from '../lib/model-execution-lineage';
+import { decryptCredential } from '../lib/model-runtime-crypto';
 import type { AiRunner } from './agent-digest';
+import {
+  CLOUD_EXECUTABLE_PROVIDERS,
+  discoverCloudRuntimeModels,
+  executeCloudRuntime,
+  type CloudAdapterRuntime,
+  type CloudRuntimeProvider,
+} from './model-runtime-provider-adapters';
 
 export const PLATFORM_WORKERS_AI_MODEL = '@cf/meta/llama-3.1-8b-instruct';
 const PLATFORM_ANTHROPIC_MODEL = 'claude-sonnet-4-6';
-const PROVIDER_TIMEOUT_MS = 30_000;
+const RELAY_REQUIRED_PROVIDERS = ['ollama', 'lm_studio', 'vllm', 'llama_cpp', 'custom'] as const;
 
-// Chat only dispatches adapters already implemented by cockpit-chat. Provider registry rows for
-// other vendors remain configurable, but are not treated as executable until an adapter is shipped.
-export type LiveRuntimeProvider = 'workers_ai' | 'anthropic';
-export type RuntimeResolutionSource = 'user_override' | 'workspace_default' | 'platform_default';
+export type LiveRuntimeProvider = 'workers_ai' | CloudRuntimeProvider;
+export type RuntimeResolutionSource = 'request_preference' | 'user_override' | 'workspace_default' | 'platform_default';
 
-export interface LiveRuntimeEnv {
-  AI?: AiRunner;
-  ANTHROPIC_API_KEY?: string;
-}
+interface RuntimeCredential { api_key: string; deployment?: string }
+
+export interface LiveRuntimeEnv { AI?: AiRunner; ANTHROPIC_API_KEY?: string; MODEL_RUNTIME_ENC_KEY?: string }
 
 export interface ResolvedRuntime {
   runtime_id: string;
@@ -23,10 +28,12 @@ export interface ResolvedRuntime {
   model: string;
   source: RuntimeResolutionSource;
   provider_config_version_id: string | null;
-  credential: string | null;
+  base_url: string | null;
+  credential: RuntimeCredential | null;
   ai?: AiRunner;
 }
 
+export type RuntimeDescriptor = Omit<ResolvedRuntime, 'credential' | 'ai'>;
 export interface RuntimeResolutionAttempt {
   source: RuntimeResolutionSource;
   runtime_id: string | null;
@@ -35,12 +42,7 @@ export interface RuntimeResolutionAttempt {
   code: string | null;
 }
 
-export interface EffectiveRuntimePlan {
-  primary: ResolvedRuntime;
-  fallbacks: ResolvedRuntime[];
-  resolution_attempts: RuntimeResolutionAttempt[];
-}
-
+export interface EffectiveRuntimePlan { primary: ResolvedRuntime; fallbacks: ResolvedRuntime[]; resolution_attempts: RuntimeResolutionAttempt[] }
 export interface RuntimeExecutionAttempt {
   runtime_id: string;
   provider: LiveRuntimeProvider;
@@ -54,7 +56,7 @@ export interface RuntimeExecutionAttempt {
 
 export interface RuntimeExecutionResult {
   text: string;
-  runtime: ResolvedRuntime;
+  runtime: RuntimeDescriptor;
   usage: { tokens_in: number | null; tokens_out: number | null };
   latency_ms: number;
   execution_receipt_id: string | null;
@@ -65,11 +67,41 @@ export class ProviderUnavailableError extends Error {
   readonly code = 'PROVIDER_UNAVAILABLE';
   readonly status = 503;
   readonly attempts: RuntimeExecutionAttempt[];
+  readonly resolution_attempts: RuntimeResolutionAttempt[];
 
-  constructor(message = 'no live model runtime is available', attempts: RuntimeExecutionAttempt[] = []) {
+  constructor(
+    message = 'no live model runtime is available',
+    attempts: RuntimeExecutionAttempt[] = [],
+    resolutionAttempts: RuntimeResolutionAttempt[] = [],
+  ) {
     super(message);
     this.name = 'ProviderUnavailableError';
     this.attempts = attempts;
+    this.resolution_attempts = resolutionAttempts;
+  }
+}
+
+export class RuntimeCapabilityError extends Error {
+  readonly status = 503;
+  readonly code: 'RELAY_REQUIRED' | 'ADAPTER_UNAVAILABLE';
+
+  constructor(code: 'RELAY_REQUIRED' | 'ADAPTER_UNAVAILABLE') {
+    super(code === 'RELAY_REQUIRED'
+      ? 'an authenticated customer-side outbound relay is required for this runtime'
+      : 'no approved server-side adapter is available for this runtime');
+    this.name = 'RuntimeCapabilityError';
+    this.code = code;
+  }
+}
+
+export class RuntimePreferenceError extends Error {
+  readonly status = 422;
+  readonly code: 'RUNTIME_PREFERENCE_INVALID' | 'MODEL_NOT_AVAILABLE';
+
+  constructor(code: 'RUNTIME_PREFERENCE_INVALID' | 'MODEL_NOT_AVAILABLE', message: string) {
+    super(message);
+    this.name = 'RuntimePreferenceError';
+    this.code = code;
   }
 }
 
@@ -82,14 +114,26 @@ const DEFAULT_MODELS: Partial<Record<ModelRuntimeProvider | 'workers_ai', string
   workers_ai: PLATFORM_WORKERS_AI_MODEL,
   anthropic: PLATFORM_ANTHROPIC_MODEL,
   openai: 'gpt-4o-mini',
-  google: 'gemini-2.0-flash',
+  google: 'gemini-3.5-flash',
   mistral: 'mistral-small-latest',
-  deepseek: 'deepseek-chat',
+  deepseek: 'deepseek-v4-flash',
   openrouter: 'openai/gpt-4o-mini',
 };
 
 export function isExecutableRuntimeProvider(provider: ModelRuntimeProvider | 'workers_ai'): boolean {
-  return provider === 'workers_ai' || provider === 'anthropic';
+  return provider === 'workers_ai' || (CLOUD_EXECUTABLE_PROVIDERS as readonly string[]).includes(provider);
+}
+
+function isCloudRuntimeProvider(provider: ModelRuntimeProvider): provider is CloudRuntimeProvider {
+  return (CLOUD_EXECUTABLE_PROVIDERS as readonly string[]).includes(provider);
+}
+
+export function runtimeProviderCapability(
+  provider: ModelRuntimeProvider | 'workers_ai',
+): 'EXECUTABLE' | 'RELAY_REQUIRED' | 'ADAPTER_UNAVAILABLE' {
+  if (isExecutableRuntimeProvider(provider)) return 'EXECUTABLE';
+  if ((RELAY_REQUIRED_PROVIDERS as readonly string[]).includes(provider)) return 'RELAY_REQUIRED';
+  return 'ADAPTER_UNAVAILABLE';
 }
 
 export function supportedModels(
@@ -104,22 +148,56 @@ function providerConfigVersion(row: ProviderConfigRow): string {
   return `model-runtime-provider:${row.id}:${row.updated_at}`;
 }
 
-function resolveConfiguredRow(
+function parseStoredCredential(plaintext: string): RuntimeCredential | null {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(plaintext);
+  } catch {
+    return null;
+  }
+  if (!parsed || typeof parsed !== 'object') return null;
+  const value = parsed as Record<string, unknown>;
+  const apiKey = typeof value.api_key === 'string' ? value.api_key.trim() : '';
+  if (!apiKey) return null;
+  const deployment = typeof value.deployment === 'string' ? value.deployment.trim() : '';
+  return { api_key: apiKey, ...(deployment ? { deployment } : {}) };
+}
+
+async function resolveConfiguredRow(
   row: ProviderConfigRow,
   source: Exclude<RuntimeResolutionSource, 'platform_default'>,
+  facade: ModelRuntimesFacade,
+  workspaceId: string,
   env: LiveRuntimeEnv,
-): { runtime?: ResolvedRuntime; code?: string } {
+): Promise<{ runtime?: ResolvedRuntime; code?: string }> {
   if (!row.enabled) return { code: 'RUNTIME_DISABLED' };
-  if (row.provider !== 'anthropic') return { code: 'PROVIDER_ADAPTER_UNAVAILABLE' };
-  if (!env.ANTHROPIC_API_KEY) return { code: 'PLATFORM_CREDENTIAL_UNAVAILABLE' };
+  const capability = runtimeProviderCapability(row.provider);
+  if (capability !== 'EXECUTABLE') return { code: capability };
+  if (!isCloudRuntimeProvider(row.provider)) return { code: 'ADAPTER_UNAVAILABLE' };
+  const sealed = await facade.getProviderCredential(workspaceId, row.provider);
+  if (!sealed?.ciphertext || !sealed.iv) return { code: 'STORED_CREDENTIAL_UNAVAILABLE' };
+  let credential: RuntimeCredential | null = null;
+  try {
+    credential = parseStoredCredential(await decryptCredential(env.MODEL_RUNTIME_ENC_KEY, {
+      ciphertext: sealed.ciphertext,
+      iv: sealed.iv,
+    }));
+  } catch {
+    return { code: 'CREDENTIAL_DECRYPTION_FAILED' };
+  }
+  if (!credential) return { code: 'CREDENTIAL_FORMAT_INVALID' };
+  if (row.provider === 'azure_openai' && !(credential.deployment || row.model?.trim())) {
+    return { code: 'AZURE_DEPLOYMENT_REQUIRED' };
+  }
   return {
     runtime: {
       runtime_id: row.id,
-      provider: 'anthropic',
-      model: row.model?.trim() || PLATFORM_ANTHROPIC_MODEL,
+      provider: row.provider,
+      model: row.model?.trim() || DEFAULT_MODELS[row.provider] || '',
       source,
       provider_config_version_id: providerConfigVersion(row),
-      credential: env.ANTHROPIC_API_KEY,
+      base_url: row.base_url,
+      credential,
     },
   };
 }
@@ -133,6 +211,7 @@ function platformRuntimes(env: LiveRuntimeEnv): ResolvedRuntime[] {
       model: PLATFORM_WORKERS_AI_MODEL,
       source: 'platform_default',
       provider_config_version_id: null,
+      base_url: null,
       credential: null,
       ai: env.AI,
     });
@@ -144,7 +223,8 @@ function platformRuntimes(env: LiveRuntimeEnv): ResolvedRuntime[] {
       model: PLATFORM_ANTHROPIC_MODEL,
       source: 'platform_default',
       provider_config_version_id: null,
-      credential: env.ANTHROPIC_API_KEY,
+      base_url: null,
+      credential: { api_key: env.ANTHROPIC_API_KEY },
     });
   }
   return runtimes;
@@ -171,16 +251,33 @@ export async function resolveEffectiveRuntimePlan(input: {
   env: LiveRuntimeEnv;
   userId: string;
   workspaceId: string;
+  runtimeId?: string | null;
+  modelId?: string | null;
 }): Promise<EffectiveRuntimePlan> {
   const rows = await input.facade.listProviders(input.workspaceId);
+  const runtimeId = String(input.runtimeId ?? '').trim() || null;
+  const modelId = String(input.modelId ?? '').trim() || null;
+  if (modelId && !runtimeId) {
+    throw new RuntimePreferenceError(
+      'RUNTIME_PREFERENCE_INVALID',
+      'model_id requires a tenant-scoped runtime_id',
+    );
+  }
+  const preferredRow = runtimeId ? rows.find((row) => row.id === runtimeId) : undefined;
+  if (runtimeId && !preferredRow) {
+    throw new RuntimePreferenceError(
+      'RUNTIME_PREFERENCE_INVALID',
+      'runtime_id is not configured for this workspace',
+    );
+  }
   const overrideId = await input.facade.getOverride(input.userId, input.workspaceId);
-  const requested = [
-    overrideId ? { source: 'user_override' as const, row: rows.find((row) => row.id === overrideId) } : null,
-    { source: 'workspace_default' as const, row: rows.find((row) => row.is_default) },
-  ].filter((item): item is {
-    source: 'user_override' | 'workspace_default';
+  const requested: Array<{
+    source: 'request_preference' | 'user_override' | 'workspace_default';
     row: ProviderConfigRow | undefined;
-  } => item !== null);
+  }> = [];
+  if (preferredRow) requested.push({ source: 'request_preference', row: preferredRow });
+  if (overrideId) requested.push({ source: 'user_override', row: rows.find((row) => row.id === overrideId) });
+  requested.push({ source: 'workspace_default', row: rows.find((row) => row.is_default) });
 
   const candidates: ResolvedRuntime[] = [];
   const resolutionAttempts: RuntimeResolutionAttempt[] = [];
@@ -199,8 +296,18 @@ export async function resolveEffectiveRuntimePlan(input: {
     }
     if (seen.has(item.row.id)) continue;
     seen.add(item.row.id);
-    const resolved = resolveConfiguredRow(item.row, item.source, input.env);
+    const resolved = await resolveConfiguredRow(
+      item.row,
+      item.source,
+      input.facade,
+      input.workspaceId,
+      input.env,
+    );
     if (!resolved.runtime) {
+      if (item.source === 'request_preference'
+        && (resolved.code === 'RELAY_REQUIRED' || resolved.code === 'ADAPTER_UNAVAILABLE')) {
+        throw new RuntimeCapabilityError(resolved.code);
+      }
       resolutionAttempts.push({
         source: item.source,
         runtime_id: item.row.id,
@@ -210,13 +317,36 @@ export async function resolveEffectiveRuntimePlan(input: {
       });
       continue;
     }
+    if (item.source === 'request_preference' && modelId) {
+      if (modelId !== resolved.runtime.model) {
+        let available: string[];
+        try {
+          available = await discoverCloudRuntimeModels(resolved.runtime as CloudAdapterRuntime);
+        } catch {
+          throw new ProviderUnavailableError(
+            'the requested runtime model inventory could not be verified',
+            [],
+            resolutionAttempts,
+          );
+        }
+        if (!available.includes(modelId)) {
+          throw new RuntimePreferenceError(
+            'MODEL_NOT_AVAILABLE',
+            'model_id is not available from the selected tenant runtime',
+          );
+        }
+      }
+      resolved.runtime.model = modelId;
+    }
     candidates.push(resolved.runtime);
   }
 
   for (const runtime of platformRuntimes(input.env)) {
     if (!candidates.some((candidate) => candidate.runtime_id === runtime.runtime_id)) candidates.push(runtime);
   }
-  if (candidates.length === 0) throw new ProviderUnavailableError();
+  if (candidates.length === 0) {
+    throw new ProviderUnavailableError('no live model runtime is available', [], resolutionAttempts);
+  }
 
   resolutionAttempts.push(...candidates.map((runtime, index): RuntimeResolutionAttempt => ({
     source: runtime.source,
@@ -237,15 +367,20 @@ export async function resolveConfiguredRuntime(input: {
   const row = (await input.facade.listProviders(input.workspaceId))
     .find((candidate) => candidate.provider === input.provider);
   if (!row) throw new ProviderUnavailableError('provider is not configured');
-  const resolved = resolveConfiguredRow(row, 'workspace_default', input.env);
+  const resolved = await resolveConfiguredRow(
+    row,
+    'workspace_default',
+    input.facade,
+    input.workspaceId,
+    input.env,
+  );
   if (!resolved.runtime) {
+    if (resolved.code === 'RELAY_REQUIRED' || resolved.code === 'ADAPTER_UNAVAILABLE') {
+      throw new RuntimeCapabilityError(resolved.code);
+    }
     throw new ProviderUnavailableError(`provider is unavailable: ${resolved.code ?? 'RUNTIME_UNAVAILABLE'}`);
   }
   return resolved.runtime;
-}
-
-function liveFetch(input: RequestInfo | URL, init: RequestInit): Promise<Response> {
-  return fetch(input, { ...init, signal: AbortSignal.timeout(PROVIDER_TIMEOUT_MS) });
 }
 
 async function executeRuntime(runtime: ResolvedRuntime, system: string, user: string, maxTokens: number): Promise<{
@@ -265,28 +400,20 @@ async function executeRuntime(runtime: ResolvedRuntime, system: string, user: st
     };
   }
 
-  const response = await liveFetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-      'x-api-key': runtime.credential ?? '',
-      'anthropic-version': '2023-06-01',
-    },
-    body: JSON.stringify({
-      model: runtime.model,
-      max_tokens: maxTokens,
-      system,
-      messages: [{ role: 'user', content: user }],
-    }),
-  });
-  if (!response.ok) throw new Error(`ANTHROPIC_HTTP_${response.status}`);
-  const data = await response.json() as Record<string, unknown>;
-  const content = Array.isArray(data.content) ? data.content as Array<Record<string, unknown>> : [];
-  const usage = data.usage as { input_tokens?: number; output_tokens?: number } | undefined;
-  return {
-    text: content.filter((part) => part.type === 'text').map((part) => String(part.text ?? '')).join('').trim(),
-    usage: { tokens_in: usage?.input_tokens ?? null, tokens_out: usage?.output_tokens ?? null },
-  };
+  if (!runtime.credential?.api_key) throw new Error('STORED_CREDENTIAL_UNAVAILABLE');
+  return executeCloudRuntime(runtime as CloudAdapterRuntime, system, user, maxTokens);
+}
+
+export async function discoverRuntimeModels(runtime: ResolvedRuntime): Promise<string[]> {
+  if (runtime.provider === 'workers_ai') return supportedModels('workers_ai', runtime.model);
+  if (!runtime.credential?.api_key) throw new Error('STORED_CREDENTIAL_UNAVAILABLE');
+  const discovered = await discoverCloudRuntimeModels(runtime as CloudAdapterRuntime);
+  return [...new Set([...supportedModels(runtime.provider, runtime.model), ...discovered])].slice(0, 200);
+}
+
+function publicRuntime(runtime: ResolvedRuntime): RuntimeDescriptor {
+  const { credential: _credential, ai: _ai, ...descriptor } = runtime;
+  return descriptor;
 }
 
 function errorCode(err: unknown): string {
@@ -329,7 +456,7 @@ export async function executeEffectiveRuntimePlan(input: {
       });
       return {
         text: result.text,
-        runtime,
+        runtime: publicRuntime(runtime),
         usage: result.usage,
         latency_ms: latency,
         execution_receipt_id: execution?.receipt_id ?? null,

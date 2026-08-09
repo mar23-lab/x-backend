@@ -29,7 +29,10 @@ function appFor(route: unknown, auth: Record<string, unknown>, dal: Record<strin
 
 const RECEIPT_ROW = {
   workspace_id: 'ws-MINE', thread_user_id: 'u1', role: 'assistant', body: 'grounded answer', mode: 'watch',
-  generated_by: 'llm', grounded_on: { events_considered: 2 }, grounding_event_ids: ['e1', 'e2'], created_at: '2026-07-08T00:00:00Z',
+  generated_by: 'llm', grounded_on: { events_considered: 2 }, grounding_event_ids: ['e1', 'e2'],
+  interaction_id: 'interaction_1', resolution_id: 'policy_resolution_1',
+  execution_receipt_id: 'execution_receipt_1', packet_id: 'context_packet_1', audit_event_id: null,
+  created_at: '2026-07-08T00:00:00Z',
 };
 const LIVE_EVENTS = {
   listEvents: async () => ({ events: [
@@ -72,6 +75,22 @@ describe('GET /chat/receipt/:uid', () => {
     const res = await app.request('/chat/receipt/rcpt_abc?format=csv', {}, env);
     const text = await res.text();
     expect(text.split('\r\n')[0]).toBe('event_id,occurred_at,status,summary,source_tool,instrument_kind,lineage_recorded');
+  });
+
+  it('versioned turn receipt names policy lineage honestly and remains JSON-only', async () => {
+    const sql = sqlReturning([{ needle: 'receipt_uid', rows: [RECEIPT_ROW] }]);
+    const { app, env } = appFor(chatReceiptRoute, { user_id: 'u1', workspace_id: 'ws-MINE', role: 'owner' }, LIVE_EVENTS, sql);
+    const res = await app.request('/chat/turns/rcpt_abc/receipt', {}, env);
+    expect(res.status).toBe(200);
+    const body = await res.json() as Record<string, any>;
+    expect(body.schema_id).toBe('xlooop.chat_turn_receipt.v1');
+    expect(body.receipts).toMatchObject({
+      answer_receipt_id: 'rcpt_abc', execution_receipt_id: 'execution_receipt_1',
+      context_receipt_id: 'context_packet_1', policy_resolution_id: 'policy_resolution_1', audit_event_id: null,
+    });
+    expect(body.receipts).not.toHaveProperty('audit_receipt_id');
+    const csv = await app.request('/chat/turns/rcpt_abc/receipt?format=csv', {}, env);
+    expect(csv.status).toBe(400);
   });
 });
 

@@ -13,6 +13,7 @@ import {
   setDefaultProviderRow,
   getOverrideRow,
   setOverrideRow,
+  clearOverrideRow,
   type ModelRuntimeProvider,
   type ProviderConfigRow,
   type ProviderConfigWriteReceipt,
@@ -37,6 +38,8 @@ export interface ModelRuntimesFacade {
   getOverride(userId: UserId, workspaceId: WorkspaceId): Promise<string | null>;
   /** Set the caller's per-workspace session override (personal preference; not audited). */
   setOverride(userId: UserId, workspaceId: WorkspaceId, providerId: string): Promise<string>;
+  /** Clear the caller's own override and return to the workspace default. */
+  clearOverride(userId: UserId, workspaceId: WorkspaceId): Promise<void>;
 }
 
 export function makeModelRuntimesFacade(getSql: () => Sql): ModelRuntimesFacade {
@@ -48,5 +51,6 @@ export function makeModelRuntimesFacade(getSql: () => Sql): ModelRuntimesFacade 
     setDefaultProvider: (workspaceId, providerId, actorUserId) => setDefaultProviderRow(getSql(), workspaceId, providerId, actorUserId),
     getOverride: (userId, workspaceId) => getOverrideRow(getSql(), userId, workspaceId),
     setOverride: (userId, workspaceId, providerId) => setOverrideRow(getSql(), userId, workspaceId, providerId),
+    clearOverride: (userId, workspaceId) => clearOverrideRow(getSql(), userId, workspaceId),
   };
 }

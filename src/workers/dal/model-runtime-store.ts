@@ -288,3 +288,11 @@ export async function setOverrideRow(sql: Sql, userId: UserId, workspaceId: Work
   `;
   return providerId;
 }
+
+/** Clear the caller's own per-workspace override so resolution returns to the workspace default. */
+export async function clearOverrideRow(sql: Sql, userId: UserId, workspaceId: WorkspaceId): Promise<void> {
+  await sql/*sql*/`
+    DELETE FROM user_runtime_override
+    WHERE user_id = ${userId} AND workspace_id = ${workspaceId}
+  `;
+}

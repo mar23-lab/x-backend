@@ -1,11 +1,17 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   ProviderUnavailableError,
+  RuntimeCapabilityError,
+  RuntimePreferenceError,
   executeEffectiveRuntimePlan,
   resolveEffectiveRuntimePlan,
   type EffectiveRuntimePlan,
   type ResolvedRuntime,
 } from '../services/model-runtime-execution';
+import { encryptCredential } from '../lib/model-runtime-crypto';
+
+const KEY = btoa(String.fromCharCode(...Array.from({ length: 32 }, (_, i) => (i * 11 + 5) & 0xff)));
+const TENANT_KEY = 'tenant-provider-key-not-real';
 
 const row = (over: Record<string, unknown> = {}) => ({
   id: 'runtime_default', provider: 'anthropic', auth_kind: 'api_key', base_url: null,
@@ -14,12 +20,12 @@ const row = (over: Record<string, unknown> = {}) => ({
   ...over,
 });
 
-function facade(rows: any[], override: string | null) {
+function facade(rows: any[], override: string | null, sealed: Awaited<ReturnType<typeof encryptCredential>> | null = null) {
   return {
     listProviders: vi.fn(async () => rows),
     getOverride: vi.fn(async () => override),
-    getProviderCredential: vi.fn(async () => null),
-    upsertProvider: vi.fn(), deleteProvider: vi.fn(), setDefaultProvider: vi.fn(), setOverride: vi.fn(),
+    getProviderCredential: vi.fn(async () => sealed),
+    upsertProvider: vi.fn(), deleteProvider: vi.fn(), setDefaultProvider: vi.fn(), setOverride: vi.fn(), clearOverride: vi.fn(),
   } as any;
 }
 
@@ -27,11 +33,13 @@ afterEach(() => vi.restoreAllMocks());
 
 describe('effective model-runtime resolution', () => {
   it('honours user override before workspace default and keeps only live platform fallbacks', async () => {
+    const sealed = await encryptCredential(KEY, JSON.stringify({ api_key: TENANT_KEY }));
     const userRuntime = row({ id: 'runtime_user', model: 'claude-user', is_default: false });
     const workspaceRuntime = row();
     const plan = await resolveEffectiveRuntimePlan({
-      facade: facade([workspaceRuntime, userRuntime], 'runtime_user'),
+      facade: facade([workspaceRuntime, userRuntime], 'runtime_user', sealed),
       env: {
+        MODEL_RUNTIME_ENC_KEY: KEY,
         ANTHROPIC_API_KEY: 'platform-anthropic-key',
         AI: { run: async () => ({ response: 'live Workers AI fallback response long enough for chat' }) },
       },
@@ -46,8 +54,8 @@ describe('effective model-runtime resolution', () => {
     ]);
   });
 
-  it('records unsupported configured providers and selects an existing live platform path', async () => {
-    const configured = row({ provider: 'openai' });
+  it('records relay-required configured providers and selects an existing live platform path', async () => {
+    const configured = row({ provider: 'ollama' });
     const plan = await resolveEffectiveRuntimePlan({
       facade: facade([configured], null),
       env: { AI: { run: async () => ({ response: 'live Workers AI response long enough for chat' }) } },
@@ -56,7 +64,7 @@ describe('effective model-runtime resolution', () => {
 
     expect(plan.primary.runtime_id).toBe('platform:workers_ai');
     expect(plan.resolution_attempts).toContainEqual(expect.objectContaining({
-      runtime_id: 'runtime_default', outcome: 'skipped', code: 'PROVIDER_ADAPTER_UNAVAILABLE',
+      runtime_id: 'runtime_default', outcome: 'skipped', code: 'RELAY_REQUIRED',
     }));
   });
 
@@ -66,14 +74,49 @@ describe('effective model-runtime resolution', () => {
     })).rejects.toBeInstanceOf(ProviderUnavailableError);
   });
 
-  it('does not read tenant credential ciphertext while resolving chat execution', async () => {
-    const runtimes = facade([row()], null);
-    await resolveEffectiveRuntimePlan({
+  it('decrypts the stored tenant credential for execution and never substitutes the platform secret', async () => {
+    const sealed = await encryptCredential(KEY, JSON.stringify({ api_key: TENANT_KEY }));
+    const runtimes = facade([row()], null, sealed);
+    const plan = await resolveEffectiveRuntimePlan({
       facade: runtimes,
-      env: { ANTHROPIC_API_KEY: 'platform-anthropic-key' },
+      env: { MODEL_RUNTIME_ENC_KEY: KEY, ANTHROPIC_API_KEY: 'platform-anthropic-key' },
       userId: 'user_a', workspaceId: 'workspace_a',
     });
-    expect(runtimes.getProviderCredential).not.toHaveBeenCalled();
+    expect(runtimes.getProviderCredential).toHaveBeenCalledWith('workspace_a', 'anthropic');
+    expect(plan.primary.runtime_id).toBe('runtime_default');
+    expect(JSON.stringify(plan.primary)).toContain(TENANT_KEY);
+  });
+
+  it('validates a request runtime preference within the tenant and rejects foreign ids', async () => {
+    const sealed = await encryptCredential(KEY, JSON.stringify({ api_key: TENANT_KEY }));
+    const plan = await resolveEffectiveRuntimePlan({
+      facade: facade([row({ id: 'tenant_runtime' })], null, sealed),
+      env: { MODEL_RUNTIME_ENC_KEY: KEY }, userId: 'u', workspaceId: 'w', runtimeId: 'tenant_runtime',
+    });
+    expect(plan.primary.source).toBe('request_preference');
+    await expect(resolveEffectiveRuntimePlan({
+      facade: facade([], null), env: {}, userId: 'u', workspaceId: 'w', runtimeId: 'foreign_runtime',
+    })).rejects.toBeInstanceOf(RuntimePreferenceError);
+  });
+
+  it('returns RELAY_REQUIRED without fetching an arbitrary local/custom URL', async () => {
+    const fetchSpy = vi.fn();
+    vi.stubGlobal('fetch', fetchSpy);
+    await expect(resolveEffectiveRuntimePlan({
+      facade: facade([row({ id: 'local_runtime', provider: 'custom', base_url: 'http://10.0.0.8:9000' })], null),
+      env: {}, userId: 'u', workspaceId: 'w', runtimeId: 'local_runtime',
+    })).rejects.toBeInstanceOf(RuntimeCapabilityError);
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it('returns ADAPTER_UNAVAILABLE for Bedrock until a reviewed SigV4 adapter exists', async () => {
+    const fetchSpy = vi.fn();
+    vi.stubGlobal('fetch', fetchSpy);
+    await expect(resolveEffectiveRuntimePlan({
+      facade: facade([row({ id: 'bedrock_runtime', provider: 'aws_bedrock' })], null),
+      env: {}, userId: 'u', workspaceId: 'w', runtimeId: 'bedrock_runtime',
+    })).rejects.toMatchObject({ code: 'ADAPTER_UNAVAILABLE', status: 503 });
+    expect(fetchSpy).not.toHaveBeenCalled();
   });
 });
 
@@ -86,7 +129,8 @@ describe('live provider dispatch', () => {
     vi.stubGlobal('fetch', fetchSpy);
     const runtime: ResolvedRuntime = {
       runtime_id: 'runtime_anthropic', provider: 'anthropic', model: 'claude-live', source: 'workspace_default',
-      provider_config_version_id: 'model-runtime-provider:runtime_anthropic:v1', credential: 'platform-key',
+      provider_config_version_id: 'model-runtime-provider:runtime_anthropic:v1', base_url: null,
+      credential: { api_key: TENANT_KEY },
     };
 
     const result = await executeEffectiveRuntimePlan({
@@ -98,17 +142,18 @@ describe('live provider dispatch', () => {
     expect(result.text).toContain('live Anthropic answer');
     expect(result.usage).toEqual({ tokens_in: 17, tokens_out: 13 });
     expect(result.attempts).toEqual([expect.objectContaining({ status: 'completed', provider: 'anthropic' })]);
+    expect(JSON.stringify(result)).not.toContain(TENANT_KEY);
   });
 
   it('uses only live fallbacks and never manufactures deterministic assistant text', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => new Response('{}', { status: 503 })));
     const primary: ResolvedRuntime = {
       runtime_id: 'runtime_anthropic', provider: 'anthropic', model: 'claude-live', source: 'workspace_default',
-      provider_config_version_id: 'v1', credential: 'platform-key',
+      provider_config_version_id: 'v1', base_url: null, credential: { api_key: TENANT_KEY },
     };
     const fallback: ResolvedRuntime = {
       runtime_id: 'platform:workers_ai', provider: 'workers_ai', model: '@cf/test', source: 'platform_default',
-      provider_config_version_id: null, credential: null,
+      provider_config_version_id: null, base_url: null, credential: null,
       ai: { run: async () => ({ response: 'A live Workers AI fallback response grounded in the supplied context.' }) },
     };
     const plan: EffectiveRuntimePlan = { primary, fallbacks: [fallback], resolution_attempts: [] };
@@ -125,7 +170,7 @@ describe('live provider dispatch', () => {
   it('returns typed provider-unavailable when every live provider fails', async () => {
     const runtime: ResolvedRuntime = {
       runtime_id: 'platform:workers_ai', provider: 'workers_ai', model: '@cf/test', source: 'platform_default',
-      provider_config_version_id: null, credential: null,
+      provider_config_version_id: null, base_url: null, credential: null,
       ai: { run: async () => { throw new Error('upstream unavailable'); } },
     };
     await expect(executeEffectiveRuntimePlan({
@@ -135,5 +180,88 @@ describe('live provider dispatch', () => {
       code: 'PROVIDER_UNAVAILABLE', status: 503,
       attempts: [expect.objectContaining({ status: 'failed' })],
     });
+  });
+});
+
+describe('cloud provider request contracts', () => {
+  const openAiCases = [
+    ['openai', 'https://api.openai.com/v1/chat/completions', 'authorization'],
+    ['mistral', 'https://api.mistral.ai/v1/chat/completions', 'authorization'],
+    ['deepseek', 'https://api.deepseek.com/chat/completions', 'authorization'],
+    ['openrouter', 'https://openrouter.ai/api/v1/chat/completions', 'authorization'],
+  ] as const;
+
+  for (const [provider, url, authHeader] of openAiCases) {
+    it(`${provider} uses its fixed cloud endpoint and tenant bearer credential`, async () => {
+      const fetchSpy = vi.fn(async (_url: string, init: RequestInit) => {
+        expect(_url).toBe(url);
+        expect((init.headers as Record<string, string>)[authHeader]).toBe(`Bearer ${TENANT_KEY}`);
+        expect(JSON.parse(String(init.body))).toMatchObject({ model: 'model-live' });
+        return new Response(JSON.stringify({
+          choices: [{ message: { content: 'A live provider response with enough text for validation.' } }],
+          usage: { prompt_tokens: 3, completion_tokens: 5 },
+        }), { status: 200 });
+      });
+      vi.stubGlobal('fetch', fetchSpy);
+      const runtime: ResolvedRuntime = {
+        runtime_id: `runtime_${provider}`, provider, model: 'model-live', source: 'workspace_default',
+        provider_config_version_id: 'v1', base_url: null, credential: { api_key: TENANT_KEY },
+      };
+      const result = await executeEffectiveRuntimePlan({
+        plan: { primary: runtime, fallbacks: [], resolution_attempts: [] },
+        system: 'System.', user: 'User.', maxTokens: 64,
+      });
+      expect(result.runtime.provider).toBe(provider);
+      expect(JSON.stringify(result)).not.toContain(TENANT_KEY);
+    });
+  }
+
+  it('Google Gemini uses x-goog-api-key and native generateContent shape', async () => {
+    vi.stubGlobal('fetch', vi.fn(async (url: string, init: RequestInit) => {
+      expect(url).toContain('/v1beta/models/gemini-live:generateContent');
+      expect((init.headers as Record<string, string>)['x-goog-api-key']).toBe(TENANT_KEY);
+      expect(JSON.parse(String(init.body))).toMatchObject({
+        system_instruction: { parts: [{ text: 'System.' }] },
+        contents: [{ role: 'user', parts: [{ text: 'User.' }] }],
+      });
+      return new Response(JSON.stringify({
+        candidates: [{ content: { parts: [{ text: 'A live Gemini response with enough text for validation.' }] } }],
+        usageMetadata: { promptTokenCount: 4, candidatesTokenCount: 6 },
+      }), { status: 200 });
+    }));
+    const runtime: ResolvedRuntime = {
+      runtime_id: 'runtime_google', provider: 'google', model: 'gemini-live', source: 'workspace_default',
+      provider_config_version_id: 'v1', base_url: null, credential: { api_key: TENANT_KEY },
+    };
+    await executeEffectiveRuntimePlan({
+      plan: { primary: runtime, fallbacks: [], resolution_attempts: [] },
+      system: 'System.', user: 'User.', maxTokens: 64,
+    });
+  });
+
+  it('Azure OpenAI accepts only allowlisted Azure hosts and uses api-key auth', async () => {
+    vi.stubGlobal('fetch', vi.fn(async (url: string, init: RequestInit) => {
+      expect(url).toBe('https://tenant.openai.azure.com/openai/v1/chat/completions');
+      expect((init.headers as Record<string, string>)['api-key']).toBe(TENANT_KEY);
+      return new Response(JSON.stringify({
+        choices: [{ message: { content: 'A live Azure response with enough text for validation.' } }],
+      }), { status: 200 });
+    }));
+    const runtime: ResolvedRuntime = {
+      runtime_id: 'runtime_azure', provider: 'azure_openai', model: 'deployment-one', source: 'workspace_default',
+      provider_config_version_id: 'v1', base_url: 'https://tenant.openai.azure.com',
+      credential: { api_key: TENANT_KEY, deployment: 'deployment-one' },
+    };
+    await executeEffectiveRuntimePlan({
+      plan: { primary: runtime, fallbacks: [], resolution_attempts: [] },
+      system: 'System.', user: 'User.', maxTokens: 64,
+    });
+
+    vi.stubGlobal('fetch', vi.fn());
+    await expect(executeEffectiveRuntimePlan({
+      plan: { primary: { ...runtime, base_url: 'http://127.0.0.1:8787' }, fallbacks: [], resolution_attempts: [] },
+      system: 'System.', user: 'User.', maxTokens: 64,
+    })).rejects.toBeInstanceOf(ProviderUnavailableError);
+    expect(fetch).not.toHaveBeenCalled();
   });
 });

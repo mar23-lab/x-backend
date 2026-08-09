@@ -13,6 +13,7 @@ import {
   deleteProviderRow,
   setDefaultProviderRow,
   setOverrideRow,
+  clearOverrideRow,
   PROVIDER_SPECS,
   MODEL_RUNTIME_PROVIDERS,
 } from '../dal/model-runtime-store';
@@ -157,6 +158,15 @@ describe('model-runtime-store · audited writes', () => {
     const sql = makeSql(() => []);
     await setOverrideRow(sql, 'u1' as any, 'ws_a' as any, 'mrp_1');
     expect(sql.calls.some((c: any) => /INSERT INTO user_runtime_override/.test(c.query))).toBe(true);
+    expect(sql.calls.some((c: any) => isAuditInsert(c.query))).toBe(false);
+  });
+
+  it('clearOverrideRow deletes only the caller/workspace preference and does not write an audit row', async () => {
+    const sql = makeSql(() => []);
+    await clearOverrideRow(sql, 'u1' as any, 'ws_a' as any);
+    expect(sql.calls).toHaveLength(1);
+    expect(sql.calls[0].query).toMatch(/DELETE FROM user_runtime_override/);
+    expect(sql.calls[0].values).toEqual(['u1', 'ws_a']);
     expect(sql.calls.some((c: any) => isAuditInsert(c.query))).toBe(false);
   });
 });

@@ -66,6 +66,10 @@ export type ApiErrorCode =
   | 'READINESS_PERSISTENCE_FAILED'
   | 'SERVICE_UNAVAILABLE'
   | 'PROVIDER_UNAVAILABLE'
+  | 'RELAY_REQUIRED'
+  | 'ADAPTER_UNAVAILABLE'
+  | 'RUNTIME_PREFERENCE_INVALID'
+  | 'MODEL_NOT_AVAILABLE'
   // T1/P3 (260710) · source-connection contract codes. NB: errorEnvelope WHITELISTS codes — an unregistered
   // code silently downgrades to INTERNAL_ERROR on the wire (that latent bug hit SOURCE_WORKSPACE_BINDING_
   // REQUIRED at sources.ts sync since R50; registering both fixes the wire code while keeping the status).

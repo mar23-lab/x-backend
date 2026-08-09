@@ -27,10 +27,9 @@ import {
 } from '../dal/model-runtime-store';
 import {
   ProviderUnavailableError,
-  isExecutableRuntimeProvider,
+  discoverRuntimeModels,
   resolveConfiguredRuntime,
   resolveEffectiveRuntimePlan,
-  supportedModels,
   validateRuntime,
 } from '../services/model-runtime-execution';
 import type { AiRunner } from '../services/agent-digest';
@@ -182,7 +181,8 @@ modelRuntimesRoute.get('/model-runtimes/effective', async (ctx) => {
   }
 });
 
-// Honest configured/supported catalog. Providers without an approved cloud adapter remain 503.
+// Live model discovery uses the configured tenant credential. Plaintext remains inside the resolver
+// and provider fetch call; only model ids are returned.
 modelRuntimesRoute.get('/model-runtimes/providers/:provider/models', async (ctx) => {
   try {
     const auth = ctx.get('auth');
@@ -191,25 +191,26 @@ modelRuntimesRoute.get('/model-runtimes/providers/:provider/models', async (ctx)
     if (!isOperatorContext(auth, ctx.env)) return errorEnvelope(ctx, { status: 403, code: 'FORBIDDEN', message: 'only an owner or operator can inspect model runtimes' });
     const provider = ctx.req.param('provider');
     if (!isModelRuntimeProvider(provider)) return errorEnvelope(ctx, { status: 400, code: 'VALIDATION_ERROR', message: 'unknown provider' });
-    const row = (await ctx.get('dal').modelRuntimes.listProviders(auth.workspace_id))
-      .find((candidate) => candidate.provider === provider);
-    if (!row) return errorEnvelope(ctx, { status: 404, code: 'NOT_FOUND', message: 'provider not configured' });
-    if (!row.enabled || !isExecutableRuntimeProvider(provider)) {
-      throw new ProviderUnavailableError('configured provider is not executable by customer chat');
-    }
+    const runtime = await resolveConfiguredRuntime({
+      facade: ctx.get('dal').modelRuntimes,
+      env: ctx.env,
+      workspaceId: auth.workspace_id,
+      provider,
+    });
+    const models = await discoverRuntimeModels(runtime);
     return ctx.json({
       provider,
-      runtime_id: row.id,
-      models: supportedModels(provider, row.model),
-      catalog_source: 'configured_and_supported_defaults',
+      runtime_id: runtime.runtime_id,
+      models,
+      catalog_source: 'live_provider_api_with_configured_fallback',
     });
   } catch (err) {
     return errorEnvelope(ctx, err);
   }
 });
 
-// A real content-free probe using an approved platform credential. Stored tenant credential material
-// is intentionally not read by this route or by chat execution.
+// A real content-free probe using the configured tenant credential. Plaintext is decrypted only inside
+// the server execution path and is never included in the response, audit metadata, or observability event.
 modelRuntimesRoute.post('/model-runtimes/providers/:provider/validate', async (ctx) => {
   try {
     const auth = ctx.get('auth');
@@ -389,15 +390,19 @@ modelRuntimesRoute.put('/model-runtimes/default', async (ctx) => {
   }
 });
 
-// PUT /model-runtimes/override — set the caller's OWN session override (personal preference; not audited).
+// PUT /model-runtimes/override — set or clear the caller's OWN session override (personal preference).
 modelRuntimesRoute.put('/model-runtimes/override', async (ctx) => {
   try {
     const auth = ctx.get('auth');
     if (!auth?.user_id) return errorEnvelope(ctx, { status: 401, code: 'UNAUTHORIZED', message: 'auth required' });
     if (!auth.workspace_id) return errorEnvelope(ctx, { status: 403, code: 'FORBIDDEN', message: 'no workspace in session' });
     if (auth.role === 'client') return errorEnvelope(ctx, { status: 403, code: 'FORBIDDEN', message: 'client role cannot set a runtime override' });
-    let body: { provider_id?: unknown } = {};
+    let body: { provider_id?: unknown; clear_override?: unknown } = {};
     try { body = (await ctx.req.json()) as typeof body; } catch { body = {}; }
+    if (body.clear_override === true) {
+      await ctx.get('dal').modelRuntimes.clearOverride(auth.user_id, auth.workspace_id);
+      return ctx.json({ session_override: null, effective_source: 'workspace_default' });
+    }
     const providerId = typeof body.provider_id === 'string' ? body.provider_id.trim() : '';
     if (!providerId) return errorEnvelope(ctx, { status: 400, code: 'VALIDATION_ERROR', message: 'provider_id required' });
     const dal = ctx.get('dal');

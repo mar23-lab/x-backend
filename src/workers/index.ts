@@ -54,6 +54,7 @@ import { membersRoute } from './routes/members';    // Stage 3 · GET /api/v1/me
 import { planRoute } from './routes/plan';          // G1 · /api/v1/plan/* (customer plan_entities facade; PLAN_ENTITIES_ENABLED default OFF)
 import { sessionModeRoute } from './routes/session-mode'; // Wave B · PATCH /session/mode (canonical operating mode, audited)
 import { modelRuntimesRoute } from './routes/model-runtimes'; // Wave C · /model-runtimes/* (encrypted-at-rest provider config)
+import { settingsReadinessRoute } from './routes/settings-readiness'; // Commercial Settings live readiness matrix
 import { readinessRoute } from './routes/readiness'; // M.7 · POST /api/v1/readiness/submit (in-app onboarding journey → scaled provision)
 import { projectsRoute } from './routes/projects';
 import { syntheticDomainsRoute } from './routes/synthetic-domains';
@@ -246,17 +247,15 @@ app.route('/api/v1', eventsRoutes);
 
 // Wave R-I.7 Stage C · investor portal split routes are mounted above:
 // - investorPublicRoute: public (no auth) at /api/v1/investor/nda-accept
-// - investorAuthedRoute: clerk-authed at /api/v1/investor/request-deck-download (in userRoutes)
-// - investorAdminRoute: admin-only at /api/v1/admin/investor/* (in adminRoutes)
-
-// ---- Workspace-scoped routes (require JWT + org_id via clerkAuth) ----
+// Authenticated and admin investor routes mount in their matching groups below.
 const protectedRoutes = new Hono<{ Bindings: AppEnv; Variables: AppVariables }>();
 protectedRoutes.use('*', clerkAuth());
-// Safety floor (SF-2, 260711): per-user caps on the two LLM-cost endpoints, flag-gated default-OFF
+// Safety floor (SF-2, 260711): per-user caps on the LLM-cost endpoints, flag-gated default-OFF
 // (SAFETY_FLOOR_RATELIMIT_ENABLED). OFF ⇒ byte-identical. Registered AFTER clerkAuth so the limiter
 // keys on the authenticated user. Defense-in-depth for the "unbounded LLM spend by an authed user"
 // concern until per-tenant metering exists; the operator flips it once RATE_LIMITER_* is provisioned.
 protectedRoutes.use('/customer-chat', rateLimitWhenFlag('SAFETY_FLOOR_RATELIMIT_ENABLED', { routeBucket: { limit: 60, periodSeconds: 60, bindingName: 'RATE_LIMITER_CHAT' } }));
+protectedRoutes.use('/chat/turns', rateLimitWhenFlag('SAFETY_FLOOR_RATELIMIT_ENABLED', { routeBucket: { limit: 60, periodSeconds: 60, bindingName: 'RATE_LIMITER_CHAT' } }));
 protectedRoutes.use('/readiness/*', rateLimitWhenFlag('SAFETY_FLOOR_RATELIMIT_ENABLED', { routeBucket: { limit: 10, periodSeconds: 60, bindingName: 'RATE_LIMITER_READINESS' } }));
 protectedRoutes.route('/', projectsRoute);
 protectedRoutes.route('/', customerRoute);           // R55 · POST /customer/authority-consent (workspace-scoped)
@@ -279,6 +278,7 @@ protectedRoutes.route('/', planRoute);               // G1 · /api/v1/plan/* (me
   protectedRoutes.route('/', currentWorkRoute);        // Wave I · GET /current-work (one server-derived Current Work projection; flag-gated CURRENT_WORK_PROJECTION_ENABLED, default OFF)
 protectedRoutes.route('/', sessionModeRoute);        // Wave B · PATCH /session/mode (canonical operating mode, audited)
 protectedRoutes.route('/', modelRuntimesRoute);      // Wave C · /model-runtimes/* (provider config, encrypted-at-rest credentials, audited default flip)
+protectedRoutes.route('/', settingsReadinessRoute);  // Customer-safe live checks; unknown stays attention.
 protectedRoutes.route('/', readinessRoute);          // M.7 · POST /readiness/submit (in-app first-login onboarding journey → scaled provision)
 protectedRoutes.route('/', inferenceHealthRoute);    // R51-ζ-3 · 6-panel inference health
 protectedRoutes.route('/', documentsRoute);          // Stage 2 source-intake · /documents (org required → workspace-scoped, no cross-tenant)

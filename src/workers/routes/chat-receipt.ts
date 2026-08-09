@@ -16,7 +16,7 @@
 // re-read via the role-visibility path (dal.listEvents with the caller's role) — a receipt can never leak
 // an event the caller's role could not read directly.
 
-import { Hono } from 'hono';
+import { Hono, type Context } from 'hono';
 import { errorEnvelope } from '../middleware/error';
 import { withDataClass } from '../lib/response-envelope';
 import { getMessageByReceiptUidRow } from '../dal/chat-store';
@@ -36,9 +36,14 @@ export interface ChatReceiptVariables extends AuthVariables {
 
 export const chatReceiptRoute = new Hono<{ Bindings: ChatReceiptEnv; Variables: ChatReceiptVariables }>();
 
-// GET /api/v1/chat/receipt/:receipt_uid?format=json|csv|jsonl
-chatReceiptRoute.get('/chat/receipt/:receipt_uid', async (ctx) => {
+type ChatReceiptContext = Context<{
+  Bindings: ChatReceiptEnv;
+  Variables: ChatReceiptVariables;
+}>;
+
+async function handleChatReceipt(ctx: ChatReceiptContext) {
   try {
+    const commercialTurnFacade = ctx.req.path.includes('/chat/turns/');
     const auth = ctx.get('auth');
     const dal = ctx.get('dal');
     const ws = String(auth.workspace_id || '').trim();
@@ -46,7 +51,8 @@ chatReceiptRoute.get('/chat/receipt/:receipt_uid', async (ctx) => {
     if (!ws) { ctx.status(403); return ctx.json({ error: 'no signed-in workspace', code: 'FORBIDDEN', request_id: ctx.get('request_id') }); }
 
     const sql = ctx.get('sql') ?? neonClient(ctx.env.DATABASE_URL);
-    const msg = await getMessageByReceiptUidRow(sql, ctx.req.param('receipt_uid'));
+    const receiptUid = ctx.req.param('receipt_uid') || ctx.req.param('id') || '';
+    const msg = await getMessageByReceiptUidRow(sql, receiptUid);
     // TENANT GATE: absent + foreign-workspace are the SAME 404 (no cross-tenant existence oracle).
     if (!msg || msg.workspace_id !== ws) return notFound();
 
@@ -71,6 +77,14 @@ chatReceiptRoute.get('/chat/receipt/:receipt_uid', async (ctx) => {
     }));
 
     const format = parseAuditExportFormat(ctx.req.query('format'));
+    if (commercialTurnFacade && format !== 'json') {
+      ctx.status(400);
+      return ctx.json({
+        error: 'commercial chat turn receipts are JSON only',
+        code: 'VALIDATION_ERROR',
+        request_id: ctx.get('request_id'),
+      });
+    }
     if (format === 'csv') {
       ctx.header('Content-Type', 'text/csv; charset=utf-8');
       ctx.header('Content-Disposition', 'attachment; filename="chat-receipt.csv"');
@@ -83,6 +97,17 @@ chatReceiptRoute.get('/chat/receipt/:receipt_uid', async (ctx) => {
     }
     return ctx.json(withDataClass({
       ok: true,
+      ...(commercialTurnFacade ? {
+        schema_id: 'xlooop.chat_turn_receipt.v1',
+        receipts: {
+          answer_receipt_id: receiptUid,
+          execution_receipt_id: msg.execution_receipt_id,
+          context_receipt_id: msg.packet_id,
+          policy_resolution_id: msg.resolution_id,
+          audit_event_id: msg.audit_event_id,
+        },
+        interaction_id: msg.interaction_id,
+      } : {}),
       receipt: {
         answered_at: msg.created_at,
         mode: msg.mode,
@@ -95,4 +120,8 @@ chatReceiptRoute.get('/chat/receipt/:receipt_uid', async (ctx) => {
       },
     }, 'live'));
   } catch (err) { return errorEnvelope(ctx, err); }
-});
+}
+
+// Legacy export-compatible receipt and the versioned commercial JSON facade share one tenant gate.
+chatReceiptRoute.get('/chat/receipt/:receipt_uid', handleChatReceipt);
+chatReceiptRoute.get('/chat/turns/:id/receipt', handleChatReceipt);

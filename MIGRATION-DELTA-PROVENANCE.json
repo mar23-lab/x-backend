@@ -6063,6 +6063,92 @@
           "reason": "Converge canonical xcp-gateway commercial governance contracts"
         }
       ]
+    },
+    {
+      "delta_id": "codex-commercial-chat-facade-provenance-260809",
+      "generated_at": "2026-08-09T02:34:12.607Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "a80a5504d03da33aed387e6c353503fcf9f7148a",
+      "target_base_commit": "a80a5504d03da33aed387e6c353503fcf9f7148a",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "docs/contracts/api-contract.v1.json",
+          "target_blob": "5e174b7c77c584cbd7ee68abc5daec9caa328d62",
+          "reason": "Add tenant credential dispatch, cloud provider adapters, commercial chat and readiness facades without changing authorization semantics"
+        },
+        {
+          "path": "src/workers/index.ts",
+          "target_blob": "96007df911613e6ce642858733a1abbcc7c43b8b",
+          "reason": "Add tenant credential dispatch, cloud provider adapters, commercial chat and readiness facades without changing authorization semantics"
+        },
+        {
+          "path": "src/workers/routes/customer-chat.ts",
+          "target_blob": "5fd4f62fca3afa2058b30db9bbb561e16dfc5557",
+          "reason": "Add tenant credential dispatch, cloud provider adapters, commercial chat and readiness facades without changing authorization semantics"
+        },
+        {
+          "path": "src/workers/__tests__/model-runtime-store.test.ts",
+          "target_blob": "e97d872bba67c0527362513963b038893dcbfa10",
+          "reason": "Add tenant credential dispatch, cloud provider adapters, commercial chat and readiness facades without changing authorization semantics"
+        },
+        {
+          "path": "src/workers/__tests__/model-runtimes-route.test.ts",
+          "target_blob": "bf5a9b058cc4262d1d5799b66bef97dd1146f358",
+          "reason": "Add tenant credential dispatch, cloud provider adapters, commercial chat and readiness facades without changing authorization semantics"
+        },
+        {
+          "path": "src/workers/dal/chat-store.ts",
+          "target_blob": "869ee1004bed377c1e96648d9a6b11ef52ba67ad",
+          "reason": "Add tenant credential dispatch, cloud provider adapters, commercial chat and readiness facades without changing authorization semantics"
+        },
+        {
+          "path": "src/workers/dal/model-runtime-facade.ts",
+          "target_blob": "9fb8b8bdd2853b5edc9200b672708f71aa8e0c32",
+          "reason": "Add tenant credential dispatch, cloud provider adapters, commercial chat and readiness facades without changing authorization semantics"
+        },
+        {
+          "path": "src/workers/dal/model-runtime-store.ts",
+          "target_blob": "ffaaf28858f1fcc9040b09d93939b2a4a2844198",
+          "reason": "Add tenant credential dispatch, cloud provider adapters, commercial chat and readiness facades without changing authorization semantics"
+        },
+        {
+          "path": "src/workers/routes/model-runtimes.ts",
+          "target_blob": "2f253e119f2c85f484a5f020a8a4a53318632e31",
+          "reason": "Add tenant credential dispatch, cloud provider adapters, commercial chat and readiness facades without changing authorization semantics"
+        },
+        {
+          "path": "docs/architecture/backend/API_CONTRACT_V1.md",
+          "target_blob": "3c4c877fe22b64eb01bf844109f929d78e930807",
+          "reason": "Add tenant credential dispatch, cloud provider adapters, commercial chat and readiness facades without changing authorization semantics"
+        },
+        {
+          "path": "src/workers/dal/types/auth.ts",
+          "target_blob": "f66a90296f506a4b4ce543e9578b40dbb1619f3c",
+          "reason": "Add tenant credential dispatch, cloud provider adapters, commercial chat and readiness facades without changing authorization semantics"
+        },
+        {
+          "path": "src/workers/middleware/error.ts",
+          "target_blob": "b4d0689314a0d0448bd719669b6056c9ff8e71e5",
+          "reason": "Add tenant credential dispatch, cloud provider adapters, commercial chat and readiness facades without changing authorization semantics"
+        },
+        {
+          "path": "docs/deployment/MODEL_RUNTIMES_ACTIVATION.md",
+          "target_blob": "51a22fae2371b497fcf484ddd8ecfead83ff220c",
+          "reason": "Add tenant credential dispatch, cloud provider adapters, commercial chat and readiness facades without changing authorization semantics"
+        },
+        {
+          "path": "src/workers/routes/chat-receipt.ts",
+          "target_blob": "95bf4671f3e3c11a2f17ed6c7c8532ed9593c485",
+          "reason": "Add tenant credential dispatch, cloud provider adapters, commercial chat and readiness facades without changing authorization semantics"
+        },
+        {
+          "path": "src/workers/__tests__/chat-receipt-route.test.ts",
+          "target_blob": "3486fd55c205446dc059a2f059c7c23bbbcd8577",
+          "reason": "Add tenant credential dispatch, cloud provider adapters, commercial chat and readiness facades without changing authorization semantics"
+        }
+      ]
     }
   ]
 }
