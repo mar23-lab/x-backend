@@ -6037,6 +6037,32 @@
           "reason": "Integrate canonical customer xcp_session_start discovery and approved live runtime controls from Banach without tenant credential dispatch"
         }
       ]
+    },
+    {
+      "delta_id": "codex-customer-connector-gateway-provenance-260809",
+      "generated_at": "2026-08-09T00:47:41.611Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "cc1f3e17fb00c62e8046806a29f057a6732b6294",
+      "target_base_commit": "cc1f3e17fb00c62e8046806a29f057a6732b6294",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "package.json",
+          "target_blob": "a7b77c3e631e583446dff01a89f61c2336009bff",
+          "reason": "Converge canonical xcp-gateway commercial governance contracts"
+        },
+        {
+          "path": "scripts/verify-commercial-governance-hardening.mjs",
+          "target_blob": "0430b56b8248a20c5ee48d3176ba5eeb812c6aa9",
+          "reason": "Converge canonical xcp-gateway commercial governance contracts"
+        },
+        {
+          "path": "scripts/verify-customer-connector-token-safety.mjs",
+          "target_blob": "a93be16e8fcb674af58f4abca2dfcc31fa52ef8c",
+          "reason": "Converge canonical xcp-gateway commercial governance contracts"
+        }
+      ]
     }
   ]
 }
