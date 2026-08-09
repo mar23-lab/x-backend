@@ -153,13 +153,17 @@
       "id": "headroom",
       "name": "chopratejas/headroom",
       "source_url": "https://github.com/chopratejas/headroom",
+      "source_aliases": [
+        "https://github.com/headroomlabs-ai/headroom"
+      ],
+      "distribution_name": "headroom-ai",
       "license": "Apache-2.0",
       "status": "benchmark_candidate",
       "adopted_by_default": false,
       "adoption_mode": "restricted_adapter_with_replay_required",
       "runtime_surface": "backend_only_adapter_after_approval",
       "risk_class": "context_compression_may_drop_decision_or_citation_context",
-      "current_local_adoption": "not_adopted; existing Xlooop headroom scripts are bundle/capacity checks, not this tool",
+      "current_local_adoption": "upstream sandbox and 40-case local semantic canaries implemented; disabled by default; paid/platform-provider semantic canary and owner approval still required",
       "allowed_scopes_if_approved": [
         "tenant_scoped_packet_compaction",
         "operator_log_compaction",
@@ -182,8 +186,11 @@
         "citation_check_after_decompression_required": true
       },
       "acceptance_gates": {
+        "semantic_case_count_min": 40,
         "token_reduction_pct_min": 25,
         "token_reduction_pct_target": 40,
+        "original_task_correctness_pct_min": 95,
+        "task_correctness_pct_min": 95,
         "answer_equivalence_pct_min": 95,
         "citation_coverage_pct_min": 95,
         "sensitive_leakage_count": 0,
@@ -196,7 +203,7 @@
       "approval_ref": null,
       "version_or_commit": null,
       "rollback_plan": "Disable tenant feature flag and replay from original uncompressed packet/evidence payload.",
-      "verifier": "npm run verify:headroom-replay-compression"
+      "verifier": "npm run verify:external-capability-runtime-results -- --strict --capability=headroom --headroom-semantic-input=<governed-report>"
     },
     {
       "id": "impeccable",

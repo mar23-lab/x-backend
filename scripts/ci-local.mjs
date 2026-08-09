@@ -121,6 +121,11 @@ const gates = [
   ['customer onboarding composed gate', 'npm', ['run', 'verify:customer-onboarding-composed-gate']],
   ['customer onboarding composed gate controls', 'npm', ['run', 'verify:customer-onboarding-composed-gate:self-test']],
   ['customer authority gates controls', 'npm', ['run', 'verify:customer-authority-gates:self-test']],
+  // External capability canaries are deliberately non-authoritative, but that boundary still needs
+  // teeth. These controls reject aggregate summaries as raw evidence, require structural and live
+  // semantic equivalence to remain distinct, and keep every tool default-disabled without approval.
+  ['external capability live-contract controls', 'npm', ['run', 'verify:external-capability-live-contract']],
+  ['external capability default hard stop', 'npm', ['run', 'verify:external-capability-default-hard-stop']],
   // Release-debt visibility (260803). Advisory by default — it reports how far HEAD has drifted from
   // the LIVE deployed sha, which is the signal that was missing while 22 backend commits accumulated
   // undeployed across five sessions. The self-test is the gate on the gate: it proves the threshold

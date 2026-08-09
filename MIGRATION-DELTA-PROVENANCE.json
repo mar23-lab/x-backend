@@ -6316,6 +6316,62 @@
           "reason": "Seal live-only chat, read-only A/B canary, receipt, callsite, runtime-credential, and policy changes after final verification"
         }
       ]
+    },
+    {
+      "delta_id": "codex-external-capability-semantic-authority-20260809",
+      "generated_at": "2026-08-09T12:58:58.715Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "7e346553d742b3596500b4ff138673d025472e31",
+      "target_base_commit": "7e346553d742b3596500b4ff138673d025472e31",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "package.json",
+          "target_blob": "a44185f0a35a95052b6f1b8eff8dcfe65f3dbf51",
+          "reason": "Port reviewed external capability live and semantic contracts into canonical x-backend"
+        },
+        {
+          "path": "scripts/ci-local.mjs",
+          "target_blob": "31b19e398e9b50602fc508fc794d3045ff5b5aa5",
+          "reason": "Port reviewed external capability live and semantic contracts into canonical x-backend"
+        },
+        {
+          "path": "docs/architecture/backend/EXTERNAL_CAPABILITY_REGISTRY.json",
+          "target_blob": "370c280c959213680aa6eab54876a2190efabcb0",
+          "reason": "Port reviewed external capability live and semantic contracts into canonical x-backend"
+        },
+        {
+          "path": "docs/deployment/PUBLIC_SELF_SERVE_EVIDENCE_GATES.md",
+          "target_blob": "f631bb226c3b63da2bb14517ebfac93c194a130b",
+          "reason": "Port reviewed external capability live and semantic contracts into canonical x-backend"
+        },
+        {
+          "path": "docs/deployment/evidence/latest-upstream-capability-live-canary-summary.json",
+          "target_blob": "952ec2b3da96f51aa153295d198eb227dc8d1a92",
+          "reason": "Port reviewed external capability live and semantic contracts into canonical x-backend"
+        },
+        {
+          "path": "scripts/run-upstream-capability-live-canary.mjs",
+          "target_blob": "ce1455b4aea6bc615a6d27a8abcd475895b10a65",
+          "reason": "Port reviewed external capability live and semantic contracts into canonical x-backend"
+        },
+        {
+          "path": "scripts/verify-external-capability-live-prereqs.mjs",
+          "target_blob": "bee743818cb5b88798f85d001fe0af6fc6abd991",
+          "reason": "Port reviewed external capability live and semantic contracts into canonical x-backend"
+        },
+        {
+          "path": "scripts/verify-external-capability-runtime-results.mjs",
+          "target_blob": "c97423ffaee5ec726ee4d6a5fa5a5e138a884322",
+          "reason": "Port reviewed external capability live and semantic contracts into canonical x-backend"
+        },
+        {
+          "path": "scripts/verify-upstream-capability-sandbox-canary.mjs",
+          "target_blob": "29f14687cc53a6b747f8e02b8a6a7f14c433f5c6",
+          "reason": "Port reviewed external capability live and semantic contracts into canonical x-backend"
+        }
+      ]
     }
   ]
 }

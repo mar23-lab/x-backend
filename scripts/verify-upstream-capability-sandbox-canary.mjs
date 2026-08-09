@@ -123,6 +123,19 @@ function verifyLiveUpstreamInput(inputPath) {
     });
     return;
   }
+  if (report.schema_id === 'xlooop.external_capability_live_canary_summary.v1') {
+    fail(
+      'live_upstream_summary_not_runtime_evidence',
+      'aggregate live-canary summaries are human-readable evidence, not result-level runtime evidence; provide the raw runtime-results report',
+      {
+        input: resolved,
+        source_report: report.source_report || null,
+        expected_schema_id: 'xlooop.external_capability_runtime_results.v1',
+      },
+    );
+    appendLiveReportWarnings(report.warnings);
+    return;
+  }
   if (report.schema_id !== 'xlooop.external_capability_runtime_results.v1') {
     fail('live_upstream_schema_invalid', 'live upstream capability results file has unexpected schema_id', {
       input: resolved,
@@ -154,8 +167,16 @@ function verifyLiveUpstreamInput(inputPath) {
   } else {
     pass('live_upstream_results_default_disabled', { result_count: (report.results || []).length });
   }
-  if ((report.warnings || []).length) {
-    warnings.push(...report.warnings.map((item) => ({ ...item, source: 'live_upstream_report' })));
+  appendLiveReportWarnings(report.warnings);
+}
+
+function appendLiveReportWarnings(items) {
+  for (const item of Array.isArray(items) ? items : []) {
+    if (typeof item === 'string') {
+      warnings.push({ id: 'live_upstream_report_warning', message: item, source: 'live_upstream_report' });
+    } else if (item && typeof item === 'object') {
+      warnings.push({ ...item, source: 'live_upstream_report' });
+    }
   }
 }
 

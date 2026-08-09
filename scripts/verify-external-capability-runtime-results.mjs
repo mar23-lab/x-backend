@@ -21,6 +21,7 @@ const runtimeResultsRel = 'docs/architecture/backend/EXTERNAL_CAPABILITY_RUNTIME
 const runtimeResultsPath = path.join(repoRoot, runtimeResultsRel);
 const tmpRuntimeResultsPath = path.join(os.tmpdir(), 'xlooop-external-capability-runtime-results.json');
 const inputPath = arg('input') || (fs.existsSync(runtimeResultsPath) ? runtimeResultsPath : tmpRuntimeResultsPath);
+const headroomSemanticInputPath = arg('headroom-semantic-input');
 const failures = [];
 const warnings = [];
 const checks = [];
@@ -38,7 +39,7 @@ const capabilities = registry.capabilities || [];
 for (const capability of capabilities) {
   if (capability.adopted_by_default === false) {
     pass(`not_default:${capability.id}`, {
-      status: capability.status,
+      capability_status: capability.status,
       adoption_mode: capability.adoption_mode,
     });
   } else {
@@ -86,6 +87,9 @@ const report = {
   strict,
   requested_capability: requestedCapability,
   input: fs.existsSync(inputPath) ? inputPath : null,
+  headroom_semantic_input: headroomSemanticInputPath && fs.existsSync(headroomSemanticInputPath)
+    ? headroomSemanticInputPath
+    : null,
   checks,
   failures,
   warnings,
@@ -135,6 +139,16 @@ function verifyRuntimeResult(result) {
     minGate(capability, gates, 'token_reduction_pct', 25);
     minGate(capability, gates, 'answer_equivalence_pct', 95);
     minGate(capability, gates, 'citation_coverage_pct', 95);
+    if (result.answer_equivalence_measurement === 'structural_context_invariant_preservation_not_downstream_llm_semantics') {
+      pass(`headroom_structural_equivalence_scope_declared:${capability}`);
+      verifyHeadroomSemanticEvidence(capability);
+    } else {
+      warnings.push({
+        id: 'headroom_answer_equivalence_scope_missing',
+        capability,
+        message: 'Headroom answer-equivalence evidence does not declare whether it measures structural preservation or downstream live-LLM task quality.',
+      });
+    }
   } else if (capability === 'markitdown') {
     minGate(capability, gates, 'extraction_fidelity_pct', 95);
     minGate(capability, gates, 'citation_source_span_coverage_pct', 95);
@@ -159,6 +173,76 @@ function verifyRuntimeResult(result) {
     minGate(capability, gates, 'citation_coverage_pct', 95);
   }
   pass(`runtime_result_reviewed:${capability}`, { decision: result.decision || 'undecided' });
+}
+
+function verifyHeadroomSemanticEvidence(capability) {
+  if (!headroomSemanticInputPath) {
+    warnings.push({
+      id: 'headroom_semantic_task_equivalence_not_measured',
+      capability,
+      message: 'Headroom passed structural context-integrity gates, but downstream live-LLM answer and task equivalence still require a separate representative canary before default adoption.',
+    });
+    return;
+  }
+  if (!fs.existsSync(headroomSemanticInputPath)) {
+    fail('headroom_semantic_input_missing', 'configured Headroom semantic evidence is missing', {
+      capability,
+      input: headroomSemanticInputPath,
+    });
+    return;
+  }
+
+  let semantic;
+  try {
+    semantic = JSON.parse(fs.readFileSync(headroomSemanticInputPath, 'utf8'));
+  } catch (error) {
+    fail('headroom_semantic_input_invalid_json', 'configured Headroom semantic evidence is invalid JSON', {
+      capability,
+      input: headroomSemanticInputPath,
+      error: error.message,
+    });
+    return;
+  }
+
+  if (semantic.schema_id !== 'xlooop.headroom_semantic_canary.v1' || semantic.status !== 'PASS') {
+    fail('headroom_semantic_evidence_not_pass', 'Headroom semantic evidence must be a passing governed canary report', {
+      capability,
+      schema_id: semantic.schema_id,
+      semantic_status: semantic.status,
+    });
+    return;
+  }
+  if (semantic.upstream_headroom_execution !== true || semantic.default_adoption_allowed !== false) {
+    fail('headroom_semantic_authority_invalid', 'semantic evidence must execute upstream Headroom and remain non-authoritative for default adoption', {
+      capability,
+      upstream_headroom_execution: semantic.upstream_headroom_execution,
+      default_adoption_allowed: semantic.default_adoption_allowed,
+    });
+    return;
+  }
+
+  const gates = semantic.gates || {};
+  const semanticLane = `${capability}_semantic`;
+  minGate(semanticLane, gates, 'case_count', 40);
+  minGate(semanticLane, gates, 'token_reduction_pct', 25);
+  minGate(semanticLane, gates, 'original_task_correctness_pct', 95);
+  minGate(semanticLane, gates, 'task_correctness_pct', 95);
+  minGate(semanticLane, gates, 'answer_equivalence_pct', 95);
+  minGate(semanticLane, gates, 'citation_coverage_pct', 95);
+  minGate(semanticLane, gates, 'redaction_invariant_pct', 100);
+  minGate(semanticLane, gates, 'replayability_pct', 100);
+  zeroGate(semanticLane, gates, 'sensitive_leakage_count');
+  pass('headroom_live_local_semantic_evidence_reviewed', {
+    capability,
+    model: semantic.model,
+    evidence_kind: semantic.evidence_kind,
+    input: headroomSemanticInputPath,
+  });
+  warnings.push({
+    id: 'headroom_paid_or_platform_provider_canary_required',
+    capability,
+    message: 'The 40-case local-LLM semantic canary passed, but customer-default adoption still requires a paid or platform-managed provider canary and owner approval.',
+  });
 }
 
 function minGate(capability, gates, key, min) {

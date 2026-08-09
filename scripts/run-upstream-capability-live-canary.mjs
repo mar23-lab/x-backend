@@ -210,7 +210,16 @@ if not hasattr(headroom, "compress"):
     }
     json.dump(payload, open(out, "w"), indent=2)
     sys.exit(0)
-result = headroom.compress(data["messages"], model_limit=120, optimize=False)
+result = headroom.compress(
+    data["messages"],
+    model="gpt-4o",
+    model_limit=4096,
+    optimize=True,
+    compress_user_messages=True,
+    target_ratio=0.5,
+    protect_recent=0,
+    protect_analysis_context=False,
+)
 messages = getattr(result, "messages", data["messages"])
 payload = {
     "api_available": True,
@@ -223,7 +232,16 @@ payload = {
 }
 json.dump(payload, open(out, "w"), indent=2)
 `;
-  const run = spawnSync(python, ['-c', code, inputPath, outputPath], { cwd: workdir, encoding: 'utf8', maxBuffer: 1024 * 1024 * 8 });
+  const run = spawnSync(python, ['-c', code, inputPath, outputPath], {
+    cwd: workdir,
+    encoding: 'utf8',
+    maxBuffer: 1024 * 1024 * 8,
+    env: {
+      ...process.env,
+      HEADROOM_CONFIG_DIR: path.join(workdir, 'headroom-config'),
+      HEADROOM_WORKSPACE_DIR: path.join(workdir, 'headroom-workspace'),
+    },
+  });
   if (run.status !== 0 || !fs.existsSync(outputPath)) {
     return {
       capability: capability.id,
@@ -275,9 +293,12 @@ json.dump(payload, open(out, "w"), indent=2)
   const compressedText = redact(JSON.stringify(parsed.messages || []));
   let citationPass = 0;
   let equivalencePass = 0;
+  let replayPass = 0;
   for (const item of selected) {
     if (compressedText.includes(`source:${item.id}:line-1`)) citationPass += 1;
     if (compressedText.includes(item.id) && compressedText.includes(item.tenant_scope)) equivalencePass += 1;
+    const replayHash = crypto.createHash('sha256').update(item.id).digest('hex');
+    if (compressedText.includes(replayHash)) replayPass += 1;
   }
   const before = Number(parsed.tokens_before || tokenCount(JSON.stringify(JSON.parse(fs.readFileSync(inputPath, 'utf8')).messages)));
   const after = Number(parsed.tokens_after || tokenCount(compressedText));
@@ -292,6 +313,12 @@ json.dump(payload, open(out, "w"), indent=2)
     });
   }
 
+  warnings.push({
+    id: 'headroom_live_canary_structural_equivalence_only',
+    message: 'Headroom equivalence in this canary measures preserved packet ids, tenant scope, citations, and replay hashes. It does not yet prove downstream live-LLM answer or task equivalence.',
+    case_count: selected.length,
+  });
+
   return {
     capability: capability.id,
     source_url: capability.source_url,
@@ -303,6 +330,15 @@ json.dump(payload, open(out, "w"), indent=2)
     case_count: selected.length,
     original_token_count: before,
     compressed_token_count: after,
+    answer_equivalence_measurement: 'structural_context_invariant_preservation_not_downstream_llm_semantics',
+    compression_profile: {
+      optimize: true,
+      compress_user_messages: true,
+      target_ratio: 0.5,
+      protect_recent: 0,
+      protect_analysis_context: false,
+      purpose: 'redacted packets, evidence, connector content, and tool-log context; never raw human messages',
+    },
     gates: {
       token_reduction_pct: round(reduction),
       answer_equivalence_pct: pct(equivalencePass, selected.length),
@@ -312,7 +348,7 @@ json.dump(payload, open(out, "w"), indent=2)
       sensitive_leakage_count: leaks,
       tenant_boundary_bypass_count: 0,
       external_graph_authority_count: 0,
-      replayability_pct: 100,
+      replayability_pct: pct(replayPass, selected.length),
       license_security_sbom_status: registryLicensePass(capability),
     },
   };
