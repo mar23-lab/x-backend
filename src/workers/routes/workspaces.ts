@@ -48,7 +48,6 @@ import { idempotencyMiddleware } from '../lib/idempotency'; // J-W1/IDEM-4
 import { persistAssistantContextLineage, completeAssistantSkillLineage, type AssistantContextLineage } from '../lib/assistant-context-lineage';
 import { createModelExecutionObserver } from '../lib/model-execution-lineage';
 import {
-  commercialLiveChatRequired,
   ProviderUnavailableError,
   resolveEffectiveRuntimePlan,
   resolvePlatformRuntimePlan,
@@ -419,7 +418,9 @@ workspacesRoute.post('/cockpit-chat', async (ctx) => {
       events = events.filter((e) => e && ((e as { domain_id?: string | null }).domain_id ?? null) === domainId);
     }
 
-    const liveChatRequired = commercialLiveChatRequired(ctx.env.COMMERCIAL_LIVE_CHAT_REQUIRED);
+    // Operator chat is also a conversational production surface: live provider
+    // execution or a typed unavailable response, never a deterministic answer.
+    const liveChatRequired = true;
     let liveRuntimePlan: EffectiveRuntimePlan | undefined;
     if (liveChatRequired) {
       try {

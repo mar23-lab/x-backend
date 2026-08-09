@@ -16,7 +16,7 @@ import { isOperatorContext } from '../lib/permissions';
 import { authorizeGovernedWrite, entitlementEnforcementOn } from '../lib/spine-authority';
 import { withAuthority } from '../lib/allowed-actions';
 import { emitEvent } from '../lib/observability';
-import { encryptCredential, lastFour, renderMaskedCredential, isEncryptionConfigured } from '../lib/model-runtime-crypto';
+import { encryptCredential, lastFour, renderMaskedCredential, isEncryptionConfigured, modelRuntimeEncryptionConfig } from '../lib/model-runtime-crypto';
 import {
   isModelRuntimeProvider,
   PROVIDER_SPECS,
@@ -36,6 +36,8 @@ import type { AiRunner } from '../services/agent-digest';
 
 export interface ModelRuntimesEnv extends AuthEnv {
   MODEL_RUNTIME_ENC_KEY?: string; // AES-256 master key (base64 32 bytes) — worker secret; NEVER in the DB
+  MODEL_RUNTIME_ENC_KEYS?: string; // JSON key-id -> base64 AES-256 key; write-only worker secret
+  MODEL_RUNTIME_ACTIVE_KEY_ID?: string;
   MBP_OWNER_USER_ID?: string;
   MBP_OWNER_LINKED_USER_IDS?: string;
   AI?: AiRunner;
@@ -67,6 +69,7 @@ function toClientProvider(row: ProviderConfigRow) {
     provider: row.provider,
     auth_kind: row.auth_kind,
     locality: spec?.locality ?? 'external',
+    execution_mode: spec?.execution_mode ?? 'adapter_unavailable',
     base_url: row.base_url,
     model: row.model,
     requires_key: spec?.requires_key ?? false,
@@ -93,7 +96,7 @@ function catalogView(rows: ProviderConfigRow[]) {
     if (row) return toClientProvider(row);
     const spec = PROVIDER_SPECS[p];
     return {
-      id: null, provider: p, auth_kind: spec.auth_kind, locality: spec.locality,
+      id: null, provider: p, auth_kind: spec.auth_kind, locality: spec.locality, execution_mode: spec.execution_mode,
       base_url: null, model: null, requires_key: spec.requires_key, requires_base_url: spec.requires_base_url,
       configured: false, enabled: false, is_default: false, masked_key: null, updated_at: null,
     };
@@ -300,12 +303,13 @@ modelRuntimesRoute.put('/model-runtimes/providers/:provider', async (ctx) => {
       if (spec.auth_kind === 'none') {
         return errorEnvelope(ctx, { status: 422, code: 'UNPROCESSABLE', message: `${provider} is a keyless (local) provider — no credential` });
       }
-      if (!(await isEncryptionConfigured(ctx.env.MODEL_RUNTIME_ENC_KEY))) {
+      const encryption = modelRuntimeEncryptionConfig(ctx.env);
+      if (!(await isEncryptionConfigured(encryption))) {
         return errorEnvelope(ctx, { status: 503, code: 'SERVICE_UNAVAILABLE', message: 'credential storage is not configured (MODEL_RUNTIME_ENC_KEY unset)' });
       }
       const { json, primary } = normalizeCredential(spec, cred);
       if (!primary) return errorEnvelope(ctx, { status: 422, code: 'UNPROCESSABLE', message: `${provider} requires a complete credential` });
-      const enc = await encryptCredential(ctx.env.MODEL_RUNTIME_ENC_KEY, json);
+      const enc = await encryptCredential(encryption, json);
       sealed = { ciphertext: enc.ciphertext, iv: enc.iv, last4: lastFour(primary) };
     } else if (spec.requires_key) {
       // No credential this call: allow a metadata-only update of an EXISTING config, else 422 on first create.

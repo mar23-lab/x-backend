@@ -9,11 +9,21 @@ import { Hono } from 'hono';
 import { workspacesRoute } from '../routes/workspaces';
 
 const MBP_OWNER = 'user_operator_mbp';
+const LIVE_TEST_AI = {
+  run: async (_model: string, input: { messages?: Array<{ role?: string; content?: string }> }) => {
+    const prompt = String(input.messages?.find((message) => message.role === 'user')?.content ?? '');
+    const match = prompt.match(/Source-bound answer draft[^:]*:\n([\s\S]*?)\n\nEvent facts:/);
+    return {
+      response: match?.[1]?.trim() || 'A live test provider completed the grounded operator trace request.',
+      usage: { prompt_tokens: 21, completion_tokens: 12 },
+    };
+  },
+};
 const BASE_ENV = {
   MBP_OWNER_USER_ID: MBP_OWNER,
   MBP_OWNER_LINKED_USER_IDS: '',
   DATABASE_URL: 'x',
-  COMMERCIAL_LIVE_CHAT_REQUIRED: 'false',
+  AI: LIVE_TEST_AI,
 };
 const AUTH = { user_id: MBP_OWNER, workspace_id: 'org_3EG82', role: 'owner' };
 const SCOPE = { workspace_id: 'org_3EG82', project_id: null };

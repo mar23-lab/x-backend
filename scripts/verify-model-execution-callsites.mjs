@@ -12,8 +12,11 @@ if (!Array.isArray(manifest.callsites) || manifest.callsites.length === 0) error
 
 const expectedCounts = new Map();
 for (const entry of manifest.callsites ?? []) {
-  for (const field of ['id', 'path', 'function', 'anchor', 'observer_token', 'principal', 'action']) {
+  for (const field of ['id', 'path', 'function', 'anchor', 'observer_token', 'principal', 'action', 'surface_kind', 'production_outcome_policy']) {
     if (typeof entry[field] !== 'string' || entry[field].length === 0) errors.push(`${entry.id ?? 'unknown'}: missing ${field}`);
+  }
+  if (entry.surface_kind === 'conversation' && entry.production_outcome_policy !== 'live_or_typed_unavailable') {
+    errors.push(`${entry.id}: conversational production surface must be live_or_typed_unavailable`);
   }
   const absolute = path.join(root, entry.path);
   if (!fs.existsSync(absolute)) {
@@ -21,6 +24,14 @@ for (const entry of manifest.callsites ?? []) {
     continue;
   }
   const source = fs.readFileSync(absolute, 'utf8');
+  if (entry.surface_kind === 'conversation') {
+    if (!source.includes('const liveChatRequired = true;')) {
+      errors.push(`${entry.id}: route does not fail closed on live runtime availability`);
+    }
+    if (!source.includes("code: 'PROVIDER_UNAVAILABLE'")) {
+      errors.push(`${entry.id}: route lacks typed PROVIDER_UNAVAILABLE outcome`);
+    }
+  }
   const occurrence = Number(entry.anchor_occurrence ?? 1);
   let index = -1;
   for (let i = 0; i < occurrence; i += 1) index = source.indexOf(entry.anchor, index + 1);

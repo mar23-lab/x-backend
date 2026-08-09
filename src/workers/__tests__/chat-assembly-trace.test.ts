@@ -83,6 +83,16 @@ describe('L1 · createAssemblyTrace / finalizeAssemblyTrace', () => {
 
 // ── Route flag gate (customer plane) ──────────────────────────────────────────────────────────────
 const AUTH = { user_id: 'u1', workspace_id: 'org_hy', email: 'a@x.example', role: 'member' };
+const LIVE_TEST_AI = {
+  run: async (_model: string, input: { messages?: Array<{ role?: string; content?: string }> }) => {
+    const prompt = String(input.messages?.find((message) => message.role === 'user')?.content ?? '');
+    const match = prompt.match(/Source-bound answer draft[^:]*:\n([\s\S]*?)\n\nEvent facts:/);
+    return {
+      response: match?.[1]?.trim() || 'A live test provider completed the grounded trace request.',
+      usage: { prompt_tokens: 19, completion_tokens: 11 },
+    };
+  },
+};
 const PROFILE = { schema_id: 'xlooop.customer_context_profile.v1', company: { name: 'Acme', domain: 'x', country: 'AU' },
   focus_90d: null, growth_posture: 'Grow', maturity_level: 'L3', ai_tools_in_use: [], customer_concentration: null,
   cyber_flag: null, notes: null, data_lives_in: [], public_signals: [], provenance: 'stated' };
@@ -111,7 +121,7 @@ function appWithCapture(captured: { messages: unknown[] }) {
 // internal-builder suite: asserts the raw grounded_on trace — opt out of the default-ON customer-safe
 // serializer (P3 260714) so the pre-serializer contract stays testable.
 const ask = (app: Hono, env: Record<string, unknown>) => app.request('/api/v1/customer-chat',
-  { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ message: 'hi' }) }, { CUSTOMER_SAFE_SERIALIZER_ENABLED: 'false', COMMERCIAL_LIVE_CHAT_REQUIRED: 'false', ...env });
+  { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ message: 'hi' }) }, { CUSTOMER_SAFE_SERIALIZER_ENABLED: 'false', AI: LIVE_TEST_AI, ...env });
 
 describe('L1 · route flag gate (CHAT_ASSEMBLY_TRACE_ENABLED)', () => {
   it('flag OFF: the persisted grounded_on is the result grounded_on UNCHANGED (no assembly key)', async () => {
@@ -131,7 +141,7 @@ describe('L1 · route flag gate (CHAT_ASSEMBLY_TRACE_ENABLED)', () => {
     const body = await res.json() as { grounded_on: Record<string, unknown> };
     const assistant = captured.messages[1] as { grounded_on: { assembly?: { plane?: string; bundle?: { generated_by?: string } } } };
     expect(assistant.grounded_on.assembly?.plane).toBe('customer');
-    expect(assistant.grounded_on.assembly?.bundle?.generated_by).toBe('deterministic');
+    expect(assistant.grounded_on.assembly?.bundle?.generated_by).toBe('llm');
     expect(body.grounded_on).not.toHaveProperty('assembly'); // trace is the PERSISTENCE plane, not the live response
   });
 

@@ -9,10 +9,12 @@ import {
   lastFour,
   renderMaskedCredential,
   isEncryptionConfigured,
+  modelRuntimeEncryptionConfig,
 } from '../lib/model-runtime-crypto';
 
 // A deterministic, valid 32-byte (AES-256) base64 key for the tests.
 const KEY = btoa(String.fromCharCode(...Array.from({ length: 32 }, (_, i) => (i * 7 + 3) & 0xff)));
+const KEY_2 = btoa(String.fromCharCode(...Array.from({ length: 32 }, (_, i) => (i * 11 + 5) & 0xff)));
 
 describe('model-runtime-crypto', () => {
   it('round-trips a credential (encrypt → decrypt returns the original plaintext)', async () => {
@@ -40,8 +42,31 @@ describe('model-runtime-crypto', () => {
 
   it('a DIFFERENT key cannot decrypt — confidentiality holds across keys', async () => {
     const sealed = await encryptCredential(KEY, 'secret');
-    const otherKey = btoa(String.fromCharCode(...Array.from({ length: 32 }, (_, i) => (i * 11 + 5) & 0xff)));
-    await expect(decryptCredential(otherKey, sealed)).rejects.toBeTruthy();
+    await expect(decryptCredential(KEY_2, sealed)).rejects.toBeTruthy();
+  });
+
+  it('versioned envelope encryption selects the active key and supports rotation replay', async () => {
+    const v1 = { active_key_id: 'tenant-v1', keys: { 'tenant-v1': KEY } };
+    const sealedV1 = await encryptCredential(v1, 'rotatable-secret');
+    expect(sealedV1.ciphertext).toMatch(/^xcp1\.tenant-v1\./);
+    expect(await decryptCredential(v1, sealedV1)).toBe('rotatable-secret');
+
+    const rotation = { active_key_id: 'tenant-v2', keys: { 'tenant-v1': KEY, 'tenant-v2': KEY_2 } };
+    expect(await decryptCredential(rotation, sealedV1)).toBe('rotatable-secret');
+    const sealedV2 = await encryptCredential(rotation, await decryptCredential(rotation, sealedV1));
+    expect(sealedV2.ciphertext).toMatch(/^xcp1\.tenant-v2\./);
+    expect(await decryptCredential(rotation, sealedV2)).toBe('rotatable-secret');
+    await expect(decryptCredential({ active_key_id: 'tenant-v2', keys: { 'tenant-v2': KEY_2 } }, sealedV1))
+      .rejects.toThrow(/tenant-v1/);
+  });
+
+  it('builds a fail-closed keyring from versioned environment secrets', async () => {
+    const config = modelRuntimeEncryptionConfig({
+      MODEL_RUNTIME_ENC_KEYS: JSON.stringify({ 'tenant-v1': KEY, 'tenant-v2': KEY_2 }),
+      MODEL_RUNTIME_ACTIVE_KEY_ID: 'tenant-v2',
+    });
+    expect(await isEncryptionConfigured(config)).toBe(true);
+    expect(await isEncryptionConfigured(modelRuntimeEncryptionConfig({ MODEL_RUNTIME_ENC_KEYS: 'not-json' }))).toBe(false);
   });
 
   it('fails closed on a missing / malformed / wrong-length master key (never silently succeeds)', async () => {

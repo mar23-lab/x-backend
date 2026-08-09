@@ -287,9 +287,10 @@ async function verifyCustomerClaudeCodeOauthBinding() {
   const doc = requireFile('docs/customer-onboarding/CLAUDE_CODE_API_ONBOARDING.md');
   const route = requireFile('src/workers/routes/template-policy-registry.ts');
   const mcp = requireFile('src/workers/routes/mcp-gateway.ts');
+  const rpc = requireFile('src/workers/routes/mcp-rpc.ts');
+  const rpcTest = requireFile('src/workers/__tests__/mcp-rpc-route.test.ts');
   const auth = requireFile('src/workers/middleware/auth.ts');
-  const parity = requireFile('scripts/verify-api-mcp-parity.mjs');
-  requireIncludes('customer_oauth_identity_binding_markers_present', `${doc}\n${route}\n${mcp}\n${auth}\n${parity}`, [
+  requireIncludes('customer_oauth_identity_binding_markers_present', `${doc}\n${route}\n${mcp}\n${rpc}\n${rpcTest}\n${auth}`, [
     'xcp_session_start',
     'xlooop.identity_whoami.v1',
     'tenant_id',
@@ -299,7 +300,8 @@ async function verifyCustomerClaudeCodeOauthBinding() {
     'client_id',
     'token_expires_at',
     'service_principal',
-    'mcp_session_start_ok',
+    'single_mcp_gateway',
+    'requires_additional_gateway',
     'token revocation',
   ]);
   requireIncludes('customer_token_is_not_prompt_supplied_tenant_authority', doc, [
@@ -342,9 +344,10 @@ async function verifyPromptInjectionE2e() {
 }
 
 async function verifyDeleteExportObjectStorageExecution() {
-  const customerDelete = requireFile('scripts/verify-customer-delete-export.mjs');
+  const route = requireFile('src/workers/routes/operational-spine.ts');
+  const store = requireFile('src/workers/dal/operational-spine-store.ts');
   const suite = requireFile('scripts/verify-template-policy-suite.mjs');
-  requireIncludes('delete_export_contract_and_execution_markers_present', `${customerDelete}\n${suite}`, [
+  requireIncludes('delete_export_contract_and_execution_markers_present', `${route}\n${store}\n${suite}`, [
     '/customer-data/export-requests/:approval_id/execute',
     '/customer-data/delete-requests/:approval_id/execute',
     'executeCustomerDataLifecycleRequest',

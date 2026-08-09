@@ -20,11 +20,19 @@ const row = (over: Record<string, unknown> = {}) => ({
   ...over,
 });
 
-function facade(rows: any[], override: string | null, sealed: Awaited<ReturnType<typeof encryptCredential>> | null = null) {
+function facade(
+  rows: any[],
+  override: string | null,
+  sealed: Awaited<ReturnType<typeof encryptCredential>> | Record<string, Awaited<ReturnType<typeof encryptCredential>>> | null = null,
+) {
   return {
     listProviders: vi.fn(async () => rows),
     getOverride: vi.fn(async () => override),
-    getProviderCredential: vi.fn(async () => sealed),
+    getProviderCredential: vi.fn(async (_workspace: string, provider: string) => {
+      if (!sealed) return null;
+      if ('ciphertext' in sealed) return sealed;
+      return sealed[provider] ?? null;
+    }),
     upsertProvider: vi.fn(), deleteProvider: vi.fn(), setDefaultProvider: vi.fn(), setOverride: vi.fn(), clearOverride: vi.fn(),
   } as any;
 }
@@ -52,6 +60,26 @@ describe('effective model-runtime resolution', () => {
     expect(plan.fallbacks.map((runtime) => runtime.runtime_id)).toEqual([
       'runtime_default', 'platform:workers_ai', 'platform:anthropic',
     ]);
+  });
+
+  it('skips a broken user override credential and selects the valid workspace default', async () => {
+    const userRuntime = row({ id: 'runtime_user', provider: 'anthropic', model: 'claude-user', is_default: false });
+    const workspaceRuntime = row({ id: 'runtime_default', provider: 'openai', model: 'gpt-4o-mini', is_default: true });
+    const openai = await encryptCredential(KEY, JSON.stringify({ api_key: TENANT_KEY }));
+    const plan = await resolveEffectiveRuntimePlan({
+      facade: facade([workspaceRuntime, userRuntime], 'runtime_user', { openai }),
+      env: { MODEL_RUNTIME_ENC_KEY: KEY },
+      userId: 'user_a',
+      workspaceId: 'workspace_a',
+    });
+
+    expect(plan.primary).toMatchObject({
+      runtime_id: 'runtime_default', provider: 'openai', source: 'workspace_default',
+    });
+    expect(plan.resolution_attempts).toEqual(expect.arrayContaining([
+      expect.objectContaining({ runtime_id: 'runtime_user', outcome: 'skipped', code: 'STORED_CREDENTIAL_UNAVAILABLE' }),
+      expect.objectContaining({ runtime_id: 'runtime_default', outcome: 'selected', code: null }),
+    ]));
   });
 
   it('records relay-required configured providers and selects an existing live platform path', async () => {

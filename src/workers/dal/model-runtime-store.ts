@@ -34,22 +34,23 @@ export interface ProviderSpec {
   requires_key: boolean; // a credential MUST be present for a valid config
   requires_base_url: boolean; // a base_url MUST be present (local / azure / custom)
   locality: 'private' | 'anthropic' | 'external';
+  execution_mode: 'executable' | 'relay_required' | 'adapter_unavailable';
 }
 export const PROVIDER_SPECS: Record<ModelRuntimeProvider, ProviderSpec> = {
-  anthropic: { auth_kind: 'api_key', requires_key: true, requires_base_url: false, locality: 'anthropic' },
-  openai: { auth_kind: 'api_key', requires_key: true, requires_base_url: false, locality: 'external' },
-  google: { auth_kind: 'api_key', requires_key: true, requires_base_url: false, locality: 'external' },
-  mistral: { auth_kind: 'api_key', requires_key: true, requires_base_url: false, locality: 'external' },
-  deepseek: { auth_kind: 'api_key', requires_key: true, requires_base_url: false, locality: 'external' },
-  azure_openai: { auth_kind: 'azure_key', requires_key: true, requires_base_url: true, locality: 'external' },
-  aws_bedrock: { auth_kind: 'aws_sigv4', requires_key: true, requires_base_url: false, locality: 'external' },
-  openrouter: { auth_kind: 'api_key', requires_key: true, requires_base_url: false, locality: 'external' },
-  ollama: { auth_kind: 'none', requires_key: false, requires_base_url: true, locality: 'private' },
-  lm_studio: { auth_kind: 'none', requires_key: false, requires_base_url: true, locality: 'private' },
-  vllm: { auth_kind: 'none', requires_key: false, requires_base_url: true, locality: 'private' },
-  llama_cpp: { auth_kind: 'none', requires_key: false, requires_base_url: true, locality: 'private' },
+  anthropic: { auth_kind: 'api_key', requires_key: true, requires_base_url: false, locality: 'anthropic', execution_mode: 'executable' },
+  openai: { auth_kind: 'api_key', requires_key: true, requires_base_url: false, locality: 'external', execution_mode: 'executable' },
+  google: { auth_kind: 'api_key', requires_key: true, requires_base_url: false, locality: 'external', execution_mode: 'executable' },
+  mistral: { auth_kind: 'api_key', requires_key: true, requires_base_url: false, locality: 'external', execution_mode: 'executable' },
+  deepseek: { auth_kind: 'api_key', requires_key: true, requires_base_url: false, locality: 'external', execution_mode: 'executable' },
+  azure_openai: { auth_kind: 'azure_key', requires_key: true, requires_base_url: true, locality: 'external', execution_mode: 'executable' },
+  aws_bedrock: { auth_kind: 'aws_sigv4', requires_key: true, requires_base_url: false, locality: 'external', execution_mode: 'adapter_unavailable' },
+  openrouter: { auth_kind: 'api_key', requires_key: true, requires_base_url: false, locality: 'external', execution_mode: 'executable' },
+  ollama: { auth_kind: 'none', requires_key: false, requires_base_url: true, locality: 'private', execution_mode: 'relay_required' },
+  lm_studio: { auth_kind: 'none', requires_key: false, requires_base_url: true, locality: 'private', execution_mode: 'relay_required' },
+  vllm: { auth_kind: 'none', requires_key: false, requires_base_url: true, locality: 'private', execution_mode: 'relay_required' },
+  llama_cpp: { auth_kind: 'none', requires_key: false, requires_base_url: true, locality: 'private', execution_mode: 'relay_required' },
   // The escape hatch: an arbitrary OpenAI-compatible endpoint. base_url required; a key is OPTIONAL.
-  custom: { auth_kind: 'custom', requires_key: false, requires_base_url: true, locality: 'private' },
+  custom: { auth_kind: 'custom', requires_key: false, requires_base_url: true, locality: 'private', execution_mode: 'relay_required' },
 };
 
 /** The masked, client-safe shape of a provider config row — NO ciphertext/iv (they are never selected). */

@@ -1500,7 +1500,7 @@ export async function answerCockpitChat(
   // ARCH-006 W3 — typed structured facts alongside the prose (the structured-context moat). The model
   // reasons over the records for per-item precision; the prose above is the same data, summarized.
   const structuredBlock = buildStructuredFactBlock(facts, grounded);
-  const userPrompt = `Event facts:\n${factLines.join('\n')}\n\nStructured facts (typed records of the SAME items — reason over these for precise, per-item answers; never invent fields):\n${structuredBlock}\n\nOperator question: ${String(message || '').slice(0, 600)}`;
+  const userPrompt = `Source-bound answer draft (verify every statement against the facts below; preserve it when accurate, revise it when needed):\n${deterministic}\n\nEvent facts:\n${factLines.join('\n')}\n\nStructured facts (typed records of the SAME items — reason over these for precise, per-item answers; never invent fields):\n${structuredBlock}\n\nOperator question: ${String(message || '').slice(0, 600)}`;
 
   // Commercial live-AI path. The route resolves tenant/user runtime precedence before entering this
   // service. Every candidate is a real provider; failures remain typed failures and can never become

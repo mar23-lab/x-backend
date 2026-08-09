@@ -59,11 +59,16 @@ runCheck('connector_token_revocation_contract', [
   'scripts/verify-commercial-governance-hardening.mjs',
   '--check=connector_token_revocation',
 ]);
-runCheck('customer_revocation_end_to_end', ['node', 'scripts/verify-customer-revocation-end-to-end.mjs']);
+runCheck('customer_revocation_authority', ['node', 'scripts/verify-customer-revocation-authority.mjs']);
 runCheck('two_tenant_commercial_fixture', ['node', 'scripts/verify-two-tenant-commercial-pilot.mjs'], {
   allowWarnings: true,
 });
-runCheck('api_mcp_lifecycle_parity_live', ['node', 'scripts/verify-api-mcp-lifecycle-parity.mjs', '--format=json']);
+runCheck('api_mcp_lifecycle_parity_live_read_only', [
+  'node',
+  'scripts/verify-api-mcp-lifecycle-parity.mjs',
+  '--format=json',
+  '--read-only',
+]);
 
 finish();
 

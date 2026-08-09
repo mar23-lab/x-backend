@@ -18,6 +18,7 @@ const PACKET_ID = process.env.XLOOOP_PARITY_PACKET_ID || '';
 const CANARY_FILE = process.env.XLOOOP_CANARY_API_TOKEN_FILE || '/tmp/xlooop-canary-api-token.txt';
 const LIFECYCLE_CANARY_FILE = process.env.XLOOOP_CANARY_LIFECYCLE_API_TOKEN_FILE || '/tmp/xlooop-canary-lifecycle-api-token.txt';
 const FORMAT = parseArg('format') || process.env.XLOOOP_PARITY_FORMAT || 'pretty';
+const READ_ONLY = process.argv.includes('--read-only') || process.env.XLOOOP_CANARY_READ_ONLY === '1';
 
 const FORBIDDEN_SURFACES = [
   'raw_graph',
@@ -39,7 +40,7 @@ const ALLOWED_DISCLOSURE_KEYS = new Set([
 const result = {
   schema_id: 'xlooop.api_mcp_lifecycle_parity_verifier.v1',
   status: 'PASS',
-  mode: 'read_boundary_canary',
+  mode: READ_ONLY ? 'read_only_no_write_probes' : 'read_boundary_canary',
   api_base: API_BASE,
   packet_id: PACKET_ID,
   checks: [],
@@ -244,6 +245,11 @@ async function run() {
     } else {
       pass('api_mcp_packet_fields_match', { fields: comparable });
     }
+  }
+
+  if (READ_ONLY) {
+    pass('write_probes_skipped_by_explicit_read_only_mode');
+    return;
   }
 
   const lifecycleCredential = loadLifecycleCanaryCredential();

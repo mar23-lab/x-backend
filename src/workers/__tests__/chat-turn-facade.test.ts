@@ -77,7 +77,7 @@ describe('POST /api/v1/chat/turns', () => {
       body: JSON.stringify({ message: 'What should I do next?', llm: 'claude' }),
     }, {
       DATABASE_URL: 'postgres://test', AI: { run: aiRun }, ROLE_SKILL_CATALOG_ENABLED: 'true',
-      CUSTOMER_SAFE_SERIALIZER_ENABLED: 'false', COMMERCIAL_LIVE_CHAT_REQUIRED: 'false',
+      CUSTOMER_SAFE_SERIALIZER_ENABLED: 'false',
     } as never);
     expect(res.status).toBe(200);
     const body = await res.json() as Record<string, any>;

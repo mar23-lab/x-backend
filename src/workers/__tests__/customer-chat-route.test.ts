@@ -11,6 +11,17 @@ import { describe, it, expect, vi } from 'vitest';
 import { Hono } from 'hono';
 import { customerChatRoute } from '../routes/customer-chat';
 
+const LIVE_TEST_AI = {
+  run: async (_model: string, input: { messages?: Array<{ role?: string; content?: string }> }) => {
+    const prompt = String(input.messages?.find((message) => message.role === 'user')?.content ?? '');
+    const match = prompt.match(/Source-bound answer draft[^:]*:\n([\s\S]*?)\n\nEvent facts:/);
+    return {
+      response: match?.[1]?.trim() || 'Live test provider completed the grounded request without deterministic fallback.',
+      usage: { prompt_tokens: 31, completion_tokens: 17 },
+    };
+  },
+};
+
 const PROFILE = {
   schema_id: 'xlooop.customer_context_profile.v1',
   company: { name: 'Honest & Young', domain: 'honestyoung.example', country: 'AU' },
@@ -82,7 +93,7 @@ function ask(app: Hono, body: Record<string, unknown>) {
     { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) },
     // internal-builder suite: assert the RAW pre-serializer contract. P3 (260714) made the customer-safe
     // serializer DEFAULT-ON (missing flag = safe), so these tests opt out explicitly.
-    { CUSTOMER_SAFE_SERIALIZER_ENABLED: 'false', COMMERCIAL_LIVE_CHAT_REQUIRED: 'false' },
+    { CUSTOMER_SAFE_SERIALIZER_ENABLED: 'false', AI: LIVE_TEST_AI },
   );
 }
 
@@ -139,13 +150,13 @@ describe('POST /api/v1/customer-chat', () => {
     expect(body.answer).not.toMatch(/deterministic|fixture/i);
   });
 
-  it('answers COMPANY-AWARE from the captured profile (no LLM binding, 0 events → deterministic floor)', async () => {
+  it('answers COMPANY-AWARE through a live runtime using the source-bound draft', async () => {
     const res = await ask(appFor(AUTH, dalStub()), { message: 'what should I do?' });
     expect(res.status).toBe(200);
     const body = await res.json() as { answer: string; generated_by: string };
     expect(body.answer).toContain('Honest & Young');
     expect(body.answer).toContain('workpaper'); // their real 90-day focus reached the answer
-    expect(body.generated_by).toBe('deterministic'); // no AI binding in the test env
+    expect(body.generated_by).toBe('llm');
   });
 
   it('TENANT-SAFE: a body-supplied scope.workspace_id is IGNORED — only the JWT workspace is read', async () => {
@@ -186,7 +197,7 @@ describe('POST /api/v1/customer-chat', () => {
     expect(body.answer).not.toContain('project_1');
     expect(body.answer).not.toContain('project_2');
     expect(body.answer).not.toContain('Here is what is happening');
-    expect(body.generated_by).toBe('deterministic');
+    expect(body.generated_by).toBe('llm');
   });
 
   it('returns complete workspace inventory coverage and freshness from canonical tenant records', async () => {
@@ -416,7 +427,7 @@ describe('POST /api/v1/customer-chat', () => {
       grounded_on: { projects: { items: Array<{ id: string; name: string }> } };
     };
     expect(body.answer).toBe('• Commercial proof — project_1\n• Customer onboarding — project_2');
-    expect(body.generated_by).toBe('deterministic');
+    expect(body.generated_by).toBe('llm');
     expect(body.grounded_on.projects.items).toEqual([
       expect.objectContaining({ id: 'project_1', name: 'Commercial proof' }),
       expect.objectContaining({ id: 'project_2', name: 'Customer onboarding' }),
@@ -461,7 +472,7 @@ describe('POST /api/v1/customer-chat', () => {
     expect(body.answer).not.toContain('google_drive');
     expect(body.answer).not.toContain('slack');
     expect(body.answer).not.toContain('legacy user-account binding');
-    expect(body.generated_by).toBe('deterministic');
+    expect(body.generated_by).toBe('llm');
     expect(body.grounded_on.sources).toMatchObject({
       total: 1,
       providers: [expect.objectContaining({ provider: 'gmail' })],
@@ -776,7 +787,7 @@ const GMAIL_ROW = {
   connected_at: '2026-07-01T00:00:00Z', last_sync_at: '2026-07-09T00:00:00Z', last_sync_error: null,
 };
 const askEnv = (app: Hono, body: Record<string, unknown>, env: Record<string, unknown>) =>
-  app.request('/api/v1/customer-chat', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }, { CUSTOMER_SAFE_SERIALIZER_ENABLED: 'false', COMMERCIAL_LIVE_CHAT_REQUIRED: 'false', ...env }); // raw pre-serializer contract (P3 opt-out)
+  app.request('/api/v1/customer-chat', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }, { CUSTOMER_SAFE_SERIALIZER_ENABLED: 'false', AI: LIVE_TEST_AI, ...env }); // raw pre-serializer contract
 
 describe('T1 · source-truth override (CHAT_SOURCE_TRUTH_OVERRIDE_ENABLED)', () => {
   const dal = () => dalStub({

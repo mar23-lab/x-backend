@@ -38,7 +38,6 @@ import { parseContextReferences } from '../lib/context-reference';
 import { resolveDocumentContext } from '../services/document-context';
 import { recordChatGroundingReads } from '../dal/document-access-store';
 import {
-  commercialLiveChatRequired,
   ProviderUnavailableError,
   resolveEffectiveRuntimePlan,
   type EffectiveRuntimePlan,
@@ -62,7 +61,7 @@ export interface CustomerChatEnv extends AuthEnv {
   AI?: AiRunner;
   ANTHROPIC_API_KEY?: string;
   MODEL_RUNTIME_ENC_KEY?: string;
-  /** Fail-closed by default. Only explicit false is permitted for legacy test/dev compatibility. */
+  /** Deprecated compatibility input; customer chat is now always live-only. */
   COMMERCIAL_LIVE_CHAT_REQUIRED?: string;
   // D-16 · grounding-tier consumer. Default OFF → byte-identical (no access_tier, no reorder). When on,
   // each source's effective per-project read_policy tier weights its place in the grounding fact bundle.
@@ -316,8 +315,10 @@ async function handleCustomerChat(ctx: CustomerChatContext) {
     const llm: CockpitChatLLM = commercialTurnFacade
       ? 'llama'
       : body?.llm === 'claude' ? 'claude' : 'llama';
-    const liveChatRequired = commercialTurnFacade
-      || commercialLiveChatRequired(ctx.env.COMMERCIAL_LIVE_CHAT_REQUIRED);
+    // All customer-facing chat routes are commercial live-AI surfaces. The
+    // unversioned alias remains for compatibility, but it may not opt out of
+    // live execution or return deterministic assistant prose.
+    const liveChatRequired = true;
     let liveRuntimePlan: EffectiveRuntimePlan | undefined;
     if (liveChatRequired) {
       try {

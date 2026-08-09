@@ -1,7 +1,7 @@
 import type { ModelRuntimesFacade } from '../dal/model-runtime-facade';
 import type { ModelRuntimeProvider, ProviderConfigRow } from '../dal/model-runtime-store';
 import type { ModelExecutionObserver } from '../lib/model-execution-lineage';
-import { decryptCredential } from '../lib/model-runtime-crypto';
+import { decryptCredential, modelRuntimeEncryptionConfig } from '../lib/model-runtime-crypto';
 import type { AiRunner } from './agent-digest';
 import {
   CLOUD_EXECUTABLE_PROVIDERS,
@@ -20,7 +20,13 @@ export type RuntimeResolutionSource = 'request_preference' | 'user_override' | '
 
 interface RuntimeCredential { api_key: string; deployment?: string }
 
-export interface LiveRuntimeEnv { AI?: AiRunner; ANTHROPIC_API_KEY?: string; MODEL_RUNTIME_ENC_KEY?: string }
+export interface LiveRuntimeEnv {
+  AI?: AiRunner;
+  ANTHROPIC_API_KEY?: string;
+  MODEL_RUNTIME_ENC_KEY?: string;
+  MODEL_RUNTIME_ENC_KEYS?: string;
+  MODEL_RUNTIME_ACTIVE_KEY_ID?: string;
+}
 
 export interface ResolvedRuntime {
   runtime_id: string;
@@ -178,7 +184,7 @@ async function resolveConfiguredRow(
   if (!sealed?.ciphertext || !sealed.iv) return { code: 'STORED_CREDENTIAL_UNAVAILABLE' };
   let credential: RuntimeCredential | null = null;
   try {
-    credential = parseStoredCredential(await decryptCredential(env.MODEL_RUNTIME_ENC_KEY, {
+    credential = parseStoredCredential(await decryptCredential(modelRuntimeEncryptionConfig(env), {
       ciphertext: sealed.ciphertext,
       iv: sealed.iv,
     }));
@@ -254,6 +260,13 @@ export async function resolveEffectiveRuntimePlan(input: {
   runtimeId?: string | null;
   modelId?: string | null;
 }): Promise<EffectiveRuntimePlan> {
+  // A platform-managed live runtime remains a valid commercial fallback when
+  // tenant runtime storage is unavailable (for example during bootstrap or a
+  // bounded degraded read). Never turn that condition into a raw 500 and never
+  // fall back to deterministic assistant prose.
+  if (!input.facade || typeof input.facade.listProviders !== 'function') {
+    return resolvePlatformRuntimePlan(input.env);
+  }
   const rows = await input.facade.listProviders(input.workspaceId);
   const runtimeId = String(input.runtimeId ?? '').trim() || null;
   const modelId = String(input.modelId ?? '').trim() || null;

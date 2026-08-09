@@ -63,6 +63,12 @@ const PROFILE = { schema_id: 'xlooop.customer_context_profile.v1', company: { na
 const GMAIL = { id: 'src_gmail', workspace_id: 'org_hy', user_id: 'u1', provider: 'gmail', provider_user_id: 'g',
   provider_username: 'a@x.example', status: 'connected', scopes: ['gmail.readonly'], connected_at: '2026-07-01T00:00:00Z',
   last_sync_at: '2026-07-09T00:00:00Z', last_sync_error: null };
+const LIVE_TEST_AI = {
+  run: async () => ({
+    response: 'A live provider response grounded in the connected source.',
+    usage: { prompt_tokens: 15, completion_tokens: 8 },
+  }),
+};
 
 function appWith(sqlStub: unknown) {
   const dal = {
@@ -87,7 +93,7 @@ function appWith(sqlStub: unknown) {
 }
 const askEnv = (app: Hono, env: Record<string, unknown>) => app.request('/api/v1/customer-chat',
   { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ message: 'hi' }) },
-  { COMMERCIAL_LIVE_CHAT_REQUIRED: false, ...env });
+  { AI: LIVE_TEST_AI, ...env });
 
 describe('D-16 · route flag gate (SOURCE_TIER_GROUNDING_ENABLED)', () => {
   it('flag ON: the injected sql read is threaded and the answer still grounds on the source', async () => {

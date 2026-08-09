@@ -7,12 +7,23 @@ import { describe, it, expect } from 'vitest';
 import { Hono } from 'hono';
 import { workspacesRoute } from '../routes/workspaces';
 
+const LIVE_TEST_AI = {
+  run: async (_model: string, input: { messages?: Array<{ role?: string; content?: string }> }) => {
+    const prompt = String(input.messages?.find((message) => message.role === 'user')?.content ?? '');
+    const match = prompt.match(/Source-bound answer draft[^:]*:\n([\s\S]*?)\n\nEvent facts:/);
+    return {
+      response: match?.[1]?.trim() || 'Live test provider completed the grounded request without deterministic fallback.',
+      usage: { prompt_tokens: 29, completion_tokens: 16 },
+    };
+  },
+};
+
 const MBP_OWNER = 'user_operator_mbp';
 const ENV = {
   MBP_OWNER_USER_ID: MBP_OWNER,
   MBP_OWNER_LINKED_USER_IDS: '',
   DATABASE_URL: 'x',
-  COMMERCIAL_LIVE_CHAT_REQUIRED: 'false',
+  AI: LIVE_TEST_AI,
 };
 
 const COCKPIT_EVENTS = [
@@ -80,8 +91,7 @@ describe('POST /cockpit-chat', () => {
     // the operator overlay was called WITH the project_id scope
     expect(cap.opts?.project_id).toBe('org_3EG82-cockpit-ux');
     expect(cap.ids).toContain(MBP_OWNER);
-    // no AI binding in this ENV → deterministic grounded answer
-    expect(body.generated_by).toBe('deterministic');
+    expect(body.generated_by).toBe('llm');
     // grounded in the REAL mocked events: counts + a named recent item
     expect(body.answer).toMatch(/3 events on record/);
     expect(body.answer).toMatch(/legible empty\/degraded project banner/);
@@ -109,7 +119,7 @@ describe('POST /cockpit-chat', () => {
   it('commercial mode returns typed 503 instead of a deterministic assistant answer', async () => {
     const res = await chat({ user_id: MBP_OWNER }, 'summarize', COCKPIT_SCOPE, {}, {
       ...ENV,
-      COMMERCIAL_LIVE_CHAT_REQUIRED: 'true',
+      AI: undefined,
     });
     expect(res.status).toBe(503);
     const body = await res.json() as Record<string, unknown>;
