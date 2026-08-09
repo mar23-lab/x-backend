@@ -6428,6 +6428,48 @@
           "reason": "Add tenant-scoped, versioned model-runtime credential rotation with atomic audit receipts"
         }
       ]
+    },
+    {
+      "delta_id": "commercial-chat-audit-atomicity-260810",
+      "generated_at": "2026-08-09T14:09:23.639Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "98c52a76107dedd03890f2da7c8f60d7c21bf3e0",
+      "target_base_commit": "98c52a76107dedd03890f2da7c8f60d7c21bf3e0",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/dal/chat-store.ts",
+          "target_blob": "e1a8f1dd5c42b2ba886ad84c21d75947b8447d92",
+          "reason": "Make the live commercial assistant exchange and its customer-safe audit receipt atomic, idempotent, append-only, and fail-closed"
+        },
+        {
+          "path": "src/workers/routes/customer-chat.ts",
+          "target_blob": "e46e83e23217f6b8c7bbdb0086acadcbeaa88dfb",
+          "reason": "Make the live commercial assistant exchange and its customer-safe audit receipt atomic, idempotent, append-only, and fail-closed"
+        }
+      ]
+    },
+    {
+      "delta_id": "direct-production-dependency-security-260810",
+      "generated_at": "2026-08-09T14:11:23.522Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "98c52a76107dedd03890f2da7c8f60d7c21bf3e0",
+      "target_base_commit": "98c52a76107dedd03890f2da7c8f60d7c21bf3e0",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "package.json",
+          "target_blob": "41d90aa5fb855b920338e2164b3ab4f3e6c682c8",
+          "reason": "Patch direct production Hono and Nano ID advisories to a zero-vulnerability production audit"
+        },
+        {
+          "path": "package-lock.json",
+          "target_blob": "b3648ed3adfeb41fafad8308d8f37985a9e0eb5b",
+          "reason": "Patch direct production Hono and Nano ID advisories to a zero-vulnerability production audit"
+        }
+      ]
     }
   ]
 }

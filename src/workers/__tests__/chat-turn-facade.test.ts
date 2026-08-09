@@ -24,7 +24,7 @@ import { customerChatRoute } from '../routes/customer-chat';
 
 const AUTH = { user_id: 'user_a', workspace_id: 'workspace_a', role: 'member' };
 
-function dal() {
+function dal(options: { auditEventId?: string | null } = {}) {
   const captured: Array<Record<string, unknown>> = [];
   return {
     captured,
@@ -45,6 +45,9 @@ function dal() {
           id: `message_${index + 1}`,
           thread_id: 'thread_1',
           receipt_uid: index === 1 ? 'answer_receipt_1' : null,
+          audit_event_id: index === 1
+            ? ('auditEventId' in options ? options.auditEventId : 'audit_event_1')
+            : null,
           created_at: '2026-08-09T00:00:00Z',
         })),
       };
@@ -91,7 +94,7 @@ describe('POST /api/v1/chat/turns', () => {
       execution_receipt_id: 'execution_receipt_1',
       context_receipt_id: 'context_packet_1',
       policy_resolution_id: 'policy_resolution_1',
-      audit_event_id: null,
+      audit_event_id: 'audit_event_1',
       skill_invocation_receipt_ids: ['skill_receipt_1'],
     });
     expect(body.receipts).not.toHaveProperty('audit_receipt_id');
@@ -102,6 +105,23 @@ describe('POST /api/v1/chat/turns', () => {
       execution_receipt_id: 'execution_receipt_1',
       packet_id: 'context_packet_1',
     });
+  });
+
+  it('fails closed when persistence does not return the assistant audit identity', async () => {
+    const currentDal = dal({ auditEventId: null });
+    const res = await appFor(currentDal).request('/api/v1/chat/turns', {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ message: 'What should I do next?' }),
+    }, {
+      DATABASE_URL: 'postgres://test',
+      AI: { run: vi.fn(async () => ({
+        response: 'A live Workers AI answer grounded in the current tenant context and policy.',
+        usage: { prompt_tokens: 12, completion_tokens: 10 },
+      })) },
+      ROLE_SKILL_CATALOG_ENABLED: 'true', CUSTOMER_SAFE_SERIALIZER_ENABLED: 'false',
+    } as never);
+    expect(res.status).toBe(503);
+    expect(await res.json()).toMatchObject({ code: 'CHAT_TURN_RECEIPT_INCOMPLETE', retryable: true });
   });
 
   it('returns typed 503 with no assistant answer when no live runtime exists', async () => {

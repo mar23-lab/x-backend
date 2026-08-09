@@ -93,6 +93,7 @@ export async function appendChatExchangeRow(
   userId: string,
   scope: ChatScopeRef,
   messages: ChatMessageInput[],
+  concurrencyRetry = 0,
 ): Promise<ChatExchangeWriteResult> {
   const valid = (Array.isArray(messages) ? messages : []).filter(
     (m) => m && (m.role === 'you' || m.role === 'assistant') && typeof m.body === 'string' && m.body.trim(),
@@ -106,6 +107,7 @@ export async function appendChatExchangeRow(
     const links = Array.isArray(m.grounding_event_ids) && m.role === 'assistant'
       ? m.grounding_event_ids.filter((x) => typeof x === 'string' && x).slice(0, 200)
       : null;
+    const receiptUid = m.role === 'assistant' ? `rcpt_${crypto.randomUUID().replace(/-/g, '')}` : null;
     return {
       sequence,
       role: m.role,
@@ -116,7 +118,7 @@ export async function appendChatExchangeRow(
       grounding_event_ids: links,
       // Commercial chat turns require a durable answer receipt even when the answer did not cite an
       // operation event. Grounding links explain evidence; they are not the identity of the answer.
-      receipt_uid: m.role === 'assistant' ? `rcpt_${crypto.randomUUID().replace(/-/g, '')}` : null,
+      receipt_uid: receiptUid,
       interaction_id: m.interaction_id ?? null,
       entry_type: m.entry_type ?? null,
       resolution_id: m.resolution_id ?? null,
@@ -125,20 +127,15 @@ export async function appendChatExchangeRow(
       operation_event_id: m.operation_event_id ?? null,
       intent_id: m.intent_id ?? null,
       audit_event_id: m.audit_event_id ?? null,
+      audit_target_id: m.role === 'assistant' && m.entry_type === 'assistant_answer'
+        ? `chat:${scopeKey}:${m.interaction_id ?? receiptUid}`
+        : null,
       closing_attestation_id: m.closing_attestation_id ?? null,
     };
   });
 
   const rows = (await sql/*sql*/`
-    WITH thread_written AS (
-      INSERT INTO chat_threads (id, user_id, workspace_id, project_id, domain_id, scope_key)
-      VALUES (
-        ${threadId}, ${userId}, ${scope.workspace_id ?? null}, ${scope.project_id ?? null},
-        ${scope.domain_id ?? null}, ${scopeKey}
-      )
-      ON CONFLICT (id) DO UPDATE SET updated_at = now()
-      RETURNING id
-    ), input_messages AS MATERIALIZED (
+    WITH input_messages AS MATERIALIZED (
       SELECT *
       FROM jsonb_to_recordset(${JSON.stringify(payload)}::jsonb) AS message(
         sequence integer,
@@ -157,8 +154,83 @@ export async function appendChatExchangeRow(
         operation_event_id text,
         intent_id text,
         audit_event_id text,
+        audit_target_id text,
         closing_attestation_id text
       )
+    ), existing_messages AS MATERIALIZED (
+      SELECT message.sequence, existing.*
+      FROM input_messages message
+      JOIN chat_messages existing
+        ON existing.thread_id = ${threadId}
+       AND existing.interaction_id = message.interaction_id
+       AND existing.entry_type = message.entry_type
+      WHERE message.interaction_id IS NOT NULL AND message.entry_type IS NOT NULL
+    ), conflicting_existing AS MATERIALIZED (
+      SELECT 1
+      FROM input_messages message
+      JOIN existing_messages existing ON existing.sequence = message.sequence
+      WHERE NOT (
+        existing.role = message.role
+        AND existing.body = message.body
+        AND existing.mode IS NOT DISTINCT FROM message.mode
+        AND existing.generated_by IS NOT DISTINCT FROM message.generated_by
+        AND existing.grounded_on IS NOT DISTINCT FROM message.grounded_on
+        AND existing.grounding_event_ids IS NOT DISTINCT FROM message.grounding_event_ids
+        AND existing.resolution_id IS NOT DISTINCT FROM message.resolution_id
+        AND existing.execution_receipt_id IS NOT DISTINCT FROM message.execution_receipt_id
+        AND existing.packet_id IS NOT DISTINCT FROM message.packet_id
+        AND existing.operation_event_id IS NOT DISTINCT FROM message.operation_event_id
+        AND existing.intent_id IS NOT DISTINCT FROM message.intent_id
+        AND (message.audit_event_id IS NULL OR existing.audit_event_id IS NOT DISTINCT FROM message.audit_event_id)
+        AND existing.closing_attestation_id IS NOT DISTINCT FROM message.closing_attestation_id
+      )
+      LIMIT 1
+    ), write_authorized AS MATERIALIZED (
+      SELECT true AS allowed
+      WHERE NOT EXISTS (SELECT 1 FROM conflicting_existing)
+    ), thread_written AS (
+      INSERT INTO chat_threads (id, user_id, workspace_id, project_id, domain_id, scope_key)
+      SELECT
+        ${threadId}, ${userId}, ${scope.workspace_id ?? null}, ${scope.project_id ?? null},
+        ${scope.domain_id ?? null}, ${scopeKey}
+      FROM write_authorized
+      ON CONFLICT (id) DO UPDATE SET updated_at = now()
+      RETURNING id
+    ), existing_audits AS MATERIALIZED (
+      SELECT message.sequence, audit.target_id AS audit_target_id, audit.id::text AS audit_event_id
+      FROM input_messages message
+      JOIN audit_logs audit
+        ON audit.workspace_id = ${scope.workspace_id ?? null}
+       AND audit.actor_user_id = ${userId}
+       AND audit.action = 'customer_chat_answer'
+       AND audit.target_type = 'session'
+       AND audit.target_id = message.audit_target_id
+      WHERE message.audit_target_id IS NOT NULL
+    ), audit_written AS (
+      INSERT INTO audit_logs (
+        actor_user_id, action, target_type, target_id, workspace_id, reason, metadata
+      )
+      SELECT
+        ${userId}, 'customer_chat_answer', 'session', message.audit_target_id,
+        ${scope.workspace_id ?? null}, 'live assistant answer persisted',
+        jsonb_build_object(
+          'generated_by', message.generated_by,
+          'resolution_id', message.resolution_id,
+          'execution_receipt_id', message.execution_receipt_id,
+          'context_packet_id', message.packet_id
+        )
+      FROM thread_written
+      JOIN input_messages message
+        ON message.role = 'assistant' AND message.entry_type = 'assistant_answer'
+      LEFT JOIN existing_messages existing ON existing.sequence = message.sequence
+      WHERE ${scope.workspace_id ?? null}::text IS NOT NULL
+        AND message.audit_event_id IS NULL
+        AND message.audit_target_id IS NOT NULL
+        AND existing.id IS NULL
+      ON CONFLICT (workspace_id, actor_user_id, action, target_type, target_id)
+        WHERE action = 'customer_chat_answer' AND target_type = 'session'
+      DO NOTHING
+      RETURNING target_id AS audit_target_id, id::text AS audit_event_id
     ), inserted AS (
       INSERT INTO chat_messages (
         thread_id, role, body, mode, generated_by, grounded_on, grounding_event_ids, receipt_uid,
@@ -170,9 +242,19 @@ export async function appendChatExchangeRow(
         message.grounded_on, message.grounding_event_ids, message.receipt_uid,
         message.interaction_id, message.entry_type, message.resolution_id,
         message.execution_receipt_id, message.packet_id, message.operation_event_id,
-        message.intent_id, message.audit_event_id, message.closing_attestation_id
+        message.intent_id,
+        COALESCE(
+          message.audit_event_id,
+          existing.audit_event_id,
+          existing_audits.audit_event_id,
+          audit_written.audit_event_id
+        ),
+        message.closing_attestation_id
       FROM thread_written
       CROSS JOIN input_messages message
+      LEFT JOIN existing_messages existing ON existing.sequence = message.sequence
+      LEFT JOIN existing_audits ON existing_audits.sequence = message.sequence
+      LEFT JOIN audit_written ON audit_written.audit_target_id = message.audit_target_id
       ORDER BY message.sequence
       ON CONFLICT (thread_id, interaction_id, entry_type)
         WHERE interaction_id IS NOT NULL AND entry_type IS NOT NULL
@@ -198,6 +280,12 @@ export async function appendChatExchangeRow(
   `) as Array<Record<string, unknown>>;
 
   if (rows.length !== valid.length) {
+    // A concurrent identical request can win the audit/message uniqueness races after this statement's
+    // READ COMMITTED snapshot was taken. One new statement sees the committed rows and converges on their
+    // receipts. A genuinely different payload remains a conflict on the second attempt and fails closed.
+    if (concurrencyRetry === 0) {
+      return appendChatExchangeRow(sql, userId, scope, messages, 1);
+    }
     throw makeError(
       'INTERACTION_ID_CONFLICT',
       'interaction identity was already used for different conversation content',

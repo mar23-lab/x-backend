@@ -745,6 +745,7 @@ async function handleCustomerChat(ctx: CustomerChatContext) {
       user_message_id: string;
       assistant_message_id: string;
       assistant_receipt_id: string | null;
+      audit_event_id: string | null;
     } | null = null;
     try {
       if (typeof appendChatExchange === 'function') {
@@ -782,6 +783,7 @@ async function handleCustomerChat(ctx: CustomerChatContext) {
           user_message_id: userMessage.id,
           assistant_message_id: assistantMessage.id,
           assistant_receipt_id: assistantMessage.receipt_uid ?? null,
+          audit_event_id: assistantMessage.audit_event_id ?? null,
         };
       } else if (chatHistoryPersistenceRequired) {
         throw new Error('appendChatExchange unavailable');
@@ -851,7 +853,8 @@ async function handleCustomerChat(ctx: CustomerChatContext) {
       } : null,
     }, customerSafeSerializerEnabled((ctx.env as { CUSTOMER_SAFE_SERIALIZER_ENABLED?: string }).CUSTOMER_SAFE_SERIALIZER_ENABLED)); // P3 (260714): DEFAULT-SAFE — a missing/malformed flag serializes; only an explicit 'false' (internal testing) yields raw. Was envFlagTrue = fail-open when the wrangler var vanished.
     if (!commercialTurnFacade) return ctx.json(response);
-    if (!conversation?.assistant_receipt_id || !assistantLineage || !result.execution?.receipt_id) {
+    if (!conversation?.assistant_receipt_id || !conversation.audit_event_id
+      || !assistantLineage || !result.execution?.receipt_id) {
       ctx.status(503);
       return ctx.json({
         error: 'commercial chat turn receipts could not be completed',
@@ -873,7 +876,7 @@ async function handleCustomerChat(ctx: CustomerChatContext) {
         execution_receipt_id: result.execution.receipt_id,
         context_receipt_id: assistantLineage.context_packet_id,
         policy_resolution_id: assistantLineage.resolution_id,
-        audit_event_id: null,
+        audit_event_id: conversation.audit_event_id,
         skill_invocation_receipt_ids: skillInvocationReceiptIds,
       },
       preference_disposition: {
