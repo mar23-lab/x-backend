@@ -6205,6 +6205,117 @@
           "reason": "Replace hollow-success ratios with independently observed counts and narrow proven skip-language false positives"
         }
       ]
+    },
+    {
+      "delta_id": "codex-live-chat-readonly-canary-provenance-260809",
+      "generated_at": "2026-08-09T12:01:19.596Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "c5c39db53cf3e28e97f544843c46bee51d9c71da",
+      "target_base_commit": "c5c39db53cf3e28e97f544843c46bee51d9c71da",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "scripts/verify-api-mcp-lifecycle-parity.mjs",
+          "target_blob": "b249634324c41abcdd330c046f06d02358c9f0ac",
+          "reason": "Seal live-only chat, read-only A/B canary, receipt, callsite, runtime-credential, and policy changes after final verification"
+        },
+        {
+          "path": "scripts/verify-internal-company-a-b-canary.mjs",
+          "target_blob": "bec29fceb4e3c5177fc3624e94b43650ed9a8a16",
+          "reason": "Seal live-only chat, read-only A/B canary, receipt, callsite, runtime-credential, and policy changes after final verification"
+        },
+        {
+          "path": "src/workers/__tests__/model-runtime-crypto.test.ts",
+          "target_blob": "0db27ed994a2138dbace39ae7af3a0e778348df6",
+          "reason": "Seal live-only chat, read-only A/B canary, receipt, callsite, runtime-credential, and policy changes after final verification"
+        },
+        {
+          "path": "src/workers/lib/model-runtime-crypto.ts",
+          "target_blob": "e70ea248ecb2aa1485083b2dc034d48cf17fd336",
+          "reason": "Seal live-only chat, read-only A/B canary, receipt, callsite, runtime-credential, and policy changes after final verification"
+        },
+        {
+          "path": "src/workers/routes/customer-chat.ts",
+          "target_blob": "ec4363039e5652b147d80457fe1580ab24ec534b",
+          "reason": "Seal live-only chat, read-only A/B canary, receipt, callsite, runtime-credential, and policy changes after final verification"
+        },
+        {
+          "path": "docs/contracts/model-execution-callsite-manifest.json",
+          "target_blob": "86ea74726031b9b6b580276674118475c4750091",
+          "reason": "Seal live-only chat, read-only A/B canary, receipt, callsite, runtime-credential, and policy changes after final verification"
+        },
+        {
+          "path": "scripts/verify-model-execution-callsites.mjs",
+          "target_blob": "02a4c1fd29a89225dc236ed41c00c451324634ff",
+          "reason": "Seal live-only chat, read-only A/B canary, receipt, callsite, runtime-credential, and policy changes after final verification"
+        },
+        {
+          "path": "src/workers/__tests__/cockpit-chat-route.test.ts",
+          "target_blob": "dfff9004b104b1b4fa1da5b952e13ce23e8d9033",
+          "reason": "Seal live-only chat, read-only A/B canary, receipt, callsite, runtime-credential, and policy changes after final verification"
+        },
+        {
+          "path": "src/workers/routes/workspaces.ts",
+          "target_blob": "899befb1a03a14e2280c706805ee2bc7a1a3885f",
+          "reason": "Seal live-only chat, read-only A/B canary, receipt, callsite, runtime-credential, and policy changes after final verification"
+        },
+        {
+          "path": "src/workers/services/cockpit-chat.ts",
+          "target_blob": "d828197956dc1d6edf3a9f491d6788ab8f89a738",
+          "reason": "Seal live-only chat, read-only A/B canary, receipt, callsite, runtime-credential, and policy changes after final verification"
+        },
+        {
+          "path": "src/workers/__tests__/operator-workspace-scope.test.ts",
+          "target_blob": "bd46b63ee745eefdd023c21c100094585e6f5b05",
+          "reason": "Seal live-only chat, read-only A/B canary, receipt, callsite, runtime-credential, and policy changes after final verification"
+        },
+        {
+          "path": "src/workers/__tests__/llm-usage-metering.test.ts",
+          "target_blob": "613e7343bcd52c30a1dfed33a36b06a05e7213f6",
+          "reason": "Seal live-only chat, read-only A/B canary, receipt, callsite, runtime-credential, and policy changes after final verification"
+        },
+        {
+          "path": "src/workers/__tests__/customer-chat-route.test.ts",
+          "target_blob": "b499e84e6642ecda5a1caedca9a8505a49d628ef",
+          "reason": "Seal live-only chat, read-only A/B canary, receipt, callsite, runtime-credential, and policy changes after final verification"
+        },
+        {
+          "path": "src/workers/__tests__/source-tier-grounding.test.ts",
+          "target_blob": "30ce885db7ac5f9b2848d3ffd1225aa48275ac7a",
+          "reason": "Seal live-only chat, read-only A/B canary, receipt, callsite, runtime-credential, and policy changes after final verification"
+        },
+        {
+          "path": "src/workers/dal/model-runtime-store.ts",
+          "target_blob": "4277d74acf5d1171aba1e1f5a13a5e4ecdcbf67f",
+          "reason": "Seal live-only chat, read-only A/B canary, receipt, callsite, runtime-credential, and policy changes after final verification"
+        },
+        {
+          "path": "src/workers/routes/model-runtimes.ts",
+          "target_blob": "39f6302ef3de59e20e9f5c8a90513bc3fc4fcbc9",
+          "reason": "Seal live-only chat, read-only A/B canary, receipt, callsite, runtime-credential, and policy changes after final verification"
+        },
+        {
+          "path": "scripts/verify-template-policy-suite.mjs",
+          "target_blob": "e0871c8babca60bdb08ed81f3d0b504889d0e448",
+          "reason": "Seal live-only chat, read-only A/B canary, receipt, callsite, runtime-credential, and policy changes after final verification"
+        },
+        {
+          "path": "src/workers/__tests__/chat-assembly-trace.test.ts",
+          "target_blob": "2aabdb89ceee141737622dcb7fc3291f6556799e",
+          "reason": "Seal live-only chat, read-only A/B canary, receipt, callsite, runtime-credential, and policy changes after final verification"
+        },
+        {
+          "path": "scripts/verify-commercial-governance-hardening.mjs",
+          "target_blob": "129161eecaa5e08c63b224a484bd2f1978fbf7a0",
+          "reason": "Seal live-only chat, read-only A/B canary, receipt, callsite, runtime-credential, and policy changes after final verification"
+        },
+        {
+          "path": "src/workers/__tests__/chat-assembly-trace-operator.test.ts",
+          "target_blob": "751586ef343467c20e1b78acc2f683ad6c199041",
+          "reason": "Seal live-only chat, read-only A/B canary, receipt, callsite, runtime-credential, and policy changes after final verification"
+        }
+      ]
     }
   ]
 }
