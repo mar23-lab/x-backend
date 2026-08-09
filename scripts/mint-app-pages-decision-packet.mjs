@@ -161,7 +161,8 @@ function selfTest() {
     console.error(`FAIL mint-app-pages-decision-packet self-test: ${failed.length}/${cases.length}`);
     process.exit(1);
   }
-  console.log(`PASS mint-app-pages-decision-packet self-test: ${cases.length}/${cases.length}`);
+  const passed = cases.length - failed.length;
+  console.log(`PASS mint-app-pages-decision-packet self-test: ${passed}/${cases.length}`);
   process.exit(0);
 }
 

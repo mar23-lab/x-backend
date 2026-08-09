@@ -120,7 +120,8 @@ function runSelfTest() {
     console.error(`verify-app-pages-release self-test · FAIL · ${failures.join(',')}`);
     process.exit(1);
   }
-  console.log(`verify-app-pages-release self-test · PASS ${checks.length}/${checks.length}`);
+  const passed = checks.length - failures.length;
+  console.log(`verify-app-pages-release self-test · PASS ${passed}/${checks.length}`);
 }
 
 if (selfTest) {

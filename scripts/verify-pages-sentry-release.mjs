@@ -132,7 +132,8 @@ if (failed.length) {
   process.exit(1);
 }
 
-console.log(`verify-pages-sentry-release · PASS ${checks.length}/${checks.length} exact-artifact and legacy-fallback checks`);
+const passed = checks.length - failed.length;
+console.log(`verify-pages-sentry-release · PASS ${passed}/${checks.length} exact-artifact and legacy-fallback checks`);
 
 // ADVISORY, deliberately. Frontend Sentry is dark today, so making this blocking would ship a gate
 // that is red from its first run — the always-red-gets-bypassed pattern this estate has measured.

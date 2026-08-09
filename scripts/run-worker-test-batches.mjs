@@ -42,6 +42,7 @@ if (!files.length) {
 const vitest = path.join(root, 'node_modules/vitest/vitest.mjs');
 const workerFiles = files.filter((file) => !nodeEnvironmentTests.has(file));
 const nodeFiles = files.filter((file) => nodeEnvironmentTests.has(file));
+let completedFileRuns = 0;
 
 if (nodeFiles.length) {
   console.log(`\n=== Node-environment tests (${nodeFiles.length} files) ===`);
@@ -51,6 +52,7 @@ if (nodeFiles.length) {
     env: process.env,
   });
   if (result.status !== 0) process.exit(result.status ?? 1);
+  completedFileRuns += nodeFiles.length;
   await new Promise((resolve) => setTimeout(resolve, batchCooldownMs));
 }
 
@@ -68,7 +70,8 @@ for (let offset = 0; offset < workerFiles.length; offset += batchSize) {
     ...batch,
   ], { cwd: root, stdio: 'inherit', env: process.env });
   if (result.status !== 0) process.exit(result.status ?? 1);
+  completedFileRuns += batch.length;
   if (index < batches) await new Promise((resolve) => setTimeout(resolve, batchCooldownMs));
 }
 
-console.log(`\nPASS complete backend suite: ${files.length}/${files.length} files (${nodeFiles.length} Node, ${workerFiles.length} Workers) in ${batches} bounded Workers batches`);
+console.log(`\nPASS complete backend suite: ${completedFileRuns}/${files.length} configured file runs returned zero exit (${nodeFiles.length} Node, ${workerFiles.length} Workers) in ${batches} bounded Workers batches; assertion counts are reported by Vitest above`);

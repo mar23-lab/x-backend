@@ -101,10 +101,11 @@ if (LIVE) {
 
 console.log('\n══════════════════════════════════════════════════════════════');
 const failed = results.filter(([, ok]) => !ok);
+const passed = results.filter(([, ok]) => ok).length;
 for (const [label, ok] of results) console.log(`  ${ok ? '☑' : '✗'} ${label}`);
 for (const label of unmeasured) console.log(`  — ${label}  [UNMEASURED]`);
 if (failed.length) { console.error(`\n✗ ${failed.length} proof(s) FAILED.`); process.exit(1); }
 console.log(
-  `\n☑ ${results.length}/${results.length} proofs MEASURED and passed`
+  `\n☑ ${passed}/${results.length} proofs MEASURED and passed`
   + (unmeasured.length ? `; ${unmeasured.length} proof(s) UNMEASURED — this run is not evidence of tenant isolation.` : ' (incl. LIVE round-trip).'),
 );

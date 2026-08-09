@@ -70,7 +70,9 @@ export function findSkipThenSucceed(source) {
   const lines = source.split('\n');
   const hits = [];
   for (let i = 0; i < lines.length; i += 1) {
-    if (!/SKIP/i.test(lines[i])) continue;
+    // Status markers are deliberately uppercase. Case-insensitive substring matching classified
+    // ordinary prose such as "only non-production skips" and "cannot be skipped" as skip results.
+    if (!/\bSKIP(?:PED)?\b/.test(lines[i])) continue;
     if (!/console\.(log|warn|error)/.test(lines[i])) continue;
     const window = lines.slice(i, Math.min(i + 6, lines.length)).join('\n');
     if (!/exit\(\s*0\s*\)/.test(window)) continue;
@@ -85,18 +87,22 @@ function runSelfTest() {
   const ratioOk = 'console.log(`PASS (${passed}/${gates.length})`)';
   const skipBad = "console.log('thing SKIP - set URLS to run.');\nprocess.exit(0);";
   const skipOk = "console.log('thing SKIPPED (0 assertions evaluated) - this is NOT a pass.');\nprocess.exit(0);";
+  const ordinarySkips = "console.log('only explicit non-production skips');\nprocess.exit(0);";
+  const cannotBeSkipped = "console.error('proof cannot be skipped under production authority');\nprocess.exit(0);";
   const controls = [
     [findSelfReferentialRatio(ratioBad).length > 0, true, 'detects the self-referential ratio'],
     [findSelfReferentialRatio(ratioOk).length > 0, false, 'allows a real measured ratio'],
     [findSkipThenSucceed(skipBad).length > 0, true, 'detects skip-then-exit(0)'],
     [findSkipThenSucceed(skipOk).length > 0, false, 'allows a skip that states 0 assertions'],
+    [findSkipThenSucceed(ordinarySkips).length > 0, false, 'ignores the ordinary word skips'],
+    [findSkipThenSucceed(cannotBeSkipped).length > 0, false, 'ignores ordinary lowercase skipped prose'],
   ];
   const failed = controls.filter(([actual, expected]) => actual !== expected);
   if (failed.length > 0) {
     console.error(`verify-controls-measure-something self-test FAIL: ${failed.map((r) => r[2]).join(', ')}`);
     process.exit(1);
   }
-  console.log('verify-controls-measure-something self-test PASS · 2 positive + 2 negative controls');
+  console.log('verify-controls-measure-something self-test PASS · 2 positive + 4 negative controls');
 }
 
 function main() {

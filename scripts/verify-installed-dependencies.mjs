@@ -28,6 +28,7 @@ const scopes = [
 ];
 
 let directCount = 0;
+let verifiedDirectCount = 0;
 for (const scope of scopes) {
   const pkg = readJson(scope.packageFile);
   const lock = readJson(scope.lockFile);
@@ -37,6 +38,7 @@ for (const scope of scopes) {
 
   for (const [name, expected] of Object.entries(dependencies)) {
     directCount += 1;
+    const failureCountBefore = failures.length;
     const lockEntry = lock.packages?.[`node_modules/${name}`];
     if (!lockEntry) {
       failures.push(`${scope.label} ${name}: missing from ${scope.lockFile}`);
@@ -59,6 +61,7 @@ for (const scope of scopes) {
     } catch {
       failures.push(`${scope.label} ${name}: not installed; run npm run bootstrap:local`);
     }
+    if (failures.length === failureCountBefore) verifiedDirectCount += 1;
   }
 }
 
@@ -69,5 +72,5 @@ if (failures.length) {
 }
 
 console.log(
-  `PASS installed dependency parity (${directCount}/${directCount} direct packages across backend + MCP server; Node ${process.versions.node})`,
+  `PASS installed dependency parity (${verifiedDirectCount}/${directCount} direct packages across backend + MCP server; Node ${process.versions.node})`,
 );

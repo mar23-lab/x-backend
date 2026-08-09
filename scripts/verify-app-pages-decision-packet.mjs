@@ -121,7 +121,8 @@ if (selfTest) {
     console.error(`verify-app-pages-decision-packet self-test · FAIL · ${failures.join(',')}`);
     process.exit(1);
   }
-  console.log(`verify-app-pages-decision-packet self-test · PASS ${cases.length}/${cases.length}`);
+  const passed = cases.length - failures.length;
+  console.log(`verify-app-pages-decision-packet self-test · PASS ${passed}/${cases.length}`);
   process.exit(0);
 }
 

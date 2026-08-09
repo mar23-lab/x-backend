@@ -6149,6 +6149,62 @@
           "reason": "Add tenant credential dispatch, cloud provider adapters, commercial chat and readiness facades without changing authorization semantics"
         }
       ]
+    },
+    {
+      "delta_id": "codex-controls-measurement-integrity-260809",
+      "generated_at": "2026-08-09T03:08:26.178Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "052b764a3551f5c8e3e29eef21b054dfd6668c5c",
+      "target_base_commit": "052b764a3551f5c8e3e29eef21b054dfd6668c5c",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "scripts/run-worker-test-batches.mjs",
+          "target_blob": "e6fbe2857cb67ee2c7a286b8adad6746996fbff3",
+          "reason": "Replace hollow-success ratios with independently observed counts and narrow proven skip-language false positives"
+        },
+        {
+          "path": "scripts/verify-installed-dependencies.mjs",
+          "target_blob": "250aa795aa6fa62a2600524b5edf42d9dba00a2b",
+          "reason": "Replace hollow-success ratios with independently observed counts and narrow proven skip-language false positives"
+        },
+        {
+          "path": "scripts/run-trust-proofs.mjs",
+          "target_blob": "dc5a79b185e2f782ef8b376203af3322b6ce9588",
+          "reason": "Replace hollow-success ratios with independently observed counts and narrow proven skip-language false positives"
+        },
+        {
+          "path": "scripts/verify-domain-scaffold-honest-empty.mjs",
+          "target_blob": "c78d4b0bb66b9c7ba2447624f013b0c929db255b",
+          "reason": "Replace hollow-success ratios with independently observed counts and narrow proven skip-language false positives"
+        },
+        {
+          "path": "scripts/verify-flag-parse-hygiene.mjs",
+          "target_blob": "a620b240fc0efef9b90fab2729d3069ab406ba77",
+          "reason": "Replace hollow-success ratios with independently observed counts and narrow proven skip-language false positives"
+        },
+        {
+          "path": "scripts/verify-tenant-source-isolation.mjs",
+          "target_blob": "78afbb6a93bfef400e5c2461c5cf0984ea4a6168",
+          "reason": "Replace hollow-success ratios with independently observed counts and narrow proven skip-language false positives"
+        },
+        {
+          "path": "scripts/verify-customer-ecosystem-template.mjs",
+          "target_blob": "f43b85083d458a9579b59d9d24a9cd151e240f37",
+          "reason": "Replace hollow-success ratios with independently observed counts and narrow proven skip-language false positives"
+        },
+        {
+          "path": "scripts/emit-routes-manifest.mjs",
+          "target_blob": "44f706f1c1bb9e1509df5770e1f7fe259d655f53",
+          "reason": "Replace hollow-success ratios with independently observed counts and narrow proven skip-language false positives"
+        },
+        {
+          "path": "scripts/mint-app-pages-decision-packet.mjs",
+          "target_blob": "fd8e106a5d7c1a747edbafc22c2a7083181c059f",
+          "reason": "Replace hollow-success ratios with independently observed counts and narrow proven skip-language false positives"
+        }
+      ]
     }
   ]
 }

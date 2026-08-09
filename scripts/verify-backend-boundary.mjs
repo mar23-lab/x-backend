@@ -168,7 +168,8 @@ if (selfTest) {
     console.error(`  SELF-TEST FAIL — ${problems.length} case(s) wrong; this gate is a false-green.\n`);
     process.exit(1);
   }
-  console.log(`  SELF-TEST PASS — ${rows.length}/${rows.length}, every case an OBSERVED exit code from a spawned run of this gate.\n`);
+  const passed = rows.length - problems.length;
+  console.log(`  SELF-TEST PASS — ${passed}/${rows.length}, every case an OBSERVED exit code from a spawned run of this gate.\n`);
   process.exit(0);
 }
 
