@@ -25,14 +25,30 @@ export function parseWranglerJson(stdout, label = 'wrangler') {
   }
 }
 
+export function wranglerJsonEnv(env = process.env) {
+  const clean = { ...env };
+  delete clean.WRANGLER_LOG;
+  return clean;
+}
+
+export function workerVersionArgs(versionId, workerName) {
+  if (!versionId || !workerName) throw new Error('Worker version id and name are required');
+  return [
+    'versions', 'view', versionId,
+    '--name', workerName,
+    '--config', 'wrangler.toml',
+    '--json',
+  ];
+}
+
 function runWrangler(args) {
   const cli = path.join(ROOT, 'node_modules', 'wrangler', 'bin', 'wrangler.js');
   const result = spawnSync(process.execPath, [cli, ...args], {
     cwd: ROOT,
-    // Wrangler 4.120 suppresses command JSON as well as logs when WRANGLER_LOG=none.
-    // These commands are machine-readable authority inputs, so keep stdout enabled and
+    // Wrangler 4.120 can suppress command JSON when WRANGLER_LOG is set. These
+    // commands are machine-readable authority inputs, so remove that override and
     // parse only a complete JSON document. stderr remains separate from the evidence.
-    env: { ...process.env, WRANGLER_LOG: 'error' },
+    env: wranglerJsonEnv(),
     encoding: 'utf8',
   });
   if (result.status !== 0) {
@@ -42,10 +58,15 @@ function runWrangler(args) {
 }
 
 function deploymentUrl(row) {
-  const urls = rollbackAuthorityValues(row, ['url']);
+  const urls = rollbackAuthorityValues(row, ['url', 'Deployment']);
   const raw = urls.find(Boolean);
   if (!raw) throw new Error('rollback Pages deployment has no URL');
   return /^https?:\/\//.test(raw) ? raw.replace(/\/+$/, '') : `https://${raw.replace(/\/+$/, '')}`;
+}
+
+export function isJsonContentType(value) {
+  const mediaType = String(value || '').split(';', 1)[0].trim().toLowerCase();
+  return mediaType === 'application/json' || mediaType.endsWith('+json');
 }
 
 async function readFrontendIdentity(base) {
@@ -54,7 +75,12 @@ async function readFrontendIdentity(base) {
     redirect: 'error',
     signal: AbortSignal.timeout(15_000),
   });
-  if (manifestResponse.ok) return parseReactRuntimeManifest(await manifestResponse.json());
+  // Older Pages releases route unknown paths to the SPA document with HTTP 200.
+  // Treat only an actual JSON media type as a runtime manifest; malformed JSON
+  // with that media type still fails closed instead of silently falling back.
+  if (manifestResponse.ok && isJsonContentType(manifestResponse.headers.get('content-type'))) {
+    return parseReactRuntimeManifest(await manifestResponse.json());
+  }
   const response = await fetch(`${base}/?rollback_probe=${Date.now()}`, {
     cache: 'no-store',
     redirect: 'error',
@@ -72,14 +98,16 @@ async function main() {
   const api = JSON.parse(readFileSync(path.resolve(apiPath), 'utf8'));
   const pages = JSON.parse(readFileSync(path.resolve(pagesPath), 'utf8'));
   const expected = {
+    worker_name: api.target.worker_name,
     worker_version_id: api.rollback.cloudflare_version_id,
     backend_sha: api.rollback.target_sha,
     pages_deployment_id: pages.rollback.cloudflare_deployment_id,
     frontend_sha: pages.rollback.frontend_sha,
   };
-  const workerVersion = runWrangler([
-    'versions', 'view', expected.worker_version_id, '--config', 'wrangler.toml', '--json',
-  ]);
+  const workerVersion = runWrangler(workerVersionArgs(
+    expected.worker_version_id,
+    expected.worker_name,
+  ));
   const pagesDeployments = runWrangler([
     'pages', 'deployment', 'list', '--project-name', 'xlooop-app', '--environment', 'production', '--json',
   ]);
@@ -98,6 +126,7 @@ async function main() {
 
 function selfTest() {
   const expected = {
+    worker_name: 'xlooop-api',
     worker_version_id: '5c20d49c-957b-4a89-8379-7e4bb1bde936',
     backend_sha: 'a'.repeat(40),
     pages_deployment_id: 'de7eac0b-3b4e-4144-830f-659a291f7e8c',
@@ -112,14 +141,30 @@ function selfTest() {
     url: 'rollback.pages.dev',
     deployment_trigger: { metadata: { commit_hash: expected.frontend_sha } },
   }];
+  const wranglerPages = [{
+    Id: expected.pages_deployment_id,
+    Environment: 'Production',
+    Branch: 'main',
+    Source: expected.frontend_sha.slice(0, 7),
+    Deployment: 'https://rollback.pages.dev',
+  }];
   const checks = [
     ['exact rollback pair passes', assessRollbackAuthorityEvidence(worker, pages, expected).ok],
+    ['Wrangler Pages display JSON passes', assessRollbackAuthorityEvidence(worker, wranglerPages, expected).ok],
+    ['Wrangler Pages URL is accepted', deploymentUrl(wranglerPages[0]) === 'https://rollback.pages.dev'],
     ['unrelated Worker version fails', assessRollbackAuthorityEvidence({ ...worker, id: 'other' }, pages, expected).problems.includes('worker_version_id')],
     ['wrong Worker build fails', assessRollbackAuthorityEvidence({ ...worker, resources: { bindings: [{ name: 'BUILD_SHA', text: 'c'.repeat(40) }] } }, pages, expected).problems.includes('worker_version_backend_sha')],
     ['wrong Pages commit fails', assessRollbackAuthorityEvidence(worker, [{ ...pages[0], deployment_trigger: { metadata: { commit_hash: 'c'.repeat(40) } } }], expected).problems.includes('pages_deployment_frontend_sha')],
+    ['too-short Pages source prefix fails', assessRollbackAuthorityEvidence(worker, [{ ...wranglerPages[0], Source: expected.frontend_sha.slice(0, 6) }], expected).problems.includes('pages_deployment_frontend_sha')],
+    ['mismatched Pages source prefix fails', assessRollbackAuthorityEvidence(worker, [{ ...wranglerPages[0], Source: 'c'.repeat(7) }], expected).problems.includes('pages_deployment_frontend_sha')],
     ['valid Wrangler JSON is parsed', parseWranglerJson('{"ok":true}').ok === true],
     ['empty Wrangler JSON is refused', (() => { try { parseWranglerJson(''); return false; } catch (error) { return String(error.message).includes('empty JSON'); } })()],
     ['invalid Wrangler JSON is refused', (() => { try { parseWranglerJson('warning only'); return false; } catch (error) { return String(error.message).includes('invalid JSON'); } })()],
+    ['JSON content type is accepted', isJsonContentType('application/json; charset=utf-8')],
+    ['structured JSON suffix is accepted', isJsonContentType('application/problem+json')],
+    ['SPA HTML fallback is not parsed as JSON', !isJsonContentType('text/html; charset=utf-8')],
+    ['Worker lookup names the exact target', workerVersionArgs(expected.worker_version_id, expected.worker_name).includes(expected.worker_name)],
+    ['Wrangler log override is removed', !Object.hasOwn(wranglerJsonEnv({ WRANGLER_LOG: 'none', KEEP: 'yes' }), 'WRANGLER_LOG')],
   ];
   const failed = checks.filter(([, ok]) => !ok);
   for (const [name, ok] of checks) console.log(`  ${ok ? 'PASS' : 'FAIL'} ${name}`);

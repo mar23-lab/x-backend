@@ -22,6 +22,14 @@ export function rollbackAuthorityValues(value, wanted) {
   return valuesForKey(value, wanted);
 }
 
+export function pagesSourceMatches(observed, expected) {
+  if (typeof observed !== 'string' || typeof expected !== 'string') return false;
+  const source = observed.trim().toLowerCase();
+  const target = expected.trim().toLowerCase();
+  if (!/^[0-9a-f]{7,40}$/.test(source) || !/^[0-9a-f]{40}$/.test(target)) return false;
+  return source === target || target.startsWith(source);
+}
+
 export function assessRollbackAuthorityEvidence(workerVersion, pagesDeployments, expected) {
   const problems = [];
   const workerIds = valuesForKey(workerVersion, ['id', 'version_id']);
@@ -32,12 +40,14 @@ export function assessRollbackAuthorityEvidence(workerVersion, pagesDeployments,
   const rows = Array.isArray(pagesDeployments)
     ? pagesDeployments
     : Array.isArray(pagesDeployments?.result) ? pagesDeployments.result : [];
-  const pages = rows.find((row) => valuesForKey(row, ['id', 'deployment_id'])
+  const pages = rows.find((row) => valuesForKey(row, ['id', 'deployment_id', 'Id'])
     .includes(expected.pages_deployment_id));
   if (!pages) problems.push('pages_deployment_id');
   else {
-    const commits = valuesForKey(pages, ['commit_hash', 'commitHash']);
-    if (!commits.includes(expected.frontend_sha)) problems.push('pages_deployment_frontend_sha');
+    const commits = valuesForKey(pages, ['commit_hash', 'commitHash', 'Source']);
+    if (!commits.some((commit) => pagesSourceMatches(commit, expected.frontend_sha))) {
+      problems.push('pages_deployment_frontend_sha');
+    }
   }
   return { ok: problems.length === 0, problems, pages: pages || null };
 }
