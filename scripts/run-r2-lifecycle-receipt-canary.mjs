@@ -33,10 +33,12 @@ function runLive() {
   const workdir = fs.mkdtempSync(path.join(os.tmpdir(), 'xlooop-r2-lifecycle-'));
   const payloadPath = path.join(workdir, 'export-payload.json');
   const downloadedPath = path.join(workdir, 'downloaded-export-payload.json');
+  const heldDownloadedPath = path.join(workdir, 'held-export-payload.json');
   const missingPath = path.join(workdir, 'must-not-exist.json');
   const manifestPath = path.join(workdir, 'export-manifest.json');
   const proofBundlePath = path.join(workdir, 'proof-bundle.json');
   const receiptPath = path.join(workdir, 'receipt.json');
+  const lockedReceiptPath = path.join(workdir, 'locked-receipt-readback.json');
 
   assertOutputOutsideRepo(outputPath);
   if (!fs.existsSync(wrangler)) fail('wrangler_missing', { expected_path: wrangler });
@@ -73,14 +75,33 @@ function runLive() {
   if (sha256File(downloadedPath) !== objectHash) fail('r2_download_hash_mismatch');
 
   const holdAdd = command(wrangler, ['r2', 'bucket', 'lock', 'add', bucket, holdRuleId, objectKey, '--retention-days', '1', '--force']);
+  const holdList = command(wrangler, ['r2', 'bucket', 'lock', 'list', bucket]);
+  if (!`${holdList.stdout}\n${holdList.stderr}`.includes(holdRuleId)) fail('legal_hold_lock_not_listed');
   const heldDelete = command(wrangler, ['r2', 'object', 'delete', `${bucket}/${objectKey}`, '--remote', '--force'], { allowFailure: true });
-  if (heldDelete.status === 0) fail('bucket_lock_did_not_block_delete');
+  const heldRead = command(wrangler, ['r2', 'object', 'get', `${bucket}/${objectKey}`, '--remote', '--file', heldDownloadedPath], { allowFailure: true });
+  if (heldRead.status !== 0 || !fs.existsSync(heldDownloadedPath)) fail('bucket_lock_did_not_preserve_object');
+  const heldObjectHash = sha256File(heldDownloadedPath);
+  if (heldObjectHash !== objectHash) fail('bucket_lock_preserved_wrong_object_hash');
+  const legalHoldProof = proof('bucket_lock_preserved_object_after_delete_attempt', JSON.stringify({
+    hold_add: proofId(holdAdd),
+    hold_list: proofId(holdList),
+    delete_attempt: proofId(heldDelete),
+    retained_read: proofId(heldRead),
+    retained_hash_sha256: heldObjectHash,
+  }));
 
   command(wrangler, ['r2', 'bucket', 'lock', 'remove', bucket, '--name', holdRuleId]);
   const objectDelete = command(wrangler, ['r2', 'object', 'delete', `${bucket}/${objectKey}`, '--remote', '--force']);
   const deletedAt = new Date();
   const negativeRead = command(wrangler, ['r2', 'object', 'get', `${bucket}/${objectKey}`, '--remote', '--file', missingPath], { allowFailure: true });
-  if (negativeRead.status === 0 || fs.existsSync(missingPath)) fail('negative_read_after_delete_failed');
+  const negativeReadOutput = `${negativeRead.stdout}\n${negativeRead.stderr}`;
+  if (!isRemoteNotFound(negativeRead)) {
+    fail('negative_read_after_delete_failed', { status: negativeRead.status, output: tail(negativeReadOutput) });
+  }
+  // Wrangler may create the requested output file before the remote GET returns
+  // not-found. The remote status and error are authoritative; discard that
+  // empty local placeholder so it cannot be mistaken for recovered data.
+  fs.rmSync(missingPath, { force: true });
 
   const exportManifest = {
     schema_id: 'xlooop.delete_export_manifest.v1',
@@ -100,7 +121,7 @@ function runLive() {
     schema_id: 'xlooop.r2_lifecycle_proof_bundle.v1',
     run_id: runId,
     generated_at: new Date().toISOString(),
-    commands: { bucketCreate, objectPut, holdAdd, heldDelete, objectDelete, negativeRead, manifestPut },
+    commands: { bucketCreate, objectPut, holdAdd, holdList, heldDelete, heldRead, legalHoldProof, objectDelete, negativeRead, manifestPut },
   };
   writeJson(proofBundlePath, proofBundle);
   const proofBundleHash = sha256File(proofBundlePath);
@@ -108,7 +129,7 @@ function runLive() {
 
   const receipt = buildReceipt({
     runId, bucket, objectKey, receiptKey, proofBundleKey, objectHash, manifestHash, proofBundleHash, holdRuleId, deletedAt,
-    proofs: { objectPut, manifestPut, proofBundlePut, objectDelete, heldDelete, negativeRead },
+    proofs: { objectPut, manifestPut, proofBundlePut, objectDelete, legalHoldProof, negativeRead },
   });
   writeJson(receiptPath, receipt);
   const immutableReceiptHash = sha256File(receiptPath);
@@ -116,6 +137,11 @@ function runLive() {
   const receiptLock = command(wrangler, ['r2', 'bucket', 'lock', 'add', bucket, receiptLockRuleId, receiptPrefix, '--retention-indefinite', '--force']);
   const lockList = command(wrangler, ['r2', 'bucket', 'lock', 'list', bucket]);
   if (!`${lockList.stdout}\n${lockList.stderr}`.includes(receiptLockRuleId)) fail('immutable_receipt_lock_not_listed');
+  const receiptDeleteAttempt = command(wrangler, ['r2', 'object', 'delete', `${bucket}/${receiptKey}`, '--remote', '--force'], { allowFailure: true });
+  const lockedReceiptRead = command(wrangler, ['r2', 'object', 'get', `${bucket}/${receiptKey}`, '--remote', '--file', lockedReceiptPath], { allowFailure: true });
+  if (lockedReceiptRead.status !== 0 || !fs.existsSync(lockedReceiptPath)) fail('immutable_receipt_lock_did_not_preserve_receipt');
+  const lockedReceiptHash = sha256File(lockedReceiptPath);
+  if (lockedReceiptHash !== immutableReceiptHash) fail('immutable_receipt_readback_hash_mismatch');
 
   fs.mkdirSync(path.dirname(outputPath), { recursive: true });
   fs.copyFileSync(receiptPath, outputPath);
@@ -132,6 +158,9 @@ function runLive() {
     immutable_receipt_upload_id: proofId(receiptPut),
     immutable_receipt_lock_id: proofId(receiptLock),
     immutable_receipt_lock_list_id: proofId(lockList),
+    immutable_receipt_delete_attempt_id: proofId(receiptDeleteAttempt),
+    immutable_receipt_readback_id: proofId(lockedReceiptRead),
+    immutable_receipt_readback_hash_sha256: lockedReceiptHash,
     verifier: JSON.parse(verify.stdout),
   }, null, 2));
 }
@@ -164,7 +193,7 @@ function buildReceipt({ runId, bucket, objectKey, receiptKey, proofBundleKey, ob
       export_manifest_receipt_id: proofId(proofs.manifestPut),
       proof_bundle_receipt_id: proofId(proofs.proofBundlePut),
       delete_request_receipt_id: proofId(proofs.objectDelete),
-      legal_hold_receipt_id: proofId(proofs.heldDelete),
+      legal_hold_receipt_id: proofId(proofs.legalHoldProof),
       negative_read_receipt_id: proofId(proofs.negativeRead),
     },
     legal_hold_state: 'released_after_verified_delete_denial',
@@ -193,7 +222,7 @@ function runSelfTest() {
     holdRuleId: 'hold-lifecycle-20260811t000000z-abcdef12', deletedAt: new Date(),
     proofs: {
       objectPut: fake('object-put'), manifestPut: fake('manifest-put'), proofBundlePut: fake('proof-bundle-put'), objectDelete: fake('object-delete'),
-      heldDelete: fake('held-delete-denied', 1), negativeRead: fake('negative-read-not-found', 1),
+      legalHoldProof: fake('object-preserved-after-delete-attempt'), negativeRead: fake('negative-read-not-found', 1),
     },
   });
   const checks = [
@@ -203,6 +232,9 @@ function runSelfTest() {
     receipt.raw_customer_data_used === false,
     Object.values(receipt.receipt_proofs).every(Boolean),
     !JSON.stringify(receipt).match(/placeholder|changeme/i),
+    isRemoteNotFound({ status: 1, stdout: '', stderr: 'The specified key does not exist.' }),
+    !isRemoteNotFound({ status: 0, stdout: 'Download complete.', stderr: '' }),
+    !isRemoteNotFound({ status: 1, stdout: '', stderr: 'Unable to resolve Cloudflare API hostname.' }),
   ];
   const selfTestDir = fs.mkdtempSync(path.join(os.tmpdir(), 'xlooop-r2-lifecycle-self-test-'));
   const selfTestReceipt = path.join(selfTestDir, 'receipt.json');
@@ -241,6 +273,10 @@ function proof(label, output) {
 }
 
 function proofId(record) { return `sha256:${record?.proof_id || sha256(JSON.stringify(record || {}))}`; }
+function isRemoteNotFound(record) {
+  return record?.status !== 0
+    && /specified key does not exist|key not found/i.test(`${record?.stdout || ''}\n${record?.stderr || ''}`);
+}
 function writeJson(file, value) { fs.mkdirSync(path.dirname(file), { recursive: true }); fs.writeFileSync(file, `${JSON.stringify(value, null, 2)}\n`, { mode: 0o600 }); }
 function sha256File(file) { return sha256(fs.readFileSync(file)); }
 function sha256(value) { return crypto.createHash('sha256').update(value).digest('hex'); }

@@ -121,13 +121,16 @@ export function posturesEqual(left, right) {
 
 export function assessFrontendReleaseArtifact(config, expected) {
   const problems = [];
+  const expectedApiBase = expected?.api_base || 'https://api.xlooop.com';
+  const expectedEnvironment = expected?.environment || 'production';
+  const expectedAuthority = expected?.authority || 'production';
   if (config.build_mode !== 'production') problems.push('build_mode');
   if (config.artifact_contract === 'react_vite_v2'
     && config.production_cutover_approved !== true) {
     problems.push('production_cutover_approved');
   }
   if (config.require_contract_handshake !== true) problems.push('require_contract_handshake');
-  if (config.api_base !== 'https://api.xlooop.com') problems.push('api_base');
+  if (config.api_base !== expectedApiBase) problems.push('api_base');
   if (!SHA_PATTERN.test(config.frontend_sha || '')) problems.push('frontend_sha');
   if (!SHA_PATTERN.test(config.backend_sha || '')) problems.push('backend_sha');
   if (!Number.isSafeInteger(config.schema_head) || config.schema_head < 1) problems.push('schema_head');
@@ -140,8 +143,8 @@ export function assessFrontendReleaseArtifact(config, expected) {
   if (expected?.feature_posture && !posturesEqual(config.feature_posture, expected.feature_posture)) {
     problems.push('feature_posture_mismatch');
   }
-  if (config.environment !== 'production') problems.push('environment');
-  if (config.authority !== 'production') problems.push('authority');
+  if (config.environment !== expectedEnvironment) problems.push('environment');
+  if (config.authority !== expectedAuthority) problems.push('authority');
   problems.push(...exactPostureProblems(config.feature_posture));
   if (expected?.frontend_sha && config.frontend_sha !== expected.frontend_sha) {
     problems.push('frontend_sha_mismatch');
@@ -163,6 +166,8 @@ export function releaseManifestDigest(manifest) {
     environment: manifest?.environment,
     authority: manifest?.authority,
     api_base: manifest?.api_base,
+    deployment_worker: manifest?.deployment_worker,
+    wrangler_config: manifest?.wrangler_config,
     feature_posture: manifest?.feature_posture,
     files: manifest?.files,
   };
@@ -267,8 +272,11 @@ export function normalizePagesFunctionsBundle(source) {
   return source.replace(PAGES_FUNCTIONS_ROUTE_SOURCE_PATTERN, PAGES_FUNCTIONS_ROUTE_SOURCE_MARKER);
 }
 
-export function assessReleaseManifest(manifest, currentHashes = null) {
+export function assessReleaseManifest(manifest, currentHashes = null, expected = {}) {
   const problems = [];
+  const expectedEnvironment = expected.environment || 'production';
+  const expectedAuthority = expected.authority || 'production';
+  const expectedApiBase = expected.api_base || 'https://api.xlooop.com';
   if (manifest?.schema_id !== 'xlooop.app_pages_release_manifest.v1') problems.push('schema_id');
   if (!['legacy_wired_v1', 'react_vite_v2'].includes(manifest?.artifact_contract)) {
     problems.push('artifact_contract');
@@ -277,8 +285,15 @@ export function assessReleaseManifest(manifest, currentHashes = null) {
   if (!SHA_PATTERN.test(manifest?.backend_sha || '')) problems.push('backend_sha');
   if (!HASH_PATTERN.test(manifest?.contract_hash || '')) problems.push('contract_hash');
   if (!Number.isSafeInteger(manifest?.schema_head) || manifest.schema_head < 1) problems.push('schema_head');
-  if (manifest?.environment !== 'production') problems.push('environment');
-  if (manifest?.authority !== 'production') problems.push('authority');
+  if (manifest?.environment !== expectedEnvironment) problems.push('environment');
+  if (manifest?.authority !== expectedAuthority) problems.push('authority');
+  if (manifest?.api_base !== expectedApiBase) problems.push('api_base');
+  if (expected.deployment_worker && manifest?.deployment_worker !== expected.deployment_worker) {
+    problems.push('deployment_worker');
+  }
+  if (expected.wrangler_config && manifest?.wrangler_config !== expected.wrangler_config) {
+    problems.push('wrangler_config');
+  }
   problems.push(...exactPostureProblems(manifest?.feature_posture));
   if (!manifest?.files || typeof manifest.files !== 'object' || Array.isArray(manifest.files)) {
     problems.push('files');

@@ -52,17 +52,29 @@ const generatedAt = execFileSync('git', ['show', '-s', '--format=%cI', 'HEAD'], 
   encoding: 'utf8',
 }).trim();
 const contract = JSON.parse(readFileSync(path.join(root, 'docs/contracts/api-contract.v1.json'), 'utf8'));
+const config = parseFrontendReleaseArtifact(artifactDir);
+const deploymentConfigByEnvironment = {
+  production: 'wrangler.toml',
+  'pilot-shadow': 'wrangler.pilot-shadow.toml',
+};
+const deploymentConfig = deploymentConfigByEnvironment[config.environment];
+if (!deploymentConfig) fail(`unsupported release environment ${config.environment}`);
 let candidateDeployment;
 try {
-  candidateDeployment = readCandidateDeploymentContract(root);
+  candidateDeployment = readCandidateDeploymentContract(root, {
+    ...process.env,
+    XLOOOP_DEPLOYMENT_WRANGLER_CONFIG: deploymentConfig,
+  });
 } catch (error) {
   fail(error instanceof Error ? error.message : String(error));
 }
-const config = parseFrontendReleaseArtifact(artifactDir);
 const assessment = assessFrontendReleaseArtifact(config, {
   backend_sha: backendSha,
   contract_hash: contract.contract_hash,
   schema_head: candidateDeployment.schema_head,
+  api_base: candidateDeployment.api_base,
+  environment: candidateDeployment.environment,
+  authority: candidateDeployment.authority,
   feature_posture: candidateDeployment.feature_posture,
 });
 const fileProblems = verifyStaticArtifactFiles(artifactDir, contract.contract_hash);
@@ -131,6 +143,8 @@ const manifest = {
   environment: config.environment,
   authority: config.authority,
   api_base: config.api_base,
+  deployment_worker: candidateDeployment.worker_name,
+  wrangler_config: candidateDeployment.wrangler_config,
   feature_posture: config.feature_posture,
   files: hashReleaseFiles(outputDir),
 };

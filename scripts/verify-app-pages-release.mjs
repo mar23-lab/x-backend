@@ -113,6 +113,26 @@ function runSelfTest() {
     contract_hash: contractHash,
     feature_posture: { ...posture, current_work_projection: true },
   });
+  const pilotApiBase = 'https://xlooop-api-pilot-shadow.xlooop23.workers.dev';
+  const pilotReact = {
+    ...reactParsed,
+    api_base: pilotApiBase,
+    environment: 'pilot-shadow',
+    authority: 'shadow',
+  };
+  const validPilotReact = assessFrontendReleaseArtifact(pilotReact, {
+    frontend_sha: frontendSha,
+    backend_sha: backendSha,
+    contract_hash: contractHash,
+    environment: 'pilot-shadow',
+    authority: 'shadow',
+    api_base: pilotApiBase,
+  });
+  const pilotReactRejectedWithoutExplicitTarget = assessFrontendReleaseArtifact(pilotReact, {
+    frontend_sha: frontendSha,
+    backend_sha: backendSha,
+    contract_hash: contractHash,
+  });
   const reactStaticProblems = verifyStaticArtifactFiles(reactRoot, contractHash);
   mkdirSync(path.join(reactRoot, '_worker.js'), { recursive: true });
   writeFileSync(path.join(reactRoot, '_worker.js', 'index.js'), 'export default {};');
@@ -132,6 +152,7 @@ function runSelfTest() {
     schema_head: 89,
     environment: 'production',
     authority: 'production',
+    api_base: 'https://api.xlooop.com',
     feature_posture: posture,
     files: hashes,
   };
@@ -161,6 +182,24 @@ function runSelfTest() {
       return true;
     }
   })();
+  const productionDeployment = readCandidateDeploymentContract(root, {
+    XLOOOP_SCHEMA_HEAD: '100',
+  });
+  const pilotShadowDeployment = readCandidateDeploymentContract(root, {
+    XLOOOP_SCHEMA_HEAD: '100',
+    XLOOOP_DEPLOYMENT_WRANGLER_CONFIG: 'wrangler.pilot-shadow.toml',
+  });
+  const unknownDeploymentConfigRejected = (() => {
+    try {
+      readCandidateDeploymentContract(root, {
+        XLOOOP_SCHEMA_HEAD: '100',
+        XLOOOP_DEPLOYMENT_WRANGLER_CONFIG: '../wrangler.toml',
+      });
+      return false;
+    } catch {
+      return true;
+    }
+  })();
   const checks = [
     ['valid artifact', valid.ok],
     ['wrong backend rejected', !wrongBackend.ok && wrongBackend.problems.includes('backend_sha_mismatch')],
@@ -172,6 +211,12 @@ function runSelfTest() {
       !wrongReactSchema.ok && wrongReactSchema.problems.includes('schema_head_mismatch')],
     ['React/Vite v2 feature posture drift is rejected',
       !wrongReactPosture.ok && wrongReactPosture.problems.includes('feature_posture_mismatch')],
+    ['pilot-shadow artifact is valid only against the explicit pilot target', validPilotReact.ok],
+    ['pilot-shadow artifact is rejected by the production-default contract',
+      !pilotReactRejectedWithoutExplicitTarget.ok
+        && pilotReactRejectedWithoutExplicitTarget.problems.includes('api_base')
+        && pilotReactRejectedWithoutExplicitTarget.problems.includes('environment')
+        && pilotReactRejectedWithoutExplicitTarget.problems.includes('authority')],
     ['React/Vite v2 static files are valid', reactStaticProblems.length === 0],
     ['React/Vite v2 frontend hashes remain valid after backend-owned release assembly',
       assembledReactProblems.length === 0],
@@ -186,6 +231,15 @@ function runSelfTest() {
     ['normalized marker is present once', normalizedA.split(PAGES_FUNCTIONS_ROUTE_SOURCE_MARKER).length === 2],
     ['duplicate route comments rejected', duplicateRouteCommentsRejected],
     ['unknown Wrangler tmp comment rejected', unknownTmpCommentRejected],
+    ['production deployment contract remains production-only',
+      productionDeployment.worker_name === 'xlooop-api'
+        && productionDeployment.environment === 'production'
+        && productionDeployment.authority === 'production'],
+    ['pilot-shadow deployment contract is explicitly allowlisted',
+      pilotShadowDeployment.worker_name === 'xlooop-api-pilot-shadow'
+        && pilotShadowDeployment.environment === 'pilot-shadow'
+        && pilotShadowDeployment.authority === 'shadow'],
+    ['unknown deployment config is rejected', unknownDeploymentConfigRejected],
   ];
   rmSync(testRoot, { recursive: true, force: true });
   const failures = checks.filter(([, ok]) => !ok).map(([name]) => name);
@@ -208,12 +262,24 @@ try {
   const backendSha = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim();
   const contract = JSON.parse(readFileSync(path.join(root, 'docs/contracts/api-contract.v1.json'), 'utf8'));
   const config = parseFrontendReleaseArtifact(releaseDir);
-  const candidateDeployment = readCandidateDeploymentContract(root);
+  const deploymentConfigByEnvironment = {
+    production: 'wrangler.toml',
+    'pilot-shadow': 'wrangler.pilot-shadow.toml',
+  };
+  const deploymentConfig = deploymentConfigByEnvironment[config.environment];
+  if (!deploymentConfig) throw new Error(`unsupported release environment ${config.environment}`);
+  const candidateDeployment = readCandidateDeploymentContract(root, {
+    ...process.env,
+    XLOOOP_DEPLOYMENT_WRANGLER_CONFIG: deploymentConfig,
+  });
   const artifact = assessFrontendReleaseArtifact(config, {
     frontend_sha: manifest.frontend_sha,
     backend_sha: backendSha,
     contract_hash: contract.contract_hash,
     schema_head: candidateDeployment.schema_head,
+    api_base: candidateDeployment.api_base,
+    environment: candidateDeployment.environment,
+    authority: candidateDeployment.authority,
     feature_posture: candidateDeployment.feature_posture,
   });
   problems.push(...artifact.problems);
@@ -240,7 +306,15 @@ try {
   if (manifest.contract_hash !== contract.contract_hash) problems.push('manifest_contract_hash_mismatch');
   if (manifest.frontend_sha !== config.frontend_sha) problems.push('manifest_frontend_sha_mismatch');
   if (manifest.schema_head !== config.schema_head) problems.push('manifest_schema_head_mismatch');
-  const manifestAssessment = assessReleaseManifest(manifest, hashReleaseFiles(releaseDir));
+  if (manifest.deployment_worker !== candidateDeployment.worker_name) problems.push('manifest_deployment_worker_mismatch');
+  if (manifest.wrangler_config !== candidateDeployment.wrangler_config) problems.push('manifest_wrangler_config_mismatch');
+  const manifestAssessment = assessReleaseManifest(manifest, hashReleaseFiles(releaseDir), {
+    environment: candidateDeployment.environment,
+    authority: candidateDeployment.authority,
+    api_base: candidateDeployment.api_base,
+    deployment_worker: candidateDeployment.worker_name,
+    wrangler_config: candidateDeployment.wrangler_config,
+  });
   problems.push(...manifestAssessment.problems);
 } catch (error) {
   problems.push(error instanceof Error ? error.message : String(error));
