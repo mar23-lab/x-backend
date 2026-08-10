@@ -10,6 +10,19 @@ export const POSTURE_FLAGS = {
   current_work_projection: 'CURRENT_WORK_PROJECTION_ENABLED',
 };
 
+const DEPLOYMENT_CONFIGS = Object.freeze({
+  'wrangler.toml': Object.freeze({
+    environment: 'production',
+    authority: 'production',
+    api_base: 'https://api.xlooop.com',
+  }),
+  'wrangler.pilot-shadow.toml': Object.freeze({
+    environment: 'pilot-shadow',
+    authority: 'shadow',
+    api_base: 'https://xlooop-api-pilot-shadow.xlooop23.workers.dev',
+  }),
+});
+
 function tomlStringVar(source, name, required = false) {
   const match = source.match(new RegExp(`^${name}\\s*=\\s*("(?:[^"\\\\]|\\\\.)*")\\s*(?:#.*)?$`, 'm'));
   if (!match) {
@@ -47,17 +60,28 @@ export function readCandidateDeploymentContract(root, env = process.env) {
   if (schemaHead !== migrationHead) {
     throw new Error(`XLOOOP_SCHEMA_HEAD ${schemaHead} does not match candidate migration head ${migrationHead}`);
   }
-  const wrangler = readFileSync(path.join(root, 'wrangler.toml'), 'utf8');
+  const configName = String(env.XLOOOP_DEPLOYMENT_WRANGLER_CONFIG || 'wrangler.toml').trim();
+  const expected = DEPLOYMENT_CONFIGS[configName];
+  if (!expected) {
+    throw new Error(`XLOOOP_DEPLOYMENT_WRANGLER_CONFIG is not allowlisted: ${configName}`);
+  }
+  const wrangler = readFileSync(path.join(root, configName), 'utf8');
   const environment = tomlStringVar(wrangler, 'ENVIRONMENT', true);
   const authority = tomlStringVar(wrangler, 'XLOOOP_AUTHORITY_MODE', true);
-  if (environment !== 'production') throw new Error(`candidate ENVIRONMENT must be production, got ${environment}`);
-  if (authority !== 'production') throw new Error(`candidate authority must be production, got ${authority}`);
+  if (environment !== expected.environment) {
+    throw new Error(`candidate ENVIRONMENT must be ${expected.environment}, got ${environment}`);
+  }
+  if (authority !== expected.authority) {
+    throw new Error(`candidate authority must be ${expected.authority}, got ${authority}`);
+  }
   return {
-    worker_name: 'xlooop-api',
+    worker_name: tomlStringVar(wrangler, 'name', true),
+    wrangler_config: configName,
     contract_hash: contract.contract_hash,
     schema_head: schemaHead,
     environment,
     authority,
+    api_base: expected.api_base,
     feature_posture: Object.fromEntries(
       Object.entries(POSTURE_FLAGS).map(([key, flag]) => [
         key,

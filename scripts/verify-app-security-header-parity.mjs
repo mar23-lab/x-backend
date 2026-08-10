@@ -13,7 +13,11 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { renderPagesHeaders } from './lib/security-header-contract.mjs';
+import {
+  renderPagesHeaders,
+  resolvePagesSecurityHeaderManifest,
+  rewritePagesWorkerSecurityHeaders,
+} from './lib/security-header-contract.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..');
@@ -126,10 +130,30 @@ for (const dir of ARTIFACT_CANDIDATES) {
   const candidate = path.join(dir, "_headers");
   if (!fs.existsSync(candidate)) continue;
   artifactChecked = path.relative(repoRoot, candidate) || candidate;
+  let artifactManifest = manifest;
+  const runtimeManifestPath = path.join(dir, 'runtime-manifest.json');
+  try {
+    const runtimeManifest = JSON.parse(fs.readFileSync(runtimeManifestPath, 'utf8'));
+    artifactManifest = resolvePagesSecurityHeaderManifest(manifest, runtimeManifest.api_base);
+  } catch (error) {
+    failures.push(`${artifactChecked} has no valid runtime API authority: ${error instanceof Error ? error.message : String(error)}`);
+  }
   const emitted = fs.readFileSync(candidate, "utf8");
-  failures.push(...staticParityFailures(manifest, emitted, artifactChecked));
-  if (emitted !== renderPagesHeaders(manifest)) {
+  failures.push(...staticParityFailures(artifactManifest, emitted, artifactChecked));
+  if (emitted !== renderPagesHeaders(artifactManifest)) {
     failures.push(`${artifactChecked} is not the exact backend-manifest rendering`);
+  }
+  const workerPath = path.join(dir, '_worker.js', 'index.js');
+  if (fs.existsSync(workerPath)) {
+    const worker = fs.readFileSync(workerPath, 'utf8');
+    for (const [name, value] of Object.entries(artifactManifest.global_headers || {})) {
+      if (!worker.includes(String(value))) failures.push(`${workerPath} is missing effective ${name}`);
+    }
+    const baselineCsp = manifest.global_headers?.['Content-Security-Policy'];
+    const effectiveCsp = artifactManifest.global_headers?.['Content-Security-Policy'];
+    if (baselineCsp !== effectiveCsp && worker.includes(baselineCsp)) {
+      failures.push(`${workerPath} retains the production CSP in a non-production artifact`);
+    }
   }
   const indexPath = path.join(dir, 'index.html');
   if (fs.existsSync(indexPath)) {
@@ -158,15 +182,25 @@ function mimeEq(got, want) {
 }
 if (liveUrl) {
   const base = liveUrl.replace(/\/$/, '');
+  let liveManifest = manifest;
+  try {
+    const runtimeResponse = await fetch(`${base}/runtime-manifest.json?cb=${Date.now()}`, { redirect: 'manual' });
+    if (runtimeResponse.ok) {
+      const runtimeManifest = await runtimeResponse.json();
+      liveManifest = resolvePagesSecurityHeaderManifest(manifest, runtimeManifest.api_base);
+    }
+  } catch {
+    // The root probe below remains authoritative when Access prevents reading the app manifest.
+  }
   const root = await fetch(`${base}/?cb=${Date.now()}`, { redirect: 'manual' });
   if (root.status >= 300 && root.status < 400) {
     console.warn(`  note: ${base}/ returned ${root.status} (Access-gated?) - header probe may be the gate response, not the app`);
   }
-  for (const [name, value] of Object.entries(manifest.global_headers)) {
+  for (const [name, value] of Object.entries(liveManifest.global_headers)) {
     const got = root.headers.get(name);
     if (got !== value) failures.push(`LIVE ${name}: expected "${value}" got "${got}"`);
   }
-  for (const o of manifest.path_overrides || []) {
+  for (const o of liveManifest.path_overrides || []) {
     const probePath = o.match.replace('*', 'R51CockpitMount/R51CockpitMount');
     const pr = await fetch(`${base}${probePath}?cb=${Date.now()}`, { redirect: 'manual' });
     for (const [name, value] of Object.entries(o.headers)) {
@@ -185,6 +219,23 @@ if (selfTest) {
     + (manifest.path_overrides || []).map((o) => o.match).join("\n")
     + "\n";
   const controls = [];
+  const stagingOrigin = 'https://xlooop-api-pilot-shadow.example.workers.dev';
+  const stagingManifest = resolvePagesSecurityHeaderManifest(manifest, `${stagingOrigin}/api/v1`);
+  const stagingCsp = stagingManifest.global_headers['Content-Security-Policy'];
+  if (!stagingCsp.includes(stagingOrigin) || stagingCsp.includes('connect-src \'self\' https://api.xlooop.com ')) {
+    controls.push('staging CSP did not replace the production API origin');
+  }
+  try {
+    resolvePagesSecurityHeaderManifest(manifest, 'http://insecure.example');
+    controls.push('non-HTTPS API origin was accepted');
+  } catch {
+    // Expected fail-closed behavior.
+  }
+  const sourceCsp = manifest.global_headers['Content-Security-Policy'];
+  const rewrittenFixture = rewritePagesWorkerSecurityHeaders(sourceCsp, manifest, stagingManifest);
+  if (!rewrittenFixture.includes(stagingOrigin) || rewrittenFixture.includes(sourceCsp)) {
+    controls.push('Pages Functions CSP rewrite did not materialize the staging origin');
+  }
   if (staticParityFailures(manifest, good, "fixture").length !== 0) {
     controls.push("comparator flagged a COMPLIANT fixture (false positive)");
   }

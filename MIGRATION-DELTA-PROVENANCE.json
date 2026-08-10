@@ -7256,6 +7256,37 @@
           "reason": "Recover validated command contracts, paired deployment authority, schema-head replay, and collision-resistant API/MCP canary provisioning"
         }
       ]
+    },
+    {
+      "delta_id": "pilot-shadow-csp-r2-lifecycle-20260811",
+      "generated_at": "2026-08-10T23:26:04.205Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "fa7e585eb6c53b666a33f2c66a9f4bb1d4348a4d",
+      "target_base_commit": "fa7e585eb6c53b666a33f2c66a9f4bb1d4348a4d",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "scripts/verify-app-security-header-parity.mjs",
+          "target_blob": "ec83ba10cdb03c48e91d041d5a1722866b289a1d",
+          "reason": "Bind pilot-shadow CSP target and authoritative R2 lifecycle proofs"
+        },
+        {
+          "path": "scripts/lib/app-pages-release-contract.mjs",
+          "target_blob": "ee615a5f8c2280f0aeba4524015a07dca73d0c88",
+          "reason": "Bind pilot-shadow CSP target and authoritative R2 lifecycle proofs"
+        },
+        {
+          "path": "scripts/lib/security-header-contract.mjs",
+          "target_blob": "2304f5a405daf7f83ca01deb6fc00ab4e1e32b77",
+          "reason": "Bind pilot-shadow CSP target and authoritative R2 lifecycle proofs"
+        },
+        {
+          "path": "scripts/prepare-app-pages-release.mjs",
+          "target_blob": "34b2df1446ead9d574fc40ed1970a0db1d98e7e3",
+          "reason": "Bind pilot-shadow CSP target and authoritative R2 lifecycle proofs"
+        }
+      ]
     }
   ]
 }

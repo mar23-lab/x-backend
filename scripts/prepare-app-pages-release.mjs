@@ -18,7 +18,11 @@ import {
   releaseManifestDigest,
   verifyStaticArtifactFiles,
 } from './lib/app-pages-release-contract.mjs';
-import { renderPagesHeaders } from './lib/security-header-contract.mjs';
+import {
+  renderPagesHeaders,
+  resolvePagesSecurityHeaderManifest,
+  rewritePagesWorkerSecurityHeaders,
+} from './lib/security-header-contract.mjs';
 import { readCandidateDeploymentContract } from './lib/candidate-deployment-contract.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -48,17 +52,29 @@ const generatedAt = execFileSync('git', ['show', '-s', '--format=%cI', 'HEAD'], 
   encoding: 'utf8',
 }).trim();
 const contract = JSON.parse(readFileSync(path.join(root, 'docs/contracts/api-contract.v1.json'), 'utf8'));
+const config = parseFrontendReleaseArtifact(artifactDir);
+const deploymentConfigByEnvironment = {
+  production: 'wrangler.toml',
+  'pilot-shadow': 'wrangler.pilot-shadow.toml',
+};
+const deploymentConfig = deploymentConfigByEnvironment[config.environment];
+if (!deploymentConfig) fail(`unsupported release environment ${config.environment}`);
 let candidateDeployment;
 try {
-  candidateDeployment = readCandidateDeploymentContract(root);
+  candidateDeployment = readCandidateDeploymentContract(root, {
+    ...process.env,
+    XLOOOP_DEPLOYMENT_WRANGLER_CONFIG: deploymentConfig,
+  });
 } catch (error) {
   fail(error instanceof Error ? error.message : String(error));
 }
-const config = parseFrontendReleaseArtifact(artifactDir);
 const assessment = assessFrontendReleaseArtifact(config, {
   backend_sha: backendSha,
   contract_hash: contract.contract_hash,
   schema_head: candidateDeployment.schema_head,
+  api_base: candidateDeployment.api_base,
+  environment: candidateDeployment.environment,
+  authority: candidateDeployment.authority,
   feature_posture: candidateDeployment.feature_posture,
 });
 const fileProblems = verifyStaticArtifactFiles(artifactDir, contract.contract_hash);
@@ -76,7 +92,8 @@ cpSync(artifactDir, outputDir, { recursive: true });
 const securityHeaders = JSON.parse(
   readFileSync(path.join(root, 'data/security-headers.manifest.json'), 'utf8'),
 );
-writeFileSync(path.join(outputDir, '_headers'), renderPagesHeaders(securityHeaders));
+const effectiveSecurityHeaders = resolvePagesSecurityHeaderManifest(securityHeaders, config.api_base);
+writeFileSync(path.join(outputDir, '_headers'), renderPagesHeaders(effectiveSecurityHeaders));
 
 const wrangler = path.join(root, 'node_modules', 'wrangler', 'bin', 'wrangler.js');
 const build = spawnSync(
@@ -102,7 +119,11 @@ if (build.status !== 0) fail(`Pages Functions build failed\n${build.stderr || bu
 const workerBundlePath = path.join(outputDir, '_worker.js', 'index.js');
 try {
   const workerBundle = readFileSync(workerBundlePath, 'utf8');
-  writeFileSync(workerBundlePath, normalizePagesFunctionsBundle(workerBundle));
+  const normalized = normalizePagesFunctionsBundle(workerBundle);
+  writeFileSync(
+    workerBundlePath,
+    rewritePagesWorkerSecurityHeaders(normalized, securityHeaders, effectiveSecurityHeaders),
+  );
 } catch (error) {
   fail(
     `Pages Functions bundle normalization failed: ${
@@ -122,6 +143,8 @@ const manifest = {
   environment: config.environment,
   authority: config.authority,
   api_base: config.api_base,
+  deployment_worker: candidateDeployment.worker_name,
+  wrangler_config: candidateDeployment.wrangler_config,
   feature_posture: config.feature_posture,
   files: hashReleaseFiles(outputDir),
 };
