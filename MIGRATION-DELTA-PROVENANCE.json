@@ -7061,6 +7061,22 @@
           "reason": "separate frontend runtime hashes from backend-owned Pages release files"
         }
       ]
+    },
+    {
+      "delta_id": "app-security-header-authority-20260811",
+      "generated_at": "2026-08-10T16:20:11.614Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "bedb63d7f44fa929b1286220a45622dbefe14fb2",
+      "target_base_commit": "bedb63d7f44fa929b1286220a45622dbefe14fb2",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "data/security-headers.manifest.json",
+          "target_blob": "51a88b099081f13a646c140dc7d09935daabf732",
+          "reason": "Converge enforced CSP reporting and host-only HSTS across backend Pages authority and React production emitter"
+        }
+      ]
     }
   ]
 }
