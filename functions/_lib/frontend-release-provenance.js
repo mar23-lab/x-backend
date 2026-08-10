@@ -27,27 +27,34 @@ function jsString(value) {
 // unaffected), which is the right direction to fail but silent, so the value must be real.
 export const SENTRY_SDK_URL = 'https://browser.sentry-cdn.com/8.55.0/bundle.min.js';
 export const SENTRY_SDK_SRI = 'sha384-BlRl+vkcjdIA/AKRb8zWtiqlVVXepUsSv0+vho7ZMUTsNudEyQjGUKo9W86Hc1EC';
+export const SENTRY_BOOTSTRAP_PATH = '/sentry-bootstrap.js';
 
 export function sentryBootstrap(env, html) {
   const dsn = String(env?.SENTRY_DSN || '').trim();
   if (!dsn) return '';
-  const environment = String(env?.SENTRY_ENVIRONMENT || 'production');
   const release = resolveSentryRelease(html, env?.SENTRY_RELEASE);
+  const query = release ? `?release=${encodeURIComponent(release)}` : '';
+  return `<script data-xlooop-sentry-bootstrap defer src="${SENTRY_BOOTSTRAP_PATH}${query}"></script>`;
+}
+
+export function sentryBootstrapSource(env, requestedRelease = '') {
+  const dsn = String(env?.SENTRY_DSN || '').trim();
+  if (!dsn) return '';
+  const environment = String(env?.SENTRY_ENVIRONMENT || 'production');
+  const release = /^[0-9a-f]{40}$/i.test(String(requestedRelease))
+    ? String(requestedRelease).toLowerCase()
+    : '';
   const sampleRate = String(env?.SENTRY_SAMPLE_RATE || '1.0');
   const tracesSampleRate = String(env?.SENTRY_TRACES_SAMPLE_RATE || '0.10');
   return [
-    '<script data-xlooop-sentry-bootstrap>',
+    '(()=>{',
+    'if(window.__XLOOP_SENTRY_BOOTSTRAP_REQUESTED)return;',
+    'window.__XLOOP_SENTRY_BOOTSTRAP_REQUESTED=true;',
     `window.SENTRY_DSN=${jsString(dsn)};`,
     `window.SENTRY_ENVIRONMENT=${jsString(environment)};`,
     release ? `window.SENTRY_RELEASE=${jsString(release)};` : '',
     `window.SENTRY_SAMPLE_RATE=${jsString(sampleRate)};`,
     `window.SENTRY_TRACES_SAMPLE_RATE=${jsString(tracesSampleRate)};`,
-    '</script>',
-    // The SDK ships from the SAME function that emits the config, so the two can never diverge
-    // again — which is exactly the gap verify-pages-sentry-release was written to detect.
-    // `defer` keeps it off the critical path; onload init means no polling and no race.
-    `<script data-xlooop-sentry-sdk defer crossorigin="anonymous" integrity="${SENTRY_SDK_SRI}" src="${SENTRY_SDK_URL}" onerror="window.__XLOOP_SENTRY_SDK_FAILED=true" onload="window.__xlooopSentryInit&amp;&amp;window.__xlooopSentryInit()"></script>`,
-    '<script data-xlooop-sentry-init>',
     'window.__xlooopSentryInit=function(){',
     'try{',
     'if(!window.Sentry||!window.Sentry.init||window.__XLOOP_SENTRY_STARTED)return;',
@@ -65,6 +72,14 @@ export function sentryBootstrap(env, html) {
     // Never let telemetry break the cockpit. A failed init must stay silent to the user.
     '}catch(e){window.__XLOOP_SENTRY_INIT_ERROR=String(e&&e.message||e);}',
     '};',
-    '</script>',
+    'const sdk=document.createElement("script");',
+    `sdk.src=${jsString(SENTRY_SDK_URL)};`,
+    `sdk.integrity=${jsString(SENTRY_SDK_SRI)};`,
+    'sdk.crossOrigin="anonymous";',
+    'sdk.defer=true;',
+    'sdk.addEventListener("load",window.__xlooopSentryInit,{once:true});',
+    'sdk.addEventListener("error",()=>{window.__XLOOP_SENTRY_SDK_FAILED=true;},{once:true});',
+    'document.head.appendChild(sdk);',
+    '})();',
   ].join('');
 }

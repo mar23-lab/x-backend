@@ -16,7 +16,7 @@ const API_SECURITY_HEADERS: Record<string, string> = {
   'X-Content-Type-Options': 'nosniff',
   'X-Frame-Options': 'DENY',
   'Referrer-Policy': 'no-referrer',
-  'Strict-Transport-Security': 'max-age=63072000; includeSubDomains; preload',
+  'Strict-Transport-Security': 'max-age=86400',
   'Cross-Origin-Resource-Policy': 'same-origin',
   // JSON API · never a document → maximally strict CSP.
   'Content-Security-Policy': "default-src 'none'; frame-ancestors 'none'; base-uri 'none'",

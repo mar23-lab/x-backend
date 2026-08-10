@@ -13,17 +13,32 @@ import {
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SELF_TEST = process.argv.includes('--self-test');
 
+export function parseWranglerJson(stdout, label = 'wrangler') {
+  const text = String(stdout || '').trim();
+  if (!text) throw new Error(`${label} returned empty JSON output`);
+  try {
+    return JSON.parse(text);
+  } catch (error) {
+    throw new Error(
+      `${label} returned invalid JSON: ${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
+}
+
 function runWrangler(args) {
   const cli = path.join(ROOT, 'node_modules', 'wrangler', 'bin', 'wrangler.js');
   const result = spawnSync(process.execPath, [cli, ...args], {
     cwd: ROOT,
-    env: { ...process.env, WRANGLER_LOG: 'none' },
+    // Wrangler 4.120 suppresses command JSON as well as logs when WRANGLER_LOG=none.
+    // These commands are machine-readable authority inputs, so keep stdout enabled and
+    // parse only a complete JSON document. stderr remains separate from the evidence.
+    env: { ...process.env, WRANGLER_LOG: 'error' },
     encoding: 'utf8',
   });
   if (result.status !== 0) {
     throw new Error((result.stderr || result.stdout || `wrangler exited ${result.status}`).trim());
   }
-  return JSON.parse(result.stdout);
+  return parseWranglerJson(result.stdout, `wrangler ${args.slice(0, 3).join(' ')}`);
 }
 
 function deploymentUrl(row) {
@@ -102,6 +117,9 @@ function selfTest() {
     ['unrelated Worker version fails', assessRollbackAuthorityEvidence({ ...worker, id: 'other' }, pages, expected).problems.includes('worker_version_id')],
     ['wrong Worker build fails', assessRollbackAuthorityEvidence({ ...worker, resources: { bindings: [{ name: 'BUILD_SHA', text: 'c'.repeat(40) }] } }, pages, expected).problems.includes('worker_version_backend_sha')],
     ['wrong Pages commit fails', assessRollbackAuthorityEvidence(worker, [{ ...pages[0], deployment_trigger: { metadata: { commit_hash: 'c'.repeat(40) } } }], expected).problems.includes('pages_deployment_frontend_sha')],
+    ['valid Wrangler JSON is parsed', parseWranglerJson('{"ok":true}').ok === true],
+    ['empty Wrangler JSON is refused', (() => { try { parseWranglerJson(''); return false; } catch (error) { return String(error.message).includes('empty JSON'); } })()],
+    ['invalid Wrangler JSON is refused', (() => { try { parseWranglerJson('warning only'); return false; } catch (error) { return String(error.message).includes('invalid JSON'); } })()],
   ];
   const failed = checks.filter(([, ok]) => !ok);
   for (const [name, ok] of checks) console.log(`  ${ok ? 'PASS' : 'FAIL'} ${name}`);

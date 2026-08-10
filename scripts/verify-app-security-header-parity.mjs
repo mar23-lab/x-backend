@@ -13,6 +13,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { renderPagesHeaders } from './lib/security-header-contract.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..');
@@ -67,6 +68,9 @@ for (const req of REQUIRED) {
 // green is the defect this block fixes: deploy-app-prod.mjs uploads dist-app-pages-release/, so
 // that is the artifact to inspect, and --require-artifact makes "nothing to check" a FAILURE.
 const hstsValue = manifest.global_headers?.["Strict-Transport-Security"] || "";
+if (hstsValue !== 'max-age=86400') {
+  failures.push(`manifest Strict-Transport-Security must be exactly "max-age=86400", got "${hstsValue}"`);
+}
 if (hstsValue.includes("preload")) {
   failures.push(
     `manifest Strict-Transport-Security contains "preload" - preload is effectively irreversible `
@@ -81,6 +85,36 @@ if (hstsValue.includes("includeSubDomains")) {
   );
 }
 
+const csp = manifest.global_headers?.['Content-Security-Policy'] || '';
+const scriptDirective = csp.split(';').map((part) => part.trim())
+  .find((part) => part.startsWith('script-src ')) || '';
+if (!csp || manifest.global_headers?.['Content-Security-Policy-Report-Only']) {
+  failures.push('manifest must use enforced Content-Security-Policy, never report-only authority');
+}
+if (!csp.includes('report-uri /api/csp-report') || !csp.includes('report-to csp-endpoint')) {
+  failures.push('manifest CSP must report to /api/csp-report through report-uri and report-to');
+}
+if (scriptDirective.includes("'unsafe-inline'")) {
+  failures.push('manifest script-src must not contain unsafe-inline');
+}
+if (!scriptDirective.includes("'self'")) failures.push('manifest script-src must allow same-origin external scripts');
+for (const override of manifest.path_overrides || []) {
+  if (/^\/src\/widgets\/\*\.jsx$/i.test(String(override.match || ''))) {
+    failures.push('legacy /src/widgets/*.jsx path override is forbidden');
+  }
+}
+
+const apiMiddleware = fs.readFileSync(
+  path.join(repoRoot, 'src/workers/middleware/security-headers.ts'),
+  'utf8',
+);
+if (!apiMiddleware.includes("'Strict-Transport-Security': 'max-age=86400'")) {
+  failures.push('API middleware HSTS must match the 86400-second host-only ramp');
+}
+if (/Strict-Transport-Security[^\n]*(includeSubDomains|preload)/i.test(apiMiddleware)) {
+  failures.push('API middleware HSTS must not include includeSubDomains or preload');
+}
+
 const ARTIFACT_CANDIDATES = [
   process.env.XLOOOP_APP_PAGES_RELEASE_DIR || "",
   path.join(repoRoot, "dist-app-pages-release"),
@@ -92,7 +126,21 @@ for (const dir of ARTIFACT_CANDIDATES) {
   const candidate = path.join(dir, "_headers");
   if (!fs.existsSync(candidate)) continue;
   artifactChecked = path.relative(repoRoot, candidate) || candidate;
-  failures.push(...staticParityFailures(manifest, fs.readFileSync(candidate, "utf8"), artifactChecked));
+  const emitted = fs.readFileSync(candidate, "utf8");
+  failures.push(...staticParityFailures(manifest, emitted, artifactChecked));
+  if (emitted !== renderPagesHeaders(manifest)) {
+    failures.push(`${artifactChecked} is not the exact backend-manifest rendering`);
+  }
+  const indexPath = path.join(dir, 'index.html');
+  if (fs.existsSync(indexPath)) {
+    const html = fs.readFileSync(indexPath, 'utf8');
+    if (/<script\b(?![^>]*\bsrc=)[^>]*>/i.test(html)) {
+      failures.push(`${path.relative(repoRoot, indexPath)} contains an inline script`);
+    }
+    if (/\son(?:load|error)\s*=/i.test(html)) {
+      failures.push(`${path.relative(repoRoot, indexPath)} contains an inline event handler`);
+    }
+  }
   break;
 }
 if (!artifactChecked && requireArtifact) {

@@ -1,10 +1,7 @@
 // functions/api/csp-report.js · CSP violation report collector.
 //
-// X-SCP P0.1 follow-on (egress-of-XSS-hardening, report-only -> enforce staging).
-// The app CSP ships as Content-Security-Policy-Report-Only (data/security-headers.
-// manifest.json) so a strict policy can be validated on real traffic before it
-// blocks. Previously the policy named no collector, so violations went nowhere and
-// the "review violations -> enforce" step could never happen. This endpoint is that
+// The app CSP is enforced by data/security-headers.manifest.json and reports here.
+// Previously the policy named no collector, so violations went nowhere. This endpoint is that
 // collector: a pure sink that logs each violation to Workers Logs (P3 observability),
 // so the operator can confirm zero legitimate-script breakage before dropping
 // 'unsafe-inline' and flipping report-only -> enforce.

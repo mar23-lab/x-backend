@@ -174,7 +174,9 @@ export function verifyStaticArtifactFiles(artifactDir, contractHash) {
   const reactManifest = path.join(artifactDir, 'runtime-manifest.json');
   const react = existsSync(reactManifest);
   const required = react
-    ? ['index.html', '_headers', 'runtime-manifest.json', 'assets']
+    // React owns application bytes. The backend release assembler owns and emits
+    // production _headers from data/security-headers.manifest.json.
+    ? ['index.html', 'runtime-manifest.json', 'assets']
     : ['index.html', '_headers', 'clerk-boot.js', 'contract-meta.js', 'live-data.js', 'support.js', 'vendor'];
   for (const entry of required) {
     if (!existsSync(path.join(artifactDir, entry))) problems.push(`missing:${entry}`);

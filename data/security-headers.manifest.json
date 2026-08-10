@@ -1,14 +1,31 @@
 {
-  "$schema_note": "SSOT for Cloudflare Pages APP-PLANE response headers (app.xlooop.com / invest / test / dev). Consumed by BOTH emitters: scripts/prepare-cloudflare-pages.mjs writes the static _headers file from it, and functions/_middleware.js re-applies it at the edge (CF Pages 'advanced mode' compiles functions/ into a _worker.js, which makes CF IGNORE the static _headers - so the middleware is the actually-effective layer; the _headers file remains for non-advanced-mode projects + as documentation). The API worker policy in src/workers/middleware/security-headers.ts is a SEPARATE, deliberately-stricter JSON-only-plane policy and is NOT governed by this manifest - do not merge them. Edit headers ONCE here; verify-app-security-header-parity.mjs asserts the live deploy matches this file.",
-  "version": "2.0.0",
+  "$schema_note": "Deploy-time and runtime SSOT for Cloudflare Pages app-plane response headers. Backend assembly always overwrites the candidate _headers file from this manifest, and functions/_middleware.js enforces the same values at the edge because Pages advanced mode ignores static _headers. Frontend source must not emit an independent production header policy. The API worker keeps a stricter JSON-only CSP, while its HSTS ramp must match this manifest. Edit app headers only here; verify-app-security-header-parity.mjs proves manifest, assembled artifact, middleware, API HSTS, and live parity.",
+  "version": "3.0.0",
   "global_headers": {
     "X-Content-Type-Options": "nosniff",
     "Referrer-Policy": "no-referrer",
     "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
     "X-Frame-Options": "DENY",
-    "Strict-Transport-Security": "max-age=31536000",
+    "Strict-Transport-Security": "max-age=86400",
     "Reporting-Endpoints": "csp-endpoint=\"/api/csp-report\"",
-    "Content-Security-Policy": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; script-src 'self' https://clerk.xlooop.com https://*.clerk.accounts.dev https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://api.xlooop.com https://clerk.xlooop.com https://*.clerk.accounts.dev; worker-src 'self' blob:; frame-src 'self' https://challenges.cloudflare.com; report-uri /api/csp-report; report-to csp-endpoint"
+    "Content-Security-Policy": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; script-src 'self' https://clerk.xlooop.com https://*.clerk.accounts.dev https://challenges.cloudflare.com https://browser.sentry-cdn.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://api.xlooop.com https://clerk.xlooop.com https://*.clerk.accounts.dev https://*.ingest.sentry.io; worker-src 'self' blob:; frame-src 'self' https://challenges.cloudflare.com; report-uri /api/csp-report; report-to csp-endpoint"
   },
-  "path_overrides": []
+  "path_overrides": [
+    {
+      "match": "/",
+      "headers": { "Cache-Control": "no-store" }
+    },
+    {
+      "match": "/index.html",
+      "headers": { "Cache-Control": "no-store" }
+    },
+    {
+      "match": "/runtime-manifest.json",
+      "headers": { "Cache-Control": "no-store" }
+    },
+    {
+      "match": "/assets/*",
+      "headers": { "Cache-Control": "public, max-age=31536000, immutable" }
+    }
+  ]
 }
