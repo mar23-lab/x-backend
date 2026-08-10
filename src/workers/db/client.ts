@@ -11,10 +11,9 @@
 //   const sql = neonClient(env.DATABASE_URL);
 //   const rows = await sql`SELECT * FROM operation_events WHERE workspace_id = ${workspaceId} LIMIT 50`;
 
-import { neon, neonConfig } from '@neondatabase/serverless';
+import { neon } from '@neondatabase/serverless';
 
-// Configure once per worker isolate. fetchConnectionCache enables HTTP keep-alive across queries.
-neonConfig.fetchConnectionCache = true;
+// Neon now always reuses the HTTP connection cache; no runtime toggle is required.
 
 export type Sql = ReturnType<typeof neon>;
 

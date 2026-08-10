@@ -1,12 +1,7 @@
-// model-runtimes.ts · Wave C (260708) · /api/v1/model-runtimes — per-workspace model-provider config with
-// ENCRYPTED-AT-REST customer credentials, a workspace default, and a per-user session override.
-//
-// SECURITY: this route is the ONLY layer that encrypts a customer provider credential (via
-// ../lib/model-runtime-crypto with ctx.env.MODEL_RUNTIME_ENC_KEY). The DAL stores only sealed ciphertext and
-// never sees plaintext or the master key. A client response NEVER contains the plaintext OR the ciphertext —
-// reads return a masked `····last4` only. Provider writes + the default flip are OWNER/OPERATOR-gated and
-// audited (audit_logs, target_type 'model_runtime_provider'); the session override is the caller's own
-// preference. Every path is workspace-scoped from the JWT (auth.workspace_id) — no cross-tenant reach.
+// Per-workspace model-provider config, encrypted credentials, defaults, and user overrides.
+// SECURITY: only this route seals credentials through the tenant-bound versioned keyring. The DAL sees
+// envelopes, never plaintext, DEKs, or platform KEKs; clients see only `····last4`. Provider writes and
+// defaults are operator-gated and audited. Every path is scoped from auth.workspace_id.
 
 import { Hono, type Context } from 'hono';
 import { errorEnvelope } from '../middleware/error';
@@ -18,9 +13,11 @@ import { withAuthority } from '../lib/allowed-actions';
 import { emitEvent } from '../lib/observability';
 import {
   credentialEnvelopeKeyId,
+  credentialEnvelopeVersion,
   decryptCredential,
   encryptCredential,
   isEncryptionConfigured,
+  isTenantEnvelopeEncryptionConfigured,
   lastFour,
   modelRuntimeActiveKeyId,
   modelRuntimeEncryptionConfig,
@@ -44,8 +41,8 @@ import {
 import type { AiRunner } from '../services/agent-digest';
 
 export interface ModelRuntimesEnv extends AuthEnv {
-  MODEL_RUNTIME_ENC_KEY?: string; // AES-256 master key (base64 32 bytes) — worker secret; NEVER in the DB
-  MODEL_RUNTIME_ENC_KEYS?: string; // JSON key-id -> base64 AES-256 key; write-only worker secret
+  MODEL_RUNTIME_ENC_KEY?: string; // legacy decrypt-only AES-256 key during migration
+  MODEL_RUNTIME_ENC_KEYS?: string; // JSON key-id -> platform KEK; wraps random tenant credential DEKs
   MODEL_RUNTIME_ACTIVE_KEY_ID?: string;
   MBP_OWNER_USER_ID?: string;
   MBP_OWNER_LINKED_USER_IDS?: string;
@@ -313,12 +310,15 @@ modelRuntimesRoute.put('/model-runtimes/providers/:provider', async (ctx) => {
         return errorEnvelope(ctx, { status: 422, code: 'UNPROCESSABLE', message: `${provider} is a keyless (local) provider — no credential` });
       }
       const encryption = modelRuntimeEncryptionConfig(ctx.env);
-      if (!(await isEncryptionConfigured(encryption))) {
-        return errorEnvelope(ctx, { status: 503, code: 'SERVICE_UNAVAILABLE', message: 'credential storage is not configured (MODEL_RUNTIME_ENC_KEY unset)' });
+      if (!(await isTenantEnvelopeEncryptionConfigured(encryption))) {
+        return errorEnvelope(ctx, { status: 503, code: 'SERVICE_UNAVAILABLE', message: 'tenant envelope credential storage is not configured' });
       }
       const { json, primary } = normalizeCredential(spec, cred);
       if (!primary) return errorEnvelope(ctx, { status: 422, code: 'UNPROCESSABLE', message: `${provider} requires a complete credential` });
-      const enc = await encryptCredential(encryption, json);
+      const enc = await encryptCredential(encryption, json, {
+        tenant_id: auth.workspace_id,
+        purpose: provider,
+      });
       sealed = { ciphertext: enc.ciphertext, iv: enc.iv, last4: lastFour(primary) };
     } else if (spec.requires_key) {
       // No credential this call: allow a metadata-only update of an EXISTING config, else 422 on first create.
@@ -378,12 +378,13 @@ modelRuntimesRoute.post('/model-runtimes/providers/:provider/rotate-credential',
     }
     const sealedStored = { ciphertext: stored.ciphertext, iv: stored.iv };
     const fromKeyId = credentialEnvelopeKeyId(sealedStored);
-    if (fromKeyId === activeKeyId) {
+    if (fromKeyId === activeKeyId && credentialEnvelopeVersion(sealedStored) === 2) {
       return errorEnvelope(ctx, { status: 409, code: 'CREDENTIAL_ALREADY_ACTIVE', message: 'provider credential already uses the active key' });
     }
 
-    const plaintext = await decryptCredential(encryption, sealedStored);
-    const rotated = await encryptCredential(encryption, plaintext);
+    const context = { tenant_id: auth.workspace_id, purpose: provider };
+    const plaintext = await decryptCredential(encryption, sealedStored, context);
+    const rotated = await encryptCredential(encryption, plaintext, context);
     const receipt = await dal.modelRuntimes.rotateProviderCredential(
       auth.workspace_id,
       provider,

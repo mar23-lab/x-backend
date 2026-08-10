@@ -142,7 +142,9 @@ function requireLearningPayload(ctx: any, body: Record<string, unknown>): Learni
 function whoamiEnvelope(auth: AuthContext) {
   const authMethod = auth.auth_method || (auth.service_principal ? 'service_principal' : 'clerk_jwt');
   const clientId = auth.client_id || auth.service_principal || 'clerk_user';
-  const scopes = auth.service_principal === 'canary_read'
+  const scopes = auth.service_principal === 'customer_token'
+    ? [...(auth.connector_scopes ?? [])]
+    : auth.service_principal === 'canary_read'
     ? ['read:status', 'read:effective_templates', 'read:mcp_allowlist']
     : [
         'read:status',

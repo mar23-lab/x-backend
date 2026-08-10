@@ -34,6 +34,7 @@ export type ObservabilityKind =
   | 'chat_workspace_identity_failed' // an explicit workspace-name question could not load the tenant session identity
   | 'chat_project_plan_failed' // selected project plan facts could not be loaded; project-scoped answer fails closed
   | 'chat_project_sources_failed' // selected project source bindings could not be verified; answer marks them unavailable
+  | 'chat_context_projection_failed' // required role-scoped tenant context could not be projected; live chat fails closed
   | 'chat_provider_unavailable' // no effective live runtime resolved or all live execution attempts failed
   | 'model_runtime_validated' // a configured provider passed the content-free live validation probe
   | 'model_runtime_credential_rotated' // a tenant provider credential was re-encrypted under the active versioned key

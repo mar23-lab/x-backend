@@ -62,6 +62,7 @@ const SRC = rootArg ? resolve(REPO, rootArg.slice('--src-root='.length)) : join(
 const STORE_REL = 'workers/dal/customer-token-store.ts';
 const AUTHORITY_REL = 'workers/lib/spine-authority.ts';
 const PERMISSIONS_REL = 'workers/lib/permissions.ts';
+const SCOPES_REL = 'workers/lib/customer-connector-scopes.ts';
 
 function cannotMeasure(reason) {
   if (asJson) {
@@ -145,8 +146,8 @@ const MUTANTS = [
   {
     id: 'revocation_predicate_removed',
     file: STORE_REL,
-    find: 'WHERE token_sha256 = ${tokenSha256} AND revoked_at IS NULL',
-    replace: 'WHERE token_sha256 = ${tokenSha256}',
+    find: 'WHERE token.token_sha256 = ${tokenSha256} AND token.revoked_at IS NULL',
+    replace: 'WHERE token.token_sha256 = ${tokenSha256}',
     expects: 'live_row_lookup_excludes_revoked',
   },
   {
@@ -169,6 +170,20 @@ const MUTANTS = [
     find: "const isPlatformService = !!auth?.service_principal && auth.service_principal !== 'customer_token';",
     replace: 'const isPlatformService = !!auth?.service_principal;',
     expects: 'customer_service_principal_is_not_exempt_from_entitlement',
+  },
+  {
+    id: 'delegated_membership_epoch_binding_removed',
+    file: STORE_REL,
+    find: 'AND member.activated_at = token.issuer_membership_activated_at',
+    replace: 'AND member.activated_at IS NOT NULL',
+    expects: 'delegated_authority_binds_membership_activation',
+  },
+  {
+    id: 'evidence_action_scope_remapped',
+    file: SCOPES_REL,
+    find: "return 'write:evidence';",
+    replace: "return 'read:evidence';",
+    expects: 'explicit_action_scope_mapping',
   },
 ];
 
@@ -289,6 +304,31 @@ check(
   'the credential hash was interpolated into the statement text instead of bound as a parameter',
 );
 
+const delegatedActivatedAt = '2026-08-10T00:00:00.000Z';
+const delegatedProbe = recordingSql(() => [{
+  id: 'tok_delegated', workspace_id: 'ws_owner', role: 'viewer', label: 'delegated',
+  packet_prefix: 'pkt-owner-', scopes: ['read:session', 'read:packets'],
+  authority_mode: 'delegated_user', issuer_membership_activated_at: delegatedActivatedAt,
+  issuer_membership_active: false, created_by: 'usr_delegate', created_at: delegatedActivatedAt,
+  expires_at: new Date(Date.now() + 86_400_000).toISOString(), revoked_at: null,
+  revoked_by: null, last_used_at: null,
+}]);
+const delegatedOutcome = await store.getCustomerTokenByHashRow(delegatedProbe.sql, WELL_FORMED_HASH);
+const delegatedStatement = delegatedProbe.statements[0] || { text: '', params: [] };
+check(
+  'delegated_authority_requires_active_membership',
+  delegatedOutcome?.authority_mode === 'delegated_user' && delegatedOutcome.issuer_membership_active === false,
+  `the shipped store did not preserve an inactive delegated-membership verdict: ${JSON.stringify(delegatedOutcome)}`,
+);
+check(
+  'delegated_authority_binds_membership_activation',
+  /workspace_members/i.test(delegatedStatement.text)
+    && /status\s*=\s*'active'/i.test(delegatedStatement.text)
+    && /removed_at\s+IS\s+NULL/i.test(delegatedStatement.text)
+    && /activated_at\s*=\s*token\.issuer_membership_activated_at/i.test(delegatedStatement.text),
+  `delegated lookup must bind workspace, issuer, active state, removal state, and the exact membership activation epoch. Observed: ${delegatedStatement.text || '(no statement issued)'}`,
+);
+
 const malformedProbe = recordingSql(() => []);
 const malformedOutcome = await store.getCustomerTokenByHashRow(malformedProbe.sql, "not-a-hash' OR 1=1 --");
 check(
@@ -324,6 +364,9 @@ await store.createCustomerTokenRow(mintProbe.sql, {
   role: 'viewer',
   label: 'probe',
   packet_prefix: 'pkt-probe-',
+  scopes: ['read:session', 'read:packets'],
+  authority_mode: 'delegated_user',
+  issuer_membership_activated_at: delegatedActivatedAt,
   created_by: 'usr_admin',
   expires_at: new Date(Date.now() + 86_400_000).toISOString(),
 }).catch(() => {});
@@ -337,6 +380,46 @@ check(
   'digest_agrees_with_an_independent_sha256',
   mintedDigest === createHash('sha256').update(RAW_SECRET).digest('hex'),
   `the shipped hashToken produced ${mintedDigest}, which is not the SHA-256 of the input as computed independently by node:crypto`,
+);
+check(
+  'mint_persists_explicit_scopes',
+  mintTrace.includes('read:session') && mintTrace.includes('read:packets')
+    && mintTrace.includes('delegated_user') && mintTrace.includes(delegatedActivatedAt),
+  'the shipped mint path did not bind explicit action scopes, authority mode, and membership activation epoch',
+);
+
+// =================================================================================================
+// A2 · EXPLICIT CONNECTOR ACTION SCOPES — the shipped catalog, executed
+// =================================================================================================
+const scopeCatalog = await loadShipped(SCOPES_REL);
+for (const name of ['resolveRequestedCustomerScopes', 'requiredCustomerScope', 'CUSTOMER_CONNECTOR_READ_SCOPES', 'CUSTOMER_CONNECTOR_OPERATOR_SCOPES']) {
+  if (scopeCatalog[name] === undefined) cannotMeasure(`${SCOPES_REL} no longer exports ${name}`);
+}
+const expectedWriteScopes = [
+  ['POST', '/api/v1/evidence', 'write:evidence'],
+  ['POST', '/api/v1/tool-events', 'write:tool_events'],
+  ['POST', '/api/v1/approvals', 'write:approval_requests'],
+];
+check(
+  'explicit_action_scope_mapping',
+  expectedWriteScopes.every(([method, path, scope]) => scopeCatalog.requiredCustomerScope(method, path) === scope),
+  `write routes do not map to their explicit action scopes: ${JSON.stringify(expectedWriteScopes.map(([method, path]) => [method, path, scopeCatalog.requiredCustomerScope(method, path)]))}`,
+);
+const disabledOperator = scopeCatalog.resolveRequestedCustomerScopes('operator', false);
+const enabledOperator = scopeCatalog.resolveRequestedCustomerScopes('operator', true);
+const unknownScope = scopeCatalog.resolveRequestedCustomerScopes('read:session write:unknown', true);
+check(
+  'operator_scopes_require_activation',
+  disabledOperator.ok === false
+    && enabledOperator.ok === true
+    && enabledOperator.role === 'operator'
+    && expectedWriteScopes.every(([, , scope]) => enabledOperator.scopes.includes(scope)),
+  `operator scope activation contract drifted: disabled=${JSON.stringify(disabledOperator)}, enabled=${JSON.stringify(enabledOperator)}`,
+);
+check(
+  'unknown_scope_fails_closed',
+  unknownScope.ok === false,
+  `an unknown action scope was accepted: ${JSON.stringify(unknownScope)}`,
 );
 
 // =================================================================================================
@@ -437,7 +520,7 @@ const report = {
   schema_id: 'xlooop.customer_revocation_authority.v2',
   status: failed ? 'FAIL' : 'PASS',
   subject: 'shipped modules under src/ — this gate defines no authorization logic of its own',
-  modules_executed: [STORE_REL, AUTHORITY_REL],
+  modules_executed: [STORE_REL, SCOPES_REL, AUTHORITY_REL],
   src_root: SRC,
   checks: ledger,
 };
@@ -451,6 +534,6 @@ if (asJson) {
     console.log('  ' + entry.status.padEnd(6) + '  ' + entry.id + (entry.detail ? '\n            ' + entry.detail : ''));
   }
   console.log('  ' + '-'.repeat(78));
-  console.log(`  ${report.status}  ${ledger.length} checks executed against ${STORE_REL} + ${AUTHORITY_REL}\n`);
+  console.log(`  ${report.status}  ${ledger.length} checks executed against ${STORE_REL} + ${SCOPES_REL} + ${AUTHORITY_REL}\n`);
 }
 process.exit(failed ? 1 : 0);

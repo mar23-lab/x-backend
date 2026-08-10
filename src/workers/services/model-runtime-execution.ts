@@ -163,7 +163,7 @@ async function resolveConfiguredRow(
     credential = parseStoredCredential(await decryptCredential(modelRuntimeEncryptionConfig(env), {
       ciphertext: sealed.ciphertext,
       iv: sealed.iv,
-    }));
+    }, { tenant_id: workspaceId, purpose: row.provider }));
   } catch {
     return { code: 'CREDENTIAL_DECRYPTION_FAILED' };
   }

@@ -1,4 +1,4 @@
--- 037_rls_app_role.sql · RLS defense-in-depth — the restricted, RLS-SUBJECT app role (Plane 1).
+-- rls_app_role_grants.sql · RLS defense-in-depth operational DDL for the restricted app role.
 --
 -- WHY (enforced-governance Plane 1, 260628): migration 034 enabled ROW LEVEL SECURITY + per-table
 -- workspace policies on the operational spine (task_packets, evidence_items, approval_requests,
@@ -15,7 +15,10 @@
 -- scripts/rls-shadow-soak.mjs on a Neon branch, (3) route the worker's tenant reads/writes through the
 -- restricted connection. Auth + the app-level WHERE clauses stay as the first layer throughout.
 --
--- Idempotent + version-guarded (safe to re-run). Apply MANUALLY per the prod-Neon one-at-a-time pattern.
+-- This is deliberately NOT a numbered schema migration: role creation and grants are deployment
+-- operations with their own live verification and cutover receipt. Keeping it outside migrations
+-- prevents a schema-ledger version from representing two unrelated changes. Idempotent; apply only
+-- through the RLS cutover runbook.
 
 DO $$
 BEGIN

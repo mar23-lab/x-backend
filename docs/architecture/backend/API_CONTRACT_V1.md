@@ -961,11 +961,13 @@ their tenant URLs. Bedrock returns `503 ADAPTER_UNAVAILABLE` until a reviewed Si
 Discovery and validation use the stored tenant credential when configured. Plaintext and ciphertext never
 leave the server execution boundary.
 
-Successful `POST /chat/turns` responses include answer, execution, context, policy-resolution, and skill
-receipt references. `audit_event_id` is `null` until a distinct audit event is persisted; a policy resolution
-is never mislabeled as an audit event. Streaming is explicitly deferred because the current contract returns
-JSON only after durable completion persistence. No deterministic or fixture assistant text is returned as a
-successful commercial response.
+Successful `POST /chat/turns` responses require non-null answer, execution, context, policy-resolution,
+audit-event, and skill-invocation receipt references. A policy resolution is never mislabeled as an audit
+event. Clients may request `Accept: text/event-stream`; the server then emits `turn.started`, one or more
+`turn.delta` events, and `turn.completed` only after live-provider execution and durable completion
+persistence. This is receipt-backed `atomic_post_completion` streaming, not provider-native token
+streaming, and does not improve first-token latency. JSON remains the default response representation.
+No deterministic or fixture assistant text is returned as a successful commercial response.
 
 Tenant-isolation note: all tenant-scoped reads carry the app-level `WHERE workspace_id` guard, and the
 five core customer tables (`operation_events`, `projects`, `documents`, `board_cards`,

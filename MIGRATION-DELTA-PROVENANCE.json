@@ -6470,6 +6470,253 @@
           "reason": "Patch direct production Hono and Nano ID advisories to a zero-vulnerability production audit"
         }
       ]
+    },
+    {
+      "delta_id": "P0-20260810-retire-duplicate-migration-037",
+      "generated_at": "2026-08-10T00:43:18.635Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "74b5059fae6df0c1f8c3d4a029b7f70c240412c0",
+      "target_base_commit": "74b5059fae6df0c1f8c3d4a029b7f70c240412c0",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [],
+      "seed_exclusions": [
+        {
+          "path": "src/workers/db/migrations/037_rls_app_role.sql",
+          "source_blob": "63bf8a5c089cd869eb05f6543d43c2b4019374fc",
+          "reason": "Moved operational RLS grants out of numbered migration namespace to restore unique immutable migration identities"
+        }
+      ]
+    },
+    {
+      "delta_id": "P0-20260810-live-chat-security-convergence",
+      "generated_at": "2026-08-10T00:43:31.788Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "74b5059fae6df0c1f8c3d4a029b7f70c240412c0",
+      "target_base_commit": "74b5059fae6df0c1f8c3d4a029b7f70c240412c0",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "docs/audits/OAR_W2_ACTIVATION_READINESS.md",
+          "target_blob": "0803ad0754246e4952428f771979edcb62118851",
+          "reason": "Reconcile reviewed live-chat, tenant authority, and encryption hardening changes"
+        },
+        {
+          "path": "src/workers/dal/customer-token-store.ts",
+          "target_blob": "471b03d3f4964cd86039c9e9280f032bac298282",
+          "reason": "Reconcile reviewed live-chat, tenant authority, and encryption hardening changes"
+        },
+        {
+          "path": "src/workers/db/migrations/053_model_runtimes.sql",
+          "target_blob": "bfe38a419b978e8d639fd70a2c587189d01ea86e",
+          "reason": "Reconcile reviewed live-chat, tenant authority, and encryption hardening changes"
+        },
+        {
+          "path": "src/workers/routes/diagnose.ts",
+          "target_blob": "dc0af4dd84f3e3cdd83ea3910226edfcad55e26d",
+          "reason": "Reconcile reviewed live-chat, tenant authority, and encryption hardening changes"
+        },
+        {
+          "path": "src/workers/routes/mbp-projection.ts",
+          "target_blob": "e6c2e8a637937815926a85496e0ab5bdc8fbe908",
+          "reason": "Reconcile reviewed live-chat, tenant authority, and encryption hardening changes"
+        },
+        {
+          "path": "src/workers/routes/template-policy-registry.ts",
+          "target_blob": "72305e5117d82f251280ac8d6978d061d71d52fb",
+          "reason": "Reconcile reviewed live-chat, tenant authority, and encryption hardening changes"
+        }
+      ]
+    },
+    {
+      "delta_id": "P0-20260810-encryption-deployment-contract",
+      "generated_at": "2026-08-10T01:05:21.277Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "74b5059fae6df0c1f8c3d4a029b7f70c240412c0",
+      "target_base_commit": "74b5059fae6df0c1f8c3d4a029b7f70c240412c0",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "docs/deployment/SECRETS_AND_CONNECTIONS_MANIFEST.yml",
+          "target_blob": "195fae637ccbaa2b5ed108b9b63d08a050e36620",
+          "reason": "Align model-runtime secret and database-client deployment truth with tenant envelope encryption"
+        },
+        {
+          "path": "src/workers/db/client.ts",
+          "target_blob": "63e9ebd181739b5b95a17aac937bfded77c25a8c",
+          "reason": "Align model-runtime secret and database-client deployment truth with tenant envelope encryption"
+        }
+      ]
+    },
+    {
+      "delta_id": "P0-20260810-commercial-live-chat-authority",
+      "generated_at": "2026-08-10T01:05:43.674Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "74b5059fae6df0c1f8c3d4a029b7f70c240412c0",
+      "target_base_commit": "74b5059fae6df0c1f8c3d4a029b7f70c240412c0",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "docs/contracts/api-contract.v1.json",
+          "target_blob": "982a0a98ffa24f02df648e5b372d349ac9866427",
+          "reason": "Reconcile reviewed live-provider, receipt, scope, migration, streaming, and tenant-envelope hardening"
+        },
+        {
+          "path": "src/workers/lib/observability.ts",
+          "target_blob": "0fa71be18f590546f8a65ee6aec02e26c3d185db",
+          "reason": "Reconcile reviewed live-provider, receipt, scope, migration, streaming, and tenant-envelope hardening"
+        },
+        {
+          "path": "src/workers/routes/customer-chat.ts",
+          "target_blob": "bb31ccb0b4891e2ac2273e6893a4aa29f67758bc",
+          "reason": "Reconcile reviewed live-provider, receipt, scope, migration, streaming, and tenant-envelope hardening"
+        },
+        {
+          "path": "docs/contracts/model-execution-callsite-manifest.json",
+          "target_blob": "c660c4ce8b44fa0f56750d76ac97cbfc7fb6c985",
+          "reason": "Reconcile reviewed live-provider, receipt, scope, migration, streaming, and tenant-envelope hardening"
+        },
+        {
+          "path": "scripts/verify-model-execution-callsites.mjs",
+          "target_blob": "32f7740a457e3c52fe5614302fdd2662b3b8e5ba",
+          "reason": "Reconcile reviewed live-provider, receipt, scope, migration, streaming, and tenant-envelope hardening"
+        },
+        {
+          "path": "src/workers/__tests__/cockpit-chat-route.test.ts",
+          "target_blob": "692b3a887f1ab51ca6e5ff60b15ef375afe90010",
+          "reason": "Reconcile reviewed live-provider, receipt, scope, migration, streaming, and tenant-envelope hardening"
+        },
+        {
+          "path": "src/workers/routes/session.ts",
+          "target_blob": "f83a54a44f55d41f3f09d5d08662d0f52b3a149e",
+          "reason": "Reconcile reviewed live-provider, receipt, scope, migration, streaming, and tenant-envelope hardening"
+        },
+        {
+          "path": "src/workers/routes/workspaces.ts",
+          "target_blob": "040045b4d9b601bd61b87a7cc0a5d946eb195e2d",
+          "reason": "Reconcile reviewed live-provider, receipt, scope, migration, streaming, and tenant-envelope hardening"
+        },
+        {
+          "path": "scripts/rls-shadow-soak.mjs",
+          "target_blob": "f2575d403249193211b2df2bb5029234cee671b6",
+          "reason": "Reconcile reviewed live-provider, receipt, scope, migration, streaming, and tenant-envelope hardening"
+        },
+        {
+          "path": "src/workers/__tests__/model-runtimes-route.test.ts",
+          "target_blob": "786823de104f11ccffe032f9f48462a2a6443191",
+          "reason": "Reconcile reviewed live-provider, receipt, scope, migration, streaming, and tenant-envelope hardening"
+        },
+        {
+          "path": "src/workers/dal/model-runtime-store.ts",
+          "target_blob": "fbc24d961d6d4c55e512e4f98e57c3c8e1863415",
+          "reason": "Reconcile reviewed live-provider, receipt, scope, migration, streaming, and tenant-envelope hardening"
+        },
+        {
+          "path": "src/workers/routes/model-runtimes.ts",
+          "target_blob": "3fd1b86eda49cc0cd6bca3b166963c1c3f573af3",
+          "reason": "Reconcile reviewed live-provider, receipt, scope, migration, streaming, and tenant-envelope hardening"
+        },
+        {
+          "path": "docs/architecture/backend/API_CONTRACT_V1.md",
+          "target_blob": "01b5f4828c8406c0138dcff5be072d453513cd88",
+          "reason": "Reconcile reviewed live-provider, receipt, scope, migration, streaming, and tenant-envelope hardening"
+        },
+        {
+          "path": "scripts/verify-prod-migrations.mjs",
+          "target_blob": "e3217606d55ea77b6d607fa9f7357dfd3f249914",
+          "reason": "Reconcile reviewed live-provider, receipt, scope, migration, streaming, and tenant-envelope hardening"
+        },
+        {
+          "path": "wrangler.toml",
+          "target_blob": "216ff1992bc6c16a781a65df2048d9123ba2003f",
+          "reason": "Reconcile reviewed live-provider, receipt, scope, migration, streaming, and tenant-envelope hardening"
+        },
+        {
+          "path": "src/workers/dal/types/auth.ts",
+          "target_blob": "1c913b7fca554d1f1825660ce80122c9c8d4455d",
+          "reason": "Reconcile reviewed live-provider, receipt, scope, migration, streaming, and tenant-envelope hardening"
+        },
+        {
+          "path": "scripts/emit-api-contract.mjs",
+          "target_blob": "cced9cfbd7bfdbbdea00fe1bd55b73bbdc686d93",
+          "reason": "Reconcile reviewed live-provider, receipt, scope, migration, streaming, and tenant-envelope hardening"
+        },
+        {
+          "path": "src/workers/middleware/auth.ts",
+          "target_blob": "82218e78b6dad649c46012ad328e52b840f32b09",
+          "reason": "Reconcile reviewed live-provider, receipt, scope, migration, streaming, and tenant-envelope hardening"
+        },
+        {
+          "path": "src/workers/routes/developer-access.ts",
+          "target_blob": "32de05b37562683e27fde12ec19b0deb53cf000f",
+          "reason": "Reconcile reviewed live-provider, receipt, scope, migration, streaming, and tenant-envelope hardening"
+        },
+        {
+          "path": "docs/deployment/MODEL_RUNTIMES_ACTIVATION.md",
+          "target_blob": "bd22bc47a285147ba40b3b644ff13ea29efaa88f",
+          "reason": "Reconcile reviewed live-provider, receipt, scope, migration, streaming, and tenant-envelope hardening"
+        },
+        {
+          "path": "src/workers/__tests__/chat-assembly-trace-operator.test.ts",
+          "target_blob": "a1e1504cfe798c4bee878aafbc18a623a815fced",
+          "reason": "Reconcile reviewed live-provider, receipt, scope, migration, streaming, and tenant-envelope hardening"
+        },
+        {
+          "path": "scripts/verify-customer-connector-token-safety.mjs",
+          "target_blob": "781fef82bef2f63072652d5965d2a696b26e3196",
+          "reason": "Reconcile reviewed live-provider, receipt, scope, migration, streaming, and tenant-envelope hardening"
+        },
+        {
+          "path": "src/workers/__tests__/model-runtime-crypto.test.ts",
+          "target_blob": "65ecea0c843aee88dba3f204ef3dd422bfdd75df",
+          "reason": "Reconcile reviewed live-provider, receipt, scope, migration, streaming, and tenant-envelope hardening"
+        },
+        {
+          "path": "src/workers/lib/model-runtime-crypto.ts",
+          "target_blob": "352317d9c6cfdba63f9f630b2e166c5e3105d86b",
+          "reason": "Reconcile reviewed live-provider, receipt, scope, migration, streaming, and tenant-envelope hardening"
+        },
+        {
+          "path": "src/workers/db/migrations/053_model_runtimes.sql",
+          "target_blob": "febd0e688dae3790fc2c81c4dd883596dddb5b0a",
+          "reason": "Reconcile reviewed live-provider, receipt, scope, migration, streaming, and tenant-envelope hardening"
+        }
+      ]
+    },
+    {
+      "delta_id": "live-canary-config-20260810",
+      "generated_at": "2026-08-10T01:20:35.067Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "74b5059fae6df0c1f8c3d4a029b7f70c240412c0",
+      "target_base_commit": "74b5059fae6df0c1f8c3d4a029b7f70c240412c0",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "scripts/verify-internal-company-a-b-canary.mjs",
+          "target_blob": "53c23476fe0089cf746471135a0b3777f6575584",
+          "reason": "load scoped packet identity from protected canary config; remove stale hardcoded packet authority"
+        }
+      ]
+    },
+    {
+      "delta_id": "model-runtime-maintainability-ratchet-20260810",
+      "generated_at": "2026-08-10T01:24:09.702Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "7ea4380b76e99dc254b0bc756805f8cc155261e6",
+      "target_base_commit": "7ea4380b76e99dc254b0bc756805f8cc155261e6",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/routes/model-runtimes.ts",
+          "target_blob": "868bd67a72664f9b88e2b9e1cff2c40091ce3d02",
+          "reason": "preserve model runtime route below the 500-line maintainability threshold"
+        }
+      ]
     }
   ]
 }

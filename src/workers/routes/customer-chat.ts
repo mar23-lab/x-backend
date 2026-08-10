@@ -16,6 +16,7 @@
 // guard). A customer can only ever ask about their own workspace.
 
 import { Hono, type Context } from 'hono';
+import { streamSSE } from 'hono/streaming';
 import { errorEnvelope } from '../middleware/error';
 import { emitEvent } from '../lib/observability'; // T3/P6
 import { gateCustomerWorkspace } from '../lib/workspace-gates';
@@ -60,7 +61,9 @@ export interface CustomerChatEnv extends AuthEnv {
   DATABASE_URL: string;
   AI?: AiRunner;
   ANTHROPIC_API_KEY?: string;
-  MODEL_RUNTIME_ENC_KEY?: string;
+  MODEL_RUNTIME_ENC_KEY?: string; // legacy decrypt-only during rotation
+  MODEL_RUNTIME_ENC_KEYS?: string;
+  MODEL_RUNTIME_ACTIVE_KEY_ID?: string;
   /** Deprecated compatibility input; customer chat is now always live-only. */
   COMMERCIAL_LIVE_CHAT_REQUIRED?: string;
   // D-16 · grounding-tier consumer. Default OFF → byte-identical (no access_tier, no reorder). When on,
@@ -567,7 +570,20 @@ async function handleCustomerChat(ctx: CustomerChatContext) {
         clientEmpty = rsc.redactionProfile.expose === 'none';
         trace?.recordRoleProjection(rsc.auditLine);
         console.log(JSON.stringify({ kind: 'role_scoped_context', plane: 'customer', workspace_id: workspaceId, ...rsc.auditLine }));
-      } catch (_) { /* projection is fail-safe: legacy facts stand; the flag can be pulled */ }
+      } catch (err) {
+        emitEvent('chat_context_projection_failed', {
+          workspace_id: workspaceId,
+          plane: 'customer',
+          error: err instanceof Error ? err.message.slice(0, 200) : String(err).slice(0, 200),
+        });
+        ctx.status(503);
+        return ctx.json({
+          error: 'tenant-safe chat context could not be projected',
+          code: 'CONTEXT_PROJECTION_UNAVAILABLE',
+          request_id: ctx.get('request_id'),
+          retryable: true,
+        });
+      }
     }
 
     // T1/P3 (260710) · MECHANICAL source-truth override, flag-gated (OFF = byte-identical): a queued system
@@ -868,7 +884,7 @@ async function handleCustomerChat(ctx: CustomerChatContext) {
       claude_available: _ignoredLegacyClaudeAvailability,
       ...commercialResponse
     } = response as Record<string, unknown>;
-    return ctx.json({
+    const turnPayload = {
       schema_id: 'xlooop.chat_turn.v1',
       ...commercialResponse,
       receipts: {
@@ -885,10 +901,28 @@ async function handleCustomerChat(ctx: CustomerChatContext) {
         legacy_llm: body?.llm ? 'ignored' : 'not_supplied',
       },
       streaming: {
-        status: 'deferred',
-        reason: 'streaming remains deferred until durable completion persistence can stay atomic',
+        status: 'enabled',
+        mode: 'atomic_post_completion',
+        provider_native: false,
+        receipt_before_stream: true,
       },
-    });
+    };
+    if (ctx.req.header('accept')?.toLowerCase().includes('text/event-stream')) {
+      const answer = String((commercialResponse as { answer?: unknown }).answer ?? '');
+      const chunks = answer.match(/[\s\S]{1,160}/g) ?? [];
+      return streamSSE(ctx, async (stream) => {
+        await stream.writeSSE({ event: 'turn.started', data: JSON.stringify({
+          request_id: ctx.get('request_id'),
+          interaction_id: interactionId,
+          execution_receipt_id: turnPayload.receipts.execution_receipt_id,
+        }) });
+        for (const chunk of chunks) {
+          await stream.writeSSE({ event: 'turn.delta', data: JSON.stringify({ delta: chunk }) });
+        }
+        await stream.writeSSE({ event: 'turn.completed', data: JSON.stringify(turnPayload) });
+      });
+    }
+    return ctx.json(turnPayload);
   } catch (err) {
     return errorEnvelope(ctx, err);
   }

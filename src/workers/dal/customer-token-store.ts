@@ -15,6 +15,7 @@ import type { Sql } from '../db/client';
 import type { WorkspaceId, WorkspaceRole } from './types';
 
 export type CustomerTokenRole = Extract<WorkspaceRole, 'viewer' | 'operator'>;
+export type CustomerTokenAuthorityMode = 'tenant_service' | 'delegated_user';
 
 export interface CustomerApiToken {
   id: string;
@@ -22,6 +23,10 @@ export interface CustomerApiToken {
   role: CustomerTokenRole;
   label: string;
   packet_prefix: string;
+  scopes: string[];
+  authority_mode: CustomerTokenAuthorityMode;
+  issuer_membership_activated_at: string | null;
+  issuer_membership_active: boolean;
   created_by: string;
   created_at: string;
   expires_at: string;
@@ -36,6 +41,9 @@ export interface CreateCustomerTokenInput {
   role: CustomerTokenRole;
   label: string;
   packet_prefix: string;
+  scopes: string[];
+  authority_mode?: CustomerTokenAuthorityMode;
+  issuer_membership_activated_at?: string | null;
   created_by: string;
   expires_at: string;         // ISO timestamp
 }
@@ -55,6 +63,10 @@ function normalize(row: CustomerApiToken): CustomerApiToken {
     revoked_at: row.revoked_at ?? null,
     revoked_by: row.revoked_by ?? null,
     last_used_at: row.last_used_at ?? null,
+    scopes: Array.isArray(row.scopes) ? row.scopes.map(String) : [],
+    authority_mode: row.authority_mode ?? 'tenant_service',
+    issuer_membership_activated_at: row.issuer_membership_activated_at ?? null,
+    issuer_membership_active: row.issuer_membership_active !== false,
   };
 }
 
@@ -71,7 +83,8 @@ export async function createCustomerTokenRow(
   const id = `cat_${randomNanoid()}`;
   const rows = (await sql/*sql*/`
     INSERT INTO customer_api_tokens (
-      id, workspace_id, token_sha256, role, label, packet_prefix, created_by, expires_at
+      id, workspace_id, token_sha256, role, label, packet_prefix, scopes,
+      authority_mode, issuer_membership_activated_at, created_by, expires_at
     ) VALUES (
       ${id},
       ${input.workspace_id},
@@ -79,10 +92,14 @@ export async function createCustomerTokenRow(
       ${input.role},
       ${input.label},
       ${input.packet_prefix},
+      ${input.scopes}::text[],
+      ${input.authority_mode ?? 'tenant_service'},
+      ${input.issuer_membership_activated_at ?? null},
       ${input.created_by},
       ${input.expires_at}
     )
-    RETURNING id, workspace_id, role, label, packet_prefix, created_by,
+    RETURNING id, workspace_id, role, label, packet_prefix, scopes, authority_mode,
+              issuer_membership_activated_at, true AS issuer_membership_active, created_by,
               created_at, expires_at, revoked_at, revoked_by, last_used_at
   `) as CustomerApiToken[];
   return normalize(rows[0]!);
@@ -95,10 +112,24 @@ export async function getCustomerTokenByHashRow(
 ): Promise<CustomerApiToken | null> {
   if (!/^[a-f0-9]{64}$/.test(tokenSha256)) return null;
   const rows = (await sql/*sql*/`
-    SELECT id, workspace_id, role, label, packet_prefix, created_by,
-           created_at, expires_at, revoked_at, revoked_by, last_used_at
-    FROM customer_api_tokens
-    WHERE token_sha256 = ${tokenSha256} AND revoked_at IS NULL
+    SELECT token.id, token.workspace_id, token.role, token.label, token.packet_prefix,
+           token.scopes, token.authority_mode, token.issuer_membership_activated_at,
+           token.created_by, token.created_at, token.expires_at, token.revoked_at,
+           token.revoked_by, token.last_used_at,
+           CASE
+             WHEN token.authority_mode = 'tenant_service' THEN true
+             ELSE EXISTS (
+               SELECT 1
+               FROM workspace_members member
+               WHERE member.workspace_id = token.workspace_id
+                 AND member.user_id = token.created_by
+                 AND member.status = 'active'
+                 AND member.removed_at IS NULL
+                 AND member.activated_at = token.issuer_membership_activated_at
+             )
+           END AS issuer_membership_active
+    FROM customer_api_tokens token
+    WHERE token.token_sha256 = ${tokenSha256} AND token.revoked_at IS NULL
     LIMIT 1
   `) as CustomerApiToken[];
   return rows[0] ? normalize(rows[0]) : null;
@@ -120,7 +151,8 @@ export async function revokeCustomerTokenRow(
     UPDATE customer_api_tokens
     SET revoked_at = now(), revoked_by = ${revokedBy}
     WHERE id = ${id} AND workspace_id = ${workspaceId} AND revoked_at IS NULL
-    RETURNING id, workspace_id, role, label, packet_prefix, created_by,
+    RETURNING id, workspace_id, role, label, packet_prefix, scopes, authority_mode,
+              issuer_membership_activated_at, true AS issuer_membership_active, created_by,
               created_at, expires_at, revoked_at, revoked_by, last_used_at
   `) as CustomerApiToken[];
   if (!rows[0]) {
@@ -135,7 +167,8 @@ export async function listCustomerTokensRow(
   workspaceId: WorkspaceId,
 ): Promise<CustomerApiToken[]> {
   const rows = (await sql/*sql*/`
-    SELECT id, workspace_id, role, label, packet_prefix, created_by,
+    SELECT id, workspace_id, role, label, packet_prefix, scopes, authority_mode,
+           issuer_membership_activated_at, true AS issuer_membership_active, created_by,
            created_at, expires_at, revoked_at, revoked_by, last_used_at
     FROM customer_api_tokens
     WHERE workspace_id = ${workspaceId}

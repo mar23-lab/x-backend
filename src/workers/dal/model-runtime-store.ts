@@ -3,7 +3,7 @@
 //
 // SECURITY BOUNDARY: this store handles ONLY the opaque sealed credential ({ciphertext, iv, last4}). It
 // never encrypts, decrypts, or sees plaintext or the master key — that is the ROUTE layer's job (it has
-// ctx.env.MODEL_RUNTIME_ENC_KEY; the DAL is constructed with sql only). listProvidersRow deliberately does
+// the versioned worker keyring; the DAL is constructed with sql only). listProvidersRow deliberately does
 // NOT select the ciphertext/iv columns (mask-by-construction) so a list read physically cannot leak the
 // sealed key; only getProviderCredentialRow returns them, and only for the internal provider-call path.
 // Every query is workspace-scoped (WHERE workspace_id = $w) so a caller only ever touches their own tenant.

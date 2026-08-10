@@ -1,5 +1,5 @@
 // model-runtimes-route.test.ts · Wave C · the /api/v1/model-runtimes route contract. Injects auth + a fake
-// dal.modelRuntimes facade + a real MODEL_RUNTIME_ENC_KEY, and asserts: masked reads (no ciphertext/plaintext
+// dal.modelRuntimes facade + real encryption material, and asserts: masked reads (no ciphertext/plaintext
 // ever in a response), owner/operator write-gating (viewer/client 403), provider + credential validation
 // (400/422/503), the audited default flip path, and the self-scoped override. Uses the REAL crypto lib so
 // the encrypt-on-write path is exercised end-to-end.
@@ -70,7 +70,10 @@ function appFor(dal: any, auth: { user_id: string; workspace_id: string; role: s
   app.route('/api/v1', modelRuntimesRoute);
   return app;
 }
-const ENV = { MODEL_RUNTIME_ENC_KEY: KEY } as never;
+const ENV = {
+  MODEL_RUNTIME_ENC_KEYS: JSON.stringify({ 'tenant-v1': KEY }),
+  MODEL_RUNTIME_ACTIVE_KEY_ID: 'tenant-v1',
+} as never;
 const call = (app: Hono, path: string, method: string, body?: unknown) =>
   app.request('/api/v1' + path, { method, body: body === undefined ? undefined : JSON.stringify(body), headers: { 'content-type': 'application/json' } }, ENV);
 
@@ -269,7 +272,7 @@ describe('PUT /model-runtimes/providers/:provider — encrypt-on-write', () => {
     expect((await res.json()).provider.masked_key).toBeNull();
   });
 
-  it('503 — a credential write is refused when MODEL_RUNTIME_ENC_KEY is unset (never stores plaintext)', async () => {
+  it('503 — a credential write is refused when the versioned keyring is unset (never stores plaintext)', async () => {
     const dal = makeDal();
     const app = appFor(dal);
     const res = await app.request('/api/v1/model-runtimes/providers/anthropic', {
@@ -306,14 +309,19 @@ describe('POST /model-runtimes/providers/:provider/rotate-credential', () => {
     });
     const rotated = dal.modelRuntimes.rotateProviderCredential.mock.calls[0][2];
     expect(credentialEnvelopeKeyId(rotated)).toBe('tenant-v2');
-    expect(await decryptCredential(rotationConfig, rotated)).toBe(JSON.stringify({ api_key: RAW_API_KEY }));
+    expect(await decryptCredential(rotationConfig, rotated, { tenant_id: 'org_a', purpose: 'anthropic' }))
+      .toBe(JSON.stringify({ api_key: RAW_API_KEY }));
     expect(JSON.stringify(body)).not.toContain(RAW_API_KEY);
     expect(JSON.stringify(body)).not.toContain(rotated.ciphertext);
   });
 
   it('returns 409 and performs no write when the credential already uses the active key', async () => {
     const config = { active_key_id: 'tenant-v2', keys: { 'tenant-v2': KEY_2 } };
-    const sealed = await encryptCredential(config, JSON.stringify({ api_key: RAW_API_KEY }));
+    const sealed = await encryptCredential(
+      config,
+      JSON.stringify({ api_key: RAW_API_KEY }),
+      { tenant_id: 'org_a', purpose: 'anthropic' },
+    );
     const dal = makeDal({ getProviderCredential: vi.fn(async () => sealed) });
     const response = await appFor(dal).request(
       '/api/v1/model-runtimes/providers/anthropic/rotate-credential',
@@ -327,7 +335,11 @@ describe('POST /model-runtimes/providers/:provider/rotate-credential', () => {
 
   it('fails closed when only the legacy single encryption key is configured', async () => {
     const dal = makeDal({ getProviderCredential: vi.fn(async () => null) });
-    const response = await call(appFor(dal), '/model-runtimes/providers/anthropic/rotate-credential', 'POST');
+    const response = await appFor(dal).request(
+      '/api/v1/model-runtimes/providers/anthropic/rotate-credential',
+      { method: 'POST' },
+      { MODEL_RUNTIME_ENC_KEY: KEY } as never,
+    );
     expect(response.status).toBe(503);
     expect(await response.json()).toMatchObject({ code: 'SERVICE_UNAVAILABLE' });
     expect(dal.modelRuntimes.getProviderCredential).not.toHaveBeenCalled();

@@ -30,6 +30,10 @@ export interface AuthContext {
    * packets whose id starts with this prefix. Unset for Clerk/canary auth. See mcp-gateway.ts.
    */
   packet_prefix?: string;
+  /** Explicit customer-connector capabilities. Human sessions continue to use role/RBAC policy. */
+  connector_scopes?: string[];
+  /** Human membership that delegated this token; absent for tenant-owned service credentials. */
+  delegated_by_user_id?: string;
 }
 
 /**
@@ -56,6 +60,7 @@ export interface ApiError {
 export type ApiErrorCode =
   | 'VALIDATION_ERROR'
   | 'UNAUTHORIZED'
+  | 'AUTHORITY_REVOKED'
   | 'FORBIDDEN'
   | 'NOT_FOUND'
   | 'CONFLICT'

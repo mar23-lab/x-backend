@@ -8,6 +8,10 @@
 
 import { Hono } from 'hono';
 import { envFlagTrue } from '../lib/env-flag';
+import {
+  CUSTOMER_CONNECTOR_OPERATOR_SCOPES,
+  CUSTOMER_CONNECTOR_READ_SCOPES,
+} from '../lib/customer-connector-scopes';
 import { errorEnvelope } from '../middleware/error';
 import type { AuthEnv, AuthVariables } from '../middleware/auth';
 import type { DalAdapter } from '../dal/DalAdapter';
@@ -230,6 +234,11 @@ developerAccessRoute.post('/developer-access/tokens', async (ctx) => {
       role,
       label,
       packet_prefix,
+      scopes: role === 'operator'
+        ? [...CUSTOMER_CONNECTOR_OPERATOR_SCOPES]
+        : [...CUSTOMER_CONNECTOR_READ_SCOPES],
+      authority_mode: 'tenant_service',
+      issuer_membership_activated_at: null,
       created_by: auth.user_id,
       expires_at,
     });
@@ -254,6 +263,7 @@ developerAccessRoute.post('/developer-access/tokens', async (ctx) => {
       token: raw,
       token_id: created.id,
       role: created.role,
+      scopes: created.scopes,
       label: created.label,
       expires_at: created.expires_at,
       mode: role === 'operator' ? 'operational' : 'read_only',

@@ -3075,7 +3075,23 @@
     "idempotency": "writes accept an Idempotency-Key header (uniform rule, FRONTIER-MANIFEST-260711)"
   },
   "streaming": {
-    "present": false,
-    "note": "no SSE/ReadableStream endpoints exist; live-stream routes are poll-based JSON snapshots"
+    "present": true,
+    "endpoints": [
+      {
+        "method": "POST",
+        "path": "/api/v1/chat/turns",
+        "content_type": "text/event-stream",
+        "negotiation": "Accept: text/event-stream",
+        "mode": "atomic_post_completion",
+        "provider_native": false,
+        "receipt_before_stream": true,
+        "events": [
+          "turn.started",
+          "turn.delta",
+          "turn.completed"
+        ]
+      }
+    ],
+    "note": "Chat turns may be emitted as receipt-backed SSE after provider completion. This does not claim provider-native token streaming or first-token latency improvement."
   }
 }

@@ -69,7 +69,7 @@ function appFor(currentDal: ReturnType<typeof dal>) {
 }
 
 describe('POST /api/v1/chat/turns', () => {
-  it('is live-only, ignores legacy llm authority, persists lineage, and declares streaming deferred', async () => {
+  it('is live-only, ignores legacy llm authority, persists lineage, and exposes atomic receipt-backed streaming', async () => {
     const currentDal = dal();
     const aiRun = vi.fn(async () => ({
       response: 'A live Workers AI answer grounded in the current tenant context and policy.',
@@ -98,13 +98,38 @@ describe('POST /api/v1/chat/turns', () => {
       skill_invocation_receipt_ids: ['skill_receipt_1'],
     });
     expect(body.receipts).not.toHaveProperty('audit_receipt_id');
-    expect(body.streaming).toMatchObject({ status: 'deferred' });
+    expect(body.streaming).toMatchObject({
+      status: 'enabled', mode: 'atomic_post_completion', provider_native: false, receipt_before_stream: true,
+    });
     expect(aiRun).toHaveBeenCalledTimes(1);
     expect(currentDal.captured[1]).toMatchObject({
       resolution_id: 'policy_resolution_1',
       execution_receipt_id: 'execution_receipt_1',
       packet_id: 'context_packet_1',
     });
+  });
+
+  it('streams a persisted answer as SSE deltas followed by the canonical completion receipt', async () => {
+    const res = await appFor(dal()).request('/api/v1/chat/turns', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', accept: 'text/event-stream' },
+      body: JSON.stringify({ message: 'What should I do next?' }),
+    }, {
+      DATABASE_URL: 'postgres://test',
+      AI: { run: vi.fn(async () => ({
+        response: 'A live Workers AI answer grounded in the current tenant context and policy, persisted before streaming.',
+        usage: { prompt_tokens: 12, completion_tokens: 10 },
+      })) },
+      ROLE_SKILL_CATALOG_ENABLED: 'true', CUSTOMER_SAFE_SERIALIZER_ENABLED: 'false',
+    } as never);
+    expect(res.status).toBe(200);
+    expect(res.headers.get('content-type')).toContain('text/event-stream');
+    const body = await res.text();
+    expect(body).toContain('event: turn.started');
+    expect(body).toContain('event: turn.delta');
+    expect(body).toContain('event: turn.completed');
+    expect(body).toContain('execution_receipt_1');
+    expect(body).toContain('answer_receipt_1');
   });
 
   it('fails closed when persistence does not return the assistant audit identity', async () => {

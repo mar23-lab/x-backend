@@ -21,6 +21,7 @@
 const IV_BYTES = 12; // 96-bit — the GCM-recommended random IV size
 const KEY_BYTES = 32; // AES-256
 const ENVELOPE_PREFIX = 'xcp1';
+const TENANT_ENVELOPE_PREFIX = 'xcp2';
 
 export interface ModelRuntimeEncryptionKeyring {
   active_key_id: string;
@@ -84,10 +85,21 @@ export interface SealedCredential {
   iv: string; // base64 of the 12-byte IV
 }
 
+export interface CredentialEnvelopeContext {
+  tenant_id: string;
+  purpose: string;
+}
+
 /** Key id carried by a versioned envelope, or null for legacy unversioned ciphertext. */
 export function credentialEnvelopeKeyId(sealed: Pick<SealedCredential, 'ciphertext'>): string | null {
-  const match = sealed.ciphertext.match(/^xcp1\.([^.]+)\./);
+  const match = sealed.ciphertext.match(/^xcp[12]\.([^.]+)\./);
   return match ? decodeURIComponent(match[1]) : null;
+}
+
+export function credentialEnvelopeVersion(sealed: Pick<SealedCredential, 'ciphertext'>): 0 | 1 | 2 {
+  if (sealed.ciphertext.startsWith(`${TENANT_ENVELOPE_PREFIX}.`)) return 2;
+  if (sealed.ciphertext.startsWith(`${ENVELOPE_PREFIX}.`)) return 1;
+  return 0;
 }
 
 /** Active key id for rotation workflows. Legacy single-key deployments return null. */
@@ -98,12 +110,47 @@ export function modelRuntimeActiveKeyId(config: ModelRuntimeEncryptionConfig): s
 }
 
 /** Encrypt a plaintext credential (typically a JSON string) with a fresh IV. Fail-closed on a bad key. */
-export async function encryptCredential(config: ModelRuntimeEncryptionConfig, plaintext: string): Promise<SealedCredential> {
+export async function encryptCredential(
+  config: ModelRuntimeEncryptionConfig,
+  plaintext: string,
+  context?: CredentialEnvelopeContext,
+): Promise<SealedCredential> {
   const keyId = typeof config === 'object' && config ? config.active_key_id.trim() : '';
   const base64Key = typeof config === 'string' ? config : keyId ? config?.keys[keyId] : undefined;
   if (typeof config === 'object' && config && !keyId) throw new Error('MODEL_RUNTIME_ACTIVE_KEY_ID is not configured');
   if (typeof config === 'object' && config && keyId && !base64Key) throw new Error(`active model-runtime encryption key is missing: ${keyId}`);
   const key = await importMasterKey(base64Key);
+  if (context) {
+    const tenantId = context.tenant_id.trim();
+    const purpose = context.purpose.trim();
+    if (!tenantId || !purpose) throw new Error('credential envelope tenant_id and purpose are required');
+    const aad = new TextEncoder().encode(`xlooop:model-runtime:v2:${tenantId}:${purpose}`);
+    const dataKeyRaw = crypto.getRandomValues(new Uint8Array(KEY_BYTES));
+    const dataKey = await crypto.subtle.importKey('raw', dataKeyRaw, { name: 'AES-GCM' }, false, ['encrypt', 'decrypt']);
+    const wrapIv = crypto.getRandomValues(new Uint8Array(IV_BYTES));
+    const dataIv = crypto.getRandomValues(new Uint8Array(IV_BYTES));
+    const wrappedDataKey = await crypto.subtle.encrypt(
+      { name: 'AES-GCM', iv: wrapIv, additionalData: aad },
+      key,
+      dataKeyRaw,
+    );
+    const ciphertext = await crypto.subtle.encrypt(
+      { name: 'AES-GCM', iv: dataIv, additionalData: aad },
+      dataKey,
+      new TextEncoder().encode(plaintext),
+    );
+    return {
+      ciphertext: [
+        TENANT_ENVELOPE_PREFIX,
+        encodeURIComponent(keyId || 'legacy'),
+        bytesToB64(wrapIv),
+        bytesToB64(new Uint8Array(wrappedDataKey)),
+        bytesToB64(dataIv),
+        bytesToB64(new Uint8Array(ciphertext)),
+      ].join('.'),
+      iv: bytesToB64(dataIv),
+    };
+  }
   const iv = crypto.getRandomValues(new Uint8Array(IV_BYTES));
   const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, new TextEncoder().encode(plaintext));
   const ciphertext = bytesToB64(new Uint8Array(ct));
@@ -114,7 +161,38 @@ export async function encryptCredential(config: ModelRuntimeEncryptionConfig, pl
 }
 
 /** Decrypt a sealed credential. Throws on a bad key or on tamper (GCM auth-tag failure). Internal-only. */
-export async function decryptCredential(config: ModelRuntimeEncryptionConfig, sealed: SealedCredential): Promise<string> {
+export async function decryptCredential(
+  config: ModelRuntimeEncryptionConfig,
+  sealed: SealedCredential,
+  context?: CredentialEnvelopeContext,
+): Promise<string> {
+  const tenantEnvelope = sealed.ciphertext.match(/^xcp2\.([^.]+)\.([^.]+)\.([^.]+)\.([^.]+)\.(.+)$/);
+  if (tenantEnvelope) {
+    if (!context?.tenant_id.trim() || !context.purpose.trim()) {
+      throw new Error('tenant envelope context is required');
+    }
+    const storedKeyId = decodeURIComponent(tenantEnvelope[1]);
+    const base64Key = typeof config === 'string'
+      ? (storedKeyId === 'legacy' ? config : undefined)
+      : config?.keys?.[storedKeyId];
+    if (!base64Key) throw new Error(`model-runtime encryption key is unavailable: ${storedKeyId}`);
+    const aad = new TextEncoder().encode(
+      `xlooop:model-runtime:v2:${context.tenant_id.trim()}:${context.purpose.trim()}`,
+    );
+    const masterKey = await importMasterKey(base64Key);
+    const rawDataKey = await crypto.subtle.decrypt(
+      { name: 'AES-GCM', iv: b64ToBytes(tenantEnvelope[2]), additionalData: aad },
+      masterKey,
+      b64ToBytes(tenantEnvelope[3]),
+    );
+    const dataKey = await crypto.subtle.importKey('raw', rawDataKey, { name: 'AES-GCM' }, false, ['decrypt']);
+    const plaintext = await crypto.subtle.decrypt(
+      { name: 'AES-GCM', iv: b64ToBytes(tenantEnvelope[4]), additionalData: aad },
+      dataKey,
+      b64ToBytes(tenantEnvelope[5]),
+    );
+    return new TextDecoder().decode(plaintext);
+  }
   const match = sealed.ciphertext.match(/^xcp1\.([^.]+)\.(.+)$/);
   const ciphertext = match ? match[2] : sealed.ciphertext;
   const storedKeyId = match ? decodeURIComponent(match[1]) : null;
@@ -159,4 +237,9 @@ export async function isEncryptionConfigured(config: ModelRuntimeEncryptionConfi
   } catch {
     return false;
   }
+}
+
+export async function isTenantEnvelopeEncryptionConfigured(config: ModelRuntimeEncryptionConfig): Promise<boolean> {
+  if (!config || typeof config === 'string' || !modelRuntimeActiveKeyId(config)) return false;
+  return isEncryptionConfigured(config);
 }

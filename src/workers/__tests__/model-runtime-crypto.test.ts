@@ -11,6 +11,8 @@ import {
   isEncryptionConfigured,
   modelRuntimeEncryptionConfig,
   credentialEnvelopeKeyId,
+  credentialEnvelopeVersion,
+  isTenantEnvelopeEncryptionConfigured,
   modelRuntimeActiveKeyId,
 } from '../lib/model-runtime-crypto';
 
@@ -71,12 +73,28 @@ describe('model-runtime-crypto', () => {
     expect(modelRuntimeActiveKeyId(KEY)).toBeNull();
   });
 
+  it('uses a random per-credential data key bound to tenant and provider context', async () => {
+    const keyring = { active_key_id: 'platform-v1', keys: { 'platform-v1': KEY } };
+    const context = { tenant_id: 'tenant_a', purpose: 'anthropic' };
+    const first = await encryptCredential(keyring, 'tenant-secret', context);
+    const second = await encryptCredential(keyring, 'tenant-secret', context);
+    expect(first.ciphertext).toMatch(/^xcp2\.platform-v1\./);
+    expect(credentialEnvelopeVersion(first)).toBe(2);
+    expect(first.ciphertext).not.toBe(second.ciphertext);
+    expect(await decryptCredential(keyring, first, context)).toBe('tenant-secret');
+    await expect(decryptCredential(keyring, first, { tenant_id: 'tenant_b', purpose: 'anthropic' })).rejects.toBeTruthy();
+    await expect(decryptCredential(keyring, first, { tenant_id: 'tenant_a', purpose: 'openai' })).rejects.toBeTruthy();
+    await expect(decryptCredential(keyring, first)).rejects.toThrow(/context is required/);
+  });
+
   it('builds a fail-closed keyring from versioned environment secrets', async () => {
     const config = modelRuntimeEncryptionConfig({
       MODEL_RUNTIME_ENC_KEYS: JSON.stringify({ 'tenant-v1': KEY, 'tenant-v2': KEY_2 }),
       MODEL_RUNTIME_ACTIVE_KEY_ID: 'tenant-v2',
     });
     expect(await isEncryptionConfigured(config)).toBe(true);
+    expect(await isTenantEnvelopeEncryptionConfigured(config)).toBe(true);
+    expect(await isTenantEnvelopeEncryptionConfigured(KEY)).toBe(false);
     expect(await isEncryptionConfigured(modelRuntimeEncryptionConfig({ MODEL_RUNTIME_ENC_KEYS: 'not-json' }))).toBe(false);
   });
 

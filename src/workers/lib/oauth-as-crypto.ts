@@ -92,6 +92,7 @@ export interface OAuthGrant {
   workspace_id: string;
   user_id: string;
   role: 'viewer' | 'operator';
+  scopes: string[];
   /** expiry, epoch seconds. */
   exp: number;
   /** random nonce — makes every code unique even for identical grants. */
@@ -118,6 +119,7 @@ export async function openGrant(code: string, secret: string, nowMs: number): Pr
     const grant = JSON.parse(dec.decode(new Uint8Array(pt))) as OAuthGrant;
     if (typeof grant.exp !== 'number' || grant.exp * 1000 <= nowMs) return null; // expired ⇒ invalid, same as tampered
     if (grant.role !== 'viewer' && grant.role !== 'operator') return null;
+    if (!Array.isArray(grant.scopes) || grant.scopes.some((scope) => typeof scope !== 'string')) return null;
     return grant;
   } catch {
     return null; // tamper, wrong key, malformed — all indistinguishable by design

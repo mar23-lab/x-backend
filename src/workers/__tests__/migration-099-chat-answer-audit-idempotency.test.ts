@@ -10,8 +10,11 @@ describe('migration 099 customer chat answer audit idempotency', () => {
     expect(migration).not.toMatch(/ADD COLUMN\s+(prompt|answer_body|response_body|customer_content)/i);
   });
 
-  it('records schema version 99 exactly once', () => {
-    expect(migration).toContain('WHERE version = 99');
+  it('blocks duplicates before a non-blocking concurrent index build and records version 99', () => {
+    expect(migration).toContain('HAVING count(*) > 1');
+    expect(migration).toContain('CREATE UNIQUE INDEX CONCURRENTLY IF NOT EXISTS');
+    expect(migration).not.toMatch(/\bBEGIN\s*;/i);
     expect(migration).toMatch(/VALUES\s*\(\s*99,/);
+    expect(migration).toContain('ON CONFLICT (version) DO NOTHING');
   });
 });

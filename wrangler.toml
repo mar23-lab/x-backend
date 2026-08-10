@@ -154,6 +154,7 @@ XLOOOP_AUTHORITY_MODE = "production"
 # 0 rows, idempotent). Order at deploy: (1) apply 075 to prod, (2) this flag, (3) wrangler deploy.
 SINGLE_INTAKE_ENABLED = "true"
 CLERK_JWKS_CACHE_TTL_SECONDS = "300"
+CLERK_AUTHORIZED_PARTIES = "https://app.xlooop.com,https://www.xlooop.com"
 ALLOWED_ORIGIN_PATTERN = "https://*.xlooop.com"
 LOG_LEVEL = "info"
 # UGEC 260720: context-receipt persistence. Prerequisite RESOLUTION_RECEIPT_SIGNING_SECRET is now
@@ -426,12 +427,12 @@ XLOOOP_JOURNEY_SEED_ENABLED = "true"
 #                             reports 'not_configured' (honest), never a fake result. `wrangler secret put HIBP_API_KEY`
 #   BUILTWITH_API_KEY       — Wave B (OPTIONAL) · BuiltWith API key for tech-stack detection. Absent →
 #                             'not_configured'. `wrangler secret put BUILTWITH_API_KEY`
-#   MODEL_RUNTIME_ENC_KEY   — Wave C · AES-256 master key (base64 of 32 random bytes) that encrypts customer
-#                             model-provider credentials AT REST (Workers have no per-tenant vault). Generate:
-#                             `openssl rand -base64 32`; bind: `wrangler secret put MODEL_RUNTIME_ENC_KEY`.
-#                             Absent → provider-credential WRITES 503 (fail-closed; never stores plaintext);
-#                             masked reads of existing rows still work. Rotating it orphans existing ciphertext
-#                             (enc_version marks rows for a future re-encrypt).
+#   MODEL_RUNTIME_ENC_KEYS  — Wave C · JSON key-id -> base64 32-byte platform KEK. Each credential uses a
+#                             random data key wrapped by the active KEK and bound to tenant/provider AAD.
+#   MODEL_RUNTIME_ACTIVE_KEY_ID — immutable key id present in MODEL_RUNTIME_ENC_KEYS; selects the write key.
+#   MODEL_RUNTIME_ENC_KEY   — legacy decrypt-only compatibility during audited keyring migration.
+#                             Absent/malformed keyring or active id -> provider-credential writes 503;
+#                             plaintext is never a fallback. Retain old KEKs until all envelopes are rotated.
 
 # ---- Local dev (wrangler dev) ----
 # Pulls from .dev.vars (NOT committed). See .dev.vars.example for the template.

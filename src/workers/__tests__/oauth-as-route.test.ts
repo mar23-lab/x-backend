@@ -5,6 +5,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { Hono } from 'hono';
 import { oauthAsRoute } from '../routes/oauth-as';
 import { mintClientId, s256Challenge, sealGrant, AUTH_CODE_TTL_SECONDS } from '../lib/oauth-as-crypto';
+import { CUSTOMER_CONNECTOR_OPERATOR_SCOPES } from '../lib/customer-connector-scopes';
 
 vi.mock('../middleware/auth', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../middleware/auth')>()),
@@ -25,8 +26,15 @@ const SECRET = 'test-oauth-signing-key-0123456789abcdef';
 const VERIFIER = 'dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk';
 const CHALLENGE = 'E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM';
 
-function appFor(opts: { auth?: Record<string, unknown>; sqlRows?: Array<Record<string, unknown>>; noKey?: boolean } = {}) {
+function appFor(opts: {
+  auth?: Record<string, unknown>;
+  sqlRows?: Array<Record<string, unknown>>;
+  noKey?: boolean;
+  membershipActive?: boolean;
+  operationalTokensEnabled?: boolean;
+} = {}) {
   const inserted: string[] = [];
+  const mintedTokens: Array<Record<string, unknown>> = [];
   const sql = Object.assign(
     async (strings: TemplateStringsArray, ...vals: unknown[]) => {
       const text = strings.join('?');
@@ -36,12 +44,20 @@ function appFor(opts: { auth?: Record<string, unknown>; sqlRows?: Array<Record<s
         inserted.push(key);
         return [{ id: 1 }];
       }
+      if (text.includes('FROM workspace_members')) {
+        return opts.membershipActive === false
+          ? []
+          : [{ activated_at: '2026-08-10T00:00:00.000Z' }];
+      }
       if (text.includes('INSERT INTO customer_api_tokens')) {
-        return [{
+        const row = {
           id: 'cat_test', workspace_id: vals[1], role: vals[3], label: vals[4], packet_prefix: vals[5],
-          created_by: vals[6], created_at: new Date().toISOString(),
+          scopes: vals[6], authority_mode: vals[7], issuer_membership_activated_at: vals[8],
+          issuer_membership_active: true, created_by: vals[9], created_at: new Date().toISOString(),
           expires_at: new Date(Date.now() + 90 * 86400000).toISOString(), revoked_at: null, revoked_by: null, last_used_at: null,
-        }];
+        };
+        mintedTokens.push(row);
+        return [row];
       }
       return opts.sqlRows ?? [];
     },
@@ -54,9 +70,13 @@ function appFor(opts: { auth?: Record<string, unknown>; sqlRows?: Array<Record<s
     await next();
   });
   app.route('/', oauthAsRoute);
-  const env = opts.noKey ? {} : { OAUTH_SIGNING_KEY: SECRET, DATABASE_URL: 'postgres://unused' };
+  const env = opts.noKey ? {} : {
+    OAUTH_SIGNING_KEY: SECRET,
+    DATABASE_URL: 'postgres://unused',
+    ...(opts.operationalTokensEnabled ? { CUSTOMER_OPERATIONAL_TOKENS_ENABLED: 'true' } : {}),
+  };
   const req = (path: string, init?: RequestInit) => app.request(path, init, env as never);
-  return { req, inserted };
+  return { req, inserted, mintedTokens };
 }
 
 describe('AS metadata', () => {
@@ -68,6 +88,9 @@ describe('AS metadata', () => {
     expect(j.code_challenge_methods_supported).toEqual(['S256']);
     expect(j.grant_types_supported).toEqual(['authorization_code']);
     expect(j.token_endpoint_auth_methods_supported).toEqual(['none']);
+    expect(j.scopes_supported).toEqual(expect.arrayContaining([
+      'read:session', 'write:evidence', 'write:tool_events', 'write:approval_requests',
+    ]));
   });
   it('fails closed without the signing key', async () => {
     const { req } = appFor({ noKey: true });
@@ -131,17 +154,14 @@ describe('consent', () => {
     const cid = await mintClientId(['http://127.0.0.1/callback'], SECRET, Date.now());
     return { client_id: cid, redirect_uri: 'http://127.0.0.1:41234/callback', code_challenge: CHALLENGE, state: 'st2', scope: 'operator' };
   };
-  it('an owner session gets a code bound to THEIR workspace; operator scope honoured only with the flag', async () => {
+  it('rejects operator scope when operational connectors are disabled instead of silently downgrading it', async () => {
     const { req } = appFor({ auth: { auth_method: 'clerk_jwt', role: 'owner', user_id: 'u_o', workspace_id: 'ws_A' } });
     const res = await req('/oauth/consent', {
       method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(await params()),
     });
-    expect(res.status).toBe(200);
+    expect(res.status).toBe(400);
     const j: any = await res.json();
-    const to = new URL(j.redirect_to);
-    expect(to.searchParams.get('state')).toBe('st2');
-    expect(to.searchParams.get('code')!.startsWith('xac_')).toBe(true);
-    expect(j.granted_role).toBe('viewer'); // CUSTOMER_OPERATIONAL_TOKENS_ENABLED unset in this env ⇒ capped
+    expect(j.error).toBe('invalid_scope');
   });
   it('a non-privileged session is refused', async () => {
     const { req } = appFor({ auth: { auth_method: 'clerk_jwt', role: 'member', user_id: 'u_m', workspace_id: 'ws_A' } });
@@ -157,12 +177,42 @@ describe('consent', () => {
     });
     expect(res.status).toBe(403);
   });
+  it('grants explicit operator action scopes only when operational connectors are enabled', async () => {
+    const { req } = appFor({
+      auth: { auth_method: 'clerk_jwt', role: 'owner', user_id: 'u_o', workspace_id: 'ws_A' },
+      operationalTokensEnabled: true,
+    });
+    const requested = await params();
+    const consent = await req('/oauth/consent', {
+      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(requested),
+    });
+    expect(consent.status).toBe(200);
+    const granted: any = await consent.json();
+    expect(granted.granted_role).toBe('operator');
+    expect(granted.granted_scopes).toEqual(CUSTOMER_CONNECTOR_OPERATOR_SCOPES);
+
+    const code = new URL(granted.redirect_to).searchParams.get('code');
+    expect(code).toBeTruthy();
+    const token = await req('/oauth/token', {
+      method: 'POST',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        grant_type: 'authorization_code', code, client_id: requested.client_id,
+        redirect_uri: requested.redirect_uri, code_verifier: VERIFIER,
+      }).toString(),
+    });
+    expect(token.status).toBe(200);
+    const redeemed: any = await token.json();
+    expect(redeemed.access_token.startsWith('xlk_op_')).toBe(true);
+    expect(redeemed.scope.split(' ')).toEqual(CUSTOMER_CONNECTOR_OPERATOR_SCOPES);
+  });
 });
 
 describe('token exchange', () => {
   const mkCode = (over: Record<string, unknown> = {}) => sealGrant({
     cid_sha: '', redirect_uri: 'http://127.0.0.1:41234/callback', cc: CHALLENGE,
     workspace_id: 'ws_A', user_id: 'u_o', role: 'viewer',
+    scopes: ['read:session', 'read:packets'],
     exp: Math.floor(Date.now() / 1000) + AUTH_CODE_TTL_SECONDS, n: crypto.randomUUID(), ...over,
   } as never, SECRET);
   const form = (o: Record<string, string>) => new URLSearchParams(o).toString();
@@ -183,6 +233,23 @@ describe('token exchange', () => {
     const replay = await req('/oauth/token', { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded' }, body });
     expect(replay.status).toBe(400);
     expect(((await replay.json()) as any).error).toBe('invalid_grant');
+  });
+  it('denies redemption and mints no token when the authorizing membership is absent', async () => {
+    const { req, mintedTokens } = appFor({ membershipActive: false });
+    const cid = await mintClientId(['http://127.0.0.1/callback'], SECRET, Date.now());
+    const { sha256HexOf } = await import('../lib/oauth-as-crypto');
+    const code = await mkCode({ cid_sha: await sha256HexOf(cid) });
+    const res = await req('/oauth/token', {
+      method: 'POST',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      body: form({
+        grant_type: 'authorization_code', code, client_id: cid,
+        redirect_uri: 'http://127.0.0.1:41234/callback', code_verifier: VERIFIER,
+      }),
+    });
+    expect(res.status).toBe(403);
+    expect((await res.json() as any).error).toBe('access_denied');
+    expect(mintedTokens).toHaveLength(0);
   });
   it('an invalid_grant denial emits the structured oauth_as_denied telemetry line', async () => {
     const { req } = appFor();
