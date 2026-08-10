@@ -6922,6 +6922,57 @@
           "reason": "patch backend and MCP dependency graph to current zero-audit advisory floors"
         }
       ]
+    },
+    {
+      "delta_id": "oauth-connector-scope-authority-20260810",
+      "generated_at": "2026-08-10T12:38:57.234Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "3d9fcaf5084784741ee5c551b43399ae6cebb9de",
+      "target_base_commit": "3d9fcaf5084784741ee5c551b43399ae6cebb9de",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "docs/governance/FEATURE_FLAGS.md",
+          "target_blob": "8d8f5c983667d6c28b921b115c03f463c2da1d13",
+          "reason": "Separate identity sign-in from connect-time Gmail and Drive consent; enforce backend registry/config authority."
+        },
+        {
+          "path": "package.json",
+          "target_blob": "55cd22354ffa34bbcaa5b0f0f8d8dc9ac51ed4af",
+          "reason": "Separate identity sign-in from connect-time Gmail and Drive consent; enforce backend registry/config authority."
+        },
+        {
+          "path": "scripts/ci-local.mjs",
+          "target_blob": "39152c1a5646bdf94fcc7201e352a6cddc161255",
+          "reason": "Separate identity sign-in from connect-time Gmail and Drive consent; enforce backend registry/config authority."
+        },
+        {
+          "path": "scripts/verify-connector-provider-ssot.mjs",
+          "target_blob": "006b751eb81b0654e3cb20ce7dc0cd1e1fe32689",
+          "reason": "Separate identity sign-in from connect-time Gmail and Drive consent; enforce backend registry/config authority."
+        },
+        {
+          "path": "src/workers/__tests__/sources-connect-sync.test.ts",
+          "target_blob": "8a74598271e11800413f955e49f14a447459914f",
+          "reason": "Separate identity sign-in from connect-time Gmail and Drive consent; enforce backend registry/config authority."
+        },
+        {
+          "path": "src/workers/lib/connector-registry.ts",
+          "target_blob": "de388b617930e3afff39b4205981041d10707940",
+          "reason": "Separate identity sign-in from connect-time Gmail and Drive consent; enforce backend registry/config authority."
+        },
+        {
+          "path": "wrangler.pilot-shadow.toml",
+          "target_blob": "c705621322fd58b526d8b5ae4c7f5d8b70a67118",
+          "reason": "Separate identity sign-in from connect-time Gmail and Drive consent; enforce backend registry/config authority."
+        },
+        {
+          "path": "wrangler.toml",
+          "target_blob": "6857a176027c502786ece7ac63bdf689620a868e",
+          "reason": "Separate identity sign-in from connect-time Gmail and Drive consent; enforce backend registry/config authority."
+        }
+      ]
     }
   ]
 }

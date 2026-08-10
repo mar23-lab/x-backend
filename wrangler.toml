@@ -167,6 +167,10 @@ CONTEXT_PACKET_PERSISTENCE_ENABLED = "true"
 # requires route-level transaction/receipt evidence.
 CHAT_HISTORY_PERSISTENCE_REQUIRED = "true"
 IDEMPOTENCY_ENABLED = "true"
+# Identity OAuth stays limited to sign-in. Restricted Gmail/Drive scopes are
+# requested only by the explicit source-connect flow and verified here before
+# a tenant source row can be materialized.
+SOURCE_SCOPE_ENFORCEMENT_ENABLED = "true"
 # W4/G2 · operator-owned org ids — connectors auto-approve the operator-approval side for these
 # (the operator IS the authority for their own workspaces). Customer orgs are NOT listed → they
 # require explicit operator approval (POST /admin/customer/:id/approve). Non-secret identifiers.

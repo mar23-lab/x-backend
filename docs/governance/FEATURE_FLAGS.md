@@ -36,7 +36,7 @@ bare `=== 'true'` / `!== 'true'` / `.toLowerCase() === 'true'`. `envFlagTrue` it
 ## Unbound → OFF (activation = redeploy with the var, dashboard var, or `wrangler secret put`)
 | Flag | Direction | Purpose |
 |---|---|---|
-| `SOURCE_SCOPE_ENFORCEMENT_ENABLED` | **fail-toward-less-safe** | restricted-scope guard on source rows (sources.ts); OFF = a source may claim a capability its token can't exercise. FGH-1: dashboard-only activation → MUST be quote-tolerant (now is). |
+| `SOURCE_SCOPE_ENFORCEMENT_ENABLED` | **enabled; paired release invariant** | Restricted-scope guard on source rows (`sources.ts`). Identity sign-in never requests Gmail/Drive data scopes; the Integrations connect flow requests `gmail.readonly` or `drive.metadata.readonly`, and this guard refuses materialization when the provider token lacks the exact scope. Must ship with the commercial connector UI; disabling it is a security regression. |
 | `IDEMPOTENCY_ENABLED` | fail-safe-off | Idempotency-Key reserve-first on governed writes (mig 065 staged) |
 | `CUSTOMER_API_TOKENS_ENABLED` | fail-safe-off | customer bearer-token auth path |
 | `CUSTOMER_OPERATIONAL_TOKENS_ENABLED` | fail-safe-off | operator-scoped customer tokens |
