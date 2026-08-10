@@ -49,10 +49,55 @@ export function parseFrontendReleaseHtml(html) {
   };
 }
 
+export function parseReactRuntimeManifest(manifest) {
+  if (!manifest || typeof manifest !== 'object' || Array.isArray(manifest)) {
+    throw new Error('frontend runtime manifest must be a JSON object');
+  }
+  if (manifest.schema_id !== 'xlooop.frontend_runtime_manifest.v2') {
+    throw new Error(`unsupported frontend runtime manifest: ${String(manifest.schema_id)}`);
+  }
+  return {
+    artifact_contract: 'react_vite_v2',
+    build_mode: manifest.runtime_class,
+    production_cutover_approved: manifest.production_cutover_approved,
+    require_contract_handshake: manifest.require_contract_handshake,
+    api_base: manifest.api_base,
+    frontend_sha: manifest.frontend_sha,
+    backend_sha: manifest.expected_backend_sha,
+    contract_hash: manifest.expected_contract_hash,
+    schema_head: manifest.expected_schema_head,
+    environment: manifest.expected_environment,
+    authority: manifest.expected_authority,
+    feature_posture: manifest.expected_feature_posture,
+    files: manifest.files,
+  };
+}
+
+function parseReactRuntimeManifestFile(artifactDir) {
+  const manifestPath = path.join(artifactDir, 'runtime-manifest.json');
+  if (!existsSync(manifestPath)) return null;
+  let manifest;
+  try {
+    manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
+  } catch {
+    throw new Error(`frontend runtime manifest is not valid JSON: ${manifestPath}`);
+  }
+  return parseReactRuntimeManifest(manifest);
+}
+
 export function parseFrontendReleaseArtifact(artifactDir) {
+  const react = parseReactRuntimeManifestFile(artifactDir);
+  if (react) return react;
   const indexPath = path.join(artifactDir, 'index.html');
   if (!existsSync(indexPath)) throw new Error(`frontend artifact missing ${indexPath}`);
-  return parseFrontendReleaseHtml(readFileSync(indexPath, 'utf8'));
+  const contractMetaPath = path.join(artifactDir, 'contract-meta.js');
+  const contractMeta = existsSync(contractMetaPath) ? readFileSync(contractMetaPath, 'utf8') : '';
+  const contractHash = contractMeta.match(/[0-9a-f]{64}/)?.[0] ?? null;
+  return {
+    artifact_contract: 'legacy_wired_v1',
+    ...parseFrontendReleaseHtml(readFileSync(indexPath, 'utf8')),
+    contract_hash: contractHash,
+  };
 }
 
 export function exactPostureProblems(posture, prefix = 'feature_posture') {
@@ -77,11 +122,24 @@ export function posturesEqual(left, right) {
 export function assessFrontendReleaseArtifact(config, expected) {
   const problems = [];
   if (config.build_mode !== 'production') problems.push('build_mode');
+  if (config.artifact_contract === 'react_vite_v2'
+    && config.production_cutover_approved !== true) {
+    problems.push('production_cutover_approved');
+  }
   if (config.require_contract_handshake !== true) problems.push('require_contract_handshake');
   if (config.api_base !== 'https://api.xlooop.com') problems.push('api_base');
   if (!SHA_PATTERN.test(config.frontend_sha || '')) problems.push('frontend_sha');
   if (!SHA_PATTERN.test(config.backend_sha || '')) problems.push('backend_sha');
   if (!Number.isSafeInteger(config.schema_head) || config.schema_head < 1) problems.push('schema_head');
+  if (expected?.contract_hash && config.contract_hash !== expected.contract_hash) {
+    problems.push('contract_hash_mismatch');
+  }
+  if (expected?.schema_head && config.schema_head !== expected.schema_head) {
+    problems.push('schema_head_mismatch');
+  }
+  if (expected?.feature_posture && !posturesEqual(config.feature_posture, expected.feature_posture)) {
+    problems.push('feature_posture_mismatch');
+  }
   if (config.environment !== 'production') problems.push('environment');
   if (config.authority !== 'production') problems.push('authority');
   problems.push(...exactPostureProblems(config.feature_posture));
@@ -94,25 +152,66 @@ export function assessFrontendReleaseArtifact(config, expected) {
   return { ok: problems.length === 0, problems };
 }
 
+export function releaseManifestDigest(manifest) {
+  const stable = {
+    schema_id: manifest?.schema_id,
+    artifact_contract: manifest?.artifact_contract,
+    frontend_sha: manifest?.frontend_sha,
+    backend_sha: manifest?.backend_sha,
+    contract_hash: manifest?.contract_hash,
+    schema_head: manifest?.schema_head,
+    environment: manifest?.environment,
+    authority: manifest?.authority,
+    api_base: manifest?.api_base,
+    feature_posture: manifest?.feature_posture,
+    files: manifest?.files,
+  };
+  return createHash('sha256').update(JSON.stringify(stable)).digest('hex');
+}
+
 export function verifyStaticArtifactFiles(artifactDir, contractHash) {
   const problems = [];
-  for (const entry of [
-    'index.html',
-    '_headers',
-    'clerk-boot.js',
-    'contract-meta.js',
-    'live-data.js',
-    'support.js',
-    'vendor',
-  ]) {
+  const reactManifest = path.join(artifactDir, 'runtime-manifest.json');
+  const react = existsSync(reactManifest);
+  const required = react
+    ? ['index.html', '_headers', 'runtime-manifest.json', 'assets']
+    : ['index.html', '_headers', 'clerk-boot.js', 'contract-meta.js', 'live-data.js', 'support.js', 'vendor'];
+  for (const entry of required) {
     if (!existsSync(path.join(artifactDir, entry))) problems.push(`missing:${entry}`);
+  }
+  if (react) {
+    const assetsDir = path.join(artifactDir, 'assets');
+    if (existsSync(assetsDir)) {
+      const assetFiles = readdirSync(assetsDir, { recursive: true, withFileTypes: false })
+        .map(String);
+      if (!assetFiles.some((name) => name.endsWith('.js'))) problems.push('missing:assets/*.js');
+    }
+    for (const legacy of ['clerk-boot.js', 'live-data.js', 'support.js', 'vendor']) {
+      if (existsSync(path.join(artifactDir, legacy))) problems.push(`legacy_runtime_leak:${legacy}`);
+    }
   }
   for (const forbidden of ['scripts', 'src', 'node_modules']) {
     if (existsSync(path.join(artifactDir, forbidden))) problems.push(`source_leak:${forbidden}`);
   }
-  const contractMeta = path.join(artifactDir, 'contract-meta.js');
-  if (existsSync(contractMeta) && !readFileSync(contractMeta, 'utf8').includes(contractHash)) {
-    problems.push('contract_hash_mismatch');
+  if (react) {
+    try {
+      const manifest = JSON.parse(readFileSync(reactManifest, 'utf8'));
+      if (manifest.expected_contract_hash !== contractHash) problems.push('contract_hash_mismatch');
+      const declared = manifest.files;
+      const actual = hashReleaseFiles(artifactDir, new Set(['runtime-manifest.json']));
+      if (!declared || typeof declared !== 'object' || Array.isArray(declared)) {
+        problems.push('runtime_manifest_files');
+      } else if (JSON.stringify(declared) !== JSON.stringify(actual)) {
+        problems.push('runtime_manifest_file_hashes');
+      }
+    } catch {
+      problems.push('runtime_manifest_invalid');
+    }
+  } else {
+    const contractMeta = path.join(artifactDir, 'contract-meta.js');
+    if (existsSync(contractMeta) && !readFileSync(contractMeta, 'utf8').includes(contractHash)) {
+      problems.push('contract_hash_mismatch');
+    }
   }
   return problems;
 }
@@ -162,6 +261,9 @@ export function normalizePagesFunctionsBundle(source) {
 export function assessReleaseManifest(manifest, currentHashes = null) {
   const problems = [];
   if (manifest?.schema_id !== 'xlooop.app_pages_release_manifest.v1') problems.push('schema_id');
+  if (!['legacy_wired_v1', 'react_vite_v2'].includes(manifest?.artifact_contract)) {
+    problems.push('artifact_contract');
+  }
   if (!SHA_PATTERN.test(manifest?.frontend_sha || '')) problems.push('frontend_sha');
   if (!SHA_PATTERN.test(manifest?.backend_sha || '')) problems.push('backend_sha');
   if (!HASH_PATTERN.test(manifest?.contract_hash || '')) problems.push('contract_hash');
@@ -171,6 +273,10 @@ export function assessReleaseManifest(manifest, currentHashes = null) {
   problems.push(...exactPostureProblems(manifest?.feature_posture));
   if (!manifest?.files || typeof manifest.files !== 'object' || Array.isArray(manifest.files)) {
     problems.push('files');
+  }
+  if (!HASH_PATTERN.test(manifest?.artifact_digest || '')) problems.push('artifact_digest');
+  else if (manifest.artifact_digest !== releaseManifestDigest(manifest)) {
+    problems.push('artifact_digest_mismatch');
   }
   if (currentHashes) {
     const expected = JSON.stringify(manifest?.files || {});
@@ -280,6 +386,10 @@ export function assessPagesDecisionPacket(packet, expected) {
   if (!UUID_PATTERN.test(rollback.cloudflare_deployment_id || '')) problems.push('rollback_deployment_id');
   if (!rollback.evidence_reference) problems.push('rollback_evidence_reference');
   if (deployment.api_base !== 'https://api.xlooop.com') problems.push('expected_api_base');
+  if (!HASH_PATTERN.test(deployment.artifact_digest || '')) problems.push('expected_artifact_digest');
+  if (!['legacy_wired_v1', 'react_vite_v2'].includes(deployment.artifact_contract)) {
+    problems.push('expected_artifact_contract');
+  }
   if (!Number.isSafeInteger(deployment.schema_head) || deployment.schema_head < 1) {
     problems.push('expected_schema_head');
   }
@@ -296,6 +406,12 @@ export function assessPagesDecisionPacket(packet, expected) {
   }
   if (expected?.contract_hash && deployment.contract_hash !== expected.contract_hash) {
     problems.push('expected_contract_hash_mismatch');
+  }
+  if (expected?.artifact_digest && deployment.artifact_digest !== expected.artifact_digest) {
+    problems.push('expected_artifact_digest_mismatch');
+  }
+  if (expected?.artifact_contract && deployment.artifact_contract !== expected.artifact_contract) {
+    problems.push('expected_artifact_contract_mismatch');
   }
   if (expected?.schema_head && deployment.schema_head !== expected.schema_head) {
     problems.push('expected_schema_head_mismatch');

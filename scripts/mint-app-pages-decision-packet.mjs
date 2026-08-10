@@ -111,6 +111,8 @@ export function buildPagesPacket(manifest, input, nowIso) {
     },
     expected_deployment: {
       api_base: 'https://api.xlooop.com',
+      artifact_digest: manifest.artifact_digest,
+      artifact_contract: manifest.artifact_contract,
       schema_head: manifest.schema_head,
       contract_hash: manifest.contract_hash,
       environment: 'production',
@@ -122,6 +124,8 @@ export function buildPagesPacket(manifest, input, nowIso) {
 
 function selfTest() {
   const manifest = {
+    artifact_digest: 'f'.repeat(64),
+    artifact_contract: 'react_vite_v2',
     frontend_sha: 'a'.repeat(40),
     backend_sha: 'b'.repeat(40),
     contract_hash: 'd'.repeat(64),
@@ -146,7 +150,8 @@ function selfTest() {
       p.candidate.frontend_sha === manifest.frontend_sha && p.candidate.backend_sha === manifest.backend_sha],
     ['expected_deployment mirrors the manifest',
       p.expected_deployment.contract_hash === manifest.contract_hash
-      && p.expected_deployment.schema_head === manifest.schema_head],
+      && p.expected_deployment.schema_head === manifest.schema_head
+      && p.expected_deployment.artifact_digest === manifest.artifact_digest],
     ['ttl is honoured exactly',
       Date.parse(p.decision.expires_at) - Date.parse(p.decision.approved_at) === 25 * 60 * 1000],
     ['rollback frontend differs from the candidate (a rollback to self is not a rollback)',

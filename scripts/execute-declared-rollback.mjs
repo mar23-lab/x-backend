@@ -31,6 +31,7 @@ import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { parseFrontendReleaseHtml, parseReactRuntimeManifest } from './lib/app-pages-release-contract.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const argv = process.argv.slice(2);
@@ -109,6 +110,37 @@ async function pollUntilBuild(apiBase, targetSha, timeoutSeconds) {
   return { ok: false, observed: last };
 }
 
+async function pollUntilFrontend(appBase, targetFrontendSha, targetBackendSha, timeoutSeconds) {
+  const deadline = Date.now() + timeoutSeconds * 1000;
+  let last = null;
+  while (Date.now() < deadline) {
+    try {
+      const base = appBase.replace(/\/$/, '');
+      const nonce = Date.now();
+      let identity = null;
+      const manifestResponse = await fetch(`${base}/runtime-manifest.json?rb=${nonce}`, {
+        cache: 'no-store', signal: AbortSignal.timeout(10_000),
+      });
+      if (manifestResponse.ok) {
+        try { identity = parseReactRuntimeManifest(await manifestResponse.json()); } catch { /* legacy SPA fallback */ }
+      }
+      if (!identity) {
+        const response = await fetch(`${base}/?rb=${nonce}`, {
+          cache: 'no-store', signal: AbortSignal.timeout(10_000),
+        });
+        if (response.ok) identity = parseFrontendReleaseHtml(await response.text());
+      }
+      last = identity;
+      if (identity?.frontend_sha === targetFrontendSha
+        && (!targetBackendSha || identity?.backend_sha === targetBackendSha)) {
+        return { ok: true, observed: identity };
+      }
+    } catch { /* transient during propagation */ }
+    await new Promise((resolve) => setTimeout(resolve, 5000));
+  }
+  return { ok: false, observed: last };
+}
+
 async function main() {
   const packetPath = arg('packet');
   if (!packetPath) refuse('--packet is required', 'Point at the authority packet whose rollback block you want executed.');
@@ -128,9 +160,15 @@ async function main() {
   console.log('execute-declared-rollback · surface=' + surface + ' target=' + targetSha.slice(0, 12) + ' id=' + targetId);
 
   if (surface === 'worker') {
-    run('npx', ['wrangler', 'versions', 'deploy', targetId, '--config', 'wrangler.toml', '--yes'], DRY_RUN);
+    run(process.execPath, [
+      path.join(ROOT, 'node_modules', 'wrangler', 'bin', 'wrangler.js'),
+      'versions', 'deploy', targetId, '--config', 'wrangler.toml', '--yes',
+    ], DRY_RUN);
   } else {
-    run('npx', ['wrangler', 'pages', 'deployment', 'promote', targetId, '--project-name', 'xlooop-app'], DRY_RUN);
+    run(process.execPath, [
+      path.join(ROOT, 'node_modules', 'wrangler', 'bin', 'wrangler.js'),
+      'pages', 'deployment', 'promote', targetId, '--project-name', 'xlooop-app',
+    ], DRY_RUN);
   }
 
   if (DRY_RUN) { console.log('DRY-RUN complete — nothing was changed.'); return; }
@@ -145,7 +183,21 @@ async function main() {
     }
     console.log('VERIFIED · live build is now ' + seen.observed);
   } else {
-    console.log('VERIFIED-PENDING · re-read the live frontend __XLOOP_EXPECTED_BACKEND_SHA to confirm the promote.');
+    const timeoutSeconds = Number(arg('timeout-seconds', '120'));
+    console.log('  verifying the promoted Pages rollback target...');
+    const seen = await pollUntilFrontend(
+      arg('app-base', 'https://app.xlooop.com'),
+      targetSha,
+      packet.rollback.backend_sha || null,
+      timeoutSeconds,
+    );
+    if (!seen.ok) {
+      refuse(
+        `Pages rollback issued but NOT observed within ${timeoutSeconds}s`,
+        `observed frontend=${seen.observed?.frontend_sha || 'unreadable'} backend=${seen.observed?.backend_sha || 'unreadable'}`,
+      );
+    }
+    console.log(`VERIFIED · live frontend is now ${seen.observed.frontend_sha}`);
   }
 }
 

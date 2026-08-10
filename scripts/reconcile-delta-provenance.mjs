@@ -47,6 +47,13 @@ function managedPaths(delta, seed) {
   return s;
 }
 
+function mergePathEntries(existing = [], incoming = []) {
+  const merged = new Map();
+  for (const entry of existing) if (entry?.path) merged.set(entry.path, entry);
+  for (const entry of incoming) if (entry?.path) merged.set(entry.path, entry);
+  return [...merged.values()];
+}
+
 // RETIREMENT (--deleted, 260729). Deleting a delta-managed file used to be INEXPRESSIBLE: the
 // verifier kept expecting the path and reported `missing` forever, so the only routes were a
 // hand-edit of the receipt (forbidden) or abandoning a correct deletion. A control with no
@@ -118,6 +125,9 @@ function reconcile(deltaJson, seedJson, { id, reason, files, deletedFiles = [], 
   if (transformed.length === 0 && exclusions.length === 0) {
     return { changed: false, skipped, transformed, exclusions, refusals };
   }
+  const prior = (deltaJson.deltas ?? []).find((d) => d.delta_id === id);
+  const mergedTransformed = mergePathEntries(prior?.transformed_files, transformed);
+  const mergedExclusions = mergePathEntries(prior?.seed_exclusions, exclusions);
   const delta = {
     delta_id: id,
     generated_at: nowIso,
@@ -125,11 +135,11 @@ function reconcile(deltaJson, seedJson, { id, reason, files, deletedFiles = [], 
     source_commit: sourceCommit,
     target_base_commit: sourceCommit,
     authority: CURRENT_AUTHORITY,
-    copied_files: [],
-    transformed_files: transformed,
+    copied_files: prior?.copied_files ?? [],
+    transformed_files: mergedTransformed,
   };
   // Emitted ONLY when a retirement was actually requested, so existing reconciles are unchanged.
-  if (exclusions.length) delta.seed_exclusions = exclusions;
+  if (mergedExclusions.length) delta.seed_exclusions = mergedExclusions;
   deltaJson.deltas = (deltaJson.deltas ?? []).filter((d) => d.delta_id !== id);
   deltaJson.deltas.push(delta);
   return { changed: true, skipped, transformed, exclusions, refusals, deltaCount: deltaJson.deltas.length };
@@ -145,7 +155,7 @@ function selfTest() {
   const nowIso = new Date().toISOString();
   const files = ['a.ts', 'seed.ts', 'transformed.ts'];
   const r1 = reconcileWith(dj, seed, { id: 'x', reason: 'r2', files, sourceCommit: 'c'.repeat(40), nowIso, hash: () => 'b'.repeat(40) });
-  const r2 = reconcileWith(dj, seed, { id: 'x', reason: 'r2', files, sourceCommit: 'c'.repeat(40), nowIso, hash: () => 'b'.repeat(40) });
+  const r2 = reconcileWith(dj, seed, { id: 'x', reason: 'r3', files: ['a.ts'], sourceCommit: 'c'.repeat(40), nowIso, hash: () => 'b'.repeat(40) });
   const okOne = dj.deltas.filter((d) => d.delta_id === 'x').length === 1;
   const reconciled = dj.deltas.find((d) => d.delta_id === 'x').transformed_files;
   const okBlob = reconciled.length === files.length && reconciled.every((entry) => entry.target_blob === 'b'.repeat(40));
@@ -182,7 +192,7 @@ function selfTest() {
 
   const ok = okOne && okBlob && okAuthority && okSkip && r1.changed && r2.changed
     && okRetire && okRefuseOnDisk && okRefuseTracked && okRefuseUnmanaged && okRefuseNoBlob && okAdditive;
-  console.log(`  self-test: single-delta=${okOne} blob-updated=${okBlob} current-authority=${okAuthority} unmanaged-skipped=${okSkip}`);
+  console.log(`  self-test: single-delta=${okOne} partial-repeat-preserves-full-set=${okBlob} current-authority=${okAuthority} unmanaged-skipped=${okSkip}`);
   console.log(`  self-test: retire=${okRetire} refuse-on-disk=${okRefuseOnDisk} refuse-tracked=${okRefuseTracked} refuse-unmanaged=${okRefuseUnmanaged} refuse-no-blob=${okRefuseNoBlob} additive-no-key=${okAdditive}`);
   console.log(ok ? 'PASS reconcile-delta-provenance self-test' : 'FAIL reconcile-delta-provenance self-test');
   return ok ? 0 : 1;
@@ -198,7 +208,8 @@ function reconcileWith(deltaJson, seedJson, { id, reason, files, sourceCommit, n
     transformed.push({ path, target_blob: hash(path), reason: reason || `reconcile ${id}` });
   }
   if (transformed.length) {
-    const delta = { delta_id: id, generated_at: nowIso, source_repo: 'mar23-lab/x-backend', source_commit: sourceCommit, target_base_commit: sourceCommit, authority: CURRENT_AUTHORITY, copied_files: [], transformed_files: transformed };
+    const prior = (deltaJson.deltas ?? []).find((d) => d.delta_id === id);
+    const delta = { delta_id: id, generated_at: nowIso, source_repo: 'mar23-lab/x-backend', source_commit: sourceCommit, target_base_commit: sourceCommit, authority: CURRENT_AUTHORITY, copied_files: prior?.copied_files ?? [], transformed_files: mergePathEntries(prior?.transformed_files, transformed) };
     deltaJson.deltas = (deltaJson.deltas ?? []).filter((d) => d.delta_id !== id);
     deltaJson.deltas.push(delta);
   }

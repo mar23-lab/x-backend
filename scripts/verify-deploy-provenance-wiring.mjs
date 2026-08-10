@@ -32,18 +32,22 @@ try {
   const dev = pkg.scripts?.['dev:api'];
   const bundle = pkg.scripts?.['verify:bundle'];
   const authorityDeploy = pkg.scripts?.['verify:authority-decision:deploy'];
+  const authorityRatify = pkg.scripts?.['deploy:api:ratify'];
   if (typeof deploy !== 'string') throw new Error('scripts["deploy:api"] missing or not a string');
+  const pairedDeploy = readFileSync(join(root, 'scripts', 'deploy-paired-prod.mjs'), 'utf8');
+  const deployContract = `${deploy}\n${pairedDeploy}`;
 
   const missing = [];
-  if (!/--var\s+BUILD_SHA:/.test(deploy)) missing.push('--var BUILD_SHA:<sha>');
-  if (!/--var\s+BUILD_TIME:/.test(deploy)) missing.push('--var BUILD_TIME:<iso>');
-  if (!/--var\s+XLOOOP_SCHEMA_HEAD:\$XLOOOP_SCHEMA_HEAD/.test(deploy)) {
+  if (!/`BUILD_SHA:\$\{head\}`/.test(deployContract)) missing.push('--var BUILD_SHA:<sha>');
+  if (!/`BUILD_TIME:\$\{new Date\(\)/.test(deployContract)) missing.push('--var BUILD_TIME:<iso>');
+  if (!/`XLOOOP_SCHEMA_HEAD:\$\{process\.env\.XLOOOP_SCHEMA_HEAD\}`/.test(deployContract)) {
     missing.push('--var XLOOOP_SCHEMA_HEAD:$XLOOOP_SCHEMA_HEAD');
   }
-  if (!/git\s+rev-parse\s+HEAD/.test(deploy) || /git\s+rev-parse\s+--short\s+HEAD/.test(deploy)) {
+  if (!/execFileSync\('git', \['rev-parse', 'HEAD'\]/.test(deployContract)
+      || /rev-parse[^\n]+--short/.test(deployContract)) {
     missing.push('full 40-character git rev-parse HEAD');
   }
-  if (!/verify-deploy-schema-head\.mjs/.test(deploy)) {
+  if (!/verify-deploy-schema-head\.mjs/.test(deployContract)) {
     missing.push('verify-deploy-schema-head.mjs preflight');
   }
   // 260727 — the POST-deploy half. A gate's asserted set must cover every step it claims to protect.
@@ -54,8 +58,15 @@ try {
   // production served 3d7ade27 off-main. The readback is the only step that compares INTENT to LIVE
   // TRUTH, so it is the one that would have caught the fork. Assert it, and assert the propagation
   // window with it — a single-shot readback races the edge and would fail correct deploys.
-  if (!/deploy:api:receipt|emit-deploy-receipt\.mjs/.test(deploy)) {
+  if (!/emit-deploy-receipt\.mjs/.test(deployContract)) {
     missing.push('post-deploy receipt step (npm run deploy:api:receipt) chained into deploy:api');
+  }
+  if (!/ratify-authority-decision-packet\.mjs/.test(deployContract)) {
+    missing.push('post-deploy exact health ratification chained into deploy:api');
+  }
+  if (typeof authorityRatify !== 'string'
+    || !/ratify-authority-decision-packet\.mjs/.test(authorityRatify)) {
+    missing.push('scripts["deploy:api:ratify"] invoking the ratification producer');
   }
   const receiptScript = pkg.scripts?.['deploy:api:receipt'];
   if (typeof receiptScript !== 'string' || !/emit-deploy-receipt\.mjs/.test(receiptScript)) {
@@ -63,17 +74,20 @@ try {
   } else if (!/--wait\s+\d+/.test(receiptScript)) {
     missing.push('deploy:api:receipt must pass --wait <seconds> (a single-shot /health readback races edge propagation)');
   }
-  if (!/verify-operation-event-source-tool-constraint\.mjs\s+--live/.test(deploy)) {
+  if (!/verify-operation-event-source-tool-constraint\.mjs[\s\S]{0,120}'--live'/.test(deployContract)) {
     missing.push('deploy:api live operation-event source-tool semantic proof');
+  }
+  if (!/preflight-model-runtime-keyring\.mjs/.test(deployContract)) {
+    missing.push('model-runtime keyring secret preflight');
   }
   if (!/verify-operation-event-source-tool-constraint\.mjs/.test(predeployMigrationGate)
       || !/--live/.test(predeployMigrationGate)) {
     missing.push('raw wrangler predeploy live operation-event source-tool semantic proof');
   }
-  if (!/npm\s+run\s+verify:authority-decision:deploy/.test(deploy)) {
+  if (!/assessAuthorityPacket\(api, 'deploy'/.test(deployContract)) {
     missing.push('verify:authority-decision:deploy preflight');
   }
-  if (!/consume-api-deployment-authorization\.mjs/.test(deploy)) {
+  if (!/consumeDeploymentAuthorization\(ROOT, 'api'/.test(deployContract)) {
     missing.push('single-use API deployment authorization reservation');
   }
   if (
@@ -82,7 +96,7 @@ try {
   ) {
     missing.push('exact operator-approved authority packet verifier');
   }
-  if (/DEPLOY_MIGRATION_GATE_NONPROD=1/.test(deploy)) {
+  if (/DEPLOY_MIGRATION_GATE_NONPROD=1/.test(deployContract)) {
     missing.push('deploy:api must not opt out as non-production');
   }
   if (typeof dev !== 'string' || !/DEPLOY_MIGRATION_GATE_NONPROD=1/.test(dev)) {

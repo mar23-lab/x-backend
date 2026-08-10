@@ -220,6 +220,21 @@ async function messageIntentRef(message: string): Promise<string> {
   return `sha256:${Array.from(new Uint8Array(hash), (b) => b.toString(16).padStart(2, '0')).join('')}`;
 }
 
+function canonicalJson(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(',')}]`;
+  if (value && typeof value === 'object') {
+    return `{${Object.keys(value as Record<string, unknown>).sort().map((key) =>
+      `${JSON.stringify(key)}:${canonicalJson((value as Record<string, unknown>)[key])}`).join(',')}}`;
+  }
+  return JSON.stringify(value) ?? 'null';
+}
+
+async function contentRef(prefix: string, value: unknown): Promise<string | null> {
+  if (value === null || value === undefined) return null;
+  const hash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(canonicalJson(value)));
+  return `${prefix}:${Array.from(new Uint8Array(hash)).map((byte) => byte.toString(16).padStart(2, '0')).join('')}`;
+}
+
 type CustomerChatContext = Context<{
   Bindings: CustomerChatEnv;
   Variables: CustomerChatVariables;
@@ -895,6 +910,22 @@ async function handleCustomerChat(ctx: CustomerChatContext) {
     const turnPayload = {
       schema_id: 'xlooop.chat_turn.v1',
       ...commercialResponse,
+      context: {
+        packet_fingerprint: assistantLineage.context_fingerprint,
+        generated_at: assistantLineage.context_generated_at,
+        stale_after_s: assistantLineage.context_stale_after_s,
+        role_skill_catalog_hash: assistantLineage.catalog_manifest_sha256,
+        selected_skill_versions: assistantLineage.resolution.selected_skills,
+        effective_profile_ref: await contentRef(
+          'effective-personalization-profile.v1',
+          personalizationProfile,
+        ),
+        source_freshness: result.grounded_on.data_freshness,
+      },
+      citations: [
+        ...(result.grounded_on.event_ids ?? []).map((ref) => ({ kind: 'event', ref })),
+        ...result.grounded_on.documents.names.map((label) => ({ kind: 'document', label })),
+      ],
       receipts: {
         answer_receipt_id: conversation.assistant_receipt_id,
         execution_receipt_id: result.execution.receipt_id,

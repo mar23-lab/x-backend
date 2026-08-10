@@ -39,6 +39,8 @@ function fixture() {
     },
     expected_deployment: {
       api_base: 'https://api.xlooop.com',
+      artifact_digest: 'f'.repeat(64),
+      artifact_contract: 'react_vite_v2',
       schema_head: 89,
       contract_hash: 'd'.repeat(64),
       environment: 'production',
@@ -61,6 +63,8 @@ if (selfTest) {
     frontend_sha: approved.candidate.frontend_sha,
     backend_sha: approved.candidate.backend_sha,
     contract_hash: approved.expected_deployment.contract_hash,
+    artifact_digest: approved.expected_deployment.artifact_digest,
+    artifact_contract: approved.expected_deployment.artifact_contract,
     schema_head: approved.expected_deployment.schema_head,
     feature_posture: approved.expected_deployment.feature_posture,
     now: '2026-07-26T00:10:00Z',
@@ -90,6 +94,14 @@ if (selfTest) {
     ['wrong backend', !assessPagesDecisionPacket({
       ...approved,
       candidate: { ...approved.candidate, backend_sha: 'e'.repeat(40) },
+    }, expected).ok],
+    ['wrong artifact digest', !assessPagesDecisionPacket({
+      ...approved,
+      expected_deployment: { ...approved.expected_deployment, artifact_digest: '0'.repeat(64) },
+    }, expected).ok],
+    ['wrong artifact contract', !assessPagesDecisionPacket({
+      ...approved,
+      expected_deployment: { ...approved.expected_deployment, artifact_contract: 'legacy_wired_v1' },
     }, expected).ok],
     ['commercial claim', !assessPagesDecisionPacket({
       ...approved,

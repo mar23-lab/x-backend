@@ -9,13 +9,16 @@
 // shape — the same one CONTRACT_PRODUCER_GATE.yml exists to refuse.
 //
 // WHAT IT DERIVES vs WHAT IT REFUSES TO GUESS.
-// Everything mechanically knowable is derived FROM THE LIVE SYSTEM, never from config:
+// Candidate expectations are derived FROM THE COMMITTED CANDIDATE, while the running Worker is
+// retained as PRE-DEPLOY/ROLLBACK observation. Copying contract/schema/posture from the old live
+// Worker made every migration or contract-changing cutover unratifiable by construction.
 //   candidate_commit_sha   git rev-parse HEAD
-//   contract_hash          GET /api/v1/health   (NOT docs/contracts/*.json — config is intent,
-//   schema_head            GET /api/v1/health    the running Worker is state. Reading config and
-//   environment            GET /api/v1/health    calling it runtime produced several false findings
-//   authority              GET /api/v1/health    on 260728.)
-//   feature_posture        GET /api/v1/health
+//   contract_hash          candidate docs/contracts/api-contract.v1.json
+//   schema_head            XLOOOP_SCHEMA_HEAD == candidate migration head (the deploy preflight
+//                          separately proves database == configured == candidate)
+//   environment/authority  candidate wrangler.toml
+//   feature_posture        candidate wrangler.toml through the same strict truth vocabulary
+//   rollback observation   GET /api/v1/health, whose build must equal --rollback-sha
 //
 // The one thing it will NOT synthesise is the human:
 //   --approver is MANDATORY. Absent it, the script refuses. The operator's identity must never be
@@ -61,6 +64,15 @@ import { randomUUID } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import {
+  POSTURE_FLAGS,
+  localMigrationHead as sharedLocalMigrationHead,
+  readCandidateDeploymentContract as sharedCandidateDeploymentContract,
+} from './lib/candidate-deployment-contract.mjs';
+import {
+  assessReleaseManifest,
+  hashReleaseFiles,
+} from './lib/app-pages-release-contract.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const argv = process.argv.slice(2);
@@ -78,7 +90,25 @@ function refuse(reason, hint) {
 }
 
 const HEX40 = /^[0-9a-f]{40}$/;
+const HASH64 = /^[0-9a-f]{64}$/;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function localMigrationHead() {
+  try {
+    return sharedLocalMigrationHead(ROOT);
+  } catch (error) {
+    refuse(error instanceof Error ? error.message : String(error));
+  }
+}
+
+/** Candidate expectation. The live Worker is rollback evidence, not a source for the new build. */
+export function readCandidateDeploymentContract(env = process.env) {
+  try {
+    return sharedCandidateDeploymentContract(ROOT, env);
+  } catch (error) {
+    refuse(error instanceof Error ? error.message : String(error));
+  }
+}
 
 // git, with the per-invocation environment stripped. Under a hook, GIT_DIR overrides discovery and
 // a cwd-scoped call reads/writes the WRONG repository — the defect fixed in #108. Same rule here.
@@ -108,7 +138,7 @@ async function readLiveHealth(apiBase) {
   }
 }
 
-export function buildPacket({ candidate, live, approver, approvalReference, rollbackSha,
+export function buildPacket({ candidate, live, candidateDeployment, approver, approvalReference, rollbackSha,
   rollbackVersionId, rollbackEvidence, ttlMinutes, now, cutoverId, pairedFrontendRelease = null }) {
   const approvedAt = new Date(now);
   const expiresAt = new Date(approvedAt.getTime() + ttlMinutes * 60 * 1000);
@@ -158,10 +188,15 @@ export function buildPacket({ candidate, live, approver, approvalReference, roll
     // Omitted (no --paired-release-dir) => absent, which is correct for a solo API deploy where the
     // live frontend already expects the candidate.
     ...(pairedFrontendRelease ? { paired_frontend_release: pairedFrontendRelease } : {}),
-    // Measured from the LIVE target, except build_sha which is what the deploy must PRODUCE.
+    // Derived from the committed candidate. The live target is pre-deploy/rollback evidence and
+    // cannot describe a contract, posture, or schema that has not been deployed yet.
     expected_deployment: {
-      worker_name: 'xlooop-api',
+      ...candidateDeployment,
       build_sha: candidate,
+    },
+    pre_deploy_observation: {
+      status: live.status,
+      build_sha: live.build,
       contract_hash: live.contract_hash,
       schema_head: Number(live.schema_head),
       environment: live.environment,
@@ -232,13 +267,36 @@ async function main() {
       refuse(`the assembled release targets backend ${String(manifest.backend_sha).slice(0, 12)}, not the candidate ${candidate.slice(0, 12)}`,
         'Re-assemble with `npm run prepare:app:prod` from the sha you are deploying, or the pair is a lie.');
     }
-    pairedFrontendRelease = { artifact_dir: pairedDir, backend_sha: manifest.backend_sha };
+    const manifestAssessment = assessReleaseManifest(
+      manifest,
+      hashReleaseFiles(pairedDir),
+    );
+    if (!manifestAssessment.ok) {
+      refuse(`assembled release manifest is not authoritative: ${manifestAssessment.problems.join(',')}`);
+    }
+    pairedFrontendRelease = {
+      artifact_dir: pairedDir,
+      artifact_digest: manifest.artifact_digest,
+      artifact_contract: manifest.artifact_contract,
+      frontend_sha: manifest.frontend_sha,
+      backend_sha: manifest.backend_sha,
+      contract_hash: manifest.contract_hash,
+      schema_head: manifest.schema_head,
+      feature_posture: manifest.feature_posture,
+    };
   }
 
   const live = await readLiveHealth(arg('api-base', 'https://api.xlooop.com'));
+  if (live.build !== rollbackSha) {
+    refuse(
+      `live build ${String(live.build).slice(0, 12)} does not match rollback sha ${rollbackSha.slice(0, 12)}`,
+      'The rollback target must be the production build observed immediately before cutover.',
+    );
+  }
+  const candidateDeployment = readCandidateDeploymentContract();
   const packet = buildPacket({
     pairedFrontendRelease,
-    candidate, live, approver, approvalReference, rollbackSha, rollbackVersionId,
+    candidate, live, candidateDeployment, approver, approvalReference, rollbackSha, rollbackVersionId,
     rollbackEvidence: arg('rollback-evidence', 'wrangler:versions-list:' + new Date().toISOString().slice(0, 10)),
     ttlMinutes, now: Date.now(),
     // Omitted => a fresh id, which is correct for a standalone API deploy. Pass the FIRST packet's
@@ -287,20 +345,48 @@ function selfTest() {
       current_work_projection: false,
     },
   };
+  const candidateDeployment = {
+    worker_name: 'xlooop-api', contract_hash: 'e'.repeat(64), schema_head: 100,
+    environment: 'production', authority: 'production',
+    feature_posture: {
+      single_intake: true, role_skill_catalog: true, context_packet_persistence: true,
+      chat_history_persistence_required: true, tenant_projection_queue: false,
+      current_work_projection: true,
+    },
+  };
   const base = {
-    candidate: 'a'.repeat(40), live, approver: 'Marat Basyrov',
+    candidate: 'a'.repeat(40), live, candidateDeployment, approver: 'Marat Basyrov',
     approvalReference: 'conversation:selftest', rollbackSha: 'd'.repeat(40),
     rollbackVersionId: '5c20d49c-957b-4a89-8379-7e4bb1bde936',
     rollbackEvidence: 'wrangler:versions-list:selftest', ttlMinutes: 25, now: Date.parse('2026-07-28T00:00:00Z'),
     cutoverId: '11111111-2222-3333-4444-555555555555',
   };
   const checks = [];
+  const sourceContract = readCandidateDeploymentContract({
+    XLOOOP_SCHEMA_HEAD: String(localMigrationHead()),
+  });
   const p = buildPacket(base);
   checks.push(['schema_id is v2', p.schema_id === 'xlooop.authority_decision_packet.v2']);
   checks.push(['commercial_release_allowed is pinned false', p.commercial_release_allowed === false]);
   checks.push(['candidate carried into expected_deployment.build_sha', p.expected_deployment.build_sha === base.candidate]);
-  checks.push(['contract_hash comes from LIVE, not config', p.expected_deployment.contract_hash === live.contract_hash]);
-  checks.push(['schema_head comes from LIVE', p.expected_deployment.schema_head === 91]);
+  checks.push(['contract_hash comes from CANDIDATE, not old live target',
+    p.expected_deployment.contract_hash === candidateDeployment.contract_hash
+      && p.expected_deployment.contract_hash !== live.contract_hash]);
+  checks.push(['schema_head comes from CANDIDATE, not old live target',
+    p.expected_deployment.schema_head === candidateDeployment.schema_head
+      && p.expected_deployment.schema_head !== live.schema_head]);
+  checks.push(['old live state is retained only as pre-deploy evidence',
+    p.pre_deploy_observation.build_sha === live.build
+      && p.pre_deploy_observation.schema_head === live.schema_head]);
+  checks.push(['candidate source contract matches local migration head',
+    sourceContract.schema_head === localMigrationHead()]);
+  checks.push(['candidate source contract reads the committed API contract',
+    HASH64.test(sourceContract.contract_hash)
+      && sourceContract.contract_hash !== live.contract_hash]);
+  checks.push(['candidate source posture is complete and production-scoped',
+    sourceContract.environment === 'production'
+      && sourceContract.authority === 'production'
+      && Object.keys(sourceContract.feature_posture).length === Object.keys(POSTURE_FLAGS).length]);
   checks.push(['authorization_id is a fresh uuid', UUID.test(p.decision.authorization_id)]);
   checks.push(['a second mint gets a DIFFERENT authorization_id',
     buildPacket(base).decision.authorization_id !== p.decision.authorization_id]);

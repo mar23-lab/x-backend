@@ -3,6 +3,7 @@
   "status": "draft_not_approved",
   "deployment_allowed": false,
   "commercial_release_allowed": false,
+  "cutover_id": "<uuid-shared-with-api-packet>",
   "decision": {
     "approver": null,
     "approval_reference": null,
@@ -22,12 +23,15 @@
   },
   "rollback": {
     "frontend_sha": "<distinct-40-character-frontend-sha>",
+    "backend_sha": "<same-rollback-backend-sha-as-api-packet>",
     "cloudflare_deployment_id": "<uuid>",
     "evidence_reference": "<wrangler-pages-deployment-list-reference>"
   },
   "expected_deployment": {
     "api_base": "https://api.xlooop.com",
-    "schema_head": 89,
+    "artifact_digest": "<64-character-assembled-release-digest>",
+    "artifact_contract": "react_vite_v2",
+    "schema_head": 100,
     "contract_hash": "<64-character-api-contract-hash>",
     "environment": "production",
     "authority": "production",

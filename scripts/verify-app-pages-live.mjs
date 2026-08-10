@@ -6,6 +6,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   assessFrontendReleaseArtifact,
+  parseReactRuntimeManifest,
   parseFrontendReleaseHtml,
   posturesEqual,
 } from './lib/app-pages-release-contract.mjs';
@@ -39,26 +40,38 @@ const failures = [];
 try {
   const manifest = JSON.parse(readFileSync(path.join(releaseDir, 'release-manifest.json'), 'utf8'));
   const nonce = `xlooop-release-${Date.now()}`;
-  const [indexResponse, manifestResponse, contractResponse, healthResponse] = await Promise.all([
+  const reactArtifact = manifest.artifact_contract === 'react_vite_v2';
+  const [indexResponse, manifestResponse, runtimeIdentityResponse, healthResponse] = await Promise.all([
     fetchRequired(`${appUrl}/?release_probe=${nonce}`),
     fetchRequired(`${appUrl}/release-manifest.json?release_probe=${nonce}`),
-    fetchRequired(`${appUrl}/contract-meta.js?release_probe=${nonce}`),
+    fetchRequired(`${appUrl}/${reactArtifact ? 'runtime-manifest.json' : 'contract-meta.js'}?release_probe=${nonce}`),
     fetchRequired(`${manifest.api_base}/api/v1/health?release_probe=${nonce}`),
   ]);
-  const [html, liveManifest, contractMeta, health] = await Promise.all([
-    indexResponse.text(),
+  const [indexBytes, liveManifest, runtimeIdentity, health] = await Promise.all([
+    indexResponse.arrayBuffer().then((value) => Buffer.from(value)),
     parseJsonResponse(manifestResponse, 'live release manifest'),
-    contractResponse.text(),
+    reactArtifact
+      ? parseJsonResponse(runtimeIdentityResponse, 'live runtime manifest')
+      : runtimeIdentityResponse.text(),
     parseJsonResponse(healthResponse, 'backend health response'),
   ]);
-  const config = parseFrontendReleaseHtml(html);
+  const html = indexBytes.toString('utf8');
+  const config = reactArtifact
+    ? parseReactRuntimeManifest(runtimeIdentity)
+    : parseFrontendReleaseHtml(html);
   const artifact = assessFrontendReleaseArtifact(config, {
     frontend_sha: manifest.frontend_sha,
     backend_sha: manifest.backend_sha,
+    contract_hash: manifest.contract_hash,
+    schema_head: manifest.schema_head,
+    feature_posture: manifest.feature_posture,
   });
   failures.push(...artifact.problems);
   if (JSON.stringify(liveManifest) !== JSON.stringify(manifest)) failures.push('live_release_manifest');
-  if (!contractMeta.includes(manifest.contract_hash)) failures.push('live_contract_meta');
+  if (reactArtifact) {
+    const localRuntime = JSON.parse(readFileSync(path.join(releaseDir, 'runtime-manifest.json'), 'utf8'));
+    if (JSON.stringify(runtimeIdentity) !== JSON.stringify(localRuntime)) failures.push('live_runtime_manifest');
+  } else if (!runtimeIdentity.includes(manifest.contract_hash)) failures.push('live_contract_meta');
   if (html.includes('data-xlooop-sentry-bootstrap')) {
     if (!html.includes(`window.SENTRY_RELEASE="${manifest.frontend_sha}"`)) {
       failures.push('live_sentry_release');
@@ -83,6 +96,9 @@ try {
   if (!posturesEqual(health.feature_posture, manifest.feature_posture)) {
     failures.push('health_feature_posture');
   }
+  if (health?.bindings?.model_runtime_keyring !== true) failures.push('health_model_runtime_keyring');
+
+  if (sha256(indexBytes) !== manifest.files['index.html']) failures.push('live_asset_hash:index.html');
 
   const publicAssets = Object.entries(manifest.files).filter(([relative]) => ![
     '_headers',

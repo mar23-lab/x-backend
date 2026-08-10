@@ -49,7 +49,7 @@ const WRANGLER_BIN = existsSync(LOCAL_WRANGLER) ? LOCAL_WRANGLER : 'wrangler';
 // banner contains '[' both as ANSI escapes and as the literal "[WARNING]", so a
 // slice-from-first-'[' parse fails either way. Robust approach: strip ANSI, then scan each
 // candidate '[' with a depth-matched, string-aware extraction; return the first JSON array found.
-function parseSecretNames(raw) {
+export function parseSecretNames(raw) {
   const cleaned = raw.replace(/\u001b\[[0-9;]*[A-Za-z]/g, '');
   for (let start = cleaned.indexOf('['); start !== -1; start = cleaned.indexOf('[', start + 1)) {
     let depth = 0;
@@ -82,6 +82,11 @@ function parseSecretNames(raw) {
   throw new Error('secret list output contained no parseable JSON array');
 }
 
+export function listSecretNames() {
+  const raw = execFileSync(WRANGLER_BIN, ['secret', 'list', '--config', CONFIG], { encoding: 'utf8' });
+  return parseSecretNames(raw);
+}
+
 function selfTest() {
   const cases = [
     { raw: '[{"name":"XLOOOP_RLS_APP_DATABASE_URL","type":"secret_text"},{"name":"CLERK_SECRET_KEY","type":"secret_text"}]', want: true },
@@ -103,26 +108,26 @@ function selfTest() {
   return ok ? 0 : 1;
 }
 
-if (process.argv.includes('--self-test')) {
-  process.exit(selfTest());
+function main() {
+  if (process.argv.includes('--self-test')) process.exit(selfTest());
+
+  let names;
+  try {
+    names = listSecretNames();
+  } catch (err) {
+    console.error(`FAIL preflight-rls-dsn: could not list wrangler secrets (${err.message}).`);
+    console.error('Refusing the deploy — an unverifiable secret list cannot prove RLS is bound (fail closed).');
+    process.exit(1);
+  }
+
+  if (!names.includes(REQUIRED_SECRET)) {
+    console.error(`FAIL preflight-rls-dsn: required secret ${REQUIRED_SECRET} is NOT bound.`);
+    console.error('Deploying now would fail RLS OPEN (reads fall back to the owner connection → cross-tenant leak).');
+    console.error(`Fix: wrangler secret put ${REQUIRED_SECRET} --config ${CONFIG}  (then re-run the deploy).`);
+    process.exit(1);
+  }
+
+  console.log(`PASS preflight-rls-dsn: ${REQUIRED_SECRET} is bound (${names.length} secret(s) total) — RLS DSN present.`);
 }
 
-let names;
-try {
-  const raw = execFileSync(WRANGLER_BIN, ['secret', 'list', '--config', CONFIG], { encoding: 'utf8' });
-  names = parseSecretNames(raw);
-} catch (err) {
-  console.error(`FAIL preflight-rls-dsn: could not list wrangler secrets (${err.message}).`);
-  console.error('Refusing the deploy — an unverifiable secret list cannot prove RLS is bound (fail closed).');
-  process.exit(1);
-}
-
-if (!names.includes(REQUIRED_SECRET)) {
-  console.error(`FAIL preflight-rls-dsn: required secret ${REQUIRED_SECRET} is NOT bound.`);
-  console.error('Deploying now would fail RLS OPEN (reads fall back to the owner connection → cross-tenant leak).');
-  console.error(`Fix: wrangler secret put ${REQUIRED_SECRET} --config ${CONFIG}  (then re-run the deploy).`);
-  process.exit(1);
-}
-
-console.log(`PASS preflight-rls-dsn: ${REQUIRED_SECRET} is bound (${names.length} secret(s) total) — RLS DSN present.`);
-process.exit(0);
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) main();

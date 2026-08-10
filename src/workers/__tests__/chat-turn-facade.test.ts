@@ -4,6 +4,10 @@ import { Hono } from 'hono';
 vi.mock('../lib/assistant-context-lineage', () => ({
   persistAssistantContextLineage: vi.fn(async () => ({
     context_packet_id: 'context_packet_1',
+    context_fingerprint: 'ctxfp-test-1',
+    context_generated_at: '2026-08-10T00:00:00Z',
+    context_stale_after_s: 900,
+    catalog_manifest_sha256: 'c'.repeat(64),
     resolution_id: 'policy_resolution_1',
     action: 'assistant:answer',
     resolution: { selected_skills: [{ key: 'customer-answer', version: '1' }] },
@@ -98,6 +102,14 @@ describe('POST /api/v1/chat/turns', () => {
       skill_invocation_receipt_ids: ['skill_receipt_1'],
     });
     expect(body.receipts).not.toHaveProperty('audit_receipt_id');
+    expect(body.context).toMatchObject({
+      packet_fingerprint: 'ctxfp-test-1',
+      generated_at: '2026-08-10T00:00:00Z',
+      stale_after_s: 900,
+      role_skill_catalog_hash: 'c'.repeat(64),
+      selected_skill_versions: [{ key: 'customer-answer', version: '1' }],
+    });
+    expect(body.citations).toEqual([]);
     expect(body.streaming).toMatchObject({
       status: 'enabled', mode: 'atomic_post_completion', provider_native: false, receipt_before_stream: true,
     });

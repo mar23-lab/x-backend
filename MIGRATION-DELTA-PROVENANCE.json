@@ -6789,6 +6789,108 @@
           "reason": "Require the live chat service boundary, reject stale current-state claims, classify legacy history, and enforce governed conversational callsites"
         }
       ]
+    },
+    {
+      "delta_id": "react-pages-live-ai-release-controls-20260810",
+      "generated_at": "2026-08-10T07:30:22.937Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "e557c286440a25dbaa7c02cac2f60a16384572ed",
+      "target_base_commit": "e557c286440a25dbaa7c02cac2f60a16384572ed",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "package.json",
+          "target_blob": "69b1ebeb57e9dea0416226c7204696e8dde06034",
+          "reason": "Bind candidate-derived API authority, post-deploy ratification, model-runtime keyring preflight, and React Pages runtime-manifest pairing without weakening the single governed release path"
+        },
+        {
+          "path": "scripts/ci-local.mjs",
+          "target_blob": "0d029799d24e433842564b6f0a18ac45d0885796",
+          "reason": "Bind candidate-derived API authority, post-deploy ratification, model-runtime keyring preflight, and React Pages runtime-manifest pairing without weakening the single governed release path"
+        },
+        {
+          "path": "scripts/verify-deploy-provenance-wiring.mjs",
+          "target_blob": "10eced94628e33c4c8e238f2304449addd7c8681",
+          "reason": "Bind candidate-derived API authority, post-deploy ratification, model-runtime keyring preflight, and React Pages runtime-manifest pairing without weakening the single governed release path"
+        },
+        {
+          "path": "scripts/lib/app-pages-release-contract.mjs",
+          "target_blob": "8ffee0201978548bd37a7cd9518fe62bfd928efe",
+          "reason": "Bind candidate-derived API authority, post-deploy ratification, model-runtime keyring preflight, and React Pages runtime-manifest pairing without weakening the single governed release path"
+        }
+      ]
+    },
+    {
+      "delta_id": "paired-production-cutover-commercial-chat-provenance-20260810",
+      "generated_at": "2026-08-10T09:17:21.992Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "e557c286440a25dbaa7c02cac2f60a16384572ed",
+      "target_base_commit": "e557c286440a25dbaa7c02cac2f60a16384572ed",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "docs/deployment/DEPLOYED_SURFACES.yml",
+          "target_blob": "28e7b496a13a1862e5f4b93b653e9196270bf047",
+          "reason": "bind paired production cutover, rollback authority, model-keyring readiness, live chat provenance, canonical deployed-surface convergence, fresh redacted MB-P projection, and merge-safe provenance reconciliation"
+        },
+        {
+          "path": "package.json",
+          "target_blob": "7afe54f8dd728ff2cb5113aac040cce831835856",
+          "reason": "bind paired production cutover, rollback authority, model-keyring readiness, live chat provenance, canonical deployed-surface convergence, fresh redacted MB-P projection, and merge-safe provenance reconciliation"
+        },
+        {
+          "path": "scripts/ci-local.mjs",
+          "target_blob": "261779a40bcb25efe1af9c746e7726f371bc6c14",
+          "reason": "bind paired production cutover, rollback authority, model-keyring readiness, live chat provenance, canonical deployed-surface convergence, fresh redacted MB-P projection, and merge-safe provenance reconciliation"
+        },
+        {
+          "path": "scripts/lib/app-pages-release-contract.mjs",
+          "target_blob": "cde2f687a4ee9af4c452b7309bca107edd938547",
+          "reason": "bind paired production cutover, rollback authority, model-keyring readiness, live chat provenance, canonical deployed-surface convergence, fresh redacted MB-P projection, and merge-safe provenance reconciliation"
+        },
+        {
+          "path": "scripts/mint-app-pages-decision-packet.mjs",
+          "target_blob": "fbcbad461fb998adf4e72f7820d520a0deb8f2bc",
+          "reason": "bind paired production cutover, rollback authority, model-keyring readiness, live chat provenance, canonical deployed-surface convergence, fresh redacted MB-P projection, and merge-safe provenance reconciliation"
+        },
+        {
+          "path": "scripts/verify-deploy-provenance-wiring.mjs",
+          "target_blob": "d321268a9ba80251371d2e1cf42dd2e12c5b24b4",
+          "reason": "bind paired production cutover, rollback authority, model-keyring readiness, live chat provenance, canonical deployed-surface convergence, fresh redacted MB-P projection, and merge-safe provenance reconciliation"
+        },
+        {
+          "path": "src/workers/__tests__/health.test.ts",
+          "target_blob": "d3cac3eb5a5582af07f58b8f8794937cede9b5e5",
+          "reason": "bind paired production cutover, rollback authority, model-keyring readiness, live chat provenance, canonical deployed-surface convergence, fresh redacted MB-P projection, and merge-safe provenance reconciliation"
+        },
+        {
+          "path": "src/workers/lib/assistant-context-lineage.ts",
+          "target_blob": "68619b44485f6b43f85df7535d6a72404b6dc08c",
+          "reason": "bind paired production cutover, rollback authority, model-keyring readiness, live chat provenance, canonical deployed-surface convergence, fresh redacted MB-P projection, and merge-safe provenance reconciliation"
+        },
+        {
+          "path": "src/workers/routes/customer-chat.ts",
+          "target_blob": "177f7dd04a31385e67140041d9f05cd2cde24dc4",
+          "reason": "bind paired production cutover, rollback authority, model-keyring readiness, live chat provenance, canonical deployed-surface convergence, fresh redacted MB-P projection, and merge-safe provenance reconciliation"
+        },
+        {
+          "path": "src/workers/routes/health.ts",
+          "target_blob": "eabd2bb833c8bcb53cc7bd9e0ba26f484c99ae1e",
+          "reason": "bind paired production cutover, rollback authority, model-keyring readiness, live chat provenance, canonical deployed-surface convergence, fresh redacted MB-P projection, and merge-safe provenance reconciliation"
+        },
+        {
+          "path": "data/mbp-operations-projection.json",
+          "target_blob": "bc40f721ef8e15e868b36f8e1913e44979c65dab",
+          "reason": "bind paired production cutover, rollback authority, model-keyring readiness, live chat provenance, canonical deployed-surface convergence, fresh redacted MB-P projection, and merge-safe provenance reconciliation"
+        },
+        {
+          "path": "data/mbp-projection-export-manifest.json",
+          "target_blob": "456c326fca043995c8135081ab77ebe20d5139d9",
+          "reason": "bind paired production cutover, rollback authority, model-keyring readiness, live chat provenance, canonical deployed-surface convergence, fresh redacted MB-P projection, and merge-safe provenance reconciliation"
+        }
+      ]
     }
   ]
 }

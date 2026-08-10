@@ -40,6 +40,10 @@ export type ProductAssistantAction =
 
 export interface AssistantContextLineage {
   context_packet_id: string;
+  context_fingerprint: string;
+  context_generated_at: string;
+  context_stale_after_s: number;
+  catalog_manifest_sha256: string;
   resolution_id: string;
   action: ProductAssistantAction;
   resolution: RoleSkillResolution;
@@ -116,7 +120,16 @@ export async function persistAssistantContextLineage(
     env.RESOLUTION_RECEIPT_SIGNING_KEY_ID,
   );
   const context_packet_id = await insertContextPacketRow(sql, packet, packetReceipt);
-  return { context_packet_id, resolution_id, action, resolution };
+  return {
+    context_packet_id,
+    context_fingerprint: packet.context_fingerprint,
+    context_generated_at: packet.freshness.generated_at,
+    context_stale_after_s: packet.freshness.stale_after_s,
+    catalog_manifest_sha256: CATALOG_MANIFEST_SHA256,
+    resolution_id,
+    action,
+    resolution,
+  };
 }
 
 export async function completeAssistantSkillLineage(

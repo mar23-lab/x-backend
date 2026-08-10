@@ -6,18 +6,23 @@ import { Hono } from 'hono';
 import { isSentryActive } from '../sentry';
 import { envFlagTrue } from '../lib/env-flag';
 import { rlsBindingMode } from '../db/rls-connection';
+import {
+  isTenantEnvelopeEncryptionConfigured,
+  modelRuntimeEncryptionConfig,
+  type ModelRuntimeEncryptionEnv,
+} from '../lib/model-runtime-crypto';
 import apiContract from '../../../docs/contracts/api-contract.v1.json';
 
 export const healthRoute = new Hono();
 
-healthRoute.get('/health', (ctx) => {
+healthRoute.get('/health', async (ctx) => {
   // `version` is the API CONTRACT version (semver) — it is NOT a deploy signal and is
   // intentionally constant. `build` / `built_at` ARE the deploy signal: they are injected
   // at `npm run deploy:api` (--var BUILD_SHA / BUILD_TIME) and CHANGE per deploy, so a
   // consumer can confirm the exact live commit. Per HR-CONFIG-REALITY-MATCH-1: never infer
   // deploy/release state from a hardcoded constant — use a value that tracks reality.
   // Falls back to 'dev' / null when run locally or deployed without injection.
-  const env = ctx.env as {
+  const env = ctx.env as ModelRuntimeEncryptionEnv & {
     BUILD_SHA?: string;
     BUILD_TIME?: string;
     ENVIRONMENT?: string;
@@ -37,6 +42,9 @@ healthRoute.get('/health', (ctx) => {
   const schemaHead = Number.isSafeInteger(configuredSchemaHead) && configuredSchemaHead > 0
     ? configuredSchemaHead
     : null;
+  const modelRuntimeKeyringReady = await isTenantEnvelopeEncryptionConfigured(
+    modelRuntimeEncryptionConfig(env),
+  );
   return ctx.json({
     status: 'ok',
     version: '1.0.0',
@@ -83,6 +91,8 @@ healthRoute.get('/health', (ctx) => {
       // resolution rule would leave the one externally observable signal reporting the old posture.
       // It now calls the same module, which is the point of that module existing.
       rls_binding: rlsBindingMode(env),
+      // Public-safe boolean only. No key id or key material is exposed.
+      model_runtime_keyring: modelRuntimeKeyringReady,
     },
     capabilities: {
       sign_offs: true,

@@ -6,14 +6,15 @@ This is one deployed frontend with a cross-repository release boundary, not a se
 
 ## Required sequence
 
-1. Build `x-ai-front/wired/dist-production` from a clean committed frontend SHA. Set:
+1. Build `x-ai-front/app/dist` with the governed `build:production` producer from a clean committed
+   frontend SHA. `wired/` is a nondeployable test/reference donor and is rejected in the React lane. Set:
    - `XLOOOP_FRONTEND_SHA=<exact 40-character frontend commit>`
    - `XLOOOP_EXPECTED_BACKEND_SHA=<exact x-backend commit>`
    - the production API, schema, authority, environment, and feature-posture values.
 2. In the exact backend checkout, assemble the release:
 
    ```sh
-   XLOOOP_FRONTEND_ARTIFACT_DIR=/absolute/path/to/wired/dist-production \
+   XLOOOP_FRONTEND_ARTIFACT_DIR=/absolute/path/to/app/dist \
      npm run prepare:app:prod
    npm run verify:app-pages-release
    ```
@@ -25,18 +26,26 @@ This is one deployed frontend with a cross-repository release boundary, not a se
    comments. This keeps `_worker.js/index.js` in the immutable manifest without
    allowing build-directory randomness to masquerade as source drift.
 
-3. Obtain an exact operator decision packet using
+3. Obtain matching API and Pages operator decision packets. Both packets must carry the same
+   `cutover_id`, approver, approval reference, candidate tuple, artifact digest, and rollback pair.
+   Use
    `docs/deployment/evidence/app-pages-deployment-decision.example.json` as the shape.
    The packet must name both candidate SHAs, expected backend contract/schema/posture,
    a distinct rollback frontend deployment, and a short-lived authorization UUID.
-4. Deploy only the assembled release:
+4. Deploy the pair through the only production mutation command:
 
    ```sh
+   XLOOOP_AUTHORITY_DECISION_PACKET=/absolute/path/to/api-approved.json \
    XLOOOP_APP_PAGES_DECISION_PACKET=/absolute/path/to/approved.json \
-     npm run deploy:app:prod
+     npm run deploy:paired:prod
    ```
 
-5. Record the returned Pages deployment ID and perform live artifact, auth, journey,
+   `deploy:api` and `deploy:app:prod` are aliases of this paired orchestrator. Standalone Pages
+   mutation is refused. The orchestrator reserves both single-use approvals before mutation,
+   deploys and ratifies the API, deploys and ratifies Pages, and automatically restores the
+   declared Pages/API rollback pair if any post-mutation step fails.
+
+5. Preserve the paired cutover receipt and perform authenticated journey,
    security-header, and rollback probes:
 
    ```sh
@@ -49,7 +58,17 @@ This is one deployed frontend with a cross-repository release boundary, not a se
 
 ## Enforced invariants
 
-- `window.__XLOOP_FRONTEND_SHA` is exact and equals the Pages commit hash.
+- `runtime-manifest.json` uses `xlooop.frontend_runtime_manifest.v2`, names the exact frontend SHA,
+  backend SHA, contract hash, schema, posture and authority, and is carried into the immutable release.
+- The versioned runtime manifest is the React artifact and live-pairing authority; the compiled
+  bundle carries the same runtime pins and fails closed against backend health.
+- The backend verifies the runtime manifest's per-file hashes before assigning the frontend SHA,
+  and live ratification verifies the served HTML shell, manifest bytes, and every public release file.
+- The API packet, Pages packet, and assembled manifest carry one immutable artifact digest and exact
+  schema/contract/feature-posture tuple. Any cross-surface mismatch is refused before authorization
+  consumption.
+- The React artifact includes Vite assets and production `_headers`, and excludes legacy
+  `clerk-boot.js`, `live-data.js`, `support.js`, and `vendor/` runtime authority.
 - The frontend's expected backend SHA equals the backend checkout `HEAD`.
 - Frontend build and backend assembly/deploy checkouts are clean; dirty code cannot inherit a committed SHA.
 - The embedded contract hash equals `x-backend/docs/contracts/api-contract.v1.json`.
@@ -62,6 +81,10 @@ This is one deployed frontend with a cross-repository release boundary, not a se
   `SENTRY_RELEASE` secret is only a compatibility fallback for legacy artifacts.
 - No deploy runs without an exact, unexpired, unconsumed operator approval packet whose validity
   window is no longer than 30 minutes.
+- Worker rollback version and Pages rollback deployment IDs are mapped to their declared Git SHAs
+  before mutation; formatted-but-unrelated UUIDs are refused.
+- API health ratification requires a structurally valid versioned model-runtime keyring. Secret
+  names alone cannot make a release green.
 - Deployment authorization receipts live under the repository's Git common directory, so every
   worktree sees the same consumed token. The token is reserved before Cloudflare is called; a failed
   or interrupted deployment attempt requires a new operator authorization.

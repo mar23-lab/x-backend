@@ -49,10 +49,13 @@ const gates = [
   ['RLS connection single-source controls', 'npm', ['run', 'verify:rls-connection-single-source:self-test']],
   ['RLS connection single-source', 'npm', ['run', 'verify:rls-connection-single-source']],
   ['deploy provenance wiring', 'npm', ['run', 'verify:deploy-provenance']],
+  ['model-runtime keyring preflight controls', 'npm', ['run', 'preflight:model-runtime-keyring:self-test']],
   ['Pages artifact-owned Sentry release', 'npm', ['run', 'verify:pages-sentry-release']],
   ['rate-limit buckets bound to real limiters', 'npm', ['run', 'verify:rate-limit-binding-parity']],
   ['Pages release artifact contract', 'npm', ['run', 'verify:app-pages-release:self-test']],
   ['Pages deployment decision contract', 'npm', ['run', 'verify:app-pages-decision:self-test']],
+  ['paired production cutover transaction controls', 'npm', ['run', 'deploy:paired:prod:self-test']],
+  ['rollback target authority controls', 'npm', ['run', 'verify:rollback-target-authority:self-test']],
   ['deployed surface registry', 'npm', ['run', 'verify:deployed-surfaces']],
   // Until 260729 this line ran `verify:app-security-headers`, which was DEFINED as the script's own
   // `--self-test`. ci-local's only security-header gate was therefore the comparator's controls; the
@@ -64,6 +67,8 @@ const gates = [
   ['app security header parity controls', 'npm', ['run', 'verify:app-security-headers:self-test']],
   ['deploy schema-head contract', 'npm', ['run', 'verify:deploy-schema-head:self-test']],
   ['authority decision truth', 'npm', ['run', 'verify:authority-decision']],
+  ['authority decision producer controls', 'npm', ['run', 'mint:authority-decision:self-test']],
+  ['authority ratification producer controls', 'npm', ['run', 'verify:authority-ratification:self-test']],
   ['deployment authorization replay protection', 'npm', ['run', 'verify:deployment-authorization-store']],
   ['deployment authorization gate repo containment', 'npm', ['run', 'verify:deployment-authorization-store:self-test']],
   ['packet completion contract', 'npm', ['run', 'verify:packet-completion-contract']],
