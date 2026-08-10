@@ -3,6 +3,13 @@ import { spawnSync } from 'node:child_process';
 
 const gates = [
   ['github actions disabled', 'npm', ['run', 'verify:github-actions-disabled']],
+  ['orchestrator command contracts', 'npm', ['run', 'verify:orchestrator-script-contracts']],
+  ['paired cloud deployment readiness', 'npm', ['run', 'verify:cloud-deployment-readiness']],
+  ['Cloudflare paired deployment signal', 'npm', ['run', 'verify:cloudflare-deployment-signal']],
+  ['customer feedback annotations contract', 'npm', ['run', 'verify:feedback-annotations']],
+  ['customer feedback hardening contract', 'npm', ['run', 'verify:customer-feedback-tools-hardening']],
+  ['customer API access guidance contract', 'npm', ['run', 'verify:customer-api-access-guidance']],
+  ['API/MCP canary packet provisioner controls', 'npm', ['run', 'provision:api-mcp-canary-packet:self-test']],
   ['installed dependency parity', 'npm', ['run', 'verify:installed-dependencies']],
   ['known dependency advisory floors', 'npm', ['run', 'verify:known-dependency-advisories']],
   ['connector provider authority controls', 'npm', ['run', 'verify:connector-provider-ssot:self-test']],
@@ -100,7 +107,7 @@ const gates = [
   ['schema 91 disposable PostgreSQL release gate', 'npm', ['run', 'verify:schema91-postgres:self-test']],
   ['schema 92 production-drift replay bridge', 'npm', ['run', 'verify:schema92-replay-bridge']],
   ['schema 92 production-drift replay bridge controls', 'npm', ['run', 'verify:schema92-replay-bridge:self-test']],
-  ['schema 93 source replay runner controls', 'npm', ['run', 'verify:schema93-source-replay:self-test']],
+  ['current schema-head source replay runner controls', 'npm', ['run', 'verify:schema-head-source-replay:self-test']],
   ['operation-event source-tool constraint', 'npm', ['run', 'verify:operation-event-source-tool-constraint']],
   ['operation-event source-tool constraint controls', 'npm', ['run', 'verify:operation-event-source-tool-constraint:self-test']],
   ['pilot live RLS evidence producer', 'npm', ['run', 'produce:pilot-shadow-live-rls-evidence:self-test']],

@@ -7108,20 +7108,76 @@
       "authority": "source_authority_no_automatic_deploy",
       "copied_files": [],
       "transformed_files": [
-        { "path": "data/security-headers.manifest.json", "target_blob": "b647e3214c13863047c44a431f307e9d9200cc57", "reason": "Make backend manifest the deploy/runtime header authority with host-only HSTS and enforced CSP reporting." },
-        { "path": "functions/_lib/frontend-release-provenance.js", "target_blob": "d86d1ee72a6a4bf137f2367ac8304139514ad3b1", "reason": "Replace inline Sentry configuration and event handlers with a same-origin external bootstrap contract." },
-        { "path": "functions/_middleware.js", "target_blob": "255766edf9f6f67f33dc382d2d9a1d29c9cf4346", "reason": "Inject only the governed same-origin Sentry bootstrap while enforcing manifest headers." },
-        { "path": "functions/api/csp-report.js", "target_blob": "54f484d0695b1f39c554a0633156a87837997be1", "reason": "Align CSP report collector documentation with enforced policy." },
-        { "path": "functions/sentry-bootstrap.js", "target_blob": "b2dc48256ded13d202868cf0562234cf0c029a6a", "reason": "Serve no-store same-origin external Sentry bootstrap JavaScript." },
-        { "path": "scripts/lib/app-pages-release-contract.mjs", "target_blob": "bd45aae57fd5a0ceea395e8179e4970377c5b17c", "reason": "Remove frontend deployment-header authority from the React donor contract." },
-        { "path": "scripts/lib/security-header-contract.mjs", "target_blob": "29a0f95a7d5d574855f2bc99d7646a37f5defb81", "reason": "Render Cloudflare Pages headers deterministically from the backend manifest." },
-        { "path": "scripts/prepare-app-pages-release.mjs", "target_blob": "6aef12f9c5d1d7496b49cce760eb9ed1766d23c8", "reason": "Overwrite donor headers during backend release assembly." },
-        { "path": "scripts/verify-app-security-header-parity.mjs", "target_blob": "21cd7a529f685eece77fe7b0d7dd6ea51d55538e", "reason": "Enforce exact HSTS, CSP, artifact rendering, no inline script, and no legacy widget exception." },
-        { "path": "scripts/verify-pages-sentry-release.mjs", "target_blob": "bfa065e8cc7bdf26f0aae0f2efb30ee7f70a6695", "reason": "Prove the same-origin bootstrap and SDK initialization execute once without inline handlers." },
-        { "path": "scripts/lib/rollback-target-authority-contract.mjs", "target_blob": "9d6241fd0eb2b632f0fd288da8c390c20fda9c07", "reason": "Accept Wrangler Pages display JSON while requiring a meaningful commit prefix before live full-SHA verification." },
-        { "path": "scripts/verify-rollback-target-authority.mjs", "target_blob": "d703b7d03b7773371f1f78e75c26e232c83527d0", "reason": "Preserve Wrangler JSON output, target the exact Worker name, accept live Pages list and legacy SPA fallback shapes, and fail clearly on invalid rollback evidence." },
-        { "path": "src/workers/middleware/security-headers.ts", "target_blob": "14ff4b54ba5afdc1be96fcd6174bef4cb33ae90c", "reason": "Align API HSTS with the approved host-only 86400-second ramp." },
-        { "path": "docs/deployment/APP_PAGES_RELEASE_CONTRACT.md", "target_blob": "fc1cbc822a3b9dc85423e89dabe0a0140de51bcf", "reason": "Document backend-owned deploy-time header authority." }
+        {
+          "path": "data/security-headers.manifest.json",
+          "target_blob": "b647e3214c13863047c44a431f307e9d9200cc57",
+          "reason": "Make backend manifest the deploy/runtime header authority with host-only HSTS and enforced CSP reporting."
+        },
+        {
+          "path": "functions/_lib/frontend-release-provenance.js",
+          "target_blob": "d86d1ee72a6a4bf137f2367ac8304139514ad3b1",
+          "reason": "Replace inline Sentry configuration and event handlers with a same-origin external bootstrap contract."
+        },
+        {
+          "path": "functions/_middleware.js",
+          "target_blob": "255766edf9f6f67f33dc382d2d9a1d29c9cf4346",
+          "reason": "Inject only the governed same-origin Sentry bootstrap while enforcing manifest headers."
+        },
+        {
+          "path": "functions/api/csp-report.js",
+          "target_blob": "54f484d0695b1f39c554a0633156a87837997be1",
+          "reason": "Align CSP report collector documentation with enforced policy."
+        },
+        {
+          "path": "functions/sentry-bootstrap.js",
+          "target_blob": "b2dc48256ded13d202868cf0562234cf0c029a6a",
+          "reason": "Serve no-store same-origin external Sentry bootstrap JavaScript."
+        },
+        {
+          "path": "scripts/lib/app-pages-release-contract.mjs",
+          "target_blob": "bd45aae57fd5a0ceea395e8179e4970377c5b17c",
+          "reason": "Remove frontend deployment-header authority from the React donor contract."
+        },
+        {
+          "path": "scripts/lib/security-header-contract.mjs",
+          "target_blob": "29a0f95a7d5d574855f2bc99d7646a37f5defb81",
+          "reason": "Render Cloudflare Pages headers deterministically from the backend manifest."
+        },
+        {
+          "path": "scripts/prepare-app-pages-release.mjs",
+          "target_blob": "6aef12f9c5d1d7496b49cce760eb9ed1766d23c8",
+          "reason": "Overwrite donor headers during backend release assembly."
+        },
+        {
+          "path": "scripts/verify-app-security-header-parity.mjs",
+          "target_blob": "21cd7a529f685eece77fe7b0d7dd6ea51d55538e",
+          "reason": "Enforce exact HSTS, CSP, artifact rendering, no inline script, and no legacy widget exception."
+        },
+        {
+          "path": "scripts/verify-pages-sentry-release.mjs",
+          "target_blob": "bfa065e8cc7bdf26f0aae0f2efb30ee7f70a6695",
+          "reason": "Prove the same-origin bootstrap and SDK initialization execute once without inline handlers."
+        },
+        {
+          "path": "scripts/lib/rollback-target-authority-contract.mjs",
+          "target_blob": "9d6241fd0eb2b632f0fd288da8c390c20fda9c07",
+          "reason": "Accept Wrangler Pages display JSON while requiring a meaningful commit prefix before live full-SHA verification."
+        },
+        {
+          "path": "scripts/verify-rollback-target-authority.mjs",
+          "target_blob": "d703b7d03b7773371f1f78e75c26e232c83527d0",
+          "reason": "Preserve Wrangler JSON output, target the exact Worker name, accept live Pages list and legacy SPA fallback shapes, and fail clearly on invalid rollback evidence."
+        },
+        {
+          "path": "src/workers/middleware/security-headers.ts",
+          "target_blob": "14ff4b54ba5afdc1be96fcd6174bef4cb33ae90c",
+          "reason": "Align API HSTS with the approved host-only 86400-second ramp."
+        },
+        {
+          "path": "docs/deployment/APP_PAGES_RELEASE_CONTRACT.md",
+          "target_blob": "fc1cbc822a3b9dc85423e89dabe0a0140de51bcf",
+          "reason": "Document backend-owned deploy-time header authority."
+        }
       ]
     },
     {
@@ -7147,6 +7203,57 @@
           "path": "scripts/ci-local.mjs",
           "target_blob": "7f03492a5f745bcb64c124949b0d7586d9095edb",
           "reason": "Add parser-safe canary binding preparation and live A/B entrypoint"
+        }
+      ]
+    },
+    {
+      "delta_id": "260811-command-contract-recovery",
+      "generated_at": "2026-08-10T22:27:37.005Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "f936ead819bf61cea5e683c231e23c0219b5c2c5",
+      "target_base_commit": "f936ead819bf61cea5e683c231e23c0219b5c2c5",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "data/cloud-deployment-readiness.json",
+          "target_blob": "5f596b2fa9ed079d60c9f81c67612d0c338a5451",
+          "reason": "Recover validated command contracts, paired deployment authority, schema-head replay, and collision-resistant API/MCP canary provisioning"
+        },
+        {
+          "path": "data/cloudflare-deployment-signal.json",
+          "target_blob": "ae79b1d55fbe5349710e6be8aa8f6d5b54f50e71",
+          "reason": "Recover validated command contracts, paired deployment authority, schema-head replay, and collision-resistant API/MCP canary provisioning"
+        },
+        {
+          "path": "docs/deployment/CLOUDFLARE_DEPLOYMENT_PLAN.md",
+          "target_blob": "87fe9aa79815206dac960eed806fb30dc7874cbd",
+          "reason": "Recover validated command contracts, paired deployment authority, schema-head replay, and collision-resistant API/MCP canary provisioning"
+        },
+        {
+          "path": "package.json",
+          "target_blob": "34ca0094183826d1befada80441d39db77fcdf01",
+          "reason": "Recover validated command contracts, paired deployment authority, schema-head replay, and collision-resistant API/MCP canary provisioning"
+        },
+        {
+          "path": "scripts/ci-local.mjs",
+          "target_blob": "af70ae8313b792e0b1d526c9c44de1394ddcddae",
+          "reason": "Recover validated command contracts, paired deployment authority, schema-head replay, and collision-resistant API/MCP canary provisioning"
+        },
+        {
+          "path": "scripts/verify-api-mcp-live-canary-hard-stop.mjs",
+          "target_blob": "2b09553be807b49dcc6d023a34e513e66c46f7c8",
+          "reason": "Recover validated command contracts, paired deployment authority, schema-head replay, and collision-resistant API/MCP canary provisioning"
+        },
+        {
+          "path": "scripts/verify-cloud-deployment-readiness.mjs",
+          "target_blob": "7cee77cdbe4cd6236645d86f08fa812fcf7a3f41",
+          "reason": "Recover validated command contracts, paired deployment authority, schema-head replay, and collision-resistant API/MCP canary provisioning"
+        },
+        {
+          "path": "scripts/verify-cloudflare-deployment-signal.mjs",
+          "target_blob": "1fcc2edd360cea9b04b48897ff8508251b0c0ed3",
+          "reason": "Recover validated command contracts, paired deployment authority, schema-head replay, and collision-resistant API/MCP canary provisioning"
         }
       ]
     }

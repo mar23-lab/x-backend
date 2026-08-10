@@ -1,69 +1,49 @@
 {
-  "schema_version": "xlooop.cloudflare_deployment_signal.v1",
-  "last_updated": "2026-05-21",
-  "canonical_deploy_surface": "cloudflare_pages_direct_upload",
-  "canonical_deploy_script": "deploy:cloudflare:test:local:feedback",
-  "local_build_script": "build",
-  "public_claim_status": "not_claimed",
+  "schema_version": "xlooop.cloudflare_deployment_signal.v2",
+  "last_updated": "2026-08-11",
+  "canonical_deploy_surface": "paired_workers_api_and_react_pages",
+  "canonical_deploy_script": "deploy:paired:prod",
+  "public_claim_status": "hold_pending_live_evidence",
   "remote_ci_status": "not_release_authority",
   "remote_integrations": [
     {
       "integration_id": "github_actions",
       "status": "disabled_by_owner_policy",
       "active_as_release_gate": false,
-      "evidence": ".github/workflows contains no active YAML workflows; templates are preserved under deployment/github-actions-disabled."
+      "evidence": ".github/workflows contains no active YAML workflows; historical templates remain under deployment/github-actions-disabled."
     },
     {
       "integration_id": "cloudflare_workers_builds_xlooop",
       "check_name": "Workers Builds: xlooop",
-      "status": "known_external_misbinding",
+      "status": "external_unratified_signal",
       "active_as_release_gate": false,
-      "classification": "cloudflare_workers_service_configuration_debt",
-      "reason": "The repo deployment authority is Cloudflare Pages/direct upload, but GitHub receives a Workers service check named xlooop. The observed Workers Builds triggers had no build command and were using Worker deploy commands against a Pages/static bundle configuration.",
-      "observed_triggers": [
-        {
-          "trigger_uuid": "d3d4433c-d853-4c57-b3a5-9baadddd348e",
-          "trigger_name": "Deploy default branch (main)",
-          "observed_build_command": "",
-          "observed_deploy_command": "npx wrangler deploy"
-        },
-        {
-          "trigger_uuid": "ba80550e-cd25-46f2-948b-bedf5181edeb",
-          "trigger_name": "Deploy non-production branches",
-          "observed_build_command": "",
-          "observed_deploy_command": "npx wrangler versions upload"
-        }
-      ],
-      "repo_deployment_contract": {
-        "wrangler_pages_output": "dist-cloudflare",
-        "build_command": "npm run build",
-        "pages_deploy_command": "npx wrangler pages deploy dist-cloudflare --project-name=xlooop-test --branch=$WORKERS_CI_BRANCH",
-        "preferred_resolution": "disable_workers_builds_or_rewire_to_pages_deploy"
-      },
-      "last_observed": {
-        "commit": "459e84a4",
-        "conclusion": "failure",
-        "build_id": "34dd47b1-1ac7-4ad0-be67-a3bd45b5dc54"
-      },
-      "required_resolution": "Disable the stale Workers GitHub integration, or rewire both trigger UUIDs to run npm run build followed by wrangler pages deploy to dist-cloudflare. Do not add a Worker main entry point just to satisfy the stale Workers trigger.",
+      "classification": "cloudflare_service_configuration_not_paired_release_authority",
+      "reason": "An external Workers build does not reserve the paired API/Pages approval, verify the exact frontend artifact, or execute compensating rollback.",
+      "required_resolution": "Disable the integration or bind it to the same exact paired-cutover contract and receipt chain before treating it as release evidence.",
       "owner_action_required": true
     }
   ],
   "required_local_evidence": [
     "verify:github-actions-disabled",
+    "verify:orchestrator-script-contracts",
     "verify:cloud-deployment-readiness",
     "verify:cloudflare-deployment-signal",
-    "verify:cloudflare-access-evidence",
-    "verify:feedback-cloud-smoke",
-    "verify:commercial-release-truth",
+    "verify:deployed-surfaces",
+    "verify:deploy-provenance",
+    "verify:deploy-schema-head",
+    "verify:frontend-pair:self-test",
+    "verify:rollback-target-authority:self-test",
+    "verify:app-pages-release:self-test",
+    "deploy:paired:prod:self-test",
     "verify:hosted-deployment-evidence",
-    "build",
     "verify:hosted-ci-runner-health",
+    "verify:api-mcp-live-canary-hard-stop",
     "verify:public-production-readiness-hard-stop"
   ],
   "operator_rules": [
-    "Do not claim public/self-serve readiness from a red remote Workers check.",
-    "Do not weaken local deployment gates to compensate for a stale external integration.",
-    "Do not send a test link to an external customer until Access, tenant entitlement, customer-safe export, and owner decision evidence are present."
+    "Do not claim release authority from an external build check that does not ratify the exact pair.",
+    "Do not deploy API or Pages independently in production.",
+    "Do not weaken local gates to compensate for unavailable remote CI.",
+    "Do not claim public self-serve readiness from deployment success alone."
   ]
 }
