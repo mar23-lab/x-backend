@@ -1,116 +1,132 @@
 #!/usr/bin/env node
-// verify-connector-provider-ssot.mjs · W4/G8 (2026-06-15) · BLOCKING ci-local gate
-//
-// The connector provider list has TWO declarations: the backend SSOT (src/workers/lib/
-// connector-registry.ts, served at GET /api/v1/connectors) and a frontend fallback array
-// (SourceConnectorModal.jsx PROVIDERS, used when the fetch is unavailable). They can DRIFT —
-// the audit found the frontend list stale relative to the registry. This gate makes the registry
-// the single source of truth: every registry provider MUST appear in the frontend list with the
-// SAME clerk_slug (the `oauth_<slug>` passed to Clerk). The frontend MAY carry extra "queued"
-// placeholders (bitbucket/notion/slack) the registry doesn't yet wire — that's allowed; what's
-// forbidden is a registry provider MISSING or MISMATCHED in the frontend (a real drift bug:
-// the live registry would offer a provider the fallback can't, or with the wrong OAuth slug).
-// `--self-test` proves it catches a missing + a mismatched-slug provider.
+// The backend connector registry is the only provider catalog. The commercial
+// frontend consumes GET /api/v1/connectors and must not carry a fallback copy.
 
-import { readFileSync } from 'node:fs';
-import { join, dirname } from 'node:path';
+import { existsSync, readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const REGISTRY = 'src/workers/lib/connector-registry.ts';
-const FRONTEND = 'src/widgets/SourceConnectorModal/SourceConnectorModal.jsx';
+const PROD_CONFIG = 'wrangler.toml';
+const PILOT_CONFIG = 'wrangler.pilot-shadow.toml';
+const RETIRED_FRONTEND_FALLBACK = 'src/widgets/SourceConnectorModal/SourceConnectorModal.jsx';
+const FLAG = 'SOURCE_SCOPE_ENFORCEMENT_ENABLED';
 
-// Map provider id -> provider metadata for each declaration. `[^}]*?` keeps the fields
-// within one object literal (provider entries have no nested braces), so the pairing is reliable.
+const EXPECTED_RESTRICTED_SCOPES = Object.freeze({
+  gmail: 'https://www.googleapis.com/auth/gmail.readonly',
+  google_drive: 'https://www.googleapis.com/auth/drive.metadata.readonly',
+});
+
 function providerMap(src) {
   const map = new Map();
   const re = /\bid:\s*['"]([a-z0-9_]+)['"]([^}]*)}/g;
-  let m;
-  while ((m = re.exec(src)) !== null) {
-    const body = m[2] || '';
+  let match;
+  while ((match = re.exec(src)) !== null) {
+    const body = match[2] || '';
     const slug = body.match(/\bclerk_slug:\s*['"]([a-z0-9_]+)['"]/);
-    const restricted = body.match(/\brestricted_scope_mode:\s*['"]([a-z0-9_]+)['"]/);
     if (!slug) continue;
-    map.set(m[1], {
+    const mode = body.match(/\brestricted_scope_mode:\s*['"]([a-z0-9_]+)['"]/);
+    const scopes = [...body.matchAll(/https:\/\/www\.googleapis\.com\/auth\/[a-z0-9._-]+/g)].map((m) => m[0]);
+    map.set(match[1], {
       clerk_slug: slug[1],
-      restricted_scope_mode: restricted ? restricted[1] : null,
+      restricted_scope_mode: mode?.[1] || null,
+      restricted_scopes: scopes,
     });
   }
   return map;
 }
 
-const RESTRICTED_MAILBOX_PROVIDERS = new Set(['gmail', 'outlook']);
-const REQUIRED_RESTRICTED_SCOPE_MODE = 'connect_time_only';
+function configEnforcesRestrictedScopes(src) {
+  const escaped = FLAG.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return new RegExp(`^${escaped}\\s*=\\s*["']true["']\\s*$`, 'm').test(src);
+}
 
-function diff(registrySrc, frontendSrc) {
-  const reg = providerMap(registrySrc);
-  const front = providerMap(frontendSrc);
+function assess({ registrySrc, prodConfigSrc, pilotConfigSrc, retiredFallbackExists = false }) {
+  const providers = providerMap(registrySrc);
   const failures = [];
-  if (reg.size === 0) failures.push('parsed 0 providers from the registry (parser drift?)');
-  for (const [id, descriptor] of reg) {
-    if (!front.has(id)) {
-      failures.push(`registry provider '${id}' is MISSING from the frontend PROVIDERS fallback (drift — a fetch-failure user could not connect it)`);
-    } else if (front.get(id).clerk_slug !== descriptor.clerk_slug) {
-      failures.push(`provider '${id}' clerk_slug MISMATCH: registry='${descriptor.clerk_slug}' vs frontend='${front.get(id).clerk_slug}' (wrong OAuth strategy on the fallback path)`);
+  if (providers.size === 0) failures.push('parsed 0 providers from the backend registry');
+
+  for (const [id, expectedScope] of Object.entries(EXPECTED_RESTRICTED_SCOPES)) {
+    const provider = providers.get(id);
+    if (!provider) {
+      failures.push(`required restricted provider '${id}' is absent from the registry`);
+      continue;
     }
-    if (RESTRICTED_MAILBOX_PROVIDERS.has(id) && descriptor.restricted_scope_mode !== REQUIRED_RESTRICTED_SCOPE_MODE) {
-      failures.push(`restricted mailbox provider '${id}' must declare restricted_scope_mode='${REQUIRED_RESTRICTED_SCOPE_MODE}' in the registry (mail scopes must not become blanket sign-in scopes)`);
+    if (provider.clerk_slug !== 'google') {
+      failures.push(`provider '${id}' must use Clerk slug 'google', found '${provider.clerk_slug}'`);
     }
-    if (descriptor.restricted_scope_mode && front.has(id)
-      && front.get(id).restricted_scope_mode !== descriptor.restricted_scope_mode) {
-      failures.push(`provider '${id}' restricted_scope_mode MISMATCH: registry='${descriptor.restricted_scope_mode}' vs frontend='${front.get(id).restricted_scope_mode || 'absent'}'`);
+    if (provider.restricted_scope_mode !== 'connect_time_only') {
+      failures.push(`provider '${id}' must declare restricted_scope_mode='connect_time_only'`);
+    }
+    if (provider.restricted_scopes.length !== 1 || provider.restricted_scopes[0] !== expectedScope) {
+      failures.push(`provider '${id}' must declare exactly '${expectedScope}' as its connect-time scope`);
     }
   }
-  return { failures, regSize: reg.size, frontSize: front.size };
+
+  if (!configEnforcesRestrictedScopes(prodConfigSrc)) {
+    failures.push(`${PROD_CONFIG} must set ${FLAG}='true'`);
+  }
+  if (!configEnforcesRestrictedScopes(pilotConfigSrc)) {
+    failures.push(`${PILOT_CONFIG} must set ${FLAG}='true'`);
+  }
+  if (retiredFallbackExists) {
+    failures.push(`${RETIRED_FRONTEND_FALLBACK} must remain retired; clients consume GET /api/v1/connectors`);
+  }
+  return { failures, providerCount: providers.size };
+}
+
+function selfTest() {
+  const registry = `export const CONNECTOR_REGISTRY = [
+    { id: 'google_drive', clerk_slug: 'google', restricted_scope_mode: 'connect_time_only', restricted_scopes: ['https://www.googleapis.com/auth/drive.metadata.readonly'] },
+    { id: 'gmail', clerk_slug: 'google', restricted_scope_mode: 'connect_time_only', restricted_scopes: ['https://www.googleapis.com/auth/gmail.readonly'] },
+  ];`;
+  const good = assess({
+    registrySrc: registry,
+    prodConfigSrc: `${FLAG} = "true"`,
+    pilotConfigSrc: `${FLAG} = "true"`,
+  });
+  const badScope = assess({
+    registrySrc: registry.replace('gmail.readonly', 'gmail.modify'),
+    prodConfigSrc: `${FLAG} = "true"`,
+    pilotConfigSrc: `${FLAG} = "true"`,
+  });
+  const badFlag = assess({
+    registrySrc: registry,
+    prodConfigSrc: `${FLAG} = "false"`,
+    pilotConfigSrc: `${FLAG} = "true"`,
+  });
+  const badFallback = assess({
+    registrySrc: registry,
+    prodConfigSrc: `${FLAG} = "true"`,
+    pilotConfigSrc: `${FLAG} = "true"`,
+    retiredFallbackExists: true,
+  });
+  const passed = good.failures.length === 0
+    && badScope.failures.some((f) => f.includes('gmail.readonly'))
+    && badFlag.failures.some((f) => f.includes(PROD_CONFIG))
+    && badFallback.failures.some((f) => f.includes('must remain retired'));
+  if (!passed) {
+    console.error(`FAIL self-test · ${JSON.stringify({ good, badScope, badFlag, badFallback })}`);
+    process.exit(1);
+  }
+  console.log('PASS self-test · catches scope, flag, and retired-frontend-fallback drift');
 }
 
 function main() {
-  if (process.argv.includes('--self-test')) {
-    const registry = `export const CONNECTOR_REGISTRY = [
-      { id: 'github', tier: 'free_active', clerk_slug: 'github' },
-      { id: 'google_drive', tier: 'free_active', clerk_slug: 'google' },
-      { id: 'gmail', tier: 'free_active', clerk_slug: 'google', restricted_scope_mode: 'connect_time_only' },
-    ];`;
-    // frontend MISSING google_drive, github with a wrong slug, and gmail missing restricted scope
-    // metadata → all must be caught.
-    const frontendBad = `const PROVIDERS = [
-      { id: 'github', tier: 'free_active', clerk_slug: 'gh_wrong' },
-      { id: 'gmail', tier: 'free_active', clerk_slug: 'google' },
-      { id: 'slack', tier: 'paid_queued', clerk_slug: 'slack' },
-    ];`;
-    const frontendGood = `const PROVIDERS = [
-      { id: 'github', tier: 'free_active', clerk_slug: 'github' },
-      { id: 'google_drive', tier: 'free_active', clerk_slug: 'google' },
-      { id: 'gmail', tier: 'free_active', clerk_slug: 'google', restricted_scope_mode: 'connect_time_only' },
-      { id: 'slack', tier: 'paid_queued', clerk_slug: 'slack' },
-    ];`;
-    const bad = diff(registry, frontendBad);
-    const good = diff(registry, frontendGood);
-    const caughtMissing = bad.failures.some((f) => /MISSING/.test(f));
-    const caughtMismatch = bad.failures.some((f) => /MISMATCH/.test(f));
-    const caughtRestricted = bad.failures.some((f) => /restricted_scope_mode/.test(f));
-    const goodOk = good.failures.length === 0;
-    if (caughtMissing && caughtMismatch && caughtRestricted && goodOk) {
-      console.log('PASS self-test · catches missing provider, clerk_slug mismatch, and restricted-scope drift; accepts a registry-superset frontend');
-      process.exit(0);
-    }
-    console.error(`FAIL self-test · caughtMissing=${caughtMissing} caughtMismatch=${caughtMismatch} caughtRestricted=${caughtRestricted} goodOk=${goodOk} :: ${JSON.stringify(good.failures)}`);
+  if (process.argv.includes('--self-test')) return selfTest();
+  const result = assess({
+    registrySrc: readFileSync(join(ROOT, REGISTRY), 'utf8'),
+    prodConfigSrc: readFileSync(join(ROOT, PROD_CONFIG), 'utf8'),
+    pilotConfigSrc: readFileSync(join(ROOT, PILOT_CONFIG), 'utf8'),
+    retiredFallbackExists: existsSync(join(ROOT, RETIRED_FRONTEND_FALLBACK)),
+  });
+  if (result.failures.length) {
+    console.error(`FAIL verify-connector-provider-ssot · ${result.failures.length} issue(s)`);
+    for (const failure of result.failures) console.error(`  - ${failure}`);
     process.exit(1);
   }
-
-  let registrySrc, frontendSrc;
-  try { registrySrc = readFileSync(join(ROOT, REGISTRY), 'utf8'); }
-  catch (e) { console.error('FAIL · cannot read ' + REGISTRY + ': ' + e.message); process.exit(1); }
-  try { frontendSrc = readFileSync(join(ROOT, FRONTEND), 'utf8'); }
-  catch (e) { console.error('FAIL · cannot read ' + FRONTEND + ': ' + e.message); process.exit(1); }
-
-  const { failures, regSize, frontSize } = diff(registrySrc, frontendSrc);
-  if (failures.length) {
-    console.error('✗ verify-connector-provider-ssot · ' + failures.length + ' drift issue(s):');
-    for (const f of failures) console.error('  - ' + f);
-    process.exit(1);
-  }
-  console.log(`☑ verify-connector-provider-ssot · PASS · all ${regSize} registry providers present in the frontend (${frontSize}) with matching clerk_slug`);
+  console.log(`PASS verify-connector-provider-ssot · ${result.providerCount} backend providers; restricted-scope config paired; no frontend fallback`);
 }
 
 main();

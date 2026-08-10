@@ -22,7 +22,7 @@
 import { Hono } from 'hono';
 import { verifyToken } from '@clerk/backend';
 import { errorEnvelope } from '../middleware/error';
-import type { AuthEnv } from '../middleware/auth';
+import { clerkAuthorizedParties, type AuthEnv } from '../middleware/auth';
 
 // Static imports — esbuild (via wrangler) inlines these JSON files into the
 // worker bundle at build time. The data physically lives in the worker binary,
@@ -109,6 +109,7 @@ async function verifyMbpOwner(ctx: any): Promise<string> {
   try {
     const payload = await verifyToken(token, {
       secretKey: env.CLERK_SECRET_KEY,
+      authorizedParties: clerkAuthorizedParties(env.CLERK_AUTHORIZED_PARTIES),
     });
     const requesterUserId = String(payload?.sub || '');
     if (!requesterUserId) {

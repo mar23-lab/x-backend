@@ -39,7 +39,7 @@ export interface ConnectorDescriptor {
 
 export const CONNECTOR_REGISTRY: readonly ConnectorDescriptor[] = Object.freeze([
   { id: 'github', label: 'GitHub', description: 'Commits, PRs, issues (metadata only)', tier: 'free_active', clerk_slug: 'github', capability: 'repos' },
-  { id: 'google_drive', label: 'Google Drive', description: 'Folder + file metadata (no content download)', tier: 'free_active', clerk_slug: 'google', capability: 'folders' },
+  { id: 'google_drive', label: 'Google Drive', description: 'Folder + file metadata (no content download)', tier: 'free_active', clerk_slug: 'google', capability: 'folders', restricted_scope_mode: 'connect_time_only', restricted_scopes: Object.freeze(['https://www.googleapis.com/auth/drive.metadata.readonly']) },
   { id: 'gmail', label: 'Gmail', description: 'Recent email metadata — From/Subject/Date + snippet, read-only (never the full body)', tier: 'free_active', clerk_slug: 'google', capability: null, restricted_scope_mode: 'connect_time_only', restricted_scopes: Object.freeze(['https://www.googleapis.com/auth/gmail.readonly']) },
   { id: 'dropbox', label: 'Dropbox', description: 'Folder metadata (cursor pagination)', tier: 'free_active', clerk_slug: 'dropbox', capability: 'folders' },
   { id: 'gitlab', label: 'GitLab', description: 'Commits, MRs, issues', tier: 'paid_queued', clerk_slug: 'gitlab', capability: 'repos' },

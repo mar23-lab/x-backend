@@ -13,11 +13,39 @@ function appFor(calls: Call[]) {
   const dispatch = async (req: Request) => {
     calls.push({ url: req.url, method: req.method, auth: req.headers.get('Authorization') });
     const path = new URL(req.url).pathname;
-    if (path === '/api/v1/mcp/whoami') {
-      return new Response(JSON.stringify({ schema_id: 'xlooop.mcp_whoami.v1', workspace_id: 'tenant_a' }), {
-        status: 200,
-        headers: { 'content-type': 'application/json' },
-      });
+    if (path === '/api/v1/mcp/session-start') {
+      return new Response(JSON.stringify({
+        schema_id: 'xcp.session_start/v1',
+        status: 'pass',
+        single_mcp_gateway: 'xcp-gateway',
+        single_mcp_gateway_required: true,
+        gateway: { name: 'xcp-gateway', profile: 'customer' },
+        gateway_profile: 'customer',
+        effect_mode: 'observe',
+        identity_scope: {
+          actor_type: 'service_principal', tenant_scope: 'tenant_a', workspace_scope: 'tenant_a',
+          authn_method: 'service_principal', subject_ref: 'svc_a', scopes: [],
+        },
+        selected_route: 'not_applicable',
+        detected_role: 'not_applicable',
+        entry_skill: 'not_applicable',
+        role_panel: {
+          schema_id: 'xcp.role_panel/v1', task_class: 'not_applicable', primary_role: 'not_applicable',
+          selected_roles: [], role_to_skill_map: [], missing_required_roles: [],
+        },
+        required_skills: [],
+        loaded_skills: [],
+        stop_conditions: [],
+        evidence_checked: ['tenant_identity', 'workspace_scope', 'tenant_safe_tool_scope'],
+        graph_context: { scope: 'tenant_safe', status: 'not_requested', references: [] },
+        policy_decision: { decision: 'allow', reason_codes: [] },
+        audit_lineage: { lineage_id: null, audit_refs: [] },
+        prior_work_digest: null,
+        prior_work_discovery_executed: false,
+        identity: { tenant_id: 'tenant_a' },
+        scoped_tools: [{ name: 'xlooop.get_task_packet' }],
+        requires_additional_gateway: false,
+      }), { status: 200, headers: { 'content-type': 'application/json' } });
     }
     return new Response(JSON.stringify({ error: 'not found', code: 'NOT_FOUND' }), {
       status: 404,
@@ -44,7 +72,54 @@ describe('mcp-rpc route', () => {
     const j: any = await res.json();
     expect(j.result.protocolVersion).toBe('2025-06-18');
     expect(j.result.serverInfo).toEqual(MCP_SERVER_INFO);
+    expect(j.result.serverInfo).toMatchObject({ name: 'xcp-gateway', profile: 'customer' });
+    expect(JSON.stringify(j.result)).not.toContain('xlooop-customer-gateway');
     expect(j.result.capabilities.tools).toBeTruthy();
+    expect(j.result.instructions).toContain('xcp_session_start once');
+  });
+
+  it('tools/call xcp_session_start completes customer intake in one authenticated gateway hop', async () => {
+    const calls: Call[] = [];
+    const res = await rpc(
+      appFor(calls),
+      { jsonrpc: '2.0', id: 20, method: 'tools/call', params: { name: 'xcp_session_start', arguments: {} } },
+      { Authorization: 'Bearer xlk_ro_test' },
+    );
+    const j: any = await res.json();
+    expect(j.result.isError).toBe(false);
+    expect(calls).toEqual([expect.objectContaining({
+      method: 'GET', auth: 'Bearer xlk_ro_test',
+    })]);
+    expect(calls[0].url).toContain('/api/v1/mcp/session-start');
+    const payload = JSON.parse(j.result.content[0].text);
+    expect(payload).toMatchObject({
+      schema_id: 'xcp.session_start/v1',
+      status: 'pass',
+      single_mcp_gateway: 'xcp-gateway',
+      single_mcp_gateway_required: true,
+      gateway: { name: 'xcp-gateway', profile: 'customer' },
+      gateway_profile: 'customer',
+      effect_mode: 'observe',
+      identity_scope: expect.objectContaining({
+        actor_type: 'service_principal', tenant_scope: 'tenant_a', workspace_scope: 'tenant_a',
+      }),
+      selected_route: 'not_applicable',
+      detected_role: 'not_applicable',
+      entry_skill: 'not_applicable',
+      role_panel: expect.objectContaining({
+        schema_id: 'xcp.role_panel/v1', selected_roles: [], role_to_skill_map: [],
+      }),
+      required_skills: [],
+      loaded_skills: [],
+      stop_conditions: [],
+      graph_context: expect.any(Object),
+      policy_decision: { decision: 'allow', reason_codes: [] },
+      audit_lineage: { lineage_id: null, audit_refs: [] },
+      prior_work_digest: null,
+      prior_work_discovery_executed: false,
+      requires_additional_gateway: false,
+    });
+    expect(payload.evidence_checked).toEqual(['tenant_identity', 'workspace_scope', 'tenant_safe_tool_scope']);
   });
 
   it('initialize falls back to a supported version for unknown client version', async () => {
@@ -60,7 +135,7 @@ describe('mcp-rpc route', () => {
     for (const t of j.result.tools) expect(t.inputSchema.type).toBe('object');
   });
 
-  it('tools/call whoami dispatches to the REST handler with forwarded auth', async () => {
+  it('tools/call rejects the legacy whoami alias without dispatching', async () => {
     const calls: Call[] = [];
     const res = await rpc(
       appFor(calls),
@@ -69,11 +144,8 @@ describe('mcp-rpc route', () => {
     );
     const j: any = await res.json();
     expect(res.status).toBe(200);
-    expect(j.result.isError).toBe(false);
-    expect(calls).toHaveLength(1);
-    expect(calls[0].url).toContain('/api/v1/mcp/whoami');
-    expect(calls[0].auth).toBe('Bearer xlk_ro_test');
-    expect(JSON.parse(j.result.content[0].text).schema_id).toBe('xlooop.mcp_whoami.v1');
+    expect(j.error.code).toBe(-32602);
+    expect(calls).toHaveLength(0);
   });
 
   it('tools/call get_task_packet without id is a JSON-RPC invalid-params error', async () => {
@@ -105,7 +177,12 @@ describe('mcp-rpc route', () => {
     const res = await appFor([]).request('/mcp/rpc', { method: 'GET' });
     const j: any = await res.json();
     expect(j.transport).toBe('streamable-http');
-    expect(j.tools).toContain('xlooop.whoami');
+    expect(j).toMatchObject({
+      schema_id: 'xcp.mcp_rpc_descriptor.v1', gateway_name: 'xcp-gateway', profile: 'customer',
+    });
+    expect(j.tools).toContain('xcp_session_start');
+    expect(j.tools).not.toContain('xlooop.whoami');
+    expect(JSON.stringify(j)).not.toContain('xlooop-customer-gateway');
   });
 
   // ── Stage-0 parity pin (260806) ────────────────────────────────────────────────────────────────

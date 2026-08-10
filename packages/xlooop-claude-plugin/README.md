@@ -12,7 +12,8 @@ Xlooop account, with the product's governance intact — **the agent reports wor
 2. **Export it** in the shell that runs Claude Code: `export XLOOOP_TOKEN=xlk_…` (never paste it into chat).
 3. **Add the plugin** (or just the MCP server):
    `claude mcp add --transport http xlooop https://api.xlooop.com/api/v1/mcp/rpc --header "Authorization: Bearer $XLOOOP_TOKEN"`
-4. Verify: ask Claude to run `xlooop.whoami` — it should name your workspace.
+4. Verify: ask Claude to run `xcp_session_start` once. It should return the canonical
+   `xcp-gateway` customer profile, your tenant identity/context, and the scoped tool list.
 
 ## Commands
 

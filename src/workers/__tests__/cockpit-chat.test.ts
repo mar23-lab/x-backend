@@ -6,6 +6,7 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import {
   answerCockpitChat,
+  answerLiveCockpitChat,
   compileChatFacts,
   buildDeterministicChatAnswer,
   classifyGovernanceRow,
@@ -19,6 +20,7 @@ import {
 } from '../services/cockpit-chat';
 import type { AiRunner } from '../services/agent-digest';
 import type { HarnessFlowEvent } from '../dal/types/event';
+import type { EffectiveRuntimePlan, ResolvedRuntime } from '../services/model-runtime-execution';
 
 // Real-shaped events modeled on the prod Cockpit project (GitHub PR/commit activity).
 function evt(over: Partial<HarnessFlowEvent>): HarnessFlowEvent {
@@ -264,6 +266,25 @@ describe('compileChatFacts — data_freshness (P0.1: never imply "all clear" ove
     const g = compileChatFacts(FACTS({ events: [evt({ id: 'fresh', occurred_at: new Date().toISOString() })] }));
     expect(g.data_freshness.is_stale).toBe(false);
     expect(g.data_freshness.staleness_minutes).toBeLessThanOrEqual(1);
+  });
+
+  it('rejects stale current-state claims from a live provider and retries a safe live fallback', async () => {
+    const runtime = (id: string, response: string): ResolvedRuntime => ({
+      runtime_id: id, provider: 'workers_ai', model: '@cf/test', source: 'platform_default',
+      provider_config_version_id: null, base_url: null, credential: null,
+      ai: { run: async () => ({ response }) },
+    });
+    const plan: EffectiveRuntimePlan = {
+      primary: runtime('unsafe', 'Nothing is blocked right now, so you are clear to proceed with the current project.'),
+      fallbacks: [runtime('safe', 'This is a stale snapshot as of 2026-06-09; the current state is unverified and needs a refresh.')],
+      resolution_attempts: [],
+    };
+
+    const result = await answerLiveCockpitChat('what is blocked?', FACTS(), 'ask', undefined, plan);
+    expect(result.execution.runtime_id).toBe('safe');
+    expect(result.execution.attempts.map((attempt) => attempt.status)).toEqual(['failed', 'completed']);
+    expect(result.answer).toMatch(/stale snapshot/i);
+    expect(result.answer).not.toMatch(/right now|you are clear/i);
   });
 });
 

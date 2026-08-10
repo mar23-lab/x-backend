@@ -269,7 +269,7 @@ async function verifyClaudeCodeOnboardingDoc() {
     'Claude Code',
     'OAuth/device flow',
     'scoped Xlooop connector token',
-    'xlooop.whoami',
+    'xcp_session_start',
     'user_id',
     'tenant_id',
     'membership_ref',
@@ -287,10 +287,11 @@ async function verifyCustomerClaudeCodeOauthBinding() {
   const doc = requireFile('docs/customer-onboarding/CLAUDE_CODE_API_ONBOARDING.md');
   const route = requireFile('src/workers/routes/template-policy-registry.ts');
   const mcp = requireFile('src/workers/routes/mcp-gateway.ts');
+  const rpc = requireFile('src/workers/routes/mcp-rpc.ts');
+  const rpcTest = requireFile('src/workers/__tests__/mcp-rpc-route.test.ts');
   const auth = requireFile('src/workers/middleware/auth.ts');
-  const parity = requireFile('scripts/verify-api-mcp-parity.mjs');
-  requireIncludes('customer_oauth_identity_binding_markers_present', `${doc}\n${route}\n${mcp}\n${auth}\n${parity}`, [
-    'xlooop.whoami',
+  requireIncludes('customer_oauth_identity_binding_markers_present', `${doc}\n${route}\n${mcp}\n${rpc}\n${rpcTest}\n${auth}`, [
+    'xcp_session_start',
     'xlooop.identity_whoami.v1',
     'tenant_id',
     'membership_ref',
@@ -299,7 +300,8 @@ async function verifyCustomerClaudeCodeOauthBinding() {
     'client_id',
     'token_expires_at',
     'service_principal',
-    'mcp_whoami_ok',
+    'single_mcp_gateway',
+    'requires_additional_gateway',
     'token revocation',
   ]);
   requireIncludes('customer_token_is_not_prompt_supplied_tenant_authority', doc, [
@@ -332,7 +334,7 @@ async function verifyPromptInjectionE2e() {
     'search_all_memory',
   ]);
   requireIncludes('safe_mcp_tool_surface_only', mcp, [
-    'xlooop.whoami',
+    'xcp_session_start',
     'xlooop.get_task_packet',
     'xlooop.submit_evidence',
     'xlooop.report_tool_event',
@@ -342,9 +344,10 @@ async function verifyPromptInjectionE2e() {
 }
 
 async function verifyDeleteExportObjectStorageExecution() {
-  const customerDelete = requireFile('scripts/verify-customer-delete-export.mjs');
+  const route = requireFile('src/workers/routes/operational-spine.ts');
+  const store = requireFile('src/workers/dal/operational-spine-store.ts');
   const suite = requireFile('scripts/verify-template-policy-suite.mjs');
-  requireIncludes('delete_export_contract_and_execution_markers_present', `${customerDelete}\n${suite}`, [
+  requireIncludes('delete_export_contract_and_execution_markers_present', `${route}\n${store}\n${suite}`, [
     '/customer-data/export-requests/:approval_id/execute',
     '/customer-data/delete-requests/:approval_id/execute',
     'executeCustomerDataLifecycleRequest',
@@ -771,17 +774,23 @@ async function verifyConnectorTokenRevocation() {
   const doc = requireFile('docs/customer-onboarding/CLAUDE_CODE_API_ONBOARDING.md');
   const auth = requireFile('src/workers/middleware/auth.ts');
   const mcp = requireFile('src/workers/routes/mcp-gateway.ts');
+  const mcpRpc = requireFile('src/workers/routes/mcp-rpc.ts');
   const template = requireFile('src/workers/routes/template-policy-registry.ts');
-  const parity = requireFile('scripts/verify-api-mcp-parity.mjs');
+  const mcpContract = requireFile('scripts/verify-customer-mcp-rpc-contract.mjs');
+  const revocationAuthority = requireFile('scripts/verify-customer-revocation-authority.mjs');
+  const connectorSafety = requireFile('scripts/verify-customer-connector-token-safety.mjs');
+  const tokenStore = requireFile('src/workers/dal/customer-token-store.ts');
+  const developerAccessTest = requireFile('src/workers/__tests__/developer-access-route.test.ts');
   requireIncludes('connector_revocation_contract_documented', doc, [
-    'Revoking the connector token must make Claude Code access fail',
+    'Revoke the connector token',
+    'Confirm assistant access fails after revocation',
     'token revocation failure proof: present',
     'Do not let Claude Code supply or override tenant identity from prompt text',
     'Service principals are for explicit automation identities only',
-    'must never impersonate a customer employee',
+    'They must never impersonate a customer employee',
   ]);
-  requireIncludes('whoami_identity_fields_available_for_revocation_probe', `${mcp}\n${template}\n${auth}\n${parity}`, [
-    'xlooop.whoami',
+  requireIncludes('session_start_identity_fields_available_for_revocation_probe', `${doc}\n${mcp}\n${mcpRpc}\n${template}\n${auth}\n${mcpContract}`, [
+    'xcp_session_start',
     'tenant_id',
     'membership_ref',
     'membership_resolution',
@@ -789,7 +798,14 @@ async function verifyConnectorTokenRevocation() {
     'client_id',
     'token_expires_at',
     'service_principal',
-    'mcp_whoami_ok',
+  ]);
+  requireIncludes('connector_revocation_is_fail_closed_and_tenant_scoped', `${tokenStore}\n${revocationAuthority}\n${connectorSafety}\n${developerAccessTest}`, [
+    'AND revoked_at IS NULL',
+    'revokeCustomerTokenRow',
+    'workspace_id',
+    'revoked_credential_resolves_to_null',
+    'store_lookup_fail_closed',
+    'customer_token_revoke',
   ]);
   requireIncludes('service_principal_scoped_not_employee_impersonation', `${auth}\n${mcp}`, [
     'xlooop-canary-read',
@@ -802,33 +818,36 @@ async function verifyConnectorTokenRevocation() {
 
 async function verifyNewUserApiMcpOnboardingScenario() {
   const doc = requireFile('docs/customer-onboarding/CLAUDE_CODE_API_ONBOARDING.md');
-  const browserScenario = requireFile('scripts/verify-new-user-onboarding-isolation.mjs');
   const adminCli = requireFile('scripts/admin-access.mjs');
   const aspRunbook = requireFile('docs/onboarding/ASP_FIRST_CUSTOMER_PROVISIONING_RUNBOOK.md');
   const authTenancy = requireFile('docs/architecture/backend/AUTH_TENANCY_MODEL.md');
-  const registrationGoLive = requireFile('docs/handoffs/customer-onboarding/CUSTOMER_REGISTRATION_GO_LIVE.md');
-  const fourPilotRunbook = requireFile('docs/handoffs/customer-onboarding/FOUR_PILOT_LAUNCH_RUNBOOK.md');
-  const backendScaffoldRunbook = requireFile('docs/handoffs/round39-backend-scaffold-operator-actions.md');
-  const workerReadme = requireFile('src/workers/README.md');
   const sessionRoute = requireFile('src/workers/routes/session.ts');
   const adminRoute = requireFile('src/workers/routes/admin.ts');
   const mcp = requireFile('src/workers/routes/mcp-gateway.ts');
+  const mcpRpc = requireFile('src/workers/routes/mcp-rpc.ts');
   const registryRoute = requireFile('src/workers/routes/template-policy-registry.ts');
+  const onboardingProvisionerTest = requireFile('src/workers/__tests__/onboarding-provisioner.test.ts');
+  const sessionInviteTest = requireFile('src/workers/__tests__/session-invite-entitlement-matrix.test.ts');
+  const mcpGatewayTest = requireFile('src/workers/__tests__/mcp-gateway-route.test.ts');
+  const mcpRpcTest = requireFile('src/workers/__tests__/mcp-rpc-route.test.ts');
+  const mcpContract = requireFile('scripts/verify-customer-mcp-rpc-contract.mjs');
   requireIncludes('new_user_customer_scenario_documented', doc, [
     'Create synthetic `company_a` and `company_b`',
     'Add `employee_a`, `employee_b`, and `admin`',
     'Connect Claude Code as `employee_a`',
-    'Call `xlooop.whoami`',
+    'Call `xcp_session_start`',
     'Confirm `employee_a` cannot access `company_b`',
     'Submit a metadata-only evidence item and tool event',
     'Revoke the connector token',
   ]);
-  requireIncludes('existing_browser_onboarding_isolation_fixture_present', browserScenario, [
-    'new_user_session_is_local_owner',
-    'new_user_session_has_tenant',
-    'owner_param_does_not_login_andrey',
-    'owner_param_does_not_leak_aps',
-    'first_run_guide_does_not_leak_mbp_or_aps',
+  requireIncludes('backend_onboarding_and_tenant_isolation_regressions_present', `${onboardingProvisionerTest}\n${sessionInviteTest}\n${mcpGatewayTest}\n${mcpRpcTest}\n${mcpContract}`, [
+    'provisionCustomerFromAccessRequest',
+    'workspace_id',
+    'approved_workspace',
+    'xcp_session_start',
+    'tenant_a',
+    'blocked_surfaces',
+    'rpc_no_legacy_whoami_tool',
   ]);
   requireIncludes('clerk_first_onboarding_default_lane_enforced', `${adminCli}\n${aspRunbook}\n${sessionRoute}\n${adminRoute}`, [
     'CUSTOMER_AUTO_PROVISION_ON_SESSION',
@@ -842,18 +861,18 @@ async function verifyNewUserApiMcpOnboardingScenario() {
     'manual entitlement inserts are break-glass',
     'Manual entitlement SQL is not a customer onboarding step',
   ]);
-  requireIncludes('clerk_workers_jwt_claims_support_session_first_provisioning', `${authTenancy}\n${registrationGoLive}\n${fourPilotRunbook}\n${backendScaffoldRunbook}\n${workerReadme}\n${sessionRoute}`, [
+  requireIncludes('clerk_workers_jwt_claims_support_session_first_provisioning', `${authTenancy}\n${aspRunbook}\n${sessionRoute}\n${onboardingProvisionerTest}`, [
     '"email": "{{user.primary_email_address}}"',
     '"name": "{{user.full_name}}"',
     '"org_id": "{{org.id}}"',
     '"org_role": "{{org.role}}"',
     '"org_slug": "{{org.slug}}"',
-    '`email` is required',
-    'first-login customer DB provisioning',
+    'session-first auto-provisioning',
+    'provisionCustomerFromAccessRequest',
     'pending_access',
   ]);
-  requireIncludes('api_mcp_new_user_surfaces_are_scoped', `${mcp}\n${registryRoute}`, [
-    'xlooop.whoami',
+  requireIncludes('api_mcp_new_user_surfaces_are_scoped', `${mcp}\n${mcpRpc}\n${registryRoute}`, [
+    'xcp_session_start',
     'xlooop.get_task_packet',
     'xlooop.submit_evidence',
     'xlooop.report_tool_event',

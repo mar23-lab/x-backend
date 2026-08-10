@@ -74,6 +74,7 @@ All errors return a consistent JSON body:
 | 429 | `RATE_LIMITED` | Cloudflare rate limit hit |
 | 500 | `INTERNAL_ERROR` | Unexpected server error |
 | 503 | `SERVICE_UNAVAILABLE` | Neon connection timeout or worker cold-start timeout |
+| 503 | `PROVIDER_UNAVAILABLE` | No approved live model runtime resolved or every live provider attempt failed |
 
 ---
 
@@ -616,20 +617,39 @@ returns zero rows and the API returns `409 CONFLICT`; no sign-off or receipt is 
 
 ---
 
-## Safe MCP Gateway
+## XCP Gateway — Customer Profile
 
-The `/api/v1/mcp/*` routes are the external execution-client gateway for Codex,
-Claude, MCP clients, and product automation. They consume the same backend
-operational spine as `/packets`, `/evidence`, `/approvals`, `/tool-events`, and
-`/metric-deltas`, but expose a narrower, packet-first contract.
+The `/api/v1/mcp/*` routes are the `customer` profile of the canonical
+agent-facing `xcp-gateway`. This tenant data-plane/resource server consumes the
+same backend operational spine as `/packets`, `/evidence`, `/approvals`,
+`/tool-events`, and `/metric-deltas`; it is not a second governance authority.
+
+### GET /api/v1/mcp/session-start
+
+**Auth:** Required
+**Tool:** `xcp_session_start`
+**Purpose:** Performs tenant identity/whoami and returns the customer-profile
+context and scoped tool manifest in one session-intake call. The response uses
+`schema_id: xcp.session_start/v1`, `status: pass`,
+`single_mcp_gateway: xcp-gateway`, `single_mcp_gateway_required: true`,
+`gateway_profile: customer`, and `effect_mode: observe`. Customer sessions use
+`selected_route`, `detected_role`, and `entry_skill` values of `not_applicable`,
+an authenticated tenant/workspace `identity_scope`, an empty `xcp.role_panel/v1`,
+empty skill/stop-condition arrays, customer-safe evidence and graph context,
+an allow policy decision, nullable/empty audit lineage, and no cross-profile
+prior-work payload. `requires_additional_gateway: false` proves clients do not
+traverse another gateway.
+
+The legacy REST identity alias is not part of MCP discovery and is not a second first-call path.
 
 ### GET /api/v1/mcp/tools
 
 **Auth:** Required
-**Purpose:** Returns the allowlisted tools and forbidden surfaces for external
-execution clients.
+**Purpose:** Returns canonical `xcp-gateway` metadata with `profile=customer`,
+the allowlisted tools and forbidden surfaces. `xcp_session_start` is the only
+discoverable intake.
 
-**Allowed tools:** `xlooop.get_task_packet`, `xlooop.submit_evidence`,
+**Allowed tools:** `xcp_session_start`, `xlooop.get_task_packet`, `xlooop.submit_evidence`,
 `xlooop.report_tool_event`, `xlooop.request_approval`,
 `xlooop.get_workflow_status`.
 
@@ -903,10 +923,13 @@ sync, not a false-green success.
 
 | Route file | Surfaces | Auth class | Purpose |
 |---|---|---|---|
-| `customer-chat.ts` | POST /customer-chat | tenant JWT | tenant-scoped AI chief-of-staff (Claude→Llama→deterministic ladder) |
+| `customer-chat.ts` | POST /customer-chat; POST /chat/turns | tenant JWT | tenant-scoped, live-provider-only assistant; `/chat/turns` is the durable commercial facade with validated runtime preferences and typed `503` without an answer |
+| `chat-receipt.ts` | GET /chat/receipt/:receipt_uid; GET /chat/turns/:id/receipt | tenant JWT | tenant-safe answer receipt; the commercial facade is JSON-only and distinguishes policy resolution from a persisted audit event |
+| `settings-readiness.ts` | GET /settings/readiness | tenant JWT | live customer-safe readiness matrix; unknown or incomplete proof remains `attention`/`unavailable` |
 | `documents.ts` | POST/GET /documents | tenant JWT | Stage-2 source-intake documents (bytea storage; metadata list is RLS-routed, 046) |
 | `sources.ts` | GET/POST /sources/* | tenant JWT | Clerk-OAuth source connectors (github/google/dropbox/microsoft); disconnect is SOFT (044) |
-| `workspaces.ts` | GET/POST /workspaces/* | operator/tenant | workspace create/list, activity-summary, doc grounding |
+| `workspaces.ts` | GET/POST /workspaces/* | operator/tenant | workspace create/list, activity-summary, doc grounding, and live-provider-only operator cockpit chat |
+| `model-runtimes.ts` | GET/POST/PUT/DELETE /model-runtimes/* | tenant member / owner/operator by operation | masked provider configuration, effective runtime resolution, model catalog, content-free live validation, defaults, and user override |
 | `members.ts` | GET /members | tenant JWT | real workspace members (membership-gated; non-member → 403) |
 | `profile.ts` | GET /me | JWT | user identity + DB account attributes |
 | `readiness.ts` | POST /readiness/submit | JWT | in-app first-login readiness onboarding |
@@ -924,6 +947,27 @@ sync, not a false-green success.
 | `developer-access.ts` | GET | JWT | developer API/desktop setup status |
 | `customer-workspace-feed.ts` | GET | tenant JWT | customer-safe starter feed |
 | `mcp-rpc.ts` | POST /mcp/rpc | service token | native MCP JSON-RPC transport |
+
+Commercial customer and operator chat resolve `request preference -> user override -> workspace default ->
+platform default`. `runtime_id` and `model_id` are optional preferences, never client authority: the server
+validates runtime tenancy and model availability. The legacy `llm` field is ignored and omitted by
+`POST /chat/turns`.
+
+The server-only execution boundary decrypts the selected tenant credential in memory and supports fixed
+adapters for Anthropic, OpenAI, Google Gemini, Mistral, DeepSeek, OpenRouter, and allowlisted Azure OpenAI
+hosts. Workers AI remains the platform fallback. Ollama, LM Studio, vLLM, llama.cpp, and custom runtimes
+return `503 RELAY_REQUIRED` until an authenticated outbound relay exists; the cloud Worker never fetches
+their tenant URLs. Bedrock returns `503 ADAPTER_UNAVAILABLE` until a reviewed SigV4 adapter exists.
+Discovery and validation use the stored tenant credential when configured. Plaintext and ciphertext never
+leave the server execution boundary.
+
+Successful `POST /chat/turns` responses require non-null answer, execution, context, policy-resolution,
+audit-event, and skill-invocation receipt references. A policy resolution is never mislabeled as an audit
+event. Clients may request `Accept: text/event-stream`; the server then emits `turn.started`, one or more
+`turn.delta` events, and `turn.completed` only after live-provider execution and durable completion
+persistence. This is receipt-backed `atomic_post_completion` streaming, not provider-native token
+streaming, and does not improve first-token latency. JSON remains the default response representation.
+No deterministic or fixture assistant text is returned as a successful commercial response.
 
 Tenant-isolation note: all tenant-scoped reads carry the app-level `WHERE workspace_id` guard, and the
 five core customer tables (`operation_events`, `projects`, `documents`, `board_cards`,

@@ -18,8 +18,10 @@ import {
   normalizePagesFunctionsBundle,
   PAGES_FUNCTIONS_ROUTE_SOURCE_MARKER,
   parseFrontendReleaseArtifact,
+  releaseManifestDigest,
   verifyStaticArtifactFiles,
 } from './lib/app-pages-release-contract.mjs';
+import { readCandidateDeploymentContract } from './lib/candidate-deployment-contract.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const releaseDir = path.resolve(process.env.XLOOOP_APP_PAGES_RELEASE_DIR || path.join(root, 'dist-app-pages-release'));
@@ -59,6 +61,28 @@ function runSelfTest() {
   writeFileSync(path.join(testRoot, 'support.js'), '');
   writeFileSync(path.join(testRoot, 'vendor/runtime.js'), '');
 
+  const reactRoot = path.join(testRoot, 'react');
+  mkdirSync(path.join(reactRoot, 'assets'), { recursive: true });
+  writeFileSync(path.join(reactRoot, 'index.html'), '<div id="root"></div>');
+  writeFileSync(path.join(reactRoot, '_headers'), '/*\n  X-Robots-Tag: noindex\n');
+  writeFileSync(path.join(reactRoot, 'assets/app.js'), '');
+  const reactManifest = {
+    schema_id: 'xlooop.frontend_runtime_manifest.v2',
+    runtime_class: 'production',
+    production_cutover_approved: true,
+    require_contract_handshake: true,
+    api_base: 'https://api.xlooop.com',
+    frontend_sha: frontendSha,
+    expected_backend_sha: backendSha,
+    expected_contract_hash: contractHash,
+    expected_schema_head: 89,
+    expected_environment: 'production',
+    expected_authority: 'production',
+    expected_feature_posture: posture,
+    files: hashReleaseFiles(reactRoot, new Set(['runtime-manifest.json'])),
+  };
+  writeFileSync(path.join(reactRoot, 'runtime-manifest.json'), `${JSON.stringify(reactManifest)}\n`);
+
   const parsed = parseFrontendReleaseArtifact(testRoot);
   const valid = assessFrontendReleaseArtifact(parsed, { frontend_sha: frontendSha, backend_sha: backendSha });
   const wrongBackend = assessFrontendReleaseArtifact(parsed, {
@@ -66,9 +90,42 @@ function runSelfTest() {
     backend_sha: 'd'.repeat(40),
   });
   const staticProblems = verifyStaticArtifactFiles(testRoot, contractHash);
+  const reactParsed = parseFrontendReleaseArtifact(reactRoot);
+  const validReact = assessFrontendReleaseArtifact(reactParsed, {
+    frontend_sha: frontendSha,
+    backend_sha: backendSha,
+    contract_hash: contractHash,
+  });
+  const wrongReactContract = assessFrontendReleaseArtifact(reactParsed, {
+    frontend_sha: frontendSha,
+    backend_sha: backendSha,
+    contract_hash: 'd'.repeat(64),
+  });
+  const wrongReactSchema = assessFrontendReleaseArtifact(reactParsed, {
+    frontend_sha: frontendSha,
+    backend_sha: backendSha,
+    contract_hash: contractHash,
+    schema_head: 100,
+  });
+  const wrongReactPosture = assessFrontendReleaseArtifact(reactParsed, {
+    frontend_sha: frontendSha,
+    backend_sha: backendSha,
+    contract_hash: contractHash,
+    feature_posture: { ...posture, current_work_projection: true },
+  });
+  const reactStaticProblems = verifyStaticArtifactFiles(reactRoot, contractHash);
+  mkdirSync(path.join(reactRoot, '_worker.js'), { recursive: true });
+  writeFileSync(path.join(reactRoot, '_worker.js', 'index.js'), 'export default {};');
+  writeFileSync(path.join(reactRoot, '_routes.json'), '{}');
+  writeFileSync(path.join(reactRoot, 'release-manifest.json'), '{}');
+  const assembledReactProblems = verifyStaticArtifactFiles(reactRoot, contractHash);
+  writeFileSync(path.join(reactRoot, 'assets/app.js'), 'tampered-after-manifest');
+  const tamperedReactProblems = verifyStaticArtifactFiles(reactRoot, contractHash);
+  writeFileSync(path.join(reactRoot, 'assets/app.js'), '');
   const hashes = hashReleaseFiles(testRoot);
   const manifest = {
     schema_id: 'xlooop.app_pages_release_manifest.v1',
+    artifact_contract: 'legacy_wired_v1',
     frontend_sha: frontendSha,
     backend_sha: backendSha,
     contract_hash: contractHash,
@@ -78,8 +135,10 @@ function runSelfTest() {
     feature_posture: posture,
     files: hashes,
   };
+  manifest.artifact_digest = releaseManifestDigest(manifest);
   const validManifest = assessReleaseManifest(manifest, hashes);
   const tamperedManifest = assessReleaseManifest(manifest, { ...hashes, 'index.html': 'd'.repeat(64) });
+  const digestDriftManifest = assessReleaseManifest({ ...manifest, artifact_digest: '0'.repeat(64) }, hashes);
   const randomRouteCommentA =
     '// ../.wrangler/tmp/pages-4T2Zm4/functionsRoutes-0.44016116637048475.mjs';
   const randomRouteCommentB =
@@ -106,8 +165,22 @@ function runSelfTest() {
     ['valid artifact', valid.ok],
     ['wrong backend rejected', !wrongBackend.ok && wrongBackend.problems.includes('backend_sha_mismatch')],
     ['required files valid', staticProblems.length === 0],
+    ['React/Vite v2 artifact is valid', validReact.ok],
+    ['React/Vite v2 contract drift is rejected',
+      !wrongReactContract.ok && wrongReactContract.problems.includes('contract_hash_mismatch')],
+    ['React/Vite v2 schema drift is rejected',
+      !wrongReactSchema.ok && wrongReactSchema.problems.includes('schema_head_mismatch')],
+    ['React/Vite v2 feature posture drift is rejected',
+      !wrongReactPosture.ok && wrongReactPosture.problems.includes('feature_posture_mismatch')],
+    ['React/Vite v2 static files are valid', reactStaticProblems.length === 0],
+    ['React/Vite v2 frontend hashes remain valid after backend-owned release assembly',
+      assembledReactProblems.length === 0],
+    ['React/Vite v2 post-manifest asset mutation is rejected',
+      tamperedReactProblems.includes('runtime_manifest_file_hashes')],
     ['valid manifest', validManifest.ok],
     ['tampered file rejected', !tamperedManifest.ok && tamperedManifest.problems.includes('file_hashes')],
+    ['tampered release digest rejected',
+      !digestDriftManifest.ok && digestDriftManifest.problems.includes('artifact_digest_mismatch')],
     ['randomized route comments normalize identically', normalizedA === normalizedB],
     ['normalized marker is stable', normalizePagesFunctionsBundle(normalizedA) === normalizedA],
     ['normalized marker is present once', normalizedA.split(PAGES_FUNCTIONS_ROUTE_SOURCE_MARKER).length === 2],
@@ -120,7 +193,8 @@ function runSelfTest() {
     console.error(`verify-app-pages-release self-test · FAIL · ${failures.join(',')}`);
     process.exit(1);
   }
-  console.log(`verify-app-pages-release self-test · PASS ${checks.length}/${checks.length}`);
+  const passed = checks.length - failures.length;
+  console.log(`verify-app-pages-release self-test · PASS ${passed}/${checks.length}`);
 }
 
 if (selfTest) {
@@ -134,9 +208,13 @@ try {
   const backendSha = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim();
   const contract = JSON.parse(readFileSync(path.join(root, 'docs/contracts/api-contract.v1.json'), 'utf8'));
   const config = parseFrontendReleaseArtifact(releaseDir);
+  const candidateDeployment = readCandidateDeploymentContract(root);
   const artifact = assessFrontendReleaseArtifact(config, {
     frontend_sha: manifest.frontend_sha,
     backend_sha: backendSha,
+    contract_hash: contract.contract_hash,
+    schema_head: candidateDeployment.schema_head,
+    feature_posture: candidateDeployment.feature_posture,
   });
   problems.push(...artifact.problems);
   problems.push(...verifyStaticArtifactFiles(releaseDir, contract.contract_hash));

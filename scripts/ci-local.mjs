@@ -5,6 +5,8 @@ const gates = [
   ['github actions disabled', 'npm', ['run', 'verify:github-actions-disabled']],
   ['installed dependency parity', 'npm', ['run', 'verify:installed-dependencies']],
   ['known dependency advisory floors', 'npm', ['run', 'verify:known-dependency-advisories']],
+  ['connector provider authority controls', 'npm', ['run', 'verify:connector-provider-ssot:self-test']],
+  ['connector provider authority', 'npm', ['run', 'verify:connector-provider-ssot']],
   ['MCP server typecheck', 'npm', ['--prefix', 'packages/xlooop-mcp-server', 'run', 'typecheck']],
   ['MCP server build', 'npm', ['--prefix', 'packages/xlooop-mcp-server', 'run', 'build']],
   ['MCP server tests', 'npm', ['--prefix', 'packages/xlooop-mcp-server', 'test']],
@@ -49,10 +51,13 @@ const gates = [
   ['RLS connection single-source controls', 'npm', ['run', 'verify:rls-connection-single-source:self-test']],
   ['RLS connection single-source', 'npm', ['run', 'verify:rls-connection-single-source']],
   ['deploy provenance wiring', 'npm', ['run', 'verify:deploy-provenance']],
+  ['model-runtime keyring preflight controls', 'npm', ['run', 'preflight:model-runtime-keyring:self-test']],
   ['Pages artifact-owned Sentry release', 'npm', ['run', 'verify:pages-sentry-release']],
   ['rate-limit buckets bound to real limiters', 'npm', ['run', 'verify:rate-limit-binding-parity']],
   ['Pages release artifact contract', 'npm', ['run', 'verify:app-pages-release:self-test']],
   ['Pages deployment decision contract', 'npm', ['run', 'verify:app-pages-decision:self-test']],
+  ['paired production cutover transaction controls', 'npm', ['run', 'deploy:paired:prod:self-test']],
+  ['rollback target authority controls', 'npm', ['run', 'verify:rollback-target-authority:self-test']],
   ['deployed surface registry', 'npm', ['run', 'verify:deployed-surfaces']],
   // Until 260729 this line ran `verify:app-security-headers`, which was DEFINED as the script's own
   // `--self-test`. ci-local's only security-header gate was therefore the comparator's controls; the
@@ -64,6 +69,8 @@ const gates = [
   ['app security header parity controls', 'npm', ['run', 'verify:app-security-headers:self-test']],
   ['deploy schema-head contract', 'npm', ['run', 'verify:deploy-schema-head:self-test']],
   ['authority decision truth', 'npm', ['run', 'verify:authority-decision']],
+  ['authority decision producer controls', 'npm', ['run', 'mint:authority-decision:self-test']],
+  ['authority ratification producer controls', 'npm', ['run', 'verify:authority-ratification:self-test']],
   ['deployment authorization replay protection', 'npm', ['run', 'verify:deployment-authorization-store']],
   ['deployment authorization gate repo containment', 'npm', ['run', 'verify:deployment-authorization-store:self-test']],
   ['packet completion contract', 'npm', ['run', 'verify:packet-completion-contract']],
@@ -121,6 +128,11 @@ const gates = [
   ['customer onboarding composed gate', 'npm', ['run', 'verify:customer-onboarding-composed-gate']],
   ['customer onboarding composed gate controls', 'npm', ['run', 'verify:customer-onboarding-composed-gate:self-test']],
   ['customer authority gates controls', 'npm', ['run', 'verify:customer-authority-gates:self-test']],
+  // External capability canaries are deliberately non-authoritative, but that boundary still needs
+  // teeth. These controls reject aggregate summaries as raw evidence, require structural and live
+  // semantic equivalence to remain distinct, and keep every tool default-disabled without approval.
+  ['external capability live-contract controls', 'npm', ['run', 'verify:external-capability-live-contract']],
+  ['external capability default hard stop', 'npm', ['run', 'verify:external-capability-default-hard-stop']],
   // Release-debt visibility (260803). Advisory by default — it reports how far HEAD has drifted from
   // the LIVE deployed sha, which is the signal that was missing while 22 backend commits accumulated
   // undeployed across five sessions. The self-test is the gate on the gate: it proves the threshold

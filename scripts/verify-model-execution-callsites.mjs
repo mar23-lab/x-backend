@@ -5,15 +5,29 @@ import path from 'node:path';
 const root = process.cwd();
 const manifest = JSON.parse(fs.readFileSync(path.join(root, 'docs/contracts/model-execution-callsite-manifest.json'), 'utf8'));
 const errors = [];
-const callableFunctions = ['answerCockpitChat', 'buildWorkspaceDigestLLM', 'buildOnboardingWelcomeDraft', 'refinePromptText', 'generateIntentEnrichment'];
+const callableFunctions = ['answerLiveCockpitChat', 'buildWorkspaceDigestLLM', 'buildOnboardingWelcomeDraft', 'refinePromptText', 'generateIntentEnrichment'];
 
 if (manifest.schema_version !== 'xlooop.model_execution_callsites.v1') errors.push('unexpected schema_version');
 if (!Array.isArray(manifest.callsites) || manifest.callsites.length === 0) errors.push('callsites must be a non-empty array');
 
 const expectedCounts = new Map();
 for (const entry of manifest.callsites ?? []) {
-  for (const field of ['id', 'path', 'function', 'anchor', 'observer_token', 'principal', 'action']) {
+  for (const field of ['id', 'path', 'function', 'anchor', 'observer_token', 'principal', 'action', 'surface_kind', 'production_outcome_policy']) {
     if (typeof entry[field] !== 'string' || entry[field].length === 0) errors.push(`${entry.id ?? 'unknown'}: missing ${field}`);
+  }
+  if (entry.surface_kind === 'conversation' && entry.production_outcome_policy !== 'live_or_typed_unavailable') {
+    errors.push(`${entry.id}: conversational production surface must be live_or_typed_unavailable`);
+  }
+  if (entry.surface_kind === 'conversation') {
+    if (entry.function !== 'answerLiveCockpitChat') {
+      errors.push(`${entry.id}: conversational route must use the required-runtime live boundary`);
+    }
+    if (entry.deterministic_success_forbidden !== true) {
+      errors.push(`${entry.id}: conversational production surface must forbid deterministic success`);
+    }
+    if (typeof entry.runtime_plan_token !== 'string' || entry.runtime_plan_token.length === 0) {
+      errors.push(`${entry.id}: conversational production surface must declare runtime_plan_token`);
+    }
   }
   const absolute = path.join(root, entry.path);
   if (!fs.existsSync(absolute)) {
@@ -21,6 +35,14 @@ for (const entry of manifest.callsites ?? []) {
     continue;
   }
   const source = fs.readFileSync(absolute, 'utf8');
+  if (entry.surface_kind === 'conversation') {
+    if (!source.includes('const liveChatRequired = true;')) {
+      errors.push(`${entry.id}: route does not fail closed on live runtime availability`);
+    }
+    if (!source.includes("code: 'PROVIDER_UNAVAILABLE'")) {
+      errors.push(`${entry.id}: route lacks typed PROVIDER_UNAVAILABLE outcome`);
+    }
+  }
   const occurrence = Number(entry.anchor_occurrence ?? 1);
   let index = -1;
   for (let i = 0; i < occurrence; i += 1) index = source.indexOf(entry.anchor, index + 1);
@@ -30,6 +52,15 @@ for (const entry of manifest.callsites ?? []) {
   }
   const callWindow = source.slice(index, index + 2400);
   if (!callWindow.includes(entry.observer_token)) errors.push(`${entry.id}: observer token is not adjacent to call`);
+  if (entry.surface_kind === 'conversation' && !callWindow.includes(entry.runtime_plan_token)) {
+    errors.push(`${entry.id}: resolved live runtime plan is not adjacent to call`);
+  }
+  if (entry.surface_kind === 'conversation') {
+    const postCallWindow = source.slice(index, index + 5200);
+    if (!postCallWindow.includes("result.generated_by !== 'llm'")) {
+      errors.push(`${entry.id}: route does not reject deterministic/non-LLM success`);
+    }
+  }
   const key = `${entry.path}::${entry.function}`;
   expectedCounts.set(key, (expectedCounts.get(key) ?? 0) + 1);
 }

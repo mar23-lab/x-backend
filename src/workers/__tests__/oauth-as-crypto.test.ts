@@ -15,6 +15,7 @@ const grant = (over: Partial<OAuthGrant> = {}): OAuthGrant => ({
   redirect_uri: 'http://127.0.0.1:33418/callback',
   cc: 'E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM',
   workspace_id: 'ws_a', user_id: 'u_1', role: 'viewer',
+  scopes: ['read:session', 'read:packets'],
   exp: Math.floor(NOW / 1000) + AUTH_CODE_TTL_SECONDS, n: 'nonce-1',
   ...over,
 });

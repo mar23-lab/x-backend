@@ -2,6 +2,19 @@
 
 import { spawnSync } from 'node:child_process';
 
+export const POSTGRES_INTEGRATION_TEST_TIMEOUT_MS = 30_000;
+
+export function vitestArgs() {
+  return [
+    '--no-install',
+    'vitest',
+    'run',
+    'src/workers/__tests__/intake-schema91-postgres.test.ts',
+    '--testTimeout',
+    String(POSTGRES_INTEGRATION_TEST_TIMEOUT_MS),
+  ];
+}
+
 function assess(env) {
   const url = String(env.XLOOOP_SCHEMA91_PG_URL || '').trim();
   const productionUrl = String(env.DATABASE_URL || '').trim();
@@ -44,6 +57,7 @@ if (process.argv.includes('--self-test')) {
       XLOOOP_SCHEMA91_PG_URL: 'https://db.example/test',
       XLOOOP_SCHEMA91_PG_DISPOSABLE: '1',
     }).includes('XLOOOP_SCHEMA91_PG_URL must use postgres or postgresql'),
+    vitestArgs().includes(String(POSTGRES_INTEGRATION_TEST_TIMEOUT_MS)),
   ];
   if (cases.every(Boolean)) {
     console.log('verify-schema91-postgres self-test PASS');
@@ -61,12 +75,7 @@ if (problems.length) {
 
 const result = spawnSync(
   'npx',
-  [
-    '--no-install',
-    'vitest',
-    'run',
-    'src/workers/__tests__/intake-schema91-postgres.test.ts',
-  ],
+  vitestArgs(),
   {
     cwd: process.cwd(),
     env: process.env,

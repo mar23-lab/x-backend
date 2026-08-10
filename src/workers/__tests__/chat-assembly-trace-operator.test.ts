@@ -9,21 +9,69 @@ import { Hono } from 'hono';
 import { workspacesRoute } from '../routes/workspaces';
 
 const MBP_OWNER = 'user_operator_mbp';
-const BASE_ENV = { MBP_OWNER_USER_ID: MBP_OWNER, MBP_OWNER_LINKED_USER_IDS: '', DATABASE_URL: 'x' };
+const LIVE_TEST_AI = {
+  run: async (_model: string, input: { messages?: Array<{ role?: string; content?: string }> }) => {
+    const prompt = String(input.messages?.find((message) => message.role === 'user')?.content ?? '');
+    const match = prompt.match(/Source-bound answer draft[^:]*:\n([\s\S]*?)\n\nEvent facts:/);
+    return {
+      response: match?.[1]?.trim() || 'A live test provider completed the grounded operator trace request.',
+      usage: { prompt_tokens: 21, completion_tokens: 12 },
+    };
+  },
+};
+const BASE_ENV = {
+  MBP_OWNER_USER_ID: MBP_OWNER,
+  MBP_OWNER_LINKED_USER_IDS: '',
+  DATABASE_URL: 'x',
+  AI: LIVE_TEST_AI,
+  ROLE_SKILL_CATALOG_ENABLED: 'true',
+  RESOLUTION_RECEIPT_SIGNING_SECRET: 'test-resolution-signing-secret-0123456789',
+  RESOLUTION_RECEIPT_SIGNING_KEY_ID: 'test-key',
+  XLOOOP_DEPLOY_SHA: 'test-sha',
+};
 const AUTH = { user_id: MBP_OWNER, workspace_id: 'org_3EG82', role: 'owner' };
 const SCOPE = { workspace_id: 'org_3EG82', project_id: null };
 const EVENTS = [
   { id: 'e1', summary: 'feat: thing', status: 'completed', source_tool: 'github', approval_state: null, domain_id: null, visibility: 'internal_workspace', occurred_at: '2026-07-01T00:00:00Z' },
 ];
 
+const fakeSql = Object.assign(
+  async (strings: TemplateStringsArray, ...values: unknown[]) => {
+    const text = strings.join('?');
+    if (text.includes('INSERT INTO model_execution_receipts')) return [{ id: String(values[0]) }];
+    if (text.includes('UPDATE model_execution_receipts')) return [{ id: 'mer_trace' }];
+    return [];
+  },
+  {
+    transaction: async (queries: (tx: typeof fakeSql) => unknown[]) => Promise.all(queries(fakeSql)),
+  },
+);
+
 // A COMPLETE operator-plane dal stub (the rotted suite's stubs omit getCustomerContextProfile → 500).
 function completeDal(captured: { messages?: unknown[] }) {
   return {
+    modelRuntimes: {
+      listProviders: async () => [],
+      getOverride: async () => null,
+      getProviderCredential: async () => null,
+    },
     listEventsForOperator: async () => ({ events: EVENTS, pagination: { has_more: false, next_before: null } }),
     getCustomerContextProfile: async () => null,
     listUnifiedGovernance: async () => [],
     getArtefactLineage: async () => [],
-    appendChatExchange: async (_u: string, _s: unknown, messages: unknown[]) => { captured.messages = messages; },
+    appendChatExchange: async (_u: string, _s: unknown, messages: unknown[]) => {
+      captured.messages = messages;
+      return {
+        thread_id: 'thr_trace',
+        messages: [
+          { id: 'msg_user', role: 'you', entry_type: 'user_request' },
+          {
+            id: 'msg_assistant', role: 'assistant', entry_type: 'assistant_answer',
+            receipt_uid: 'chat_receipt_trace', audit_event_id: 'audit_trace',
+          },
+        ],
+      };
+    },
   };
 }
 
@@ -32,6 +80,7 @@ function ask(env: Record<string, unknown>, captured: { messages?: unknown[] }) {
   app.use('*', async (ctx, next) => {
     ctx.set('request_id', 'test');
     ctx.set('auth', AUTH as never);
+    ctx.set('sql', fakeSql as never);
     ctx.set('dal', completeDal(captured) as never);
     await next();
   });

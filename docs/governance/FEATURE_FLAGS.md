@@ -36,7 +36,7 @@ bare `=== 'true'` / `!== 'true'` / `.toLowerCase() === 'true'`. `envFlagTrue` it
 ## Unbound → OFF (activation = redeploy with the var, dashboard var, or `wrangler secret put`)
 | Flag | Direction | Purpose |
 |---|---|---|
-| `SOURCE_SCOPE_ENFORCEMENT_ENABLED` | **fail-toward-less-safe** | restricted-scope guard on source rows (sources.ts); OFF = a source may claim a capability its token can't exercise. FGH-1: dashboard-only activation → MUST be quote-tolerant (now is). |
+| `SOURCE_SCOPE_ENFORCEMENT_ENABLED` | **enabled; paired release invariant** | Restricted-scope guard on source rows (`sources.ts`). Identity sign-in never requests Gmail/Drive data scopes; the Integrations connect flow requests `gmail.readonly` or `drive.metadata.readonly`, and this guard refuses materialization when the provider token lacks the exact scope. Must ship with the commercial connector UI; disabling it is a security regression. |
 | `IDEMPOTENCY_ENABLED` | fail-safe-off | Idempotency-Key reserve-first on governed writes (mig 065 staged) |
 | `CUSTOMER_API_TOKENS_ENABLED` | fail-safe-off | customer bearer-token auth path |
 | `CUSTOMER_OPERATIONAL_TOKENS_ENABLED` | fail-safe-off | operator-scoped customer tokens |
@@ -51,7 +51,7 @@ bare `=== 'true'` / `!== 'true'` / `.toLowerCase() === 'true'`. `envFlagTrue` it
 | `CONTEXT_RESOLVER_ENABLED` | fail-safe-off | onboarding context resolver |
 | `PURGE_DELETED_ENABLED` | fail-safe-off | purge-deleted cron (hard-delete of soft-deleted rows) |
 | `SAFETY_FLOOR_RATELIMIT_ENABLED` | fail-safe-off | rate-limit on LLM-cost endpoints (SF-2) |
-| `CUSTOMER_SAFE_SERIALIZER_ENABLED` | fail-safe-off | AR-0.2 · customer-safe projection: strips internal provisioning ids from /session entitlement + engine name / model / grounded_on ids from /customer-chat. OFF = byte-identical (fields still emitted); ON = redacted. Wired at session.ts + customer-chat.ts, enforced by `verify:no-internal-ip-customer-payload`. |
+| `CUSTOMER_SAFE_SERIALIZER_ENABLED` | fail-safe-off | AR-0.2 · customer-safe projection: strips internal provisioning ids from /session entitlement, legacy engine/model fields, raw attempt details, and grounded_on ids from /customer-chat. The explicit execution receipt keeps the resolved runtime/provider/model/config-version reference required for customer transparency. OFF = byte-identical (fields still emitted); ON = redacted. Wired at session.ts + customer-chat.ts, enforced by `verify:no-internal-ip-customer-payload`. |
 | `ROLE_SKILL_CATALOG_ENABLED` | fail-safe-off | AR-2.1 · the KEYSTONE. When the shadow role/skill resolver is on (`ROLE_SKILL_RESOLVER_ENABLED`), this makes `resolveBindings` read the W3-published catalog (real skill bindings) instead of the empty floor. OFF (default) = floor = byte-identical shadow (skill_coverage='no_catalog'); ON = real resolution (coverage moves off zero). Loader = role-skill-catalog-loader.ts; drift-gated by `verify:role-skill-catalog-loader-fresh`. |
 
 All 28 flags are read via `envFlagTrue`. The 10 declared-ON are byte-identical under the

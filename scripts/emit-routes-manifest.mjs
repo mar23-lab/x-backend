@@ -503,11 +503,13 @@ function runSelfTest() {
     '--simulate-group-guard-removal',
     '--simulate-route-guard-removal',
   ];
+  let mutationsObservedRed = 0;
   for (const mutation of mutations) {
     const child = spawnSync(process.execPath, [fileURLToPath(import.meta.url), '--repo', REPO, mutation], { encoding: 'utf-8' });
     if (child.status === 0) throw new Error(`self-test mutation did not turn RED: ${mutation}`);
+    mutationsObservedRed += 1;
   }
-  console.log(`route-manifest self-test PASS · ${manifest._provenance.route_count}/${manifest._provenance.route_count} classified · ${manifest._provenance.factory_mount_count} factory mount · ${mutations.length}/${mutations.length} mutations RED`);
+  console.log(`route-manifest self-test PASS · ${manifest._provenance.auth_classified_count}/${manifest._provenance.route_count} classified · ${manifest._provenance.factory_mount_count} factory mount · ${mutationsObservedRed}/${mutations.length} mutations RED`);
 }
 
 if (argv.includes('--self-test')) {

@@ -11,6 +11,17 @@ import { describe, it, expect, vi } from 'vitest';
 import { Hono } from 'hono';
 import { customerChatRoute } from '../routes/customer-chat';
 
+const LIVE_TEST_AI = {
+  run: async (_model: string, input: { messages?: Array<{ role?: string; content?: string }> }) => {
+    const prompt = String(input.messages?.find((message) => message.role === 'user')?.content ?? '');
+    const match = prompt.match(/Source-bound answer draft[^:]*:\n([\s\S]*?)\n\nEvent facts:/);
+    return {
+      response: match?.[1]?.trim() || 'Live test provider completed the grounded request without deterministic fallback.',
+      usage: { prompt_tokens: 31, completion_tokens: 17 },
+    };
+  },
+};
+
 const PROFILE = {
   schema_id: 'xlooop.customer_context_profile.v1',
   company: { name: 'Honest & Young', domain: 'honestyoung.example', country: 'AU' },
@@ -82,7 +93,7 @@ function ask(app: Hono, body: Record<string, unknown>) {
     { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) },
     // internal-builder suite: assert the RAW pre-serializer contract. P3 (260714) made the customer-safe
     // serializer DEFAULT-ON (missing flag = safe), so these tests opt out explicitly.
-    { CUSTOMER_SAFE_SERIALIZER_ENABLED: 'false' },
+    { CUSTOMER_SAFE_SERIALIZER_ENABLED: 'false', AI: LIVE_TEST_AI },
   );
 }
 
@@ -93,13 +104,124 @@ function history(app: Hono, query = '', env: Record<string, unknown> = {}) {
 const AUTH = { user_id: 'u1', workspace_id: 'org_hy', email: 'a@honestyoung.example', role: 'member' };
 
 describe('POST /api/v1/customer-chat', () => {
-  it('answers COMPANY-AWARE from the captured profile (no LLM binding, 0 events → deterministic floor)', async () => {
+  it('commercial default returns typed 503 when no live runtime exists, never a deterministic answer', async () => {
+    const dal = dalStub({
+      modelRuntimes: {
+        listProviders: vi.fn(async () => []),
+        getOverride: vi.fn(async () => null),
+        getProviderCredential: vi.fn(async () => null),
+      },
+    });
+    const res = await appFor(AUTH, dal).request('/api/v1/customer-chat', {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ message: 'What should I do next?' }),
+    }, { CUSTOMER_SAFE_SERIALIZER_ENABLED: 'false' });
+    expect(res.status).toBe(503);
+    const body = await res.json() as Record<string, unknown>;
+    expect(body).toMatchObject({ code: 'PROVIDER_UNAVAILABLE', retryable: true });
+    expect(body.answer).toBeUndefined();
+  });
+
+  it('commercial default uses a live effective runtime and returns execution provenance', async () => {
+    const dal = dalStub({
+      modelRuntimes: {
+        listProviders: vi.fn(async () => []),
+        getOverride: vi.fn(async () => null),
+        getProviderCredential: vi.fn(async () => null),
+      },
+    });
+    const res = await appFor(AUTH, dal).request('/api/v1/customer-chat', {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ message: 'What should I do next?' }),
+    }, {
+      CUSTOMER_SAFE_SERIALIZER_ENABLED: 'false',
+      AI: { run: async () => ({
+        response: 'A live provider answer grounded in Honest & Young and its current operating context.',
+        usage: { prompt_tokens: 23, completion_tokens: 15 },
+      }) },
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json() as Record<string, any>;
+    expect(body.generated_by).toBe('llm');
+    expect(body.execution).toMatchObject({
+      runtime_id: 'platform:workers_ai', provider: 'workers_ai', source: 'platform_default',
+      usage: { tokens_in: 23, tokens_out: 15 },
+    });
+    expect(body.answer).not.toMatch(/deterministic|fixture/i);
+  });
+
+  it('never returns the repeated stale digest for hey and lets do a proper work', async () => {
+    const aiRun = vi.fn(async (_model: string, input: { messages?: Array<{ role?: string; content?: string }> }) => {
+      const user = String(input.messages?.find((message) => message.role === 'user')?.content ?? '');
+      const operatorQuestion = user.match(/Operator question:\s*([\s\S]*)$/)?.[1]?.trim() ?? '';
+      return {
+        response: operatorQuestion === 'hey'
+          ? 'Hello. I am live and ready to help with this project using its current governed context.'
+          : 'Let us begin the real work. Tell me the outcome you want, and I will use the current project context.',
+        usage: { prompt_tokens: 29, completion_tokens: 18 },
+      };
+    });
+    const currentDal = dalStub({
+      modelRuntimes: {
+        listProviders: vi.fn(async () => []),
+        getOverride: vi.fn(async () => null),
+        getProviderCredential: vi.fn(async () => null),
+      },
+    });
+    const app = appFor(AUTH, currentDal);
+    const responses = [];
+    for (const message of ['hey', 'lets do a proper work']) {
+      const res = await app.request('/api/v1/customer-chat', {
+        method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ message }),
+      }, { CUSTOMER_SAFE_SERIALIZER_ENABLED: 'false', AI: { run: aiRun } });
+      expect(res.status).toBe(200);
+      responses.push(await res.json() as Record<string, any>);
+    }
+
+    expect(aiRun).toHaveBeenCalledTimes(2);
+    expect(responses.map((body) => body.generated_by)).toEqual(['llm', 'llm']);
+    expect(responses.map((body) => body.execution?.provider)).toEqual(['workers_ai', 'workers_ai']);
+    expect(responses[0].answer).not.toBe(responses[1].answer);
+    expect(responses.map((body) => body.answer).join('\n')).not.toMatch(/Here is what is happening in this project/);
+  });
+
+  it('maps the retired legacy Claude selector to the live platform Anthropic runtime', async () => {
+    const currentDal = dalStub({
+      modelRuntimes: {
+        listProviders: vi.fn(async () => []),
+        getOverride: vi.fn(async () => null),
+        getProviderCredential: vi.fn(async () => null),
+      },
+    });
+    const fetchSpy = vi.fn(async () => new Response(JSON.stringify({
+      content: [{ type: 'text', text: 'A live Anthropic answer for the selected customer project.' }],
+      usage: { input_tokens: 21, output_tokens: 12 },
+    }), { status: 200, headers: { 'content-type': 'application/json' } }));
+    vi.stubGlobal('fetch', fetchSpy);
+    const res = await appFor(AUTH, currentDal).request('/api/v1/customer-chat', {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ message: 'hey', llm: 'claude' }),
+    }, {
+      CUSTOMER_SAFE_SERIALIZER_ENABLED: 'false',
+      AI: { run: async () => ({ response: 'Workers fallback should not be selected.' }) },
+      ANTHROPIC_API_KEY: 'platform-anthropic-key',
+    });
+
+    expect(res.status).toBe(200);
+    const body = await res.json() as Record<string, any>;
+    expect(body.execution).toMatchObject({
+      runtime_id: 'platform:anthropic', provider: 'anthropic', source: 'request_preference',
+    });
+    expect(fetchSpy).toHaveBeenCalledWith('https://api.anthropic.com/v1/messages', expect.any(Object));
+  });
+
+  it('answers COMPANY-AWARE through a live runtime using the source-bound draft', async () => {
     const res = await ask(appFor(AUTH, dalStub()), { message: 'what should I do?' });
     expect(res.status).toBe(200);
     const body = await res.json() as { answer: string; generated_by: string };
     expect(body.answer).toContain('Honest & Young');
     expect(body.answer).toContain('workpaper'); // their real 90-day focus reached the answer
-    expect(body.generated_by).toBe('deterministic'); // no AI binding in the test env
+    expect(body.generated_by).toBe('llm');
   });
 
   it('TENANT-SAFE: a body-supplied scope.workspace_id is IGNORED — only the JWT workspace is read', async () => {
@@ -140,7 +262,7 @@ describe('POST /api/v1/customer-chat', () => {
     expect(body.answer).not.toContain('project_1');
     expect(body.answer).not.toContain('project_2');
     expect(body.answer).not.toContain('Here is what is happening');
-    expect(body.generated_by).toBe('deterministic');
+    expect(body.generated_by).toBe('llm');
   });
 
   it('returns complete workspace inventory coverage and freshness from canonical tenant records', async () => {
@@ -370,7 +492,7 @@ describe('POST /api/v1/customer-chat', () => {
       grounded_on: { projects: { items: Array<{ id: string; name: string }> } };
     };
     expect(body.answer).toBe('• Commercial proof — project_1\n• Customer onboarding — project_2');
-    expect(body.generated_by).toBe('deterministic');
+    expect(body.generated_by).toBe('llm');
     expect(body.grounded_on.projects.items).toEqual([
       expect.objectContaining({ id: 'project_1', name: 'Commercial proof' }),
       expect.objectContaining({ id: 'project_2', name: 'Customer onboarding' }),
@@ -415,7 +537,7 @@ describe('POST /api/v1/customer-chat', () => {
     expect(body.answer).not.toContain('google_drive');
     expect(body.answer).not.toContain('slack');
     expect(body.answer).not.toContain('legacy user-account binding');
-    expect(body.generated_by).toBe('deterministic');
+    expect(body.generated_by).toBe('llm');
     expect(body.grounded_on.sources).toMatchObject({
       total: 1,
       providers: [expect.objectContaining({ provider: 'gmail' })],
@@ -650,6 +772,7 @@ describe('GET /api/v1/customer-chat/history', () => {
     const stored = [
       { role: 'you', body: 'What is blocking us?', created_at: '2026-07-24T01:00:00.000Z' },
       { role: 'assistant', body: 'One approval is waiting.', created_at: '2026-07-24T01:00:01.000Z' },
+      { role: 'assistant', body: 'A current live answer.', generated_by: 'llm', created_at: '2026-08-10T01:00:01.000Z' },
     ];
     const captured: { userId?: string; scope?: Record<string, unknown>; limit?: number } = {};
     const dal = dalStub({
@@ -663,7 +786,16 @@ describe('GET /api/v1/customer-chat/history', () => {
     const res = await history(appFor(AUTH, dal), '?workspace_id=org_ATTACKER');
     expect(res.status).toBe(200);
     const body = await res.json() as { messages: unknown[]; scope: Record<string, unknown> };
-    expect(body.messages).toEqual(stored);
+    expect(body.messages).toEqual([
+      expect.objectContaining({ role: 'you', activity_class: 'user_input', is_live_assistant: false }),
+      expect.objectContaining({
+        role: 'assistant', activity_class: 'legacy_non_live_projection', is_live_assistant: false,
+        commercial_render_policy: 'historical_projection_only',
+      }),
+      expect.objectContaining({
+        role: 'assistant', generated_by: 'llm', activity_class: 'live_assistant_turn', is_live_assistant: true,
+      }),
+    ]);
     expect(body.scope).toEqual({ workspace_id: 'org_hy', project_id: null, domain_id: null });
     expect(captured).toEqual({
       userId: 'u1',
@@ -730,7 +862,7 @@ const GMAIL_ROW = {
   connected_at: '2026-07-01T00:00:00Z', last_sync_at: '2026-07-09T00:00:00Z', last_sync_error: null,
 };
 const askEnv = (app: Hono, body: Record<string, unknown>, env: Record<string, unknown>) =>
-  app.request('/api/v1/customer-chat', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }, { CUSTOMER_SAFE_SERIALIZER_ENABLED: 'false', ...env }); // raw pre-serializer contract (P3 opt-out)
+  app.request('/api/v1/customer-chat', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }, { CUSTOMER_SAFE_SERIALIZER_ENABLED: 'false', AI: LIVE_TEST_AI, ...env }); // raw pre-serializer contract
 
 describe('T1 · source-truth override (CHAT_SOURCE_TRUTH_OVERRIDE_ENABLED)', () => {
   const dal = () => dalStub({

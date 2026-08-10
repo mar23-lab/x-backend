@@ -154,6 +154,7 @@ XLOOOP_AUTHORITY_MODE = "production"
 # 0 rows, idempotent). Order at deploy: (1) apply 075 to prod, (2) this flag, (3) wrangler deploy.
 SINGLE_INTAKE_ENABLED = "true"
 CLERK_JWKS_CACHE_TTL_SECONDS = "300"
+CLERK_AUTHORIZED_PARTIES = "https://app.xlooop.com,https://www.xlooop.com"
 ALLOWED_ORIGIN_PATTERN = "https://*.xlooop.com"
 LOG_LEVEL = "info"
 # UGEC 260720: context-receipt persistence. Prerequisite RESOLUTION_RECEIPT_SIGNING_SECRET is now
@@ -166,6 +167,10 @@ CONTEXT_PACKET_PERSISTENCE_ENABLED = "true"
 # requires route-level transaction/receipt evidence.
 CHAT_HISTORY_PERSISTENCE_REQUIRED = "true"
 IDEMPOTENCY_ENABLED = "true"
+# Identity OAuth stays limited to sign-in. Restricted Gmail/Drive scopes are
+# requested only by the explicit source-connect flow and verified here before
+# a tenant source row can be materialized.
+SOURCE_SCOPE_ENFORCEMENT_ENABLED = "true"
 # W4/G2 · operator-owned org ids — connectors auto-approve the operator-approval side for these
 # (the operator IS the authority for their own workspaces). Customer orgs are NOT listed → they
 # require explicit operator approval (POST /admin/customer/:id/approve). Non-secret identifiers.
@@ -307,6 +312,9 @@ CHAT_SOURCE_TRUTH_OVERRIDE_ENABLED = "true"
 # 2. §168 role-scoped grounding (D-5/6/7): visibility ceiling + admissibility + client-empty bundle,
 #    now including the sources axis (T1).
 CHAT_ROLE_SCOPED_CONTEXT_ENABLED = "true"
+# Commercial customer chat is live-provider-only. The route also defaults fail-closed when this
+# variable is absent; the explicit production value prevents configuration ambiguity.
+COMMERCIAL_LIVE_CHAT_REQUIRED = "true"
 # 3. W1/G2 spine unification: tool events emit their companion operation_events row (migration 057).
 SPINE_TOOL_EVENT_UNIFICATION_ENABLED = "true"
 # 4. W4/G3 document-read audit: day-grain deduped access log (migration 059).
@@ -392,8 +400,8 @@ XLOOOP_JOURNEY_SEED_ENABLED = "true"
 
 # ---- Secrets (NOT committed; set via `wrangler secret put <NAME>`) ----
 # DEP-3 (260711-J): this block was missing several live-feature secrets the code reads. Full set:
-#   ANTHROPIC_API_KEY       — Claude API key for the chat chief-of-staff ladder. Absent → the ladder
-#                             falls back to Workers-AI / deterministic (no Claude tier). OPTIONAL.
+#   ANTHROPIC_API_KEY       — platform-managed Claude fallback for live chat. Absent → configured
+#                             tenant runtime or Workers AI; customer chat never falls back to canned text.
 #   SENTRY_DSN              — error/observability sink. Absent → sentry.ts console-fallback (dormant-safe).
 #                             Companion tuning vars (all OPTIONAL): SENTRY_* (sample rates / environment).
 #   RESEND_API_KEY          — transactional email (admin notify, investor invite). Absent → notifier
@@ -423,12 +431,12 @@ XLOOOP_JOURNEY_SEED_ENABLED = "true"
 #                             reports 'not_configured' (honest), never a fake result. `wrangler secret put HIBP_API_KEY`
 #   BUILTWITH_API_KEY       — Wave B (OPTIONAL) · BuiltWith API key for tech-stack detection. Absent →
 #                             'not_configured'. `wrangler secret put BUILTWITH_API_KEY`
-#   MODEL_RUNTIME_ENC_KEY   — Wave C · AES-256 master key (base64 of 32 random bytes) that encrypts customer
-#                             model-provider credentials AT REST (Workers have no per-tenant vault). Generate:
-#                             `openssl rand -base64 32`; bind: `wrangler secret put MODEL_RUNTIME_ENC_KEY`.
-#                             Absent → provider-credential WRITES 503 (fail-closed; never stores plaintext);
-#                             masked reads of existing rows still work. Rotating it orphans existing ciphertext
-#                             (enc_version marks rows for a future re-encrypt).
+#   MODEL_RUNTIME_ENC_KEYS  — Wave C · JSON key-id -> base64 32-byte platform KEK. Each credential uses a
+#                             random data key wrapped by the active KEK and bound to tenant/provider AAD.
+#   MODEL_RUNTIME_ACTIVE_KEY_ID — immutable key id present in MODEL_RUNTIME_ENC_KEYS; selects the write key.
+#   MODEL_RUNTIME_ENC_KEY   — legacy decrypt-only compatibility during audited keyring migration.
+#                             Absent/malformed keyring or active id -> provider-credential writes 503;
+#                             plaintext is never a fallback. Retain old KEKs until all envelopes are rotated.
 
 # ---- Local dev (wrangler dev) ----
 # Pulls from .dev.vars (NOT committed). See .dev.vars.example for the template.

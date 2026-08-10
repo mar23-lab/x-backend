@@ -20,6 +20,10 @@ import { neonClient } from '../db/client';
 import { createCustomerTokenRow } from '../dal/customer-token-store';
 import { envFlagTrue } from '../lib/env-flag';
 import {
+  CUSTOMER_CONNECTOR_SCOPES,
+  resolveRequestedCustomerScopes,
+} from '../lib/customer-connector-scopes';
+import {
   AUTH_CODE_TTL_SECONDS,
   mintClientId,
   verifyClientId,
@@ -87,7 +91,7 @@ oauthAsRoute.get('/.well-known/oauth-authorization-server', (ctx) => {
     grant_types_supported: ['authorization_code'], // no refresh grant — tokens live 90 days, hosts re-auth after
     code_challenge_methods_supported: ['S256'],
     token_endpoint_auth_methods_supported: ['none'], // public clients (PKCE is the proof)
-    scopes_supported: ['viewer', 'operator'],
+    scopes_supported: [...CUSTOMER_CONNECTOR_SCOPES, 'viewer', 'operator'],
     service_documentation: 'https://app.xlooop.com/settings',
   });
 });
@@ -180,10 +184,11 @@ oauthAsRoute.post('/oauth/consent', async (ctx) => {
   }
   if (!/^[A-Za-z0-9_-]{43,128}$/.test(challenge)) return oauthError(ctx, 400, 'invalid_request', 'malformed code_challenge');
 
-  // Role comes from the VERIFIED session's request, capped by deployment posture — mirror of
-  // developer-access.ts:213-216. The grant records what the consenting human approved.
-  const role: 'viewer' | 'operator' =
-    scope === 'operator' && envFlagTrue(ctx.env.CUSTOMER_OPERATIONAL_TOKENS_ENABLED) ? 'operator' : 'viewer';
+  const resolved = resolveRequestedCustomerScopes(
+    scope,
+    envFlagTrue(ctx.env.CUSTOMER_OPERATIONAL_TOKENS_ENABLED),
+  );
+  if (!resolved.ok) return oauthError(ctx, 400, 'invalid_scope', resolved.reason);
 
   const code = await sealGrant({
     cid_sha: await sha256HexOf(clientId),
@@ -191,7 +196,8 @@ oauthAsRoute.post('/oauth/consent', async (ctx) => {
     cc: challenge,
     workspace_id: auth.workspace_id,
     user_id: auth.user_id,
-    role,
+    role: resolved.role,
+    scopes: resolved.scopes,
     exp: Math.floor(Date.now() / 1000) + AUTH_CODE_TTL_SECONDS,
     n: crypto.randomUUID(),
   }, key);
@@ -199,7 +205,11 @@ oauthAsRoute.post('/oauth/consent', async (ctx) => {
   const to = new URL(redirectUri);
   to.searchParams.set('code', code);
   if (state) to.searchParams.set('state', state);
-  return ctx.json({ redirect_to: to.toString(), granted_role: role });
+  return ctx.json({
+    redirect_to: to.toString(),
+    granted_role: resolved.role,
+    granted_scopes: resolved.scopes,
+  });
 });
 
 // ── RFC 6749 §4.1.3 / RFC 7636 · token endpoint ──────────────────────────────────────────────────
@@ -212,7 +222,12 @@ oauthAsRoute.post('/oauth/token', async (ctx) => {
     const j = await ctx.req.json().catch(() => null) as Record<string, unknown> | null;
     if (j) for (const [k, v] of Object.entries(j)) { if (typeof v === 'string') p[k] = v; }
   } else {
-    p = Object.fromEntries(new URLSearchParams(await ctx.req.text().catch(() => ''))) as Record<string, string>;
+    const form = await ctx.req.formData().catch(() => null);
+    if (form) {
+      form.forEach((value, field) => {
+        if (typeof value === 'string') p[field] = value;
+      });
+    }
   }
   if (p.grant_type !== 'authorization_code') {
     return oauthError(ctx, 400, 'unsupported_grant_type', 'only authorization_code is supported');
@@ -243,6 +258,20 @@ oauthAsRoute.post('/oauth/token', async (ctx) => {
     return oauthError(ctx, 400, 'invalid_grant', 'code has already been redeemed');
   }
 
+  const memberships = (await sql/*sql*/`
+    SELECT activated_at
+    FROM workspace_members
+    WHERE workspace_id = ${grant.workspace_id}
+      AND user_id = ${grant.user_id}
+      AND status = 'active'
+      AND removed_at IS NULL
+    LIMIT 1
+  `) as Array<{ activated_at: string | null }>;
+  const issuerMembershipActivatedAt = memberships[0]?.activated_at ?? null;
+  if (!issuerMembershipActivatedAt) {
+    return oauthError(ctx, 403, 'access_denied', 'the authorizing workspace membership is no longer active');
+  }
+
   const raw = mintRawToken(grant.role);
   const clientHost = (() => { try { return new URL(grant.redirect_uri).hostname; } catch { return 'client'; } })();
   const created = await createCustomerTokenRow(sql, {
@@ -251,6 +280,9 @@ oauthAsRoute.post('/oauth/token', async (ctx) => {
     role: grant.role,
     label: `OAuth connector · ${clientHost}`.slice(0, 80),
     packet_prefix: `pkt-${slugifyWorkspace(grant.workspace_id)}-`,
+    scopes: grant.scopes,
+    authority_mode: 'delegated_user',
+    issuer_membership_activated_at: issuerMembershipActivatedAt,
     created_by: grant.user_id,
     expires_at: new Date(Date.now() + 90 * 86400000).toISOString(),
   });
@@ -259,6 +291,6 @@ oauthAsRoute.post('/oauth/token', async (ctx) => {
     access_token: raw,
     token_type: 'bearer',
     expires_in: Math.max(0, Math.floor((Date.parse(created.expires_at) - Date.now()) / 1000)),
-    scope: grant.role,
+    scope: grant.scopes.join(' '),
   });
 });

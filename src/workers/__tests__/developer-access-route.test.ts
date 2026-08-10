@@ -47,6 +47,18 @@ const OFF = { DATABASE_URL: 'postgres://t' } as never;
 const mint = (app: Hono, body: Record<string, unknown>, env: never) =>
   app.request('/api/v1/developer-access/tokens', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }, env);
 
+describe('GET /developer-access/status · canonical MCP discovery', () => {
+  it('advertises one xcp-gateway customer intake and no legacy identity tool or peer gateway', async () => {
+    const res = await appFor(VIEWER, dalStub()).request('/api/v1/developer-access/status', {}, OFF);
+    expect(res.status).toBe(200);
+    const body = await res.json() as Record<string, any>;
+    expect(body).toMatchObject({ connector_namespace: 'xcp-gateway', profile: 'customer' });
+    expect(body.allowed_tools.filter((tool: { name: string }) => tool.name === 'xcp_session_start')).toHaveLength(1);
+    expect(JSON.stringify(body)).not.toContain('xlooop.whoami');
+    expect(JSON.stringify(body)).not.toContain('xlooop-customer-gateway');
+  });
+});
+
 describe('POST /developer-access/tokens · the controlled minter', () => {
   it('SERVICE PRINCIPAL can never mint (403 before any flag/authority check)', async () => {
     const dal = dalStub();

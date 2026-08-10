@@ -1,12 +1,7 @@
-// model-runtimes.ts · Wave C (260708) · /api/v1/model-runtimes — per-workspace model-provider config with
-// ENCRYPTED-AT-REST customer credentials, a workspace default, and a per-user session override.
-//
-// SECURITY: this route is the ONLY layer that encrypts a customer provider credential (via
-// ../lib/model-runtime-crypto with ctx.env.MODEL_RUNTIME_ENC_KEY). The DAL stores only sealed ciphertext and
-// never sees plaintext or the master key. A client response NEVER contains the plaintext OR the ciphertext —
-// reads return a masked `····last4` only. Provider writes + the default flip are OWNER/OPERATOR-gated and
-// audited (audit_logs, target_type 'model_runtime_provider'); the session override is the caller's own
-// preference. Every path is workspace-scoped from the JWT (auth.workspace_id) — no cross-tenant reach.
+// Per-workspace model-provider config, encrypted credentials, defaults, and user overrides.
+// SECURITY: only this route seals credentials through the tenant-bound versioned keyring. The DAL sees
+// envelopes, never plaintext, DEKs, or platform KEKs; clients see only `····last4`. Provider writes and
+// defaults are operator-gated and audited. Every path is scoped from auth.workspace_id.
 
 import { Hono, type Context } from 'hono';
 import { errorEnvelope } from '../middleware/error';
@@ -15,7 +10,19 @@ import type { DalAdapter } from '../dal/DalAdapter';
 import { isOperatorContext } from '../lib/permissions';
 import { authorizeGovernedWrite, entitlementEnforcementOn } from '../lib/spine-authority';
 import { withAuthority } from '../lib/allowed-actions';
-import { encryptCredential, lastFour, renderMaskedCredential, isEncryptionConfigured } from '../lib/model-runtime-crypto';
+import { emitEvent } from '../lib/observability';
+import {
+  credentialEnvelopeKeyId,
+  credentialEnvelopeVersion,
+  decryptCredential,
+  encryptCredential,
+  isEncryptionConfigured,
+  isTenantEnvelopeEncryptionConfigured,
+  lastFour,
+  modelRuntimeActiveKeyId,
+  modelRuntimeEncryptionConfig,
+  renderMaskedCredential,
+} from '../lib/model-runtime-crypto';
 import {
   isModelRuntimeProvider,
   PROVIDER_SPECS,
@@ -24,11 +31,23 @@ import {
   type ProviderConfigRow,
   type ProviderSpec,
 } from '../dal/model-runtime-store';
+import {
+  ProviderUnavailableError,
+  discoverRuntimeModels,
+  resolveConfiguredRuntime,
+  resolveEffectiveRuntimePlan,
+  validateRuntime,
+} from '../services/model-runtime-execution';
+import type { AiRunner } from '../services/agent-digest';
 
 export interface ModelRuntimesEnv extends AuthEnv {
-  MODEL_RUNTIME_ENC_KEY?: string; // AES-256 master key (base64 32 bytes) — worker secret; NEVER in the DB
+  MODEL_RUNTIME_ENC_KEY?: string; // legacy decrypt-only AES-256 key during migration
+  MODEL_RUNTIME_ENC_KEYS?: string; // JSON key-id -> platform KEK; wraps random tenant credential DEKs
+  MODEL_RUNTIME_ACTIVE_KEY_ID?: string;
   MBP_OWNER_USER_ID?: string;
   MBP_OWNER_LINKED_USER_IDS?: string;
+  AI?: AiRunner;
+  ANTHROPIC_API_KEY?: string;
 }
 export interface ModelRuntimesVariables extends AuthVariables {
   dal: DalAdapter;
@@ -56,6 +75,7 @@ function toClientProvider(row: ProviderConfigRow) {
     provider: row.provider,
     auth_kind: row.auth_kind,
     locality: spec?.locality ?? 'external',
+    execution_mode: spec?.execution_mode ?? 'adapter_unavailable',
     base_url: row.base_url,
     model: row.model,
     requires_key: spec?.requires_key ?? false,
@@ -82,7 +102,7 @@ function catalogView(rows: ProviderConfigRow[]) {
     if (row) return toClientProvider(row);
     const spec = PROVIDER_SPECS[p];
     return {
-      id: null, provider: p, auth_kind: spec.auth_kind, locality: spec.locality,
+      id: null, provider: p, auth_kind: spec.auth_kind, locality: spec.locality, execution_mode: spec.execution_mode,
       base_url: null, model: null, requires_key: spec.requires_key, requires_base_url: spec.requires_base_url,
       configured: false, enabled: false, is_default: false, masked_key: null, updated_at: null,
     };
@@ -140,6 +160,117 @@ modelRuntimesRoute.get('/model-runtimes/providers', async (ctx) => {
   }
 });
 
+// The runtime customer chat will use after user override -> workspace default -> platform default.
+// Credentials and fallback internals never leave the worker.
+modelRuntimesRoute.get('/model-runtimes/effective', async (ctx) => {
+  try {
+    const auth = ctx.get('auth');
+    if (!auth?.user_id) return errorEnvelope(ctx, { status: 401, code: 'UNAUTHORIZED', message: 'auth required' });
+    if (!auth.workspace_id) return errorEnvelope(ctx, { status: 403, code: 'FORBIDDEN', message: 'no workspace in session' });
+    if (auth.role === 'client') return errorEnvelope(ctx, { status: 403, code: 'FORBIDDEN', message: 'client role cannot read model-runtime config' });
+    const plan = await resolveEffectiveRuntimePlan({
+      facade: ctx.get('dal').modelRuntimes,
+      env: ctx.env,
+      userId: auth.user_id,
+      workspaceId: auth.workspace_id,
+    });
+    return ctx.json({
+      effective: {
+        runtime_id: plan.primary.runtime_id,
+        provider: plan.primary.provider,
+        model: plan.primary.model,
+        source: plan.primary.source,
+        provider_config_version_id: plan.primary.provider_config_version_id,
+      },
+      fallback_count: plan.fallbacks.length,
+      resolution_attempts: plan.resolution_attempts,
+    });
+  } catch (err) {
+    return errorEnvelope(ctx, err);
+  }
+});
+
+// Live model discovery uses the configured tenant credential. Plaintext remains inside the resolver
+// and provider fetch call; only model ids are returned.
+modelRuntimesRoute.get('/model-runtimes/providers/:provider/models', async (ctx) => {
+  try {
+    const auth = ctx.get('auth');
+    if (!auth?.user_id) return errorEnvelope(ctx, { status: 401, code: 'UNAUTHORIZED', message: 'auth required' });
+    if (!auth.workspace_id) return errorEnvelope(ctx, { status: 403, code: 'FORBIDDEN', message: 'no workspace in session' });
+    if (!isOperatorContext(auth, ctx.env)) return errorEnvelope(ctx, { status: 403, code: 'FORBIDDEN', message: 'only an owner or operator can inspect model runtimes' });
+    const provider = ctx.req.param('provider');
+    if (!isModelRuntimeProvider(provider)) return errorEnvelope(ctx, { status: 400, code: 'VALIDATION_ERROR', message: 'unknown provider' });
+    const runtime = await resolveConfiguredRuntime({
+      facade: ctx.get('dal').modelRuntimes,
+      env: ctx.env,
+      workspaceId: auth.workspace_id,
+      provider,
+    });
+    const models = await discoverRuntimeModels(runtime);
+    return ctx.json({
+      provider,
+      runtime_id: runtime.runtime_id,
+      models,
+      catalog_source: 'live_provider_api_with_configured_fallback',
+    });
+  } catch (err) {
+    return errorEnvelope(ctx, err);
+  }
+});
+
+// A real content-free probe using the configured tenant credential. Plaintext is decrypted only inside
+// the server execution path and is never included in the response, audit metadata, or observability event.
+modelRuntimesRoute.post('/model-runtimes/providers/:provider/validate', async (ctx) => {
+  try {
+    const auth = ctx.get('auth');
+    if (!auth?.user_id) return errorEnvelope(ctx, { status: 401, code: 'UNAUTHORIZED', message: 'auth required' });
+    if (!auth.workspace_id) return errorEnvelope(ctx, { status: 403, code: 'FORBIDDEN', message: 'no workspace in session' });
+    if (!isOperatorContext(auth, ctx.env)) return errorEnvelope(ctx, { status: 403, code: 'FORBIDDEN', message: 'only an owner or operator can validate model runtimes' });
+    { const rg = await runtimeEnforcementGate(ctx); if (rg) return rg; }
+    const provider = ctx.req.param('provider');
+    if (!isModelRuntimeProvider(provider)) return errorEnvelope(ctx, { status: 400, code: 'VALIDATION_ERROR', message: 'unknown provider' });
+    const runtime = await resolveConfiguredRuntime({
+      facade: ctx.get('dal').modelRuntimes,
+      env: ctx.env,
+      workspaceId: auth.workspace_id,
+      provider,
+    });
+    const result = await validateRuntime(runtime);
+    const validationReceiptId = `mrv_${crypto.randomUUID()}`;
+    await ctx.get('dal').appendAuditLog({
+      actor_user_id: auth.user_id,
+      action: 'model_runtime_validate',
+      target_type: 'model_runtime_provider',
+      target_id: runtime.runtime_id,
+      workspace_id: auth.workspace_id,
+      reason: 'live provider validation passed',
+      metadata: {
+        validation_receipt_id: validationReceiptId,
+        provider,
+        model: runtime.model,
+        latency_ms: result.latency_ms,
+      },
+    });
+    emitEvent('model_runtime_validated', {
+      workspace_id: auth.workspace_id,
+      provider,
+      latency_ms: result.latency_ms,
+    });
+    return ctx.json({
+      ok: true,
+      validation_receipt_id: validationReceiptId,
+      audit_recorded: true,
+      runtime_id: runtime.runtime_id,
+      provider,
+      model: runtime.model,
+      latency_ms: result.latency_ms,
+      usage: result.usage,
+    });
+  } catch (err) {
+    return errorEnvelope(ctx, err);
+  }
+});
+
 // ── writes (owner/operator, audited) ──────────────────────────────────────────
 
 // PUT /model-runtimes/providers/:provider — upsert config + (optional) credential.
@@ -163,6 +294,9 @@ modelRuntimesRoute.put('/model-runtimes/providers/:provider', async (ctx) => {
     if (spec.requires_base_url && !base_url) {
       return errorEnvelope(ctx, { status: 422, code: 'UNPROCESSABLE', message: `${provider} requires a base_url` });
     }
+    if (!spec.requires_base_url && base_url) {
+      return errorEnvelope(ctx, { status: 422, code: 'UNPROCESSABLE', message: `${provider} does not accept a base_url` });
+    }
 
     const dal = ctx.get('dal');
     let sealed: { ciphertext: string; iv: string; last4: string } | null = null;
@@ -175,12 +309,16 @@ modelRuntimesRoute.put('/model-runtimes/providers/:provider', async (ctx) => {
       if (spec.auth_kind === 'none') {
         return errorEnvelope(ctx, { status: 422, code: 'UNPROCESSABLE', message: `${provider} is a keyless (local) provider — no credential` });
       }
-      if (!(await isEncryptionConfigured(ctx.env.MODEL_RUNTIME_ENC_KEY))) {
-        return errorEnvelope(ctx, { status: 503, code: 'SERVICE_UNAVAILABLE', message: 'credential storage is not configured (MODEL_RUNTIME_ENC_KEY unset)' });
+      const encryption = modelRuntimeEncryptionConfig(ctx.env);
+      if (!(await isTenantEnvelopeEncryptionConfigured(encryption))) {
+        return errorEnvelope(ctx, { status: 503, code: 'SERVICE_UNAVAILABLE', message: 'tenant envelope credential storage is not configured' });
       }
       const { json, primary } = normalizeCredential(spec, cred);
       if (!primary) return errorEnvelope(ctx, { status: 422, code: 'UNPROCESSABLE', message: `${provider} requires a complete credential` });
-      const enc = await encryptCredential(ctx.env.MODEL_RUNTIME_ENC_KEY, json);
+      const enc = await encryptCredential(encryption, json, {
+        tenant_id: auth.workspace_id,
+        purpose: provider,
+      });
       sealed = { ciphertext: enc.ciphertext, iv: enc.iv, last4: lastFour(primary) };
     } else if (spec.requires_key) {
       // No credential this call: allow a metadata-only update of an EXISTING config, else 422 on first create.
@@ -202,6 +340,74 @@ modelRuntimesRoute.put('/model-runtimes/providers/:provider', async (ctx) => {
       provider: toClientProvider(saved.provider),
       provider_config_version_id: providerConfigVersionId,
       audit_event_id: auditEventId,
+    });
+  } catch (err) {
+    return errorEnvelope(ctx, err);
+  }
+});
+
+// POST /model-runtimes/providers/:provider/rotate-credential — re-encrypt one credential under the
+// active keyring key. Per-provider rotation is deliberate: each write is atomic, audited and safely
+// replayable, so a workspace-wide workflow cannot hide partial completion.
+modelRuntimesRoute.post('/model-runtimes/providers/:provider/rotate-credential', async (ctx) => {
+  try {
+    const auth = ctx.get('auth');
+    if (!auth?.user_id) return errorEnvelope(ctx, { status: 401, code: 'UNAUTHORIZED', message: 'auth required' });
+    if (!auth.workspace_id) return errorEnvelope(ctx, { status: 403, code: 'FORBIDDEN', message: 'no workspace in session' });
+    if (!isOperatorContext(auth, ctx.env)) return errorEnvelope(ctx, { status: 403, code: 'FORBIDDEN', message: 'only an owner or operator can rotate model-runtime credentials' });
+    { const rg = await runtimeEnforcementGate(ctx); if (rg) return rg; }
+    const provider = ctx.req.param('provider');
+    if (!isModelRuntimeProvider(provider)) return errorEnvelope(ctx, { status: 400, code: 'VALIDATION_ERROR', message: 'unknown provider' });
+    if (!PROVIDER_SPECS[provider].requires_key) {
+      return errorEnvelope(ctx, { status: 422, code: 'UNPROCESSABLE', message: `${provider} has no stored credential to rotate` });
+    }
+
+    const encryption = modelRuntimeEncryptionConfig(ctx.env);
+    const activeKeyId = modelRuntimeActiveKeyId(encryption);
+    if (!activeKeyId || !(await isEncryptionConfigured(encryption))) {
+      return errorEnvelope(ctx, {
+        status: 503,
+        code: 'SERVICE_UNAVAILABLE',
+        message: 'versioned credential rotation is not configured',
+      });
+    }
+    const dal = ctx.get('dal');
+    const stored = await dal.modelRuntimes.getProviderCredential(auth.workspace_id, provider);
+    if (!stored?.ciphertext || !stored.iv) {
+      return errorEnvelope(ctx, { status: 404, code: 'NOT_FOUND', message: 'provider credential is not configured' });
+    }
+    const sealedStored = { ciphertext: stored.ciphertext, iv: stored.iv };
+    const fromKeyId = credentialEnvelopeKeyId(sealedStored);
+    if (fromKeyId === activeKeyId && credentialEnvelopeVersion(sealedStored) === 2) {
+      return errorEnvelope(ctx, { status: 409, code: 'CREDENTIAL_ALREADY_ACTIVE', message: 'provider credential already uses the active key' });
+    }
+
+    const context = { tenant_id: auth.workspace_id, purpose: provider };
+    const plaintext = await decryptCredential(encryption, sealedStored, context);
+    const rotated = await encryptCredential(encryption, plaintext, context);
+    const receipt = await dal.modelRuntimes.rotateProviderCredential(
+      auth.workspace_id,
+      provider,
+      rotated,
+      auth.user_id,
+      fromKeyId,
+      activeKeyId,
+    );
+    if (!receipt) return errorEnvelope(ctx, { status: 404, code: 'NOT_FOUND', message: 'provider credential is not configured' });
+    emitEvent('model_runtime_credential_rotated', {
+      workspace_id: auth.workspace_id,
+      provider,
+      from_key_id: fromKeyId ?? 'legacy',
+      to_key_id: activeKeyId,
+    });
+    return ctx.json({
+      ok: true,
+      provider,
+      from_key_id: fromKeyId ?? 'legacy',
+      to_key_id: activeKeyId,
+      provider_config_version_id: receipt.provider_config_version_id,
+      credential_rotation_receipt_id: receipt.credential_rotation_receipt_id,
+      audit_event_id: receipt.audit_event_id,
     });
   } catch (err) {
     return errorEnvelope(ctx, err);
@@ -265,15 +471,19 @@ modelRuntimesRoute.put('/model-runtimes/default', async (ctx) => {
   }
 });
 
-// PUT /model-runtimes/override — set the caller's OWN session override (personal preference; not audited).
+// PUT /model-runtimes/override — set or clear the caller's OWN session override (personal preference).
 modelRuntimesRoute.put('/model-runtimes/override', async (ctx) => {
   try {
     const auth = ctx.get('auth');
     if (!auth?.user_id) return errorEnvelope(ctx, { status: 401, code: 'UNAUTHORIZED', message: 'auth required' });
     if (!auth.workspace_id) return errorEnvelope(ctx, { status: 403, code: 'FORBIDDEN', message: 'no workspace in session' });
     if (auth.role === 'client') return errorEnvelope(ctx, { status: 403, code: 'FORBIDDEN', message: 'client role cannot set a runtime override' });
-    let body: { provider_id?: unknown } = {};
+    let body: { provider_id?: unknown; clear_override?: unknown } = {};
     try { body = (await ctx.req.json()) as typeof body; } catch { body = {}; }
+    if (body.clear_override === true) {
+      await ctx.get('dal').modelRuntimes.clearOverride(auth.user_id, auth.workspace_id);
+      return ctx.json({ session_override: null, effective_source: 'workspace_default' });
+    }
     const providerId = typeof body.provider_id === 'string' ? body.provider_id.trim() : '';
     if (!providerId) return errorEnvelope(ctx, { status: 400, code: 'VALIDATION_ERROR', message: 'provider_id required' });
     const dal = ctx.get('dal');

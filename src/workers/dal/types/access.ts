@@ -563,7 +563,8 @@ export type AuditAction =
   // Wave C (260708) · model-runtime provider config + audited workspace-default flip (migration 053)
   | 'model_runtime_provider_set'
   | 'model_runtime_provider_delete'
-  | 'model_runtime_default_change';
+  | 'model_runtime_default_change'
+  | 'model_runtime_validate';
 
 export type AuditTargetType =
   | 'user'

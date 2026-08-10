@@ -7,8 +7,62 @@ import { describe, it, expect } from 'vitest';
 import { Hono } from 'hono';
 import { workspacesRoute } from '../routes/workspaces';
 
+const LIVE_TEST_AI = {
+  run: async (_model: string, input: { messages?: Array<{ role?: string; content?: string }> }) => {
+    const prompt = String(input.messages?.find((message) => message.role === 'user')?.content ?? '');
+    const match = prompt.match(/Source-bound answer draft[^:]*:\n([\s\S]*?)\n\nEvent facts:/);
+    return {
+      response: match?.[1]?.trim() || 'Live test provider completed the grounded request without deterministic fallback.',
+      usage: { prompt_tokens: 29, completion_tokens: 16 },
+    };
+  },
+};
+
 const MBP_OWNER = 'user_operator_mbp';
-const ENV = { MBP_OWNER_USER_ID: MBP_OWNER, MBP_OWNER_LINKED_USER_IDS: '', DATABASE_URL: 'x' };
+const ENV = {
+  MBP_OWNER_USER_ID: MBP_OWNER,
+  MBP_OWNER_LINKED_USER_IDS: '',
+  DATABASE_URL: 'x',
+  AI: LIVE_TEST_AI,
+  ROLE_SKILL_CATALOG_ENABLED: 'true',
+  RESOLUTION_RECEIPT_SIGNING_SECRET: 'test-resolution-signing-secret-0123456789',
+  RESOLUTION_RECEIPT_SIGNING_KEY_ID: 'test-key',
+  XLOOOP_DEPLOY_SHA: 'test-sha',
+};
+
+const fakeSql = Object.assign(
+  async (strings: TemplateStringsArray, ...values: unknown[]) => {
+    const text = strings.join('?');
+    if (text.includes('INSERT INTO model_execution_receipts')) return [{ id: String(values[0]) }];
+    if (text.includes('UPDATE model_execution_receipts')) return [{ id: 'mer_test' }];
+    return [];
+  },
+  {
+    transaction: async (queries: (tx: typeof fakeSql) => unknown[]) =>
+      Promise.all(queries(fakeSql)),
+  },
+);
+
+function commercialDal(overrides: Record<string, unknown> = {}) {
+  return {
+    modelRuntimes: {
+      listProviders: async () => [],
+      getOverride: async () => null,
+      getProviderCredential: async () => null,
+    },
+    appendChatExchange: async () => ({
+      thread_id: 'thr_test',
+      messages: [
+        { id: 'msg_user', role: 'you', entry_type: 'user_request' },
+        {
+          id: 'msg_assistant', role: 'assistant', entry_type: 'assistant_answer',
+          receipt_uid: 'chat_receipt_test', audit_event_id: 'audit_test',
+        },
+      ],
+    }),
+    ...overrides,
+  };
+}
 
 const COCKPIT_EVENTS = [
   { id: 'e1', summary: 'fix(cockpit): legible empty/degraded project banner (#515)', status: 'completed', source_tool: 'github', approval_state: null, domain_id: null, occurred_at: '2026-06-09T03:13:34.000Z' },
@@ -21,12 +75,13 @@ function appFor(auth: Record<string, unknown>, capture: { opts?: Record<string, 
   app.use('*', async (ctx, next) => {
     ctx.set('request_id', 'test');
     ctx.set('auth', auth as never);
-    ctx.set('dal', {
+    ctx.set('sql' as never, fakeSql as never);
+    ctx.set('dal', commercialDal({
       listEventsForOperator: async (ids: string[], opts: Record<string, unknown>) => {
         capture.ids = ids; capture.opts = opts;
         return { events: COCKPIT_EVENTS, pagination: { has_more: false, next_before: null } };
       },
-    } as never);
+    }) as never);
     await next();
   });
   app.route('/api/v1', workspacesRoute);
@@ -70,8 +125,7 @@ describe('POST /cockpit-chat', () => {
     // the operator overlay was called WITH the project_id scope
     expect(cap.opts?.project_id).toBe('org_3EG82-cockpit-ux');
     expect(cap.ids).toContain(MBP_OWNER);
-    // no AI binding in this ENV → deterministic grounded answer
-    expect(body.generated_by).toBe('deterministic');
+    expect(body.generated_by).toBe('llm');
     // grounded in the REAL mocked events: counts + a named recent item
     expect(body.answer).toMatch(/3 events on record/);
     expect(body.answer).toMatch(/legible empty\/degraded project banner/);
@@ -83,13 +137,28 @@ describe('POST /cockpit-chat', () => {
 
   it('uses the LLM answer (still grounded provenance) when a Workers-AI binding is present', async () => {
     const cap: { opts?: Record<string, unknown>; ids?: string[] } = {};
-    const ai = { run: async () => ({ response: 'This project has 3 events on record, recently shipping the project banner fix and the operator overlay; one item awaits your sign-off.' }) };
-    const res = await chat({ user_id: MBP_OWNER }, 'summarize', COCKPIT_SCOPE, cap, { ...ENV, AI: ai });
+    const ai = { run: async () => ({ response: 'This stale snapshot has 3 events on record, including the project banner fix and operator overlay; one item awaited your sign-off as of the recorded date.' }) };
+    const res = await chat({ user_id: MBP_OWNER }, 'summarize', COCKPIT_SCOPE, cap, {
+      ...ENV,
+      COMMERCIAL_LIVE_CHAT_REQUIRED: 'true',
+      AI: ai,
+    });
     expect(res.status).toBe(200);
     const body = (await res.json()) as { answer: string; generated_by: string; grounded_on: { needs_review: number } };
     expect(body.generated_by).toBe('llm');
     expect(body.answer).toMatch(/operator overlay/);
     expect(body.grounded_on.needs_review).toBe(1); // provenance still from real events
+  });
+
+  it('commercial mode returns typed 503 instead of a deterministic assistant answer', async () => {
+    const res = await chat({ user_id: MBP_OWNER }, 'summarize', COCKPIT_SCOPE, {}, {
+      ...ENV,
+      AI: undefined,
+    });
+    expect(res.status).toBe(503);
+    const body = await res.json() as Record<string, unknown>;
+    expect(body).toMatchObject({ code: 'PROVIDER_UNAVAILABLE', retryable: true });
+    expect(body.answer).toBeUndefined();
   });
 
   it('answers over the WHOLE workspace when no project_id is given', async () => {
@@ -105,7 +174,8 @@ describe('POST /cockpit-chat', () => {
     app.use('*', async (ctx, next) => {
       ctx.set('request_id', 'test');
       ctx.set('auth', { user_id: MBP_OWNER, role: 'owner' } as never);
-      ctx.set('dal', {
+      ctx.set('sql' as never, fakeSql as never);
+      ctx.set('dal', commercialDal({
         operatorOwnsWorkspace: async (_ids: string[], workspaceId: string) => {
           calls.push(`owns:${workspaceId}`);
           return workspaceId === 'org_3EG82';
@@ -115,7 +185,7 @@ describe('POST /cockpit-chat', () => {
           return { events: COCKPIT_EVENTS, pagination: { has_more: false, next_before: null } };
         },
         listEventsForOperator: async () => { throw new Error('operator-wide read must not serve a named workspace'); },
-      } as never);
+      }) as never);
       await next();
     });
     app.route('/api/v1', workspacesRoute);
@@ -132,10 +202,11 @@ describe('POST /cockpit-chat', () => {
     app.use('*', async (ctx, next) => {
       ctx.set('request_id', 'test');
       ctx.set('auth', { user_id: MBP_OWNER, role: 'owner' } as never);
-      ctx.set('dal', {
+      ctx.set('sql' as never, fakeSql as never);
+      ctx.set('dal', commercialDal({
         operatorOwnsWorkspace: async () => false,
         listEvents: async () => { throw new Error('must not read'); },
-      } as never);
+      }) as never);
       await next();
     });
     app.route('/api/v1', workspacesRoute);
@@ -151,9 +222,10 @@ describe('POST /cockpit-chat', () => {
     app.use('*', async (ctx, next) => {
       ctx.set('request_id', 'test');
       ctx.set('auth', { user_id: MBP_OWNER, role: 'owner' } as never);
-      ctx.set('dal', {
+      ctx.set('sql' as never, fakeSql as never);
+      ctx.set('dal', commercialDal({
         listEventsForOperator: async () => ({ events: COCKPIT_EVENTS, pagination: { has_more: false, next_before: null } }),
-      } as never);
+      }) as never);
       await next();
     });
     app.route('/api/v1', workspacesRoute);
@@ -180,13 +252,14 @@ describe('POST /cockpit-chat', () => {
     app.use('*', async (ctx, next) => {
       ctx.set('request_id', 'test');
       ctx.set('auth', { user_id: MBP_OWNER } as never);
-      ctx.set('dal', {
+      ctx.set('sql' as never, fakeSql as never);
+      ctx.set('dal', commercialDal({
         listEventsForOperator: async () => ({ events: [], pagination: { has_more: false, next_before: null } }),
         getLatestLiveStreamSnapshot: async (streamId: string) => {
           expect(streamId).toBe('mbp-operations-live-stream');
           return { source_mode: 'db_live', generated_at: 'x', valid_until: null, rows_count: GOV_ROWS.length, envelope: { rows: GOV_ROWS }, ingested_at: 'x' };
         },
-      } as never);
+      }) as never);
       await next();
     });
     app.route('/api/v1', workspacesRoute);
@@ -206,19 +279,27 @@ describe('POST /cockpit-chat', () => {
 
   // Wave 3 · persistence. POST /cockpit-chat writes the exchange to the (operator, scope) thread so it
   // survives a reload / another browser; GET /cockpit-chat/history reads it back. Persistence is
-  // best-effort — a DAL without the methods (or a throwing one) must never break the live answer.
+  // receipt-backed — a DAL write must return canonical message, answer-receipt and audit identities.
   it('persists the exchange (you + assistant) to the scoped thread on a successful answer', async () => {
     const captured: { userId?: string; scope?: Record<string, unknown>; messages?: Array<Record<string, unknown>> } = {};
     const app = new Hono();
     app.use('*', async (ctx, next) => {
       ctx.set('request_id', 'test');
       ctx.set('auth', { user_id: MBP_OWNER } as never);
-      ctx.set('dal', {
+      ctx.set('sql' as never, fakeSql as never);
+      ctx.set('dal', commercialDal({
         listEventsForOperator: async () => ({ events: COCKPIT_EVENTS, pagination: { has_more: false, next_before: null } }),
         appendChatExchange: async (userId: string, scope: Record<string, unknown>, messages: Array<Record<string, unknown>>) => {
           captured.userId = userId; captured.scope = scope; captured.messages = messages;
+          return {
+            thread_id: 'thr_test',
+            messages: [
+              { id: 'msg_user', role: 'you', entry_type: 'user_request' },
+              { id: 'msg_assistant', role: 'assistant', entry_type: 'assistant_answer', receipt_uid: 'chat_receipt_test', audit_event_id: 'audit_test' },
+            ],
+          };
         },
-      } as never);
+      }) as never);
       await next();
     });
     app.route('/api/v1', workspacesRoute);
@@ -234,15 +315,16 @@ describe('POST /cockpit-chat', () => {
     expect(typeof (captured.messages?.[1] as { body?: string }).body).toBe('string');
   });
 
-  it('a persistence failure NEVER breaks the live answer (best-effort)', async () => {
+  it('a persistence failure returns typed 503 instead of an unauditable assistant success', async () => {
     const app = new Hono();
     app.use('*', async (ctx, next) => {
       ctx.set('request_id', 'test');
       ctx.set('auth', { user_id: MBP_OWNER } as never);
-      ctx.set('dal', {
+      ctx.set('sql' as never, fakeSql as never);
+      ctx.set('dal', commercialDal({
         listEventsForOperator: async () => ({ events: COCKPIT_EVENTS, pagination: { has_more: false, next_before: null } }),
         appendChatExchange: async () => { throw new Error('db down'); },
-      } as never);
+      }) as never);
       await next();
     });
     app.route('/api/v1', workspacesRoute);
@@ -250,7 +332,8 @@ describe('POST /cockpit-chat', () => {
       method: 'POST', headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ message: 'summarize', scope: COCKPIT_SCOPE }),
     }, ENV as never);
-    expect(res.status).toBe(200); // answer still returned despite the persist throw
+    expect(res.status).toBe(503);
+    expect((await res.json()).code).toBe('CHAT_HISTORY_PERSISTENCE_FAILED');
   });
 
   it('GET /cockpit-chat/history returns the stored thread for the operator scope (operator-only)', async () => {
@@ -327,11 +410,12 @@ describe('POST /cockpit-chat', () => {
     app.use('*', async (ctx, next) => {
       ctx.set('request_id', 'test');
       ctx.set('auth', { user_id: MBP_OWNER } as never);
-      ctx.set('dal', {
+      ctx.set('sql' as never, fakeSql as never);
+      ctx.set('dal', commercialDal({
         listEventsForOperator: async () => ({ events: [], pagination: { has_more: false, next_before: null } }),
         listUnifiedGovernance: async () => GOV3, // durable table has the rows
         getLatestLiveStreamSnapshot: async () => { snapshotRead = true; return null; }, // must NOT be needed
-      } as never);
+      }) as never);
       await next();
     });
     app.route('/api/v1', workspacesRoute);
@@ -352,12 +436,13 @@ describe('POST /cockpit-chat', () => {
     app.use('*', async (ctx, next) => {
       ctx.set('request_id', 'test');
       ctx.set('auth', { user_id: MBP_OWNER } as never);
-      ctx.set('dal', {
+      ctx.set('sql' as never, fakeSql as never);
+      ctx.set('dal', commercialDal({
         listEventsForOperator: async () => ({ events: [], pagination: { has_more: false, next_before: null } }),
         listUnifiedGovernance: async () => [], // durable table empty → fall back
         getLatestLiveStreamSnapshot: async () => ({ source_mode: 'db_live', generated_at: 'x', valid_until: null, rows_count: 3, envelope: { rows: GOV3 }, ingested_at: 'x' }),
         materializeGovernanceSnapshot: async (rows: unknown[]) => { materialized = rows; return rows.length; },
-      } as never);
+      }) as never);
       await next();
     });
     app.route('/api/v1', workspacesRoute);
@@ -375,7 +460,7 @@ describe('POST /cockpit-chat', () => {
   // ARCH-006 W1.1 — the operator-wide ("All my workspaces") fix end-to-end. The operator's exact bug:
   // viewing one workspace the chat said "0 blocked" while real blockers sat in ANOTHER owned workspace.
   // With all_workspaces (empty scope) BOTH planes span every owned workspace (HR-SCOPE-SYMMETRY-1).
-  it('operator-wide surfaces governance items from MULTIPLE workspaces (the "0 blocked" fix)', async () => {
+  it('operator-wide chat fails closed until one tenant workspace is selected for commercial lineage', async () => {
     const GOV_MULTI = [
       { row_id: 'g1', stream_type: 'packet', state: 'evidence_ready', workspace_id: 'mbp-private', project_id: 'mbp-governance', domain_id: 'mbp-governance', timestamp_iso: '2026-06-09T09:00:00.000Z', title: 'Owner confirmation · A', summary: 'awaiting owner sign-off.', source_adapter: '', evidence_refs: [] },
       { row_id: 'g2', stream_type: 'packet', state: 'evidence_ready', workspace_id: 'org_3EG82VEzc8t3t65XSZ0YDlcaDMI', project_id: 'org-cockpit', domain_id: null, timestamp_iso: '2026-06-09T09:00:00.000Z', title: 'Owner confirmation · B', summary: 'awaiting owner sign-off.', source_adapter: '', evidence_refs: [] },
@@ -384,10 +469,11 @@ describe('POST /cockpit-chat', () => {
     app.use('*', async (ctx, next) => {
       ctx.set('request_id', 'test');
       ctx.set('auth', { user_id: MBP_OWNER } as never);
-      ctx.set('dal', {
+      ctx.set('sql' as never, fakeSql as never);
+      ctx.set('dal', commercialDal({
         listEventsForOperator: async () => ({ events: [], pagination: { has_more: false, next_before: null } }),
         listUnifiedGovernance: async () => GOV_MULTI,
-      } as never);
+      }) as never);
       await next();
     });
     app.route('/api/v1', workspacesRoute);
@@ -395,10 +481,8 @@ describe('POST /cockpit-chat', () => {
       method: 'POST', headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ message: "what's blocked across everything?", scope: { workspace_id: '', all_workspaces: true } }),
     }, ENV as never);
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as { grounded_on: { planes: { governance: number } } };
-    // BOTH workspaces' governance rows are counted — not just one (the bug was it saw only the scoped ws).
-    expect(body.grounded_on.planes.governance).toBe(2);
+    expect(res.status).toBe(409);
+    expect((await res.json()).code).toBe('CONTEXT_LINEAGE_SCOPE_REQUIRED');
   });
 
   it('narrowing to a single workspace still excludes other workspaces (no over-widening)', async () => {
@@ -410,7 +494,8 @@ describe('POST /cockpit-chat', () => {
     app.use('*', async (ctx, next) => {
       ctx.set('request_id', 'test');
       ctx.set('auth', { user_id: MBP_OWNER } as never);
-      ctx.set('dal', { listEventsForOperator: async () => ({ events: [], pagination: { has_more: false, next_before: null } }), listUnifiedGovernance: async () => GOV_MULTI } as never);
+      ctx.set('sql' as never, fakeSql as never);
+      ctx.set('dal', commercialDal({ listEventsForOperator: async () => ({ events: [], pagination: { has_more: false, next_before: null } }), listUnifiedGovernance: async () => GOV_MULTI }) as never);
       await next();
     });
     app.route('/api/v1', workspacesRoute);

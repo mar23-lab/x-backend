@@ -53,14 +53,43 @@ addCheck('markitdown_cli_exists', fs.existsSync(markitdown), { markitdown }, {
 });
 
 if (fs.existsSync(python)) {
+  const fixtureDependencies = pythonJson(`
+import importlib.metadata as md, importlib.util, json
+packages = {
+    "reportlab": "reportlab",
+    "docx": "python-docx",
+    "pptx": "python-pptx",
+    "openpyxl": "openpyxl",
+    "PIL": "Pillow",
+}
+out = {}
+for module, distribution in packages.items():
+    available = importlib.util.find_spec(module) is not None
+    try:
+        version = md.version(distribution) if available else None
+    except md.PackageNotFoundError:
+        version = None
+    out[module] = {"available": available, "distribution": distribution, "version": version}
+print(json.dumps(out))
+`);
+  const fixtureDependenciesReady = fixtureDependencies
+    && !fixtureDependencies.error
+    && Object.values(fixtureDependencies).every((item) => item.available && item.version);
+  addCheck('markitdown_binary_fixture_dependencies_available', fixtureDependenciesReady, {
+    modules: fixtureDependencies,
+  }, {
+    block: strict,
+    message: 'The expanded MarkItDown PDF/Office/media canary requires reportlab, python-docx, python-pptx, openpyxl, and Pillow in the disposable venv.',
+  });
+
   const metadata = pythonJson(`
 import importlib.metadata as md, json
 out = {}
-for name in ["markitdown", "headroom"]:
+for key, name in [("markitdown", "markitdown"), ("headroom_ai", "headroom-ai")]:
     try:
         dist = md.distribution(name)
         meta = dist.metadata
-        out[name] = {
+        out[key] = {
             "version": dist.version,
             "name": meta.get("Name", ""),
             "summary": meta.get("Summary", ""),
@@ -71,7 +100,7 @@ for name in ["markitdown", "headroom"]:
             "description_sample": (meta.get("Description", "") or "")[:500],
         }
     except Exception as exc:
-        out[name] = {"error": str(exc)}
+        out[key] = {"error": str(exc)}
 print(json.dumps(out))
 `);
 
@@ -96,15 +125,25 @@ print(json.dumps(out))
     message: 'The installed MarkItDown package must expose recognizable source identity before strict default evaluation.',
   });
 
-  const headroomMeta = metadata?.headroom || {};
+  const headroomMeta = metadata?.headroom_ai || {};
   addCheck('headroom_distribution_installed', !headroomMeta.error, { metadata: headroomMeta }, {
     block: strict,
     message: 'Headroom distribution must be installed in the sandbox before strict external default evaluation.',
   });
-  const headroomSourceMatches = String(headroomMeta.home_page || '').toLowerCase().includes('chopratejas/headroom');
+  const headroomIdentityText = [
+    headroomMeta.home_page || '',
+    headroomMeta.summary || '',
+    headroomMeta.description_sample || '',
+    ...(headroomMeta.project_urls || []),
+  ].join(' ').toLowerCase();
+  const headroomSourceMatches = ['headroomlabs-ai/headroom', 'chopratejas/headroom']
+    .some((source) => headroomIdentityText.includes(source));
   addCheck('headroom_distribution_matches_registry_source', headroomSourceMatches, {
     expected_source: 'https://github.com/chopratejas/headroom',
+    accepted_source_alias: 'https://github.com/headroomlabs-ai/headroom',
     observed_home_page: headroomMeta.home_page || '',
+    observed_project_urls: headroomMeta.project_urls || [],
+    observed_version: headroomMeta.version || '',
     observed_license: headroomMeta.license || '',
   }, {
     block: strict,
@@ -116,12 +155,15 @@ print(json.dumps(out))
   const cargoSupportsEdition2024 = cargoVersion
     ? Number(cargoVersion[1]) > 1 || (Number(cargoVersion[1]) === 1 && Number(cargoVersion[2]) >= 85)
     : false;
-  addCheck('headroom_source_build_cargo_supports_edition2024', cargoSupportsEdition2024, {
+  const sourceBuildRequired = Boolean(headroomMeta.error);
+  addCheck('headroom_install_path_available', !sourceBuildRequired || cargoSupportsEdition2024, {
+    installed_distribution: !headroomMeta.error,
+    source_build_required: sourceBuildRequired,
     cargo_version: (cargo.stdout || cargo.stderr || '').trim(),
     required_minimum: 'cargo 1.85.0',
   }, {
     block: strict,
-    message: 'Registry Headroom source currently requires a Cargo toolchain that supports Rust edition2024 before strict default evaluation.',
+    message: 'Headroom needs either an installed verified distribution or Cargo >=1.85 for a source build before strict default evaluation.',
   });
 
   const headroom = spawnSync(python, ['-c', 'import headroom; print(hasattr(headroom, "compress")); print(",".join([n for n in dir(headroom) if not n.startswith("_")][:20]))'], {

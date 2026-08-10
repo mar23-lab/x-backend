@@ -98,6 +98,12 @@ describe('current-work · operator-workspace-scope (OPERATOR_WORKSPACE_SCOPE_ENA
 // customer-chat · POST /api/v1/customer-chat  (body.workspace_id)
 // ─────────────────────────────────────────────────────────────────────────────────────────────────
 const CH_AUTH = { user_id: 'u_op', workspace_id: 'org_small', email: 'o@x.com', role: 'owner' };
+const LIVE_TEST_AI = {
+  run: async () => ({
+    response: 'A live provider response for the authorized workspace scope.',
+    usage: { prompt_tokens: 13, completion_tokens: 9 },
+  }),
+};
 const PROFILE = {
   schema_id: 'xlooop.customer_context_profile.v1',
   company: { name: 'Acme', domain: 'acme.example', country: 'AU' },
@@ -130,7 +136,7 @@ function chApp(spy: any) {
 }
 const chSpy = () => ({ eventsFor: [] as string[], ctxFor: [] as string[], canScopeCalls: [] as Array<[string, string]>, canScope: true });
 function chAsk(app: Hono, body: Record<string, unknown>, env: Record<string, unknown>) {
-  return app.request('/api/v1/customer-chat', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }, { CUSTOMER_SAFE_SERIALIZER_ENABLED: 'false', ...env });
+  return app.request('/api/v1/customer-chat', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }, { CUSTOMER_SAFE_SERIALIZER_ENABLED: 'false', AI: LIVE_TEST_AI, ...env });
 }
 
 describe('customer-chat · operator-workspace-scope (OPERATOR_WORKSPACE_SCOPE_ENABLED)', () => {

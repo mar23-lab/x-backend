@@ -19,7 +19,7 @@
 import { Hono } from 'hono';
 import { verifyToken } from '@clerk/backend';
 import { errorEnvelope } from '../middleware/error';
-import type { AuthEnv } from '../middleware/auth';
+import { clerkAuthorizedParties, type AuthEnv } from '../middleware/auth';
 import type { DalAdapter } from '../dal/DalAdapter';
 
 export interface DiagnoseEnv extends AuthEnv {
@@ -54,7 +54,10 @@ async function requireOperator(ctx: {
     return ctx.json({ error: 'missing bearer token', code: 'UNAUTHORIZED', request_id: requestId });
   }
   try {
-    const payload = await verifyToken(token, { secretKey: ctx.env.CLERK_SECRET_KEY });
+    const payload = await verifyToken(token, {
+      secretKey: ctx.env.CLERK_SECRET_KEY,
+      authorizedParties: clerkAuthorizedParties(ctx.env.CLERK_AUTHORIZED_PARTIES),
+    });
     if (String(payload?.sub || '') !== ownerUserId) {
       ctx.status(403);
       return ctx.json({ error: 'this endpoint is restricted to the platform operator', code: 'FORBIDDEN', request_id: requestId });

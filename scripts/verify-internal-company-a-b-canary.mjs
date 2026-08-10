@@ -19,7 +19,6 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..');
-const DEFAULT_PACKET_ID = 'pkt-canary-api-mcp-parity-20260619t080834z';
 const DEFAULT_CANARY_ENV_FILE = path.join(
   os.homedir(),
   '.xlooop',
@@ -28,15 +27,18 @@ const DEFAULT_CANARY_ENV_FILE = path.join(
   'xlooop-canary-api-token.env',
 );
 
+const canaryConfig = loadCanaryConfigFromEnvFile(
+  process.env.XLOOOP_CANARY_API_TOKEN_ENV_FILE || DEFAULT_CANARY_ENV_FILE,
+);
+
 const baseEnv = {
   ...process.env,
   XLOOOP_API_BASE: process.env.XLOOOP_API_BASE || 'https://api.xlooop.com',
-  XLOOOP_PARITY_PACKET_ID: process.env.XLOOOP_PARITY_PACKET_ID || DEFAULT_PACKET_ID,
+  XLOOOP_PARITY_PACKET_ID: process.env.XLOOOP_PARITY_PACKET_ID || canaryConfig.packetId,
 };
 
-const tokenFromEnvFile = loadTokenFromEnvFile(process.env.XLOOOP_CANARY_API_TOKEN_ENV_FILE || DEFAULT_CANARY_ENV_FILE);
-if (!baseEnv.XLOOOP_CANARY_API_TOKEN && tokenFromEnvFile) {
-  baseEnv.XLOOOP_CANARY_API_TOKEN = tokenFromEnvFile;
+if (!baseEnv.XLOOOP_CANARY_API_TOKEN && canaryConfig.token) {
+  baseEnv.XLOOOP_CANARY_API_TOKEN = canaryConfig.token;
 }
 
 const result = {
@@ -59,19 +61,30 @@ runCheck('connector_token_revocation_contract', [
   'scripts/verify-commercial-governance-hardening.mjs',
   '--check=connector_token_revocation',
 ]);
-runCheck('customer_revocation_end_to_end', ['node', 'scripts/verify-customer-revocation-end-to-end.mjs']);
+runCheck('customer_revocation_authority', ['node', 'scripts/verify-customer-revocation-authority.mjs']);
 runCheck('two_tenant_commercial_fixture', ['node', 'scripts/verify-two-tenant-commercial-pilot.mjs'], {
   allowWarnings: true,
 });
-runCheck('api_mcp_lifecycle_parity_live', ['node', 'scripts/verify-api-mcp-lifecycle-parity.mjs', '--format=json']);
+runCheck('api_mcp_lifecycle_parity_live_read_only', [
+  'node',
+  'scripts/verify-api-mcp-lifecycle-parity.mjs',
+  '--format=json',
+  '--read-only',
+]);
 
 finish();
 
-function loadTokenFromEnvFile(filePath) {
-  if (!filePath || !fs.existsSync(filePath)) return '';
+function loadCanaryConfigFromEnvFile(filePath) {
+  if (!filePath || !fs.existsSync(filePath)) return { token: '', packetId: '' };
   const text = fs.readFileSync(filePath, 'utf8');
-  const match = text.match(/^\s*(?:export\s+)?XLOOOP_CANARY_API_TOKEN=(['"]?)([^'"\n]+)\1\s*$/m);
-  return match ? match[2].trim() : '';
+  const value = (name) => {
+    const match = text.match(new RegExp(`^\\s*(?:export\\s+)?${name}=(['"]?)([^'"\\n]+)\\1\\s*$`, 'm'));
+    return match ? match[2].trim() : '';
+  };
+  return {
+    token: value('XLOOOP_CANARY_API_TOKEN'),
+    packetId: value('XLOOOP_PARITY_PACKET_ID'),
+  };
 }
 
 function runCheck(id, command, options = {}) {

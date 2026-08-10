@@ -30,7 +30,7 @@ import { stripInternalProvisioning, customerSafeSerializerEnabled } from '../lib
 import { provisionCustomerFromAccessRequest } from '../services/onboarding-provisioner';
 import { listUserOrgMemberships } from '../services/clerk-org'; // A5 Option B · server-side membership backstop
 import type { AiRunner } from '../services/agent-digest';
-import type { AuthEnv } from '../middleware/auth';
+import { clerkAuthorizedParties, type AuthEnv } from '../middleware/auth';
 import type { DalAdapter } from '../dal/DalAdapter';
 import { neonClient } from '../db/client';
 import { modelLineagePolicy } from '../lib/model-execution-lineage';
@@ -94,6 +94,7 @@ sessionRoute.get('/session', async (ctx) => {
   try {
     payload = await verifyToken(token, {
       secretKey: ctx.env.CLERK_SECRET_KEY,
+      authorizedParties: clerkAuthorizedParties(ctx.env.CLERK_AUTHORIZED_PARTIES),
     }) as unknown as Record<string, unknown>;
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Token verification failed';

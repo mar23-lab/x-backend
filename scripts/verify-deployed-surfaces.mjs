@@ -12,16 +12,17 @@ const problems = [];
 
 for (const marker of [
   'schema_id: xlooop.deployed_surfaces.v1',
-  "last_reviewed: '2026-07-26'",
+  "last_reviewed: '2026-08-10'",
   'id: app',
   'url: https://app.xlooop.com',
   'source_repo: x-ai-front',
-  'serving_source: wired',
-  'serving_artifact: wired/dist-production',
+  'serving_source: app',
+  'serving_artifact: app/dist',
+  'artifact_contract: react_vite_v2',
   'pages_functions_repo: x-backend',
   'pages_functions_source: functions',
   'release_manifest: dist-app-pages-release/release-manifest.json',
-  'deploy_script: deploy:app:prod',
+  'deploy_script: deploy:paired:prod',
   'id: api',
   'url: https://api.xlooop.com',
 ]) {
@@ -31,10 +32,12 @@ for (const marker of [
 if (registry.includes('src/widgets/XcpScreenRouter/XcpScreenRouter.jsx')) {
   problems.push('stale_app_router');
 }
-if (pkg.scripts?.['deploy:app:prod'] !== 'node scripts/deploy-app-prod.mjs') {
-  problems.push('package:deploy:app:prod');
+const pairedCommand = 'node scripts/deploy-paired-prod.mjs';
+for (const alias of ['deploy:api', 'deploy:app:prod', 'deploy:paired:prod']) {
+  if (pkg.scripts?.[alias] !== pairedCommand) problems.push(`package:${alias}`);
 }
 const appDeploy = readFileSync(path.join(root, 'scripts/deploy-app-prod.mjs'), 'utf8');
+const pairedDeploy = readFileSync(path.join(root, 'scripts/deploy-paired-prod.mjs'), 'utf8');
 const appPrepare = readFileSync(path.join(root, 'scripts/prepare-app-pages-release.mjs'), 'utf8');
 const apiAuthorization = readFileSync(
   path.join(root, 'scripts/consume-api-deployment-authorization.mjs'),
@@ -48,6 +51,20 @@ for (const marker of [
   'XLOOOP_APP_PAGES_DECISION_PACKET',
   'authorization_expired',
   'deployment authorization has already been consumed',
+  'reserved_before_pair',
+  'verify-rollback-target-authority.mjs',
+  'rollbackPages',
+  'rollbackApi',
+]) {
+  if (!pairedDeploy.includes(marker) && !readFileSync(
+    path.join(root, 'scripts/lib/app-pages-release-contract.mjs'),
+    'utf8',
+  ).includes(marker)) {
+    problems.push(`paired_deploy_contract:${marker}`);
+  }
+}
+for (const marker of [
+  'standalone Pages production deploy is disabled',
   "'--commit-dirty=false'",
   "'--no-bundle'",
 ]) {
@@ -59,11 +76,11 @@ for (const marker of [
   }
 }
 for (const marker of [
-  'reserved_before_deploy',
+  'reserved_before_pair',
   'git-common-dir',
   'openSync(receiptPath, \'wx\'',
 ]) {
-  if (!appDeploy.includes(marker)
+  if (!pairedDeploy.includes(marker)
       && !apiAuthorization.includes(marker)
       && !authorizationStore.includes(marker)) {
     problems.push(`authorization_contract:${marker}`);
@@ -77,6 +94,7 @@ for (const marker of [
 }
 for (const file of [
   'functions/_middleware.js',
+  'scripts/deploy-paired-prod.mjs',
   'scripts/deploy-app-prod.mjs',
   'scripts/prepare-app-pages-release.mjs',
   'scripts/verify-app-pages-release.mjs',
@@ -85,6 +103,7 @@ for (const file of [
   'scripts/consume-api-deployment-authorization.mjs',
   'scripts/lib/deployment-authorization-store.mjs',
   'scripts/verify-deployment-authorization-store.mjs',
+  'scripts/verify-rollback-target-authority.mjs',
 ]) {
   if (!existsSync(path.join(root, file))) problems.push(`missing:${file}`);
 }
@@ -93,4 +112,4 @@ if (problems.length) {
   console.error(`verify-deployed-surfaces · FAIL-CLOSED · ${problems.join(',')}`);
   process.exit(1);
 }
-console.log('verify-deployed-surfaces · PASS · app and API ownership/deploy paths are source-backed');
+console.log('verify-deployed-surfaces · PASS · React app and API converge on one paired, rollback-bound production path');

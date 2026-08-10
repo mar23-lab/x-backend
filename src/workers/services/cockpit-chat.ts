@@ -3,10 +3,10 @@
 // The cockpit chat used to be broadcast-only (capture a message → an event). This service turns it
 // into an ACTOR: it reads the operator's REAL scoped events (a project, domain, or whole workspace)
 // and answers a question GROUNDED in them — counts, recent items, what's blocked / needs sign-off,
-// top sources. Richer via the Cloudflare Workers-AI binding when present (same binding + no-invention
-// guardrails + never-throws contract as services/agent-digest.ts buildWorkspaceDigestLLM); a
-// deterministic, genuinely-useful grounded digest is the fallback so a missing/failing binding can
-// NEVER 5xx or fabricate. The model is fed ONLY the supplied event facts (no invention).
+// top sources. Production routes enter through answerLiveCockpitChat, which requires a resolved live
+// runtime and returns live output or a typed unavailable error. The older answerCockpitChat function
+// remains only for explicitly labelled projections and migration tests; its deterministic digest must
+// never be mounted as a commercial conversational success response.
 //
 // READ-ONLY by construction: this answers ABOUT the record; it never writes events, never approves,
 // never mutates. (Contrast agent-digest, which DRAFTS a pending proposal the operator approves.)
@@ -16,6 +16,14 @@ import type { HarnessFlowEvent, EventStatus } from '../dal/types/event';
 import type { AiRunner } from './agent-digest';
 import { companyContextPreamble } from '../dal/customer-context-store';
 import type { ModelExecutionObserver } from '../lib/model-execution-lineage';
+import {
+  executeEffectiveRuntimePlan,
+  ProviderUnavailableError,
+  type EffectiveRuntimePlan,
+  type RuntimeExecutionAttempt,
+  type RuntimeResolutionSource,
+  type LiveRuntimeProvider,
+} from './model-runtime-execution';
 
 /** The Workers-AI text model — same small instruct model the digest agent uses (free-tier friendly). */
 export const COCKPIT_CHAT_LLM_MODEL = '@cf/meta/llama-3.1-8b-instruct';
@@ -224,6 +232,17 @@ export interface CockpitChatResult {
    *  dal/llm-usage-store.ts behind LLM_USAGE_METERING_ENABLED. undefined on deterministic answers; token
    *  fields null when the provider didn't report usage (Workers-AI usage is optional). */
   usage?: { tokens_in: number | null; tokens_out: number | null } | null;
+  /** Commercial live-runtime provenance. Credentials and raw prompts are never included. */
+  execution?: {
+    receipt_id: string | null;
+    runtime_id: string;
+    provider: LiveRuntimeProvider;
+    model: string;
+    source: RuntimeResolutionSource;
+    provider_config_version_id: string | null;
+    latency_ms: number;
+    attempts: RuntimeExecutionAttempt[];
+  };
   /** Provenance the UI shows so the answer visibly references the real record. */
   grounded_on: {
     /** W1 (260708) · the operation_events/governance ids the answer grounded on — the LIVE-link source the
@@ -1101,7 +1120,7 @@ export function buildDeterministicChatAnswer(
       + `${grounded.events_considered < grounded.events_total ? ` (I looked at the ${grounded.events_considered} most recent)` : ''}:`,
     );
   } else {
-    lines.push(`There is no other recorded activity in ${where} right now — here is what I can tell you about the pinned ${grounded.pinned_total === 1 ? 'item' : 'items'}:`);
+    lines.push(`There is no other recorded activity in the bounded ${where} record — here is what I can tell you about the pinned ${grounded.pinned_total === 1 ? 'item' : 'items'}:`);
   }
 
   // Status posture line.
@@ -1139,7 +1158,9 @@ export function buildDeterministicChatAnswer(
   // Blocked / sign-off first when the operator asked for it.
   if (asksBlocked) {
     if (grounded.needs_review === 0 && grounded.blocked === 0) {
-      lines.push('• Nothing is blocked and nothing is awaiting your sign-off right now — you are clear.');
+      lines.push(grounded.data_freshness.is_stale
+        ? `• No blocked or awaiting-sign-off items are recorded as of ${grounded.data_freshness.newest_event_at}; current state is unverified because the record is stale.`
+        : '• Nothing is blocked and nothing is awaiting your sign-off in the current record.');
     } else {
       if (grounded.needs_review > 0) lines.push(`• ${plural(grounded.needs_review, 'item')} need your sign-off.`);
       if (grounded.blocked > 0) lines.push(`• ${plural(grounded.blocked, 'item')} blocked and need attention.`);
@@ -1159,10 +1180,8 @@ export function buildDeterministicChatAnswer(
 }
 
 /**
- * Answer a cockpit-chat question grounded in the scoped events. LLM-richer via the Workers-AI
- * binding when present; deterministic grounded digest otherwise / on any failure. NEVER throws
- * (HR-INPUT-COERCION-NO-THROW-1 spirit) and NEVER invents — the model is fed ONLY the compiled
- * facts and instructed to restate, not invent. Bounded tokens.
+ * Legacy projection-compatible answer engine. Commercial routes must call answerLiveCockpitChat.
+ * The model is fed only compiled facts and instructed to restate, not invent. Bounded tokens.
  */
 /**
  * P6 · call Claude via the Anthropic Messages API. Returns the text, or null on ANY failure / non-200 /
@@ -1316,6 +1335,18 @@ function buildStructuredFactBlock(facts: CockpitChatFacts, grounded: CockpitChat
 /** User-selectable chat LLM. 'llama' = free Workers-AI default; 'claude' = premium (needs ANTHROPIC_API_KEY). */
 export type CockpitChatLLM = 'llama' | 'claude';
 
+function validateLiveGrounding(text: string, grounded: CockpitChatResult['grounded_on']): string | null {
+  if (!grounded.data_freshness.is_stale) return null;
+  const normalized = text.toLowerCase();
+  const acknowledgesAge = normalized.includes(String(grounded.data_freshness.staleness_minutes))
+    || /\b(?:stale|snapshot|as of|not current|unverified)\b/.test(normalized);
+  if (!acknowledgesAge) return 'GROUNDING_FRESHNESS_MISSING';
+  if (/\b(?:right now|currently|all clear|you are clear|real[- ]?time)\b/.test(normalized)) {
+    return 'GROUNDING_CURRENT_STATE_OVER_STALE';
+  }
+  return null;
+}
+
 export async function answerCockpitChat(
   message: string,
   facts: CockpitChatFacts,
@@ -1324,6 +1355,7 @@ export async function answerCockpitChat(
   claudeKey?: string,
   llmChoice: CockpitChatLLM = 'llama',
   executionObserver?: ModelExecutionObserver,
+  liveRuntimePlan?: EffectiveRuntimePlan,
 ): Promise<CockpitChatResult> {
   const grounded = compileChatFacts(facts, message);
   // P0.1 · the deterministic FLOOR must be honest about staleness too (it is the guaranteed fallback).
@@ -1346,7 +1378,7 @@ export async function answerCockpitChat(
       : projectPlanQuestion
       ? buildProjectPlanAnswer(grounded)
       : buildDeterministicChatAnswer(message, grounded, facts.scope, mode, facts.companyContext));
-  if (projectInventoryQuestion || projectPlanQuestion) {
+  if ((projectInventoryQuestion || projectPlanQuestion) && !liveRuntimePlan) {
     return {
       answer: deterministic,
       generated_by: 'deterministic',
@@ -1481,7 +1513,39 @@ export async function answerCockpitChat(
   // ARCH-006 W3 — typed structured facts alongside the prose (the structured-context moat). The model
   // reasons over the records for per-item precision; the prose above is the same data, summarized.
   const structuredBlock = buildStructuredFactBlock(facts, grounded);
-  const userPrompt = `Event facts:\n${factLines.join('\n')}\n\nStructured facts (typed records of the SAME items — reason over these for precise, per-item answers; never invent fields):\n${structuredBlock}\n\nOperator question: ${String(message || '').slice(0, 600)}`;
+  const userPrompt = `Source-bound answer draft (verify every statement against the facts below; preserve it when accurate, revise it when needed):\n${deterministic}\n\nEvent facts:\n${factLines.join('\n')}\n\nStructured facts (typed records of the SAME items — reason over these for precise, per-item answers; never invent fields):\n${structuredBlock}\n\nOperator question: ${String(message || '').slice(0, 600)}`;
+
+  // Commercial live-AI path. The route resolves tenant/user runtime precedence before entering this
+  // service. Every candidate is a real provider; failures remain typed failures and can never become
+  // deterministic assistant prose. The legacy ladder below remains available only to explicitly
+  // non-commercial callers while they migrate to the resolver.
+  if (liveRuntimePlan) {
+    const live = await executeEffectiveRuntimePlan({
+      plan: liveRuntimePlan,
+      system: systemPrompt,
+      user: userPrompt,
+      maxTokens: mode === 'deep-research' ? 900 : 700,
+      validateText: (text) => validateLiveGrounding(text, grounded),
+      observer: executionObserver,
+    });
+    return {
+      answer: live.text,
+      generated_by: 'llm',
+      grounded_on: grounded,
+      model: live.runtime.model,
+      usage: live.usage,
+      execution: {
+        receipt_id: live.execution_receipt_id,
+        runtime_id: live.runtime.runtime_id,
+        provider: live.runtime.provider,
+        model: live.runtime.model,
+        source: live.runtime.source,
+        provider_config_version_id: live.runtime.provider_config_version_id,
+        latency_ms: live.latency_ms,
+        attempts: live.attempts,
+      },
+    };
+  }
 
   // 260805 · THESE TWO PARAGRAPHS USED TO CONTRADICT EACH OTHER, IN ADJACENT LINES.
   // The first said Claude is primary "for EVERY read mode whenever ANTHROPIC_API_KEY is configured";
@@ -1584,4 +1648,28 @@ export async function answerCockpitChat(
     console.log(JSON.stringify({ kind: 'cockpit_chat_llm_error', model: COCKPIT_CHAT_LLM_MODEL, error: err instanceof Error ? err.message : String(err) }));
     return { answer: deterministic, generated_by: 'deterministic', grounded_on: grounded, model: null };
   }
+}
+
+export type LiveCockpitChatResult = CockpitChatResult & {
+  generated_by: 'llm';
+  execution: NonNullable<CockpitChatResult['execution']>;
+};
+
+/** Production conversational boundary: a runtime plan is mandatory and fake-success results are impossible. */
+export async function answerLiveCockpitChat(
+  message: string,
+  facts: CockpitChatFacts,
+  mode: CockpitChatMode,
+  executionObserver: ModelExecutionObserver | undefined,
+  liveRuntimePlan: EffectiveRuntimePlan,
+): Promise<LiveCockpitChatResult> {
+  const result = await answerCockpitChat(
+    message, facts, undefined, mode, undefined, 'llama', executionObserver, liveRuntimePlan,
+  );
+  if (result.generated_by !== 'llm' || !result.execution) {
+    throw new ProviderUnavailableError(
+      'commercial live chat produced no execution receipt', [], liveRuntimePlan.resolution_attempts,
+    );
+  }
+  return result as LiveCockpitChatResult;
 }

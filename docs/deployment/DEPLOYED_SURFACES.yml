@@ -11,7 +11,7 @@
 # is wrong / can't be found", query THIS file (HR-SEARCH-BEFORE-ABSENCE-1).
 
 schema_id: xlooop.deployed_surfaces.v1
-last_reviewed: '2026-07-26'
+last_reviewed: '2026-08-10'
 
 hosts:
   - id: app
@@ -19,15 +19,16 @@ hosts:
     purpose: customer workspace cockpit with one governed composer
     state: live
     source_repo: x-ai-front
-    serving_source: wired
-    serving_artifact: wired/dist-production
+    serving_source: app
+    serving_artifact: app/dist
+    artifact_contract: react_vite_v2
     pages_functions_repo: x-backend
     pages_functions_source: functions
     release_manifest: dist-app-pages-release/release-manifest.json
-    deploy_script: deploy:app:prod
+    deploy_script: deploy:paired:prod
     default_screen: workspace-cockpit
     screens: [workspace-cockpit, chat, plan, sources, settings, events, onboarding]
-    notes: x-backend assembles the immutable x-ai-front artifact with Pages Functions; no second frontend
+    notes: x-backend assembles the immutable React artifact with Pages Functions; all production aliases enter the paired API/Pages cutover orchestrator; wired is nondeployable
 
   - id: invest
     url: https://invest.xlooop.com
@@ -66,5 +67,5 @@ hosts:
     purpose: backend worker (investor/workspace/graph/events/sign-off endpoints)
     state: live
     source_repo: x-backend
-    deploy_script: deploy:api                 # wrangler deploy --config wrangler.toml
+    deploy_script: deploy:paired:prod         # paired API/Pages cutover; deploy:api is an alias, not another entrance
     config: wrangler.toml

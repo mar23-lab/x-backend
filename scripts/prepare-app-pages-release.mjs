@@ -15,8 +15,10 @@ import {
   hashReleaseFiles,
   normalizePagesFunctionsBundle,
   parseFrontendReleaseArtifact,
+  releaseManifestDigest,
   verifyStaticArtifactFiles,
 } from './lib/app-pages-release-contract.mjs';
+import { readCandidateDeploymentContract } from './lib/candidate-deployment-contract.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const artifactDir = path.resolve(process.env.XLOOOP_FRONTEND_ARTIFACT_DIR || '');
@@ -45,8 +47,19 @@ const generatedAt = execFileSync('git', ['show', '-s', '--format=%cI', 'HEAD'], 
   encoding: 'utf8',
 }).trim();
 const contract = JSON.parse(readFileSync(path.join(root, 'docs/contracts/api-contract.v1.json'), 'utf8'));
+let candidateDeployment;
+try {
+  candidateDeployment = readCandidateDeploymentContract(root);
+} catch (error) {
+  fail(error instanceof Error ? error.message : String(error));
+}
 const config = parseFrontendReleaseArtifact(artifactDir);
-const assessment = assessFrontendReleaseArtifact(config, { backend_sha: backendSha });
+const assessment = assessFrontendReleaseArtifact(config, {
+  backend_sha: backendSha,
+  contract_hash: contract.contract_hash,
+  schema_head: candidateDeployment.schema_head,
+  feature_posture: candidateDeployment.feature_posture,
+});
 const fileProblems = verifyStaticArtifactFiles(artifactDir, contract.contract_hash);
 if (!assessment.ok || fileProblems.length) {
   fail([...assessment.problems, ...fileProblems].join(','));
@@ -56,10 +69,11 @@ rmSync(outputDir, { recursive: true, force: true });
 mkdirSync(outputDir, { recursive: true });
 cpSync(artifactDir, outputDir, { recursive: true });
 
-const wrangler = path.join(root, 'node_modules', '.bin', 'wrangler');
+const wrangler = path.join(root, 'node_modules', 'wrangler', 'bin', 'wrangler.js');
 const build = spawnSync(
-  wrangler,
+  process.execPath,
   [
+    wrangler,
     'pages',
     'functions',
     'build',
@@ -90,6 +104,7 @@ try {
 
 const manifest = {
   schema_id: 'xlooop.app_pages_release_manifest.v1',
+  artifact_contract: config.artifact_contract,
   generated_at: generatedAt,
   frontend_sha: config.frontend_sha,
   backend_sha: backendSha,
@@ -101,6 +116,7 @@ const manifest = {
   feature_posture: config.feature_posture,
   files: hashReleaseFiles(outputDir),
 };
+manifest.artifact_digest = releaseManifestDigest(manifest);
 writeFileSync(path.join(outputDir, 'release-manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`);
 console.log(
   `prepare-app-pages-release · PASS · frontend=${manifest.frontend_sha} backend=${manifest.backend_sha}`

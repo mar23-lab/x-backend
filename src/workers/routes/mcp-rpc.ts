@@ -1,6 +1,7 @@
 // mcp-rpc.ts · hosted Model Context Protocol (Streamable HTTP / JSON-RPC 2.0) endpoint.
 //
-// This is the native-connector surface: `claude mcp add --transport http
+// This is the customer-profile transport for the canonical agent-facing xcp-gateway:
+// `claude mcp add --transport http
 // https://api.xlooop.com/api/v1/mcp/rpc --header "Authorization: Bearer <token>"`.
 // It is a THIN protocol adapter — it does NOT re-implement any tool. Each tools/call is
 // dispatched, with the caller's own Authorization header, back through the same authenticated
@@ -17,7 +18,7 @@ import type { AuthEnv, AuthVariables } from '../middleware/auth';
 export const MCP_PROTOCOL_VERSIONS = ['2025-06-18', '2025-03-26', '2024-11-05'] as const;
 const DEFAULT_PROTOCOL_VERSION = '2025-06-18';
 
-export const MCP_SERVER_INFO = { name: 'xlooop-customer-gateway', version: '1.0.0' } as const;
+export const MCP_SERVER_INFO = { name: 'xcp-gateway', version: '1.1.0', profile: 'customer' } as const;
 
 // The customer-safe read tools exposed over MCP. Each maps to an existing authenticated REST
 // handler (path verbatim from mcp-gateway SAFE_TOOLS / template-policy routes). Write tools are
@@ -44,10 +45,10 @@ function reqString(args: Record<string, unknown>, key: string): string | null {
 
 export const MCP_READ_TOOLS: McpToolDef[] = [
   {
-    name: 'xlooop.whoami',
-    description: 'Confirm the connected customer identity, workspace, and the read-only tool allowlist.',
+    name: 'xcp_session_start',
+    description: 'Start one customer-profile session and return tenant identity, scoped context, and allowed tools.',
     inputSchema: STRING(),
-    build: () => ({ method: 'GET', path: '/api/v1/mcp/whoami' }),
+    build: () => ({ method: 'GET', path: '/api/v1/mcp/session-start' }),
   },
   {
     name: 'xlooop.get_task_packet',
@@ -241,7 +242,7 @@ export function createMcpRpcRoute(dispatch: AppDispatch) {
         capabilities: { tools: { listChanged: false } },
         serverInfo: MCP_SERVER_INFO,
         instructions:
-          'Xlooop customer connector. Read-only, tenant-scoped. Call xlooop.whoami first to confirm identity.',
+          'Canonical xcp-gateway with profile=customer. Call xcp_session_start once for tenant identity, scoped context, and tools; no second gateway hop is required.',
       });
     }
 
@@ -322,7 +323,9 @@ export function createMcpRpcRoute(dispatch: AppDispatch) {
   // Discovery convenience: GET advertises the transport so a misconfigured client gets a hint.
   route.get('/rpc', (ctx) =>
     ctx.json({
-      schema_id: 'xlooop.mcp_rpc_descriptor.v1',
+      schema_id: 'xcp.mcp_rpc_descriptor.v1',
+      gateway_name: MCP_SERVER_INFO.name,
+      profile: MCP_SERVER_INFO.profile,
       transport: 'streamable-http',
       protocol_versions: MCP_PROTOCOL_VERSIONS,
       server_info: MCP_SERVER_INFO,

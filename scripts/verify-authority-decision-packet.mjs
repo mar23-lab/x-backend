@@ -65,6 +65,7 @@ function assessApprovedShape(packet, problems, currentHead, now) {
   const decision = packet?.decision || {};
   const rollback = packet?.rollback || {};
   const target = packet?.target || {};
+  const preDeploy = packet?.pre_deploy_observation || {};
 
   if (packet?.schema_id !== 'xlooop.authority_decision_packet.v2') problems.push('approved_schema_id');
   if (!decision.approver) problems.push('approver');
@@ -111,6 +112,16 @@ function assessApprovedShape(packet, problems, currentHead, now) {
   if (rollback.target_sha === packet?.candidate_commit_sha) problems.push('rollback_target_not_distinct');
   if (!uuidPattern.test(rollback.cloudflare_version_id || '')) problems.push('rollback_cloudflare_version_id');
   if (!rollback.evidence_reference) problems.push('rollback_evidence_reference');
+  if (preDeploy.status !== 'ok') problems.push('pre_deploy_status');
+  if (!shaPattern.test(preDeploy.build_sha || '')) problems.push('pre_deploy_build_sha');
+  if (preDeploy.build_sha !== rollback.target_sha) problems.push('pre_deploy_rollback_sha_mismatch');
+  if (!hashPattern.test(preDeploy.contract_hash || '')) problems.push('pre_deploy_contract_hash');
+  if (!Number.isSafeInteger(preDeploy.schema_head) || preDeploy.schema_head < 1) {
+    problems.push('pre_deploy_schema_head');
+  }
+  if (preDeploy.environment !== 'production') problems.push('pre_deploy_environment');
+  if (preDeploy.authority !== 'production') problems.push('pre_deploy_authority');
+  problems.push(...exactPostureProblems(preDeploy.feature_posture, 'pre_deploy_feature_posture'));
   if (expected.worker_name !== target.worker_name) problems.push('expected_worker_name');
   if (expected.build_sha !== packet?.candidate_commit_sha) problems.push('expected_build_sha');
   if (!hashPattern.test(expected.contract_hash || '')) problems.push('expected_contract_hash');
@@ -145,6 +156,9 @@ function assessRatifiedObservation(packet, problems) {
   if (health.authority !== expected.authority) problems.push('health_authority');
   if (!posturesEqual(health.feature_posture, expected.feature_posture)) {
     problems.push('health_feature_posture');
+  }
+  if (health?.bindings?.model_runtime_keyring !== true) {
+    problems.push('health_model_runtime_keyring');
   }
 }
 
@@ -218,6 +232,15 @@ function approvedFixture() {
       target_sha: 'c'.repeat(40),
       cloudflare_version_id: '5c20d49c-957b-4a89-8379-7e4bb1bde936',
       evidence_reference: 'wrangler:deployments-list:2026-07-25',
+    },
+    pre_deploy_observation: {
+      status: 'ok',
+      build_sha: 'c'.repeat(40),
+      contract_hash: 'e'.repeat(64),
+      schema_head: 88,
+      environment: 'production',
+      authority: 'production',
+      feature_posture: structuredClone(posture),
     },
     expected_deployment: {
       worker_name: 'xlooop-api',
@@ -299,6 +322,7 @@ function runSelfTest() {
         environment: approved.expected_deployment.environment,
         authority: approved.expected_deployment.authority,
         feature_posture: structuredClone(approved.expected_deployment.feature_posture),
+        bindings: { model_runtime_keyring: true },
       },
     },
   };
@@ -381,14 +405,12 @@ function packetPathForPhase() {
   return isAbsolute(supplied) ? supplied : resolve(process.cwd(), supplied);
 }
 
-if (requireApproved && requireRatified) {
-  console.error('verify-authority-decision-packet · FAIL-CLOSED · choose one required phase');
-  process.exit(2);
-}
-
-if (selfTest) {
-  runSelfTest();
-} else {
+async function main() {
+  if (requireApproved && requireRatified) {
+    console.error('verify-authority-decision-packet · FAIL-CLOSED · choose one required phase');
+    process.exit(2);
+  }
+  if (selfTest) return runSelfTest();
   try {
     const phase = requireApproved ? 'deploy' : requireRatified ? 'ratified' : 'observe';
     const packetPath = packetPathForPhase();
@@ -416,3 +438,6 @@ if (selfTest) {
     process.exit(1);
   }
 }
+
+const invokedPath = process.argv[1] ? resolve(process.argv[1]) : null;
+if (invokedPath === fileURLToPath(import.meta.url)) await main();

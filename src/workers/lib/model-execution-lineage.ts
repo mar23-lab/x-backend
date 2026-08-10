@@ -15,6 +15,7 @@ import {
 } from './assistant-context-lineage';
 
 export interface ModelExecutionRun {
+  receipt_id?: string;
   complete(input: ModelExecutionFinishInput): Promise<void>;
 }
 
@@ -72,6 +73,7 @@ export function createModelExecutionObserver(
         model_key: input.model_key,
       });
       return {
+        receipt_id: receiptId,
         complete: (finish) => finishModelExecutionReceiptRow(sql, workspaceId, receiptId, finish),
       };
     },

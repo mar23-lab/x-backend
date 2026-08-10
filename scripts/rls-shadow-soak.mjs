@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // rls-shadow-soak.mjs · RLS defense-in-depth SHADOW proof (Plane 1, 260628).
 //
-// Proves the non-owner, RLS-subject role (`xlooop_app`, migration 037) enforces tenant isolation at the
+// Proves the non-owner, RLS-subject role (`xlooop_app`, db/operations/rls_app_role_grants.sql) enforces tenant isolation at the
 // DB level BEFORE any cutover — so the live flip (routing the worker through XLOOOP_RLS_APP_DATABASE_URL)
 // is evidence-backed, not hoped. Run it on a NEON BRANCH (never first on prod) with both URLs set:
 //
@@ -88,7 +88,7 @@ async function appCount(table, gucWs, whereWs) {
 const main = async () => {
   // 0. Confirm the app role truly cannot bypass RLS (the whole point).
   const [role] = await owner`SELECT rolbypassrls, rolsuper FROM pg_roles WHERE rolname = 'xlooop_app'`;
-  if (!role) { console.error('✗ xlooop_app role missing — apply migration 037 first'); process.exit(1); }
+  if (!role) { console.error('✗ xlooop_app role missing — apply db/operations/rls_app_role_grants.sql through the RLS cutover runbook first'); process.exit(1); }
   if (role.rolbypassrls || role.rolsuper) { console.error(`✗ xlooop_app is privileged (bypassrls=${role.rolbypassrls} super=${role.rolsuper}) — it would NOT be subject to RLS`); process.exit(1); }
   console.log('☑ xlooop_app is non-superuser + NOBYPASSRLS (subject to RLS)');
 

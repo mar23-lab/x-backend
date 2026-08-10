@@ -8,7 +8,6 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { assessPagesDecisionPacket } from './lib/app-pages-release-contract.mjs';
 import {
-  consumeDeploymentAuthorization,
   isDeploymentAuthorizationConsumed,
 } from './lib/deployment-authorization-store.mjs';
 
@@ -47,6 +46,10 @@ if (verifyHeaders.status !== 0) fail(verifyHeaders.stderr || verifyHeaders.stdou
 
 const manifest = JSON.parse(readFileSync(path.join(releaseDir, 'release-manifest.json'), 'utf8'));
 const packet = JSON.parse(readFileSync(path.resolve(packetPath), 'utf8'));
+const orchestratedCutoverId = process.env.XLOOOP_PAIRED_CUTOVER_INTERNAL;
+if (!orchestratedCutoverId || orchestratedCutoverId !== packet.cutover_id) {
+  fail('standalone Pages production deploy is disabled; use npm run deploy:paired:prod');
+}
 const backendSha = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim();
 const backendDirty = execFileSync('git', ['status', '--porcelain=v1'], {
   cwd: root,
@@ -62,34 +65,15 @@ const decision = assessPagesDecisionPacket(packet, {
   now: new Date().toISOString(),
 });
 if (!decision.ok) fail(decision.problems.join(','));
-if (isDeploymentAuthorizationConsumed(root, 'pages', packet.decision.authorization_id)) {
-  fail('deployment authorization has already been consumed');
+if (!isDeploymentAuthorizationConsumed(root, 'pages', packet.decision.authorization_id)) {
+  fail('Pages authorization was not reserved by the paired cutover orchestrator');
 }
 
-try {
-  consumeDeploymentAuthorization(root, 'pages', packet.decision.authorization_id, {
-    schema_id: 'xlooop.app_pages_deployment_authorization_receipt.v1',
-    authorization_id: packet.decision.authorization_id,
-    approval_reference: packet.decision.approval_reference,
-    frontend_sha: manifest.frontend_sha,
-    backend_sha: manifest.backend_sha,
-    project_name: packet.target.project_name,
-    state: 'reserved_before_deploy',
-    reserved_at: new Date().toISOString(),
-    consequence: 'a failed or interrupted deploy attempt requires a new operator authorization',
-  });
-} catch (error) {
-  fail(
-    error?.code === 'EEXIST'
-      ? 'deployment authorization has already been consumed'
-      : error instanceof Error ? error.message : String(error),
-  );
-}
-
-const wrangler = path.join(root, 'node_modules', '.bin', 'wrangler');
+const wrangler = path.join(root, 'node_modules', 'wrangler', 'bin', 'wrangler.js');
 const deploy = spawnSync(
-  wrangler,
+  process.execPath,
   [
+    wrangler,
     'pages',
     'deploy',
     releaseDir,

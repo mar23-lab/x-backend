@@ -75,6 +75,18 @@ function parseFileVersions() {
     .sort((a, b) => a.version - b.version || a.file.localeCompare(b.file));
 }
 
+export function duplicateMigrationVersions(migrations) {
+  const byVersion = new Map();
+  for (const migration of migrations) {
+    const files = byVersion.get(migration.version) ?? [];
+    files.push(migration.file);
+    byVersion.set(migration.version, files);
+  }
+  return [...byVersion.entries()]
+    .filter(([, files]) => files.length > 1)
+    .map(([version, files]) => ({ version, files: [...files].sort() }));
+}
+
 // Extract the primary CREATE TABLE object a migration declares (the thing whose
 // existence proves the migration reached the DB). Returns the bare, lower-cased,
 // unqualified table name, or null for ALTER/INDEX/RLS/GRANT-only migrations that
@@ -259,6 +271,14 @@ END $$;`,
       fails.push(`${parserCase.label}: expected ${String(parserCase.expected)}, got ${String(actual)}`);
     }
   }
+  const duplicateControl = duplicateMigrationVersions([
+    { version: 37, file: '037_a.sql' },
+    { version: 37, file: '037_b.sql' },
+    { version: 38, file: '038_c.sql' },
+  ]);
+  if (duplicateControl.length !== 1 || duplicateControl[0].version !== 37) {
+    fails.push('duplicate migration versions must be detected deterministically');
+  }
   if (fails.length) {
     console.error('SELF-TEST FAIL:\n  ' + fails.join('\n  '));
     process.exit(4);
@@ -281,6 +301,13 @@ async function main() {
   if (!fileVersions.length) {
     console.error(`verify-prod-migrations · no NNN_*.sql migration files in ${MIGRATIONS_DIR}`);
     process.exit(1);
+  }
+  const duplicateVersions = duplicateMigrationVersions(fileVersions);
+  if (duplicateVersions.length > 0) {
+    const detail = duplicateVersions.map((entry) => `v${entry.version}: ${entry.files.join(', ')}`).join('; ');
+    if (JSON_OUT) console.log(JSON.stringify({ ok: false, error: 'duplicate migration versions', duplicateVersions }));
+    else console.error(`verify-prod-migrations · duplicate migration versions: ${detail}`);
+    process.exit(2);
   }
 
   // Attach each migration's key table (parsed once, from disk).

@@ -8,6 +8,10 @@
 
 import { Hono } from 'hono';
 import { envFlagTrue } from '../lib/env-flag';
+import {
+  CUSTOMER_CONNECTOR_OPERATOR_SCOPES,
+  CUSTOMER_CONNECTOR_READ_SCOPES,
+} from '../lib/customer-connector-scopes';
 import { errorEnvelope } from '../middleware/error';
 import type { AuthEnv, AuthVariables } from '../middleware/auth';
 import type { DalAdapter } from '../dal/DalAdapter';
@@ -16,6 +20,7 @@ import {
   CUSTOMER_MCP_CONNECTOR_NAMESPACE,
   FORBIDDEN_SURFACES as MCP_FORBIDDEN_SURFACES,
   SAFE_TOOLS,
+  XCP_GATEWAY_PROFILE,
 } from './mcp-gateway';
 import { whoamiEnvelope } from './template-policy-registry';
 import { hashToken } from '../dal/customer-token-store';
@@ -44,7 +49,7 @@ const READ_ONLY_ENDPOINTS = [
   '/api/v1/customer/workspace-feed',
   '/api/v1/developer-access/status',
   '/api/v1/developer-access/test',
-  '/api/v1/mcp/whoami',
+  '/api/v1/mcp/session-start',
   '/api/v1/mcp/tools',
 ] as const;
 const FULL_API_BLOCKERS = [
@@ -93,7 +98,7 @@ developerAccessRoute.post('/developer-access/test', async (ctx) => {
       },
       checks: [
         { id: 'session', label: 'Session is authenticated', status: 'pass' },
-        { id: 'whoami', label: 'Identity is bound to this workspace', status: 'pass' },
+        { id: 'session_start', label: 'Session intake is bound to this workspace', status: 'pass' },
         { id: 'tools', label: 'Tool allowlist is visible', status: 'pass' },
         { id: 'full_api', label: 'Full API remains blocked until live proof passes', status: 'blocked' },
       ],
@@ -112,6 +117,7 @@ function buildStatus(auth: AuthContext, workspaceName: string) {
     public_api_ready: false,
     full_api_blocked: true,
     connector_namespace: CUSTOMER_MCP_CONNECTOR_NAMESPACE,
+    profile: XCP_GATEWAY_PROFILE,
     workspace_label: workspaceName,
     user_label: labelUser(auth),
     supported_clients: SUPPORTED_CLIENTS,
@@ -151,7 +157,7 @@ function humanizeTenant(value: string): string {
 }
 
 function describeTool(name: string): string {
-  if (name === 'xlooop.whoami') return 'Confirm the connected user and workspace.';
+  if (name === 'xcp_session_start') return 'Start one tenant-bound customer session.';
   if (name === 'xlooop.get_task_packet') return 'Read a scoped task packet.';
   if (name === 'xlooop.get_workflow_status') return 'Read workflow status for an allowed packet.';
   if (name === 'xlooop.get_effective_templates') return 'Read redacted effective templates.';
@@ -228,6 +234,11 @@ developerAccessRoute.post('/developer-access/tokens', async (ctx) => {
       role,
       label,
       packet_prefix,
+      scopes: role === 'operator'
+        ? [...CUSTOMER_CONNECTOR_OPERATOR_SCOPES]
+        : [...CUSTOMER_CONNECTOR_READ_SCOPES],
+      authority_mode: 'tenant_service',
+      issuer_membership_activated_at: null,
       created_by: auth.user_id,
       expires_at,
     });
@@ -252,14 +263,17 @@ developerAccessRoute.post('/developer-access/tokens', async (ctx) => {
       token: raw,
       token_id: created.id,
       role: created.role,
+      scopes: created.scopes,
       label: created.label,
       expires_at: created.expires_at,
       mode: role === 'operator' ? 'operational' : 'read_only',
       warning:
         'Store this token in your agent config now. It is shown once and never again. Never paste it into chat, docs, tickets, or email.',
       connect: {
-        endpoint: 'https://api.xlooop.com/api/v1/mcp',
-        whoami_check: `curl -s https://api.xlooop.com/api/v1/mcp/whoami -H "Authorization: Bearer ${raw}"`,
+        gateway_name: CUSTOMER_MCP_CONNECTOR_NAMESPACE,
+        profile: XCP_GATEWAY_PROFILE,
+        endpoint: 'https://api.xlooop.com/api/v1/mcp/rpc',
+        session_start_check: `curl -s https://api.xlooop.com/api/v1/mcp/session-start -H "Authorization: Bearer ${raw}"`,
       },
     });
   } catch (err) {

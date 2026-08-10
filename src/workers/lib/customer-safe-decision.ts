@@ -8,7 +8,7 @@
 //   - session.ts entitlement: internal provisioning fields (auto_provisioned_from_access_request_id is an
 //     internal access-request UUID; auto_provisioned_from / auto_provision_skipped_reason / operator_bootstrapped
 //     are internal provisioning mechanics) reaching the customer session payload.
-//   - customer-chat.ts decision: `generated_by` (internal engine class), `model` (internal model id), and
+//   - customer-chat.ts decision: `generated_by` (internal engine class), legacy top-level `model`, and
 //     `grounded_on.event_ids` (internal event ids) reaching the customer chat payload.
 //
 // PURE — no env, no io. The caller passes `enabled` (from envFlagTrue(CUSTOMER_SAFE_SERIALIZER_ENABLED)).
@@ -22,7 +22,8 @@
 /**
  * Internal engine class → customer-safe label. `deterministic` stays honestly `rule_based` (a real trust
  * signal: this answer came from a rule, not an LLM); every AI engine collapses to `assistant` — the
- * customer never sees the provider/model name (`claude`/`workers_ai`) or the internal `llm` tag.
+ * customer never sees legacy engine/model fields or the internal `llm` tag. Commercial execution
+ * provenance is a separate explicit allowlist and includes the provider/model the customer used.
  */
 /**
  * Fail-CLOSED gate (E7 hardening, 260713): the customer-safe projection is ON by default and turns OFF only
@@ -65,6 +66,7 @@ const SAFE_GENERATED_BY: Record<string, 'assistant' | 'rule_based'> = {
 
 /** The ONLY keys a customer-safe chat decision may carry (allow-list = deny-by-default for new leaky fields). */
 export interface CustomerSafeChat {
+  request_id: string;
   interaction_id: string;
   scope: { workspace_id: string | null; project_id: string | null; domain_id: string | null };
   answer: string;
@@ -90,11 +92,23 @@ export interface CustomerSafeChat {
     user_message_id: string;
     assistant_message_id: string;
   } | null;
+  execution: {
+    receipt_id: string | null;
+    runtime_id: string;
+    provider: string;
+    model: string;
+    source: string;
+    provider_config_version_id: string | null;
+    latency_ms: number;
+    attempts: number;
+    usage: { tokens_in: number | null; tokens_out: number | null } | null;
+  } | null;
   mode: unknown;
   claude_available?: boolean;
 }
 
 export interface ChatDecisionLike {
+  request_id?: unknown;
   interaction_id?: unknown;
   scope?: unknown;
   answer: string;
@@ -108,13 +122,15 @@ export interface ChatDecisionLike {
   grounding?: unknown;
   lineage?: unknown;
   conversation?: unknown;
+  execution?: unknown;
   [k: string]: unknown;
 }
 
 /**
  * Chat decision → customer-safe (allow-list). OFF: input returned unchanged (byte-identical).
- * ON: engine name collapsed to a coarse label; `model` dropped; `grounded_on` reduced to an evidence
- * count (internal `event_ids` never emitted). Unknown/absent `generated_by` defaults to `assistant`.
+ * ON: the legacy engine name is collapsed and top-level `model` is dropped; governed execution
+ * provenance keeps its explicit provider/model reference. `grounded_on` is reduced to an evidence count
+ * (internal `event_ids` never emitted). Unknown/absent `generated_by` defaults to `assistant`.
  */
 export function customerSafeChat<T extends ChatDecisionLike>(payload: T, enabled: boolean): T | CustomerSafeChat {
   if (!enabled) return payload;
@@ -138,7 +154,11 @@ export function customerSafeChat<T extends ChatDecisionLike>(payload: T, enabled
   const conversation = payload.conversation && typeof payload.conversation === 'object'
     ? payload.conversation as Record<string, unknown>
     : null;
+  const execution = payload.execution && typeof payload.execution === 'object'
+    ? payload.execution as Record<string, unknown>
+    : null;
   const safe: CustomerSafeChat = {
+    request_id: String(payload.request_id ?? ''),
     interaction_id: String(payload.interaction_id ?? ''),
     scope: {
       workspace_id: scope.workspace_id == null ? null : String(scope.workspace_id),
@@ -169,6 +189,23 @@ export function customerSafeChat<T extends ChatDecisionLike>(payload: T, enabled
       thread_id: String(conversation.thread_id ?? ''),
       user_message_id: String(conversation.user_message_id ?? ''),
       assistant_message_id: String(conversation.assistant_message_id ?? ''),
+    } : null,
+    execution: execution ? {
+      receipt_id: execution.receipt_id == null ? null : String(execution.receipt_id),
+      runtime_id: String(execution.runtime_id ?? ''),
+      provider: String(execution.provider ?? ''),
+      model: String(execution.model ?? ''),
+      source: String(execution.source ?? ''),
+      provider_config_version_id: execution.provider_config_version_id == null
+        ? null : String(execution.provider_config_version_id),
+      latency_ms: Number(execution.latency_ms ?? 0),
+      attempts: Array.isArray(execution.attempts) ? execution.attempts.length : 0,
+      usage: execution.usage && typeof execution.usage === 'object' ? {
+        tokens_in: typeof (execution.usage as Record<string, unknown>).tokens_in === 'number'
+          ? Number((execution.usage as Record<string, unknown>).tokens_in) : null,
+        tokens_out: typeof (execution.usage as Record<string, unknown>).tokens_out === 'number'
+          ? Number((execution.usage as Record<string, unknown>).tokens_out) : null,
+      } : null,
     } : null,
     mode: payload.mode,
   };

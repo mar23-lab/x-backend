@@ -64,6 +64,23 @@ describe('GET /api/v1/health', () => {
     expect(body.bindings.rls_binding).toBe('app');
   });
 
+  it('reports model_runtime_keyring=false when the versioned keyring is absent', async () => {
+    const res = await app.fetch(new Request('http://localhost/api/v1/health'), stubEnv());
+    const body = (await res.json()) as { bindings: Record<string, unknown> };
+    expect(body.bindings.model_runtime_keyring).toBe(false);
+  });
+
+  it('reports model_runtime_keyring=true only for a valid active AES-256 key', async () => {
+    const env = {
+      ...(stubEnv() as unknown as Record<string, unknown>),
+      MODEL_RUNTIME_ENC_KEYS: JSON.stringify({ 'key-2026-08': 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=' }),
+      MODEL_RUNTIME_ACTIVE_KEY_ID: 'key-2026-08',
+    } as never;
+    const res = await app.fetch(new Request('http://localhost/api/v1/health'), env);
+    const body = (await res.json()) as { bindings: Record<string, unknown> };
+    expect(body.bindings.model_runtime_keyring).toBe(true);
+  });
+
   it('reports pilot-shadow feature and binding posture without claiming authority', async () => {
     const env = {
       ...(stubEnv() as unknown as Record<string, unknown>),

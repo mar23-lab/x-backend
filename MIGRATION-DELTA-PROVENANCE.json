@@ -5693,6 +5693,1390 @@
           "reason": "comment condensation to hold the 500-line ratchet"
         }
       ]
+    },
+    {
+      "delta_id": "customer-profile-live-chat-callsite-260808",
+      "generated_at": "2026-08-08T10:44:52.929Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "60d9320d0e840845bc286ad153f99d9d38f4f706",
+      "target_base_commit": "60d9320d0e840845bc286ad153f99d9d38f4f706",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "docs/contracts/model-execution-callsite-manifest.json",
+          "target_blob": "c3709ad28ba8b99e0349bf69424118ce15b4db31",
+          "reason": "Update customer chat model-execution anchor after live-only dispatch"
+        }
+      ]
+    },
+    {
+      "delta_id": "customer-profile-live-chat-260808",
+      "generated_at": "2026-08-08T10:52:16.831Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "60d9320d0e840845bc286ad153f99d9d38f4f706",
+      "target_base_commit": "60d9320d0e840845bc286ad153f99d9d38f4f706",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "docs/architecture/backend/API_CONTRACT_V1.md",
+          "target_blob": "7e3bd68f1c6541249b152f18db647112a40d7906",
+          "reason": "Canonical xcp-gateway customer profile and production live-only chat runtime"
+        },
+        {
+          "path": "docs/architecture/backend/CUSTOMER_LEARNING_PERSONALIZATION_ARCHITECTURE.md",
+          "target_blob": "0b01db856ecf9cfaeb2995b19c9a4a24a751e03b",
+          "reason": "Canonical xcp-gateway customer profile and production live-only chat runtime"
+        },
+        {
+          "path": "docs/contracts/api-contract.v1.json",
+          "target_blob": "e536afc65f46a41c914bc5e215c6648cf15a0e3a",
+          "reason": "Canonical xcp-gateway customer profile and production live-only chat runtime"
+        },
+        {
+          "path": "docs/customer-onboarding/CONNECTOR_TOKEN_AND_MCP_ACTIVATION_RUNBOOK.md",
+          "target_blob": "c1de700584800bddebb1477976a3d20272118956",
+          "reason": "Canonical xcp-gateway customer profile and production live-only chat runtime"
+        },
+        {
+          "path": "package.json",
+          "target_blob": "3159a184e699d72f20151f208bf31856c41df1ec",
+          "reason": "Canonical xcp-gateway customer profile and production live-only chat runtime"
+        },
+        {
+          "path": "scripts/verify-customer-learning-personalization.mjs",
+          "target_blob": "2ebd741d2bed785d7856e6e74887b208bdae0e37",
+          "reason": "Canonical xcp-gateway customer profile and production live-only chat runtime"
+        },
+        {
+          "path": "scripts/verify-customer-mcp-rpc-contract.mjs",
+          "target_blob": "3181bc7a4e1328879f01f1f1a55d05ca0a6e8618",
+          "reason": "Canonical xcp-gateway customer profile and production live-only chat runtime"
+        },
+        {
+          "path": "src/workers/__tests__/auth.test.ts",
+          "target_blob": "c436c238832dd865db762a50c92b882aff247e7c",
+          "reason": "Canonical xcp-gateway customer profile and production live-only chat runtime"
+        },
+        {
+          "path": "src/workers/__tests__/chat-assembly-trace.test.ts",
+          "target_blob": "342fb1d20af2d74b6637f41c1fe812a0d5aa82a3",
+          "reason": "Canonical xcp-gateway customer profile and production live-only chat runtime"
+        },
+        {
+          "path": "src/workers/__tests__/customer-chat-route.test.ts",
+          "target_blob": "51d1ae8a5148f83c464855744c70729fdc3d8fe0",
+          "reason": "Canonical xcp-gateway customer profile and production live-only chat runtime"
+        },
+        {
+          "path": "src/workers/__tests__/customer-safe-decision.test.ts",
+          "target_blob": "b1d73f2175f2eb8932aaaeaa7df9f194b4870833",
+          "reason": "Canonical xcp-gateway customer profile and production live-only chat runtime"
+        },
+        {
+          "path": "src/workers/__tests__/llm-usage-metering.test.ts",
+          "target_blob": "e535f56994d19a01407d65f15447c7f4afdc180e",
+          "reason": "Canonical xcp-gateway customer profile and production live-only chat runtime"
+        },
+        {
+          "path": "src/workers/__tests__/mcp-gateway-route.test.ts",
+          "target_blob": "8ded563eff63f2f653affc19cbb6451619d064ba",
+          "reason": "Canonical xcp-gateway customer profile and production live-only chat runtime"
+        },
+        {
+          "path": "src/workers/__tests__/mcp-rpc-route.test.ts",
+          "target_blob": "0bae7586e9e7668f982aa540404940ef38bfc36d",
+          "reason": "Canonical xcp-gateway customer profile and production live-only chat runtime"
+        },
+        {
+          "path": "src/workers/__tests__/operator-workspace-scope.test.ts",
+          "target_blob": "1701264436f03d741c77099431b76dde3cc0e3a0",
+          "reason": "Canonical xcp-gateway customer profile and production live-only chat runtime"
+        },
+        {
+          "path": "src/workers/dal/types/auth.ts",
+          "target_blob": "18621ed9cefd8d4b5ea104a3e02e5ea9171157bc",
+          "reason": "Canonical xcp-gateway customer profile and production live-only chat runtime"
+        },
+        {
+          "path": "src/workers/lib/customer-safe-decision.ts",
+          "target_blob": "7f690c1742bae5a06ddf58bfbb8e5ff553e443c8",
+          "reason": "Canonical xcp-gateway customer profile and production live-only chat runtime"
+        },
+        {
+          "path": "src/workers/lib/model-execution-lineage.ts",
+          "target_blob": "dbf388897b1a70d9e84c5debbc63cf321211ab78",
+          "reason": "Canonical xcp-gateway customer profile and production live-only chat runtime"
+        },
+        {
+          "path": "src/workers/lib/observability.ts",
+          "target_blob": "7112280022da8eb4de860f5be967b42414591323",
+          "reason": "Canonical xcp-gateway customer profile and production live-only chat runtime"
+        },
+        {
+          "path": "src/workers/middleware/error.ts",
+          "target_blob": "4bc0e51ef9a6664b436c51ec32597c2f961f9f07",
+          "reason": "Canonical xcp-gateway customer profile and production live-only chat runtime"
+        },
+        {
+          "path": "src/workers/routes/customer-chat.ts",
+          "target_blob": "4e17b7a524d5a47f330e63bbb0c87a79460250d7",
+          "reason": "Canonical xcp-gateway customer profile and production live-only chat runtime"
+        },
+        {
+          "path": "src/workers/routes/customer-workspace-feed.ts",
+          "target_blob": "5ccd31173ad82a305c48f100d2dc7afe02c255fd",
+          "reason": "Canonical xcp-gateway customer profile and production live-only chat runtime"
+        },
+        {
+          "path": "src/workers/routes/developer-access.ts",
+          "target_blob": "e4dfc4faa1a7b8d2b943eedbac662f7f8da96957",
+          "reason": "Canonical xcp-gateway customer profile and production live-only chat runtime"
+        },
+        {
+          "path": "src/workers/routes/mcp-gateway.ts",
+          "target_blob": "ff9e4ab595fdf2abf88c37362494b45c17f67539",
+          "reason": "Canonical xcp-gateway customer profile and production live-only chat runtime"
+        },
+        {
+          "path": "src/workers/routes/mcp-rpc.ts",
+          "target_blob": "1a29c2f7af574039806cf9033174c6f4ffbade8b",
+          "reason": "Canonical xcp-gateway customer profile and production live-only chat runtime"
+        },
+        {
+          "path": "src/workers/services/cockpit-chat.ts",
+          "target_blob": "6969370b679a7798222b6551a93c0f0ec0d135fb",
+          "reason": "Canonical xcp-gateway customer profile and production live-only chat runtime"
+        },
+        {
+          "path": "wrangler.toml",
+          "target_blob": "0520f515ff3445ef4d54dd8377da79e7f82b2f05",
+          "reason": "Canonical xcp-gateway customer profile and production live-only chat runtime"
+        }
+      ]
+    },
+    {
+      "delta_id": "customer-profile-live-chat-source-tier-fixture-260808",
+      "generated_at": "2026-08-08T11:00:57.903Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "60d9320d0e840845bc286ad153f99d9d38f4f706",
+      "target_base_commit": "60d9320d0e840845bc286ad153f99d9d38f4f706",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/__tests__/source-tier-grounding.test.ts",
+          "target_blob": "3f39bdce0e24b0a3154ad60a6a00a034b5ed0176",
+          "reason": "marks the source-tier fixture as a deterministic-path test so production live-chat enforcement remains fail-closed"
+        }
+      ]
+    },
+    {
+      "delta_id": "codex-customer-session-runtime-integration-260808",
+      "generated_at": "2026-08-08T11:39:08.010Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "475599236b9c3b1c1a1926401bf5e9cf5472956d",
+      "target_base_commit": "475599236b9c3b1c1a1926401bf5e9cf5472956d",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "docs/architecture/backend/API_CONTRACT_V1.md",
+          "target_blob": "83ff264c8c6f17a3361cea34eea3d59a3da80235",
+          "reason": "Integrate canonical customer xcp_session_start discovery and approved live runtime controls from Banach without tenant credential dispatch"
+        },
+        {
+          "path": "docs/architecture/backend/CUSTOMER_LEARNING_PERSONALIZATION_ARCHITECTURE.md",
+          "target_blob": "b59702ceddf7ff273e03df58adfe490ae79d6259",
+          "reason": "Integrate canonical customer xcp_session_start discovery and approved live runtime controls from Banach without tenant credential dispatch"
+        },
+        {
+          "path": "docs/contracts/api-contract.v1.json",
+          "target_blob": "438ef88ba97e0642493ab945b3935d6b4cf62201",
+          "reason": "Integrate canonical customer xcp_session_start discovery and approved live runtime controls from Banach without tenant credential dispatch"
+        },
+        {
+          "path": "docs/contracts/model-execution-callsite-manifest.json",
+          "target_blob": "96200a86cb57d6e1225b51ea47fc893425834121",
+          "reason": "Integrate canonical customer xcp_session_start discovery and approved live runtime controls from Banach without tenant credential dispatch"
+        },
+        {
+          "path": "docs/customer-onboarding/CLAUDE_CODE_API_ONBOARDING.md",
+          "target_blob": "41c6f640e7fcf431bbd0437e1a509fae33c67615",
+          "reason": "Integrate canonical customer xcp_session_start discovery and approved live runtime controls from Banach without tenant credential dispatch"
+        },
+        {
+          "path": "docs/customer-onboarding/CONNECTOR_TOKEN_AND_MCP_ACTIVATION_RUNBOOK.md",
+          "target_blob": "8efff27aa4a6b7b3f81e34bc41e8f6907da6a272",
+          "reason": "Integrate canonical customer xcp_session_start discovery and approved live runtime controls from Banach without tenant credential dispatch"
+        },
+        {
+          "path": "docs/deployment/MODEL_RUNTIMES_ACTIVATION.md",
+          "target_blob": "07e7d37426f876238b424c8f2182bd3031628334",
+          "reason": "Integrate canonical customer xcp_session_start discovery and approved live runtime controls from Banach without tenant credential dispatch"
+        },
+        {
+          "path": "docs/governance/FEATURE_FLAGS.md",
+          "target_blob": "959532e3d39acadcd4a2ba01b142d4652d29d081",
+          "reason": "Integrate canonical customer xcp_session_start discovery and approved live runtime controls from Banach without tenant credential dispatch"
+        },
+        {
+          "path": "scripts/verify-backend-effective-template-consumption.mjs",
+          "target_blob": "362f9fc70b796708015c5a8cfdb2ed654264419e",
+          "reason": "Integrate canonical customer xcp_session_start discovery and approved live runtime controls from Banach without tenant credential dispatch"
+        },
+        {
+          "path": "scripts/verify-commercial-governance-hardening.mjs",
+          "target_blob": "eca1ab1624daa8075b420cfd0c84ac8ca88e9644",
+          "reason": "Integrate canonical customer xcp_session_start discovery and approved live runtime controls from Banach without tenant credential dispatch"
+        },
+        {
+          "path": "scripts/verify-customer-learning-personalization.mjs",
+          "target_blob": "62fdf95993749e9af5e42e72ed7447c30681e791",
+          "reason": "Integrate canonical customer xcp_session_start discovery and approved live runtime controls from Banach without tenant credential dispatch"
+        },
+        {
+          "path": "scripts/verify-customer-mcp-rpc-contract.mjs",
+          "target_blob": "b75af11fa5abd24cf92f62a893a4014c0964b329",
+          "reason": "Integrate canonical customer xcp_session_start discovery and approved live runtime controls from Banach without tenant credential dispatch"
+        },
+        {
+          "path": "scripts/verify-template-policy-suite.mjs",
+          "target_blob": "2ca1706cb7eca8425d9dfc7b18d45c3a06dd2fc2",
+          "reason": "Integrate canonical customer xcp_session_start discovery and approved live runtime controls from Banach without tenant credential dispatch"
+        },
+        {
+          "path": "src/workers/__tests__/chat-assembly-trace-operator.test.ts",
+          "target_blob": "a9f5e56ff500e246d4a1de4a92a52fbfbcad3e87",
+          "reason": "Integrate canonical customer xcp_session_start discovery and approved live runtime controls from Banach without tenant credential dispatch"
+        },
+        {
+          "path": "src/workers/__tests__/cockpit-chat-route.test.ts",
+          "target_blob": "5ccb7806132e70fd7473017903547b6f07d25ece",
+          "reason": "Integrate canonical customer xcp_session_start discovery and approved live runtime controls from Banach without tenant credential dispatch"
+        },
+        {
+          "path": "src/workers/__tests__/developer-access-route.test.ts",
+          "target_blob": "99e7241330dda3eeeb0adb5e4701708832c9d719",
+          "reason": "Integrate canonical customer xcp_session_start discovery and approved live runtime controls from Banach without tenant credential dispatch"
+        },
+        {
+          "path": "src/workers/__tests__/mcp-gateway-route.test.ts",
+          "target_blob": "03cce2d3e727207a0f010a109f8cb0fd78d5acfd",
+          "reason": "Integrate canonical customer xcp_session_start discovery and approved live runtime controls from Banach without tenant credential dispatch"
+        },
+        {
+          "path": "src/workers/__tests__/mcp-rpc-route.test.ts",
+          "target_blob": "7fddc87879e16ad0199913f79e94d83a9c22f53d",
+          "reason": "Integrate canonical customer xcp_session_start discovery and approved live runtime controls from Banach without tenant credential dispatch"
+        },
+        {
+          "path": "src/workers/__tests__/model-runtime-enforcement.test.ts",
+          "target_blob": "31fd2e4fafe39fbc2e7b0fb69850e3b4da35eeae",
+          "reason": "Integrate canonical customer xcp_session_start discovery and approved live runtime controls from Banach without tenant credential dispatch"
+        },
+        {
+          "path": "src/workers/__tests__/model-runtimes-route.test.ts",
+          "target_blob": "12565df00e6c9602d7efdbbcf1600f008dcb0fe1",
+          "reason": "Integrate canonical customer xcp_session_start discovery and approved live runtime controls from Banach without tenant credential dispatch"
+        },
+        {
+          "path": "src/workers/__tests__/route-auth-coverage.test.ts",
+          "target_blob": "c6599310b00c5273d2f7131c2398269389576ff1",
+          "reason": "Integrate canonical customer xcp_session_start discovery and approved live runtime controls from Banach without tenant credential dispatch"
+        },
+        {
+          "path": "src/workers/dal/model-execution-receipt-store.ts",
+          "target_blob": "2824c3118b79a188c6efadc474db336c8e58bb53",
+          "reason": "Integrate canonical customer xcp_session_start discovery and approved live runtime controls from Banach without tenant credential dispatch"
+        },
+        {
+          "path": "src/workers/dal/types/access.ts",
+          "target_blob": "cf1de887e2dbe067179ad3a9b4ddaf3a10220772",
+          "reason": "Integrate canonical customer xcp_session_start discovery and approved live runtime controls from Banach without tenant credential dispatch"
+        },
+        {
+          "path": "src/workers/lib/observability.ts",
+          "target_blob": "2df1f11fba1ead840a74514a0a06472bfa4cf4f8",
+          "reason": "Integrate canonical customer xcp_session_start discovery and approved live runtime controls from Banach without tenant credential dispatch"
+        },
+        {
+          "path": "src/workers/routes/customer-chat.ts",
+          "target_blob": "f279a8e1764b2794628b6e0a1c8a65841ec3f7ac",
+          "reason": "Integrate canonical customer xcp_session_start discovery and approved live runtime controls from Banach without tenant credential dispatch"
+        },
+        {
+          "path": "src/workers/routes/customer-workspace-feed.ts",
+          "target_blob": "106bf2623cab4716d02c8cf2501384aa4bf8b3df",
+          "reason": "Integrate canonical customer xcp_session_start discovery and approved live runtime controls from Banach without tenant credential dispatch"
+        },
+        {
+          "path": "src/workers/routes/developer-access.ts",
+          "target_blob": "0b011f444ada64078dcf0c07cc22192b5c74f06a",
+          "reason": "Integrate canonical customer xcp_session_start discovery and approved live runtime controls from Banach without tenant credential dispatch"
+        },
+        {
+          "path": "src/workers/routes/mcp-gateway.ts",
+          "target_blob": "e0cb5e128217019a07b596ecd0fdcfccd733e9f0",
+          "reason": "Integrate canonical customer xcp_session_start discovery and approved live runtime controls from Banach without tenant credential dispatch"
+        },
+        {
+          "path": "src/workers/routes/mcp-rpc.ts",
+          "target_blob": "37d3136fdb7898e3124d0956f38593021bb122ab",
+          "reason": "Integrate canonical customer xcp_session_start discovery and approved live runtime controls from Banach without tenant credential dispatch"
+        },
+        {
+          "path": "src/workers/routes/model-runtimes.ts",
+          "target_blob": "2dba321f0661eee9bf363ff27b6860c7a9a52083",
+          "reason": "Integrate canonical customer xcp_session_start discovery and approved live runtime controls from Banach without tenant credential dispatch"
+        },
+        {
+          "path": "src/workers/routes/workspaces.ts",
+          "target_blob": "282abd4cab5d98f5c0b30a627098d724bc8eec79",
+          "reason": "Integrate canonical customer xcp_session_start discovery and approved live runtime controls from Banach without tenant credential dispatch"
+        }
+      ]
+    },
+    {
+      "delta_id": "codex-customer-connector-gateway-provenance-260809",
+      "generated_at": "2026-08-09T00:47:41.611Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "cc1f3e17fb00c62e8046806a29f057a6732b6294",
+      "target_base_commit": "cc1f3e17fb00c62e8046806a29f057a6732b6294",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "package.json",
+          "target_blob": "a7b77c3e631e583446dff01a89f61c2336009bff",
+          "reason": "Converge canonical xcp-gateway commercial governance contracts"
+        },
+        {
+          "path": "scripts/verify-commercial-governance-hardening.mjs",
+          "target_blob": "0430b56b8248a20c5ee48d3176ba5eeb812c6aa9",
+          "reason": "Converge canonical xcp-gateway commercial governance contracts"
+        },
+        {
+          "path": "scripts/verify-customer-connector-token-safety.mjs",
+          "target_blob": "a93be16e8fcb674af58f4abca2dfcc31fa52ef8c",
+          "reason": "Converge canonical xcp-gateway commercial governance contracts"
+        }
+      ]
+    },
+    {
+      "delta_id": "codex-commercial-chat-facade-provenance-260809",
+      "generated_at": "2026-08-09T02:34:12.607Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "a80a5504d03da33aed387e6c353503fcf9f7148a",
+      "target_base_commit": "a80a5504d03da33aed387e6c353503fcf9f7148a",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "docs/contracts/api-contract.v1.json",
+          "target_blob": "5e174b7c77c584cbd7ee68abc5daec9caa328d62",
+          "reason": "Add tenant credential dispatch, cloud provider adapters, commercial chat and readiness facades without changing authorization semantics"
+        },
+        {
+          "path": "src/workers/index.ts",
+          "target_blob": "96007df911613e6ce642858733a1abbcc7c43b8b",
+          "reason": "Add tenant credential dispatch, cloud provider adapters, commercial chat and readiness facades without changing authorization semantics"
+        },
+        {
+          "path": "src/workers/routes/customer-chat.ts",
+          "target_blob": "5fd4f62fca3afa2058b30db9bbb561e16dfc5557",
+          "reason": "Add tenant credential dispatch, cloud provider adapters, commercial chat and readiness facades without changing authorization semantics"
+        },
+        {
+          "path": "src/workers/__tests__/model-runtime-store.test.ts",
+          "target_blob": "e97d872bba67c0527362513963b038893dcbfa10",
+          "reason": "Add tenant credential dispatch, cloud provider adapters, commercial chat and readiness facades without changing authorization semantics"
+        },
+        {
+          "path": "src/workers/__tests__/model-runtimes-route.test.ts",
+          "target_blob": "bf5a9b058cc4262d1d5799b66bef97dd1146f358",
+          "reason": "Add tenant credential dispatch, cloud provider adapters, commercial chat and readiness facades without changing authorization semantics"
+        },
+        {
+          "path": "src/workers/dal/chat-store.ts",
+          "target_blob": "869ee1004bed377c1e96648d9a6b11ef52ba67ad",
+          "reason": "Add tenant credential dispatch, cloud provider adapters, commercial chat and readiness facades without changing authorization semantics"
+        },
+        {
+          "path": "src/workers/dal/model-runtime-facade.ts",
+          "target_blob": "9fb8b8bdd2853b5edc9200b672708f71aa8e0c32",
+          "reason": "Add tenant credential dispatch, cloud provider adapters, commercial chat and readiness facades without changing authorization semantics"
+        },
+        {
+          "path": "src/workers/dal/model-runtime-store.ts",
+          "target_blob": "ffaaf28858f1fcc9040b09d93939b2a4a2844198",
+          "reason": "Add tenant credential dispatch, cloud provider adapters, commercial chat and readiness facades without changing authorization semantics"
+        },
+        {
+          "path": "src/workers/routes/model-runtimes.ts",
+          "target_blob": "2f253e119f2c85f484a5f020a8a4a53318632e31",
+          "reason": "Add tenant credential dispatch, cloud provider adapters, commercial chat and readiness facades without changing authorization semantics"
+        },
+        {
+          "path": "docs/architecture/backend/API_CONTRACT_V1.md",
+          "target_blob": "3c4c877fe22b64eb01bf844109f929d78e930807",
+          "reason": "Add tenant credential dispatch, cloud provider adapters, commercial chat and readiness facades without changing authorization semantics"
+        },
+        {
+          "path": "src/workers/dal/types/auth.ts",
+          "target_blob": "f66a90296f506a4b4ce543e9578b40dbb1619f3c",
+          "reason": "Add tenant credential dispatch, cloud provider adapters, commercial chat and readiness facades without changing authorization semantics"
+        },
+        {
+          "path": "src/workers/middleware/error.ts",
+          "target_blob": "b4d0689314a0d0448bd719669b6056c9ff8e71e5",
+          "reason": "Add tenant credential dispatch, cloud provider adapters, commercial chat and readiness facades without changing authorization semantics"
+        },
+        {
+          "path": "docs/deployment/MODEL_RUNTIMES_ACTIVATION.md",
+          "target_blob": "51a22fae2371b497fcf484ddd8ecfead83ff220c",
+          "reason": "Add tenant credential dispatch, cloud provider adapters, commercial chat and readiness facades without changing authorization semantics"
+        },
+        {
+          "path": "src/workers/routes/chat-receipt.ts",
+          "target_blob": "95bf4671f3e3c11a2f17ed6c7c8532ed9593c485",
+          "reason": "Add tenant credential dispatch, cloud provider adapters, commercial chat and readiness facades without changing authorization semantics"
+        },
+        {
+          "path": "src/workers/__tests__/chat-receipt-route.test.ts",
+          "target_blob": "3486fd55c205446dc059a2f059c7c23bbbcd8577",
+          "reason": "Add tenant credential dispatch, cloud provider adapters, commercial chat and readiness facades without changing authorization semantics"
+        }
+      ]
+    },
+    {
+      "delta_id": "codex-controls-measurement-integrity-260809",
+      "generated_at": "2026-08-09T03:08:26.178Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "052b764a3551f5c8e3e29eef21b054dfd6668c5c",
+      "target_base_commit": "052b764a3551f5c8e3e29eef21b054dfd6668c5c",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "scripts/run-worker-test-batches.mjs",
+          "target_blob": "e6fbe2857cb67ee2c7a286b8adad6746996fbff3",
+          "reason": "Replace hollow-success ratios with independently observed counts and narrow proven skip-language false positives"
+        },
+        {
+          "path": "scripts/verify-installed-dependencies.mjs",
+          "target_blob": "250aa795aa6fa62a2600524b5edf42d9dba00a2b",
+          "reason": "Replace hollow-success ratios with independently observed counts and narrow proven skip-language false positives"
+        },
+        {
+          "path": "scripts/run-trust-proofs.mjs",
+          "target_blob": "dc5a79b185e2f782ef8b376203af3322b6ce9588",
+          "reason": "Replace hollow-success ratios with independently observed counts and narrow proven skip-language false positives"
+        },
+        {
+          "path": "scripts/verify-domain-scaffold-honest-empty.mjs",
+          "target_blob": "c78d4b0bb66b9c7ba2447624f013b0c929db255b",
+          "reason": "Replace hollow-success ratios with independently observed counts and narrow proven skip-language false positives"
+        },
+        {
+          "path": "scripts/verify-flag-parse-hygiene.mjs",
+          "target_blob": "a620b240fc0efef9b90fab2729d3069ab406ba77",
+          "reason": "Replace hollow-success ratios with independently observed counts and narrow proven skip-language false positives"
+        },
+        {
+          "path": "scripts/verify-tenant-source-isolation.mjs",
+          "target_blob": "78afbb6a93bfef400e5c2461c5cf0984ea4a6168",
+          "reason": "Replace hollow-success ratios with independently observed counts and narrow proven skip-language false positives"
+        },
+        {
+          "path": "scripts/verify-customer-ecosystem-template.mjs",
+          "target_blob": "f43b85083d458a9579b59d9d24a9cd151e240f37",
+          "reason": "Replace hollow-success ratios with independently observed counts and narrow proven skip-language false positives"
+        },
+        {
+          "path": "scripts/emit-routes-manifest.mjs",
+          "target_blob": "44f706f1c1bb9e1509df5770e1f7fe259d655f53",
+          "reason": "Replace hollow-success ratios with independently observed counts and narrow proven skip-language false positives"
+        },
+        {
+          "path": "scripts/mint-app-pages-decision-packet.mjs",
+          "target_blob": "fd8e106a5d7c1a747edbafc22c2a7083181c059f",
+          "reason": "Replace hollow-success ratios with independently observed counts and narrow proven skip-language false positives"
+        }
+      ]
+    },
+    {
+      "delta_id": "codex-live-chat-readonly-canary-provenance-260809",
+      "generated_at": "2026-08-09T12:01:19.596Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "c5c39db53cf3e28e97f544843c46bee51d9c71da",
+      "target_base_commit": "c5c39db53cf3e28e97f544843c46bee51d9c71da",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "scripts/verify-api-mcp-lifecycle-parity.mjs",
+          "target_blob": "b249634324c41abcdd330c046f06d02358c9f0ac",
+          "reason": "Seal live-only chat, read-only A/B canary, receipt, callsite, runtime-credential, and policy changes after final verification"
+        },
+        {
+          "path": "scripts/verify-internal-company-a-b-canary.mjs",
+          "target_blob": "bec29fceb4e3c5177fc3624e94b43650ed9a8a16",
+          "reason": "Seal live-only chat, read-only A/B canary, receipt, callsite, runtime-credential, and policy changes after final verification"
+        },
+        {
+          "path": "src/workers/__tests__/model-runtime-crypto.test.ts",
+          "target_blob": "0db27ed994a2138dbace39ae7af3a0e778348df6",
+          "reason": "Seal live-only chat, read-only A/B canary, receipt, callsite, runtime-credential, and policy changes after final verification"
+        },
+        {
+          "path": "src/workers/lib/model-runtime-crypto.ts",
+          "target_blob": "e70ea248ecb2aa1485083b2dc034d48cf17fd336",
+          "reason": "Seal live-only chat, read-only A/B canary, receipt, callsite, runtime-credential, and policy changes after final verification"
+        },
+        {
+          "path": "src/workers/routes/customer-chat.ts",
+          "target_blob": "ec4363039e5652b147d80457fe1580ab24ec534b",
+          "reason": "Seal live-only chat, read-only A/B canary, receipt, callsite, runtime-credential, and policy changes after final verification"
+        },
+        {
+          "path": "docs/contracts/model-execution-callsite-manifest.json",
+          "target_blob": "86ea74726031b9b6b580276674118475c4750091",
+          "reason": "Seal live-only chat, read-only A/B canary, receipt, callsite, runtime-credential, and policy changes after final verification"
+        },
+        {
+          "path": "scripts/verify-model-execution-callsites.mjs",
+          "target_blob": "02a4c1fd29a89225dc236ed41c00c451324634ff",
+          "reason": "Seal live-only chat, read-only A/B canary, receipt, callsite, runtime-credential, and policy changes after final verification"
+        },
+        {
+          "path": "src/workers/__tests__/cockpit-chat-route.test.ts",
+          "target_blob": "dfff9004b104b1b4fa1da5b952e13ce23e8d9033",
+          "reason": "Seal live-only chat, read-only A/B canary, receipt, callsite, runtime-credential, and policy changes after final verification"
+        },
+        {
+          "path": "src/workers/routes/workspaces.ts",
+          "target_blob": "899befb1a03a14e2280c706805ee2bc7a1a3885f",
+          "reason": "Seal live-only chat, read-only A/B canary, receipt, callsite, runtime-credential, and policy changes after final verification"
+        },
+        {
+          "path": "src/workers/services/cockpit-chat.ts",
+          "target_blob": "d828197956dc1d6edf3a9f491d6788ab8f89a738",
+          "reason": "Seal live-only chat, read-only A/B canary, receipt, callsite, runtime-credential, and policy changes after final verification"
+        },
+        {
+          "path": "src/workers/__tests__/operator-workspace-scope.test.ts",
+          "target_blob": "bd46b63ee745eefdd023c21c100094585e6f5b05",
+          "reason": "Seal live-only chat, read-only A/B canary, receipt, callsite, runtime-credential, and policy changes after final verification"
+        },
+        {
+          "path": "src/workers/__tests__/llm-usage-metering.test.ts",
+          "target_blob": "613e7343bcd52c30a1dfed33a36b06a05e7213f6",
+          "reason": "Seal live-only chat, read-only A/B canary, receipt, callsite, runtime-credential, and policy changes after final verification"
+        },
+        {
+          "path": "src/workers/__tests__/customer-chat-route.test.ts",
+          "target_blob": "b499e84e6642ecda5a1caedca9a8505a49d628ef",
+          "reason": "Seal live-only chat, read-only A/B canary, receipt, callsite, runtime-credential, and policy changes after final verification"
+        },
+        {
+          "path": "src/workers/__tests__/source-tier-grounding.test.ts",
+          "target_blob": "30ce885db7ac5f9b2848d3ffd1225aa48275ac7a",
+          "reason": "Seal live-only chat, read-only A/B canary, receipt, callsite, runtime-credential, and policy changes after final verification"
+        },
+        {
+          "path": "src/workers/dal/model-runtime-store.ts",
+          "target_blob": "4277d74acf5d1171aba1e1f5a13a5e4ecdcbf67f",
+          "reason": "Seal live-only chat, read-only A/B canary, receipt, callsite, runtime-credential, and policy changes after final verification"
+        },
+        {
+          "path": "src/workers/routes/model-runtimes.ts",
+          "target_blob": "39f6302ef3de59e20e9f5c8a90513bc3fc4fcbc9",
+          "reason": "Seal live-only chat, read-only A/B canary, receipt, callsite, runtime-credential, and policy changes after final verification"
+        },
+        {
+          "path": "scripts/verify-template-policy-suite.mjs",
+          "target_blob": "e0871c8babca60bdb08ed81f3d0b504889d0e448",
+          "reason": "Seal live-only chat, read-only A/B canary, receipt, callsite, runtime-credential, and policy changes after final verification"
+        },
+        {
+          "path": "src/workers/__tests__/chat-assembly-trace.test.ts",
+          "target_blob": "2aabdb89ceee141737622dcb7fc3291f6556799e",
+          "reason": "Seal live-only chat, read-only A/B canary, receipt, callsite, runtime-credential, and policy changes after final verification"
+        },
+        {
+          "path": "scripts/verify-commercial-governance-hardening.mjs",
+          "target_blob": "129161eecaa5e08c63b224a484bd2f1978fbf7a0",
+          "reason": "Seal live-only chat, read-only A/B canary, receipt, callsite, runtime-credential, and policy changes after final verification"
+        },
+        {
+          "path": "src/workers/__tests__/chat-assembly-trace-operator.test.ts",
+          "target_blob": "751586ef343467c20e1b78acc2f683ad6c199041",
+          "reason": "Seal live-only chat, read-only A/B canary, receipt, callsite, runtime-credential, and policy changes after final verification"
+        }
+      ]
+    },
+    {
+      "delta_id": "codex-external-capability-semantic-authority-20260809",
+      "generated_at": "2026-08-09T12:58:58.715Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "7e346553d742b3596500b4ff138673d025472e31",
+      "target_base_commit": "7e346553d742b3596500b4ff138673d025472e31",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "package.json",
+          "target_blob": "a44185f0a35a95052b6f1b8eff8dcfe65f3dbf51",
+          "reason": "Port reviewed external capability live and semantic contracts into canonical x-backend"
+        },
+        {
+          "path": "scripts/ci-local.mjs",
+          "target_blob": "31b19e398e9b50602fc508fc794d3045ff5b5aa5",
+          "reason": "Port reviewed external capability live and semantic contracts into canonical x-backend"
+        },
+        {
+          "path": "docs/architecture/backend/EXTERNAL_CAPABILITY_REGISTRY.json",
+          "target_blob": "370c280c959213680aa6eab54876a2190efabcb0",
+          "reason": "Port reviewed external capability live and semantic contracts into canonical x-backend"
+        },
+        {
+          "path": "docs/deployment/PUBLIC_SELF_SERVE_EVIDENCE_GATES.md",
+          "target_blob": "f631bb226c3b63da2bb14517ebfac93c194a130b",
+          "reason": "Port reviewed external capability live and semantic contracts into canonical x-backend"
+        },
+        {
+          "path": "docs/deployment/evidence/latest-upstream-capability-live-canary-summary.json",
+          "target_blob": "952ec2b3da96f51aa153295d198eb227dc8d1a92",
+          "reason": "Port reviewed external capability live and semantic contracts into canonical x-backend"
+        },
+        {
+          "path": "scripts/run-upstream-capability-live-canary.mjs",
+          "target_blob": "ce1455b4aea6bc615a6d27a8abcd475895b10a65",
+          "reason": "Port reviewed external capability live and semantic contracts into canonical x-backend"
+        },
+        {
+          "path": "scripts/verify-external-capability-live-prereqs.mjs",
+          "target_blob": "bee743818cb5b88798f85d001fe0af6fc6abd991",
+          "reason": "Port reviewed external capability live and semantic contracts into canonical x-backend"
+        },
+        {
+          "path": "scripts/verify-external-capability-runtime-results.mjs",
+          "target_blob": "c97423ffaee5ec726ee4d6a5fa5a5e138a884322",
+          "reason": "Port reviewed external capability live and semantic contracts into canonical x-backend"
+        },
+        {
+          "path": "scripts/verify-upstream-capability-sandbox-canary.mjs",
+          "target_blob": "29f14687cc53a6b747f8e02b8a6a7f14c433f5c6",
+          "reason": "Port reviewed external capability live and semantic contracts into canonical x-backend"
+        }
+      ]
+    },
+    {
+      "delta_id": "runtime-credential-rotation-260809",
+      "generated_at": "2026-08-09T13:20:00.735Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "758a86d20cef4a2c2007727d8599c0415cbd7702",
+      "target_base_commit": "758a86d20cef4a2c2007727d8599c0415cbd7702",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/lib/model-runtime-crypto.ts",
+          "target_blob": "b627fb129b03f4f05824411173c07fd9250b02ca",
+          "reason": "Add tenant-scoped, versioned model-runtime credential rotation with atomic audit receipts"
+        },
+        {
+          "path": "src/workers/lib/observability.ts",
+          "target_blob": "17d620908c0a5ae24e94a7f8625e7dc7c7a134e7",
+          "reason": "Add tenant-scoped, versioned model-runtime credential rotation with atomic audit receipts"
+        },
+        {
+          "path": "src/workers/dal/model-runtime-store.ts",
+          "target_blob": "7f08d30120ec0531aaa6d9fad91347fe0b89b63e",
+          "reason": "Add tenant-scoped, versioned model-runtime credential rotation with atomic audit receipts"
+        },
+        {
+          "path": "src/workers/dal/model-runtime-facade.ts",
+          "target_blob": "a67f3901bc8585148214753a4ca5a587fc678310",
+          "reason": "Add tenant-scoped, versioned model-runtime credential rotation with atomic audit receipts"
+        },
+        {
+          "path": "src/workers/routes/model-runtimes.ts",
+          "target_blob": "351d3bf46b0edcbf4955b9f71dfa3f73014f8ab7",
+          "reason": "Add tenant-scoped, versioned model-runtime credential rotation with atomic audit receipts"
+        },
+        {
+          "path": "src/workers/__tests__/model-runtime-crypto.test.ts",
+          "target_blob": "0164225e6eb867a21326b362909c33fe854850f3",
+          "reason": "Add tenant-scoped, versioned model-runtime credential rotation with atomic audit receipts"
+        },
+        {
+          "path": "src/workers/__tests__/model-runtime-store.test.ts",
+          "target_blob": "1c15af787e33f6e6a86160206702953f5b4b1ef5",
+          "reason": "Add tenant-scoped, versioned model-runtime credential rotation with atomic audit receipts"
+        },
+        {
+          "path": "src/workers/__tests__/model-runtimes-route.test.ts",
+          "target_blob": "0f64b665a93662d6e41ee00fdc62c5d9a7d06738",
+          "reason": "Add tenant-scoped, versioned model-runtime credential rotation with atomic audit receipts"
+        },
+        {
+          "path": "docs/contracts/api-contract.v1.json",
+          "target_blob": "cfe34edb99b9ff6f7eabb15b8410db0dabbd11aa",
+          "reason": "Add tenant-scoped, versioned model-runtime credential rotation with atomic audit receipts"
+        }
+      ]
+    },
+    {
+      "delta_id": "commercial-chat-audit-atomicity-260810",
+      "generated_at": "2026-08-09T14:09:23.639Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "98c52a76107dedd03890f2da7c8f60d7c21bf3e0",
+      "target_base_commit": "98c52a76107dedd03890f2da7c8f60d7c21bf3e0",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/dal/chat-store.ts",
+          "target_blob": "e1a8f1dd5c42b2ba886ad84c21d75947b8447d92",
+          "reason": "Make the live commercial assistant exchange and its customer-safe audit receipt atomic, idempotent, append-only, and fail-closed"
+        },
+        {
+          "path": "src/workers/routes/customer-chat.ts",
+          "target_blob": "e46e83e23217f6b8c7bbdb0086acadcbeaa88dfb",
+          "reason": "Make the live commercial assistant exchange and its customer-safe audit receipt atomic, idempotent, append-only, and fail-closed"
+        }
+      ]
+    },
+    {
+      "delta_id": "direct-production-dependency-security-260810",
+      "generated_at": "2026-08-09T14:11:23.522Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "98c52a76107dedd03890f2da7c8f60d7c21bf3e0",
+      "target_base_commit": "98c52a76107dedd03890f2da7c8f60d7c21bf3e0",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "package.json",
+          "target_blob": "41d90aa5fb855b920338e2164b3ab4f3e6c682c8",
+          "reason": "Patch direct production Hono and Nano ID advisories to a zero-vulnerability production audit"
+        },
+        {
+          "path": "package-lock.json",
+          "target_blob": "b3648ed3adfeb41fafad8308d8f37985a9e0eb5b",
+          "reason": "Patch direct production Hono and Nano ID advisories to a zero-vulnerability production audit"
+        }
+      ]
+    },
+    {
+      "delta_id": "P0-20260810-retire-duplicate-migration-037",
+      "generated_at": "2026-08-10T00:43:18.635Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "74b5059fae6df0c1f8c3d4a029b7f70c240412c0",
+      "target_base_commit": "74b5059fae6df0c1f8c3d4a029b7f70c240412c0",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [],
+      "seed_exclusions": [
+        {
+          "path": "src/workers/db/migrations/037_rls_app_role.sql",
+          "source_blob": "63bf8a5c089cd869eb05f6543d43c2b4019374fc",
+          "reason": "Moved operational RLS grants out of numbered migration namespace to restore unique immutable migration identities"
+        }
+      ]
+    },
+    {
+      "delta_id": "P0-20260810-live-chat-security-convergence",
+      "generated_at": "2026-08-10T00:43:31.788Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "74b5059fae6df0c1f8c3d4a029b7f70c240412c0",
+      "target_base_commit": "74b5059fae6df0c1f8c3d4a029b7f70c240412c0",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "docs/audits/OAR_W2_ACTIVATION_READINESS.md",
+          "target_blob": "0803ad0754246e4952428f771979edcb62118851",
+          "reason": "Reconcile reviewed live-chat, tenant authority, and encryption hardening changes"
+        },
+        {
+          "path": "src/workers/dal/customer-token-store.ts",
+          "target_blob": "471b03d3f4964cd86039c9e9280f032bac298282",
+          "reason": "Reconcile reviewed live-chat, tenant authority, and encryption hardening changes"
+        },
+        {
+          "path": "src/workers/db/migrations/053_model_runtimes.sql",
+          "target_blob": "bfe38a419b978e8d639fd70a2c587189d01ea86e",
+          "reason": "Reconcile reviewed live-chat, tenant authority, and encryption hardening changes"
+        },
+        {
+          "path": "src/workers/routes/diagnose.ts",
+          "target_blob": "dc0af4dd84f3e3cdd83ea3910226edfcad55e26d",
+          "reason": "Reconcile reviewed live-chat, tenant authority, and encryption hardening changes"
+        },
+        {
+          "path": "src/workers/routes/mbp-projection.ts",
+          "target_blob": "e6c2e8a637937815926a85496e0ab5bdc8fbe908",
+          "reason": "Reconcile reviewed live-chat, tenant authority, and encryption hardening changes"
+        },
+        {
+          "path": "src/workers/routes/template-policy-registry.ts",
+          "target_blob": "72305e5117d82f251280ac8d6978d061d71d52fb",
+          "reason": "Reconcile reviewed live-chat, tenant authority, and encryption hardening changes"
+        }
+      ]
+    },
+    {
+      "delta_id": "P0-20260810-encryption-deployment-contract",
+      "generated_at": "2026-08-10T01:05:21.277Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "74b5059fae6df0c1f8c3d4a029b7f70c240412c0",
+      "target_base_commit": "74b5059fae6df0c1f8c3d4a029b7f70c240412c0",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "docs/deployment/SECRETS_AND_CONNECTIONS_MANIFEST.yml",
+          "target_blob": "195fae637ccbaa2b5ed108b9b63d08a050e36620",
+          "reason": "Align model-runtime secret and database-client deployment truth with tenant envelope encryption"
+        },
+        {
+          "path": "src/workers/db/client.ts",
+          "target_blob": "63e9ebd181739b5b95a17aac937bfded77c25a8c",
+          "reason": "Align model-runtime secret and database-client deployment truth with tenant envelope encryption"
+        }
+      ]
+    },
+    {
+      "delta_id": "P0-20260810-commercial-live-chat-authority",
+      "generated_at": "2026-08-10T01:05:43.674Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "74b5059fae6df0c1f8c3d4a029b7f70c240412c0",
+      "target_base_commit": "74b5059fae6df0c1f8c3d4a029b7f70c240412c0",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "docs/contracts/api-contract.v1.json",
+          "target_blob": "982a0a98ffa24f02df648e5b372d349ac9866427",
+          "reason": "Reconcile reviewed live-provider, receipt, scope, migration, streaming, and tenant-envelope hardening"
+        },
+        {
+          "path": "src/workers/lib/observability.ts",
+          "target_blob": "0fa71be18f590546f8a65ee6aec02e26c3d185db",
+          "reason": "Reconcile reviewed live-provider, receipt, scope, migration, streaming, and tenant-envelope hardening"
+        },
+        {
+          "path": "src/workers/routes/customer-chat.ts",
+          "target_blob": "bb31ccb0b4891e2ac2273e6893a4aa29f67758bc",
+          "reason": "Reconcile reviewed live-provider, receipt, scope, migration, streaming, and tenant-envelope hardening"
+        },
+        {
+          "path": "docs/contracts/model-execution-callsite-manifest.json",
+          "target_blob": "c660c4ce8b44fa0f56750d76ac97cbfc7fb6c985",
+          "reason": "Reconcile reviewed live-provider, receipt, scope, migration, streaming, and tenant-envelope hardening"
+        },
+        {
+          "path": "scripts/verify-model-execution-callsites.mjs",
+          "target_blob": "32f7740a457e3c52fe5614302fdd2662b3b8e5ba",
+          "reason": "Reconcile reviewed live-provider, receipt, scope, migration, streaming, and tenant-envelope hardening"
+        },
+        {
+          "path": "src/workers/__tests__/cockpit-chat-route.test.ts",
+          "target_blob": "692b3a887f1ab51ca6e5ff60b15ef375afe90010",
+          "reason": "Reconcile reviewed live-provider, receipt, scope, migration, streaming, and tenant-envelope hardening"
+        },
+        {
+          "path": "src/workers/routes/session.ts",
+          "target_blob": "f83a54a44f55d41f3f09d5d08662d0f52b3a149e",
+          "reason": "Reconcile reviewed live-provider, receipt, scope, migration, streaming, and tenant-envelope hardening"
+        },
+        {
+          "path": "src/workers/routes/workspaces.ts",
+          "target_blob": "040045b4d9b601bd61b87a7cc0a5d946eb195e2d",
+          "reason": "Reconcile reviewed live-provider, receipt, scope, migration, streaming, and tenant-envelope hardening"
+        },
+        {
+          "path": "scripts/rls-shadow-soak.mjs",
+          "target_blob": "f2575d403249193211b2df2bb5029234cee671b6",
+          "reason": "Reconcile reviewed live-provider, receipt, scope, migration, streaming, and tenant-envelope hardening"
+        },
+        {
+          "path": "src/workers/__tests__/model-runtimes-route.test.ts",
+          "target_blob": "786823de104f11ccffe032f9f48462a2a6443191",
+          "reason": "Reconcile reviewed live-provider, receipt, scope, migration, streaming, and tenant-envelope hardening"
+        },
+        {
+          "path": "src/workers/dal/model-runtime-store.ts",
+          "target_blob": "fbc24d961d6d4c55e512e4f98e57c3c8e1863415",
+          "reason": "Reconcile reviewed live-provider, receipt, scope, migration, streaming, and tenant-envelope hardening"
+        },
+        {
+          "path": "src/workers/routes/model-runtimes.ts",
+          "target_blob": "3fd1b86eda49cc0cd6bca3b166963c1c3f573af3",
+          "reason": "Reconcile reviewed live-provider, receipt, scope, migration, streaming, and tenant-envelope hardening"
+        },
+        {
+          "path": "docs/architecture/backend/API_CONTRACT_V1.md",
+          "target_blob": "01b5f4828c8406c0138dcff5be072d453513cd88",
+          "reason": "Reconcile reviewed live-provider, receipt, scope, migration, streaming, and tenant-envelope hardening"
+        },
+        {
+          "path": "scripts/verify-prod-migrations.mjs",
+          "target_blob": "e3217606d55ea77b6d607fa9f7357dfd3f249914",
+          "reason": "Reconcile reviewed live-provider, receipt, scope, migration, streaming, and tenant-envelope hardening"
+        },
+        {
+          "path": "wrangler.toml",
+          "target_blob": "216ff1992bc6c16a781a65df2048d9123ba2003f",
+          "reason": "Reconcile reviewed live-provider, receipt, scope, migration, streaming, and tenant-envelope hardening"
+        },
+        {
+          "path": "src/workers/dal/types/auth.ts",
+          "target_blob": "1c913b7fca554d1f1825660ce80122c9c8d4455d",
+          "reason": "Reconcile reviewed live-provider, receipt, scope, migration, streaming, and tenant-envelope hardening"
+        },
+        {
+          "path": "scripts/emit-api-contract.mjs",
+          "target_blob": "cced9cfbd7bfdbbdea00fe1bd55b73bbdc686d93",
+          "reason": "Reconcile reviewed live-provider, receipt, scope, migration, streaming, and tenant-envelope hardening"
+        },
+        {
+          "path": "src/workers/middleware/auth.ts",
+          "target_blob": "82218e78b6dad649c46012ad328e52b840f32b09",
+          "reason": "Reconcile reviewed live-provider, receipt, scope, migration, streaming, and tenant-envelope hardening"
+        },
+        {
+          "path": "src/workers/routes/developer-access.ts",
+          "target_blob": "32de05b37562683e27fde12ec19b0deb53cf000f",
+          "reason": "Reconcile reviewed live-provider, receipt, scope, migration, streaming, and tenant-envelope hardening"
+        },
+        {
+          "path": "docs/deployment/MODEL_RUNTIMES_ACTIVATION.md",
+          "target_blob": "bd22bc47a285147ba40b3b644ff13ea29efaa88f",
+          "reason": "Reconcile reviewed live-provider, receipt, scope, migration, streaming, and tenant-envelope hardening"
+        },
+        {
+          "path": "src/workers/__tests__/chat-assembly-trace-operator.test.ts",
+          "target_blob": "a1e1504cfe798c4bee878aafbc18a623a815fced",
+          "reason": "Reconcile reviewed live-provider, receipt, scope, migration, streaming, and tenant-envelope hardening"
+        },
+        {
+          "path": "scripts/verify-customer-connector-token-safety.mjs",
+          "target_blob": "781fef82bef2f63072652d5965d2a696b26e3196",
+          "reason": "Reconcile reviewed live-provider, receipt, scope, migration, streaming, and tenant-envelope hardening"
+        },
+        {
+          "path": "src/workers/__tests__/model-runtime-crypto.test.ts",
+          "target_blob": "65ecea0c843aee88dba3f204ef3dd422bfdd75df",
+          "reason": "Reconcile reviewed live-provider, receipt, scope, migration, streaming, and tenant-envelope hardening"
+        },
+        {
+          "path": "src/workers/lib/model-runtime-crypto.ts",
+          "target_blob": "352317d9c6cfdba63f9f630b2e166c5e3105d86b",
+          "reason": "Reconcile reviewed live-provider, receipt, scope, migration, streaming, and tenant-envelope hardening"
+        },
+        {
+          "path": "src/workers/db/migrations/053_model_runtimes.sql",
+          "target_blob": "febd0e688dae3790fc2c81c4dd883596dddb5b0a",
+          "reason": "Reconcile reviewed live-provider, receipt, scope, migration, streaming, and tenant-envelope hardening"
+        }
+      ]
+    },
+    {
+      "delta_id": "live-canary-config-20260810",
+      "generated_at": "2026-08-10T01:20:35.067Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "74b5059fae6df0c1f8c3d4a029b7f70c240412c0",
+      "target_base_commit": "74b5059fae6df0c1f8c3d4a029b7f70c240412c0",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "scripts/verify-internal-company-a-b-canary.mjs",
+          "target_blob": "53c23476fe0089cf746471135a0b3777f6575584",
+          "reason": "load scoped packet identity from protected canary config; remove stale hardcoded packet authority"
+        }
+      ]
+    },
+    {
+      "delta_id": "model-runtime-maintainability-ratchet-20260810",
+      "generated_at": "2026-08-10T01:24:09.702Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "7ea4380b76e99dc254b0bc756805f8cc155261e6",
+      "target_base_commit": "7ea4380b76e99dc254b0bc756805f8cc155261e6",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/routes/model-runtimes.ts",
+          "target_blob": "868bd67a72664f9b88e2b9e1cff2c40091ce3d02",
+          "reason": "preserve model runtime route below the 500-line maintainability threshold"
+        }
+      ]
+    },
+    {
+      "delta_id": "live-chat-legacy-selector-20260810",
+      "generated_at": "2026-08-10T03:46:53.359Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "a23c9f9c9d80afe20412618794dfa6f042520452",
+      "target_base_commit": "a23c9f9c9d80afe20412618794dfa6f042520452",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/routes/customer-chat.ts",
+          "target_blob": "aa259a7cc586c495234c379cfcfd82eb43406045",
+          "reason": "Map the retired Claude selector to a governed Anthropic platform preference and prove live-only replies for the reported production prompts"
+        },
+        {
+          "path": "src/workers/__tests__/customer-chat-route.test.ts",
+          "target_blob": "f73724a5bebae054135676f644a20578784d1fa6",
+          "reason": "Map the retired Claude selector to a governed Anthropic platform preference and prove live-only replies for the reported production prompts"
+        }
+      ]
+    },
+    {
+      "delta_id": "commercial-live-chat-fail-closed-20260810",
+      "generated_at": "2026-08-10T04:07:49.084Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "a23c9f9c9d80afe20412618794dfa6f042520452",
+      "target_base_commit": "a23c9f9c9d80afe20412618794dfa6f042520452",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/routes/customer-chat.ts",
+          "target_blob": "e1c19bbff03fadc1a4f626570064f16e1224bbb3",
+          "reason": "Require the live chat service boundary, reject stale current-state claims, classify legacy history, and enforce governed conversational callsites"
+        },
+        {
+          "path": "docs/contracts/model-execution-callsite-manifest.json",
+          "target_blob": "0e5897ecc2928b190ac7a2c66a880d8eb0342f5c",
+          "reason": "Require the live chat service boundary, reject stale current-state claims, classify legacy history, and enforce governed conversational callsites"
+        },
+        {
+          "path": "scripts/verify-model-execution-callsites.mjs",
+          "target_blob": "283fb95752e41bf6ae9c3256b275ac0101ca4c81",
+          "reason": "Require the live chat service boundary, reject stale current-state claims, classify legacy history, and enforce governed conversational callsites"
+        },
+        {
+          "path": "src/workers/__tests__/cockpit-chat-route.test.ts",
+          "target_blob": "091a5b150135a08d8aebd592623143b492b6f5eb",
+          "reason": "Require the live chat service boundary, reject stale current-state claims, classify legacy history, and enforce governed conversational callsites"
+        },
+        {
+          "path": "src/workers/__tests__/cockpit-chat.test.ts",
+          "target_blob": "7a5dae64d70132ba492e67f077c85d9bccd6f761",
+          "reason": "Require the live chat service boundary, reject stale current-state claims, classify legacy history, and enforce governed conversational callsites"
+        },
+        {
+          "path": "src/workers/routes/workspaces.ts",
+          "target_blob": "2ec375477aa2a1d0a789b7de09971ab07f7f65b8",
+          "reason": "Require the live chat service boundary, reject stale current-state claims, classify legacy history, and enforce governed conversational callsites"
+        },
+        {
+          "path": "src/workers/services/cockpit-chat.ts",
+          "target_blob": "d5e2c6891efad6a8c019afefeda1f159933afb1e",
+          "reason": "Require the live chat service boundary, reject stale current-state claims, classify legacy history, and enforce governed conversational callsites"
+        },
+        {
+          "path": "src/workers/__tests__/customer-chat-route.test.ts",
+          "target_blob": "d20a198d83d6b28d180c5257c7c159d910a2c727",
+          "reason": "Require the live chat service boundary, reject stale current-state claims, classify legacy history, and enforce governed conversational callsites"
+        }
+      ]
+    },
+    {
+      "delta_id": "react-pages-live-ai-release-controls-20260810",
+      "generated_at": "2026-08-10T07:30:22.937Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "e557c286440a25dbaa7c02cac2f60a16384572ed",
+      "target_base_commit": "e557c286440a25dbaa7c02cac2f60a16384572ed",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "package.json",
+          "target_blob": "69b1ebeb57e9dea0416226c7204696e8dde06034",
+          "reason": "Bind candidate-derived API authority, post-deploy ratification, model-runtime keyring preflight, and React Pages runtime-manifest pairing without weakening the single governed release path"
+        },
+        {
+          "path": "scripts/ci-local.mjs",
+          "target_blob": "0d029799d24e433842564b6f0a18ac45d0885796",
+          "reason": "Bind candidate-derived API authority, post-deploy ratification, model-runtime keyring preflight, and React Pages runtime-manifest pairing without weakening the single governed release path"
+        },
+        {
+          "path": "scripts/verify-deploy-provenance-wiring.mjs",
+          "target_blob": "10eced94628e33c4c8e238f2304449addd7c8681",
+          "reason": "Bind candidate-derived API authority, post-deploy ratification, model-runtime keyring preflight, and React Pages runtime-manifest pairing without weakening the single governed release path"
+        },
+        {
+          "path": "scripts/lib/app-pages-release-contract.mjs",
+          "target_blob": "8ffee0201978548bd37a7cd9518fe62bfd928efe",
+          "reason": "Bind candidate-derived API authority, post-deploy ratification, model-runtime keyring preflight, and React Pages runtime-manifest pairing without weakening the single governed release path"
+        }
+      ]
+    },
+    {
+      "delta_id": "paired-production-cutover-commercial-chat-provenance-20260810",
+      "generated_at": "2026-08-10T09:17:21.992Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "e557c286440a25dbaa7c02cac2f60a16384572ed",
+      "target_base_commit": "e557c286440a25dbaa7c02cac2f60a16384572ed",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "docs/deployment/DEPLOYED_SURFACES.yml",
+          "target_blob": "28e7b496a13a1862e5f4b93b653e9196270bf047",
+          "reason": "bind paired production cutover, rollback authority, model-keyring readiness, live chat provenance, canonical deployed-surface convergence, fresh redacted MB-P projection, and merge-safe provenance reconciliation"
+        },
+        {
+          "path": "package.json",
+          "target_blob": "7afe54f8dd728ff2cb5113aac040cce831835856",
+          "reason": "bind paired production cutover, rollback authority, model-keyring readiness, live chat provenance, canonical deployed-surface convergence, fresh redacted MB-P projection, and merge-safe provenance reconciliation"
+        },
+        {
+          "path": "scripts/ci-local.mjs",
+          "target_blob": "261779a40bcb25efe1af9c746e7726f371bc6c14",
+          "reason": "bind paired production cutover, rollback authority, model-keyring readiness, live chat provenance, canonical deployed-surface convergence, fresh redacted MB-P projection, and merge-safe provenance reconciliation"
+        },
+        {
+          "path": "scripts/lib/app-pages-release-contract.mjs",
+          "target_blob": "cde2f687a4ee9af4c452b7309bca107edd938547",
+          "reason": "bind paired production cutover, rollback authority, model-keyring readiness, live chat provenance, canonical deployed-surface convergence, fresh redacted MB-P projection, and merge-safe provenance reconciliation"
+        },
+        {
+          "path": "scripts/mint-app-pages-decision-packet.mjs",
+          "target_blob": "fbcbad461fb998adf4e72f7820d520a0deb8f2bc",
+          "reason": "bind paired production cutover, rollback authority, model-keyring readiness, live chat provenance, canonical deployed-surface convergence, fresh redacted MB-P projection, and merge-safe provenance reconciliation"
+        },
+        {
+          "path": "scripts/verify-deploy-provenance-wiring.mjs",
+          "target_blob": "d321268a9ba80251371d2e1cf42dd2e12c5b24b4",
+          "reason": "bind paired production cutover, rollback authority, model-keyring readiness, live chat provenance, canonical deployed-surface convergence, fresh redacted MB-P projection, and merge-safe provenance reconciliation"
+        },
+        {
+          "path": "src/workers/__tests__/health.test.ts",
+          "target_blob": "d3cac3eb5a5582af07f58b8f8794937cede9b5e5",
+          "reason": "bind paired production cutover, rollback authority, model-keyring readiness, live chat provenance, canonical deployed-surface convergence, fresh redacted MB-P projection, and merge-safe provenance reconciliation"
+        },
+        {
+          "path": "src/workers/lib/assistant-context-lineage.ts",
+          "target_blob": "68619b44485f6b43f85df7535d6a72404b6dc08c",
+          "reason": "bind paired production cutover, rollback authority, model-keyring readiness, live chat provenance, canonical deployed-surface convergence, fresh redacted MB-P projection, and merge-safe provenance reconciliation"
+        },
+        {
+          "path": "src/workers/routes/customer-chat.ts",
+          "target_blob": "177f7dd04a31385e67140041d9f05cd2cde24dc4",
+          "reason": "bind paired production cutover, rollback authority, model-keyring readiness, live chat provenance, canonical deployed-surface convergence, fresh redacted MB-P projection, and merge-safe provenance reconciliation"
+        },
+        {
+          "path": "src/workers/routes/health.ts",
+          "target_blob": "eabd2bb833c8bcb53cc7bd9e0ba26f484c99ae1e",
+          "reason": "bind paired production cutover, rollback authority, model-keyring readiness, live chat provenance, canonical deployed-surface convergence, fresh redacted MB-P projection, and merge-safe provenance reconciliation"
+        },
+        {
+          "path": "data/mbp-operations-projection.json",
+          "target_blob": "bc40f721ef8e15e868b36f8e1913e44979c65dab",
+          "reason": "bind paired production cutover, rollback authority, model-keyring readiness, live chat provenance, canonical deployed-surface convergence, fresh redacted MB-P projection, and merge-safe provenance reconciliation"
+        },
+        {
+          "path": "data/mbp-projection-export-manifest.json",
+          "target_blob": "456c326fca043995c8135081ab77ebe20d5139d9",
+          "reason": "bind paired production cutover, rollback authority, model-keyring readiness, live chat provenance, canonical deployed-surface convergence, fresh redacted MB-P projection, and merge-safe provenance reconciliation"
+        }
+      ]
+    },
+    {
+      "delta_id": "security-dependency-floor-20260810",
+      "generated_at": "2026-08-10T10:10:54.232Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "f60485a49fbab6d7e2ab06abb88ab864e96793b0",
+      "target_base_commit": "f60485a49fbab6d7e2ab06abb88ab864e96793b0",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "package.json",
+          "target_blob": "b44b9d39fc051a88d20bc848f19a15647975074b",
+          "reason": "patch backend and MCP dependency graph to current zero-audit advisory floors"
+        },
+        {
+          "path": "package-lock.json",
+          "target_blob": "3f9d66c0d6dd44a1b1da3d050f69803c719fc2ee",
+          "reason": "patch backend and MCP dependency graph to current zero-audit advisory floors"
+        },
+        {
+          "path": "packages/xlooop-mcp-server/package.json",
+          "target_blob": "0bb4317b46345549dd1c4670584f94f28474f26c",
+          "reason": "patch backend and MCP dependency graph to current zero-audit advisory floors"
+        },
+        {
+          "path": "packages/xlooop-mcp-server/package-lock.json",
+          "target_blob": "c68dbd9f6658b4c53cf44a1508ddb4e92dffb53e",
+          "reason": "patch backend and MCP dependency graph to current zero-audit advisory floors"
+        }
+      ]
+    },
+    {
+      "delta_id": "oauth-connector-scope-authority-20260810",
+      "generated_at": "2026-08-10T12:38:57.234Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "3d9fcaf5084784741ee5c551b43399ae6cebb9de",
+      "target_base_commit": "3d9fcaf5084784741ee5c551b43399ae6cebb9de",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "docs/governance/FEATURE_FLAGS.md",
+          "target_blob": "8d8f5c983667d6c28b921b115c03f463c2da1d13",
+          "reason": "Separate identity sign-in from connect-time Gmail and Drive consent; enforce backend registry/config authority."
+        },
+        {
+          "path": "package.json",
+          "target_blob": "55cd22354ffa34bbcaa5b0f0f8d8dc9ac51ed4af",
+          "reason": "Separate identity sign-in from connect-time Gmail and Drive consent; enforce backend registry/config authority."
+        },
+        {
+          "path": "scripts/ci-local.mjs",
+          "target_blob": "39152c1a5646bdf94fcc7201e352a6cddc161255",
+          "reason": "Separate identity sign-in from connect-time Gmail and Drive consent; enforce backend registry/config authority."
+        },
+        {
+          "path": "scripts/verify-connector-provider-ssot.mjs",
+          "target_blob": "006b751eb81b0654e3cb20ce7dc0cd1e1fe32689",
+          "reason": "Separate identity sign-in from connect-time Gmail and Drive consent; enforce backend registry/config authority."
+        },
+        {
+          "path": "src/workers/__tests__/sources-connect-sync.test.ts",
+          "target_blob": "8a74598271e11800413f955e49f14a447459914f",
+          "reason": "Separate identity sign-in from connect-time Gmail and Drive consent; enforce backend registry/config authority."
+        },
+        {
+          "path": "src/workers/lib/connector-registry.ts",
+          "target_blob": "de388b617930e3afff39b4205981041d10707940",
+          "reason": "Separate identity sign-in from connect-time Gmail and Drive consent; enforce backend registry/config authority."
+        },
+        {
+          "path": "wrangler.pilot-shadow.toml",
+          "target_blob": "c705621322fd58b526d8b5ae4c7f5d8b70a67118",
+          "reason": "Separate identity sign-in from connect-time Gmail and Drive consent; enforce backend registry/config authority."
+        },
+        {
+          "path": "wrangler.toml",
+          "target_blob": "6857a176027c502786ece7ac63bdf689620a868e",
+          "reason": "Separate identity sign-in from connect-time Gmail and Drive consent; enforce backend registry/config authority."
+        }
+      ]
+    },
+    {
+      "delta_id": "headroom-paid-provider-semantic-canary-20260810",
+      "generated_at": "2026-08-10T13:56:31.406Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "4382fde270e536f0622c6174e802973e16214052",
+      "target_base_commit": "4382fde270e536f0622c6174e802973e16214052",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "package.json",
+          "target_blob": "b66ec78c23ef4c8e71de25bfc44a171f53d5f486",
+          "reason": "governed paid/platform Headroom semantic evidence lane"
+        },
+        {
+          "path": "docs/architecture/backend/EXTERNAL_CAPABILITY_REGISTRY.json",
+          "target_blob": "7a3cd116d108d2b6270186188e60efcdbb3c64bb",
+          "reason": "governed paid/platform Headroom semantic evidence lane"
+        },
+        {
+          "path": "docs/deployment/PUBLIC_SELF_SERVE_EVIDENCE_GATES.md",
+          "target_blob": "0fd95871641b04cdfa32e7670f0dd42bc95ebe55",
+          "reason": "governed paid/platform Headroom semantic evidence lane"
+        },
+        {
+          "path": "scripts/verify-external-capability-runtime-results.mjs",
+          "target_blob": "eca64ef2a9dc126af1cbf65a439b36ba0332e56e",
+          "reason": "governed paid/platform Headroom semantic evidence lane"
+        }
+      ]
+    },
+    {
+      "delta_id": "delta-20260811-markitdown-modality-contract",
+      "generated_at": "2026-08-10T14:21:53.352Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "2a6954a52243932c09d9158fb5f9ffe39541151b",
+      "target_base_commit": "2a6954a52243932c09d9158fb5f9ffe39541151b",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "docs/architecture/backend/EXTERNAL_CAPABILITY_REGISTRY.json",
+          "target_blob": "c0fe173a6e7f6c0eaada384331cee005e64c9ab8",
+          "reason": "expand MarkItDown binary corpus and separate document authority from image/audio semantics"
+        },
+        {
+          "path": "docs/deployment/PUBLIC_SELF_SERVE_EVIDENCE_GATES.md",
+          "target_blob": "6970c9189159fe67e8f1a49aadd05fe84aa30bca",
+          "reason": "expand MarkItDown binary corpus and separate document authority from image/audio semantics"
+        },
+        {
+          "path": "scripts/run-upstream-capability-live-canary.mjs",
+          "target_blob": "837b2875fe69f25fad01cea62f5b6cedcf30dc05",
+          "reason": "expand MarkItDown binary corpus and separate document authority from image/audio semantics"
+        },
+        {
+          "path": "scripts/verify-external-capability-live-prereqs.mjs",
+          "target_blob": "ede908fa45c8354e9425b44b742107ef61cf4f5d",
+          "reason": "expand MarkItDown binary corpus and separate document authority from image/audio semantics"
+        },
+        {
+          "path": "scripts/verify-external-capability-runtime-decision.mjs",
+          "target_blob": "5475ce55a64dbf11abb8cea0b553d458b334eed5",
+          "reason": "expand MarkItDown binary corpus and separate document authority from image/audio semantics"
+        },
+        {
+          "path": "scripts/verify-external-capability-runtime-results.mjs",
+          "target_blob": "576abd562ac6504f35ed7b328266124451fa4306",
+          "reason": "expand MarkItDown binary corpus and separate document authority from image/audio semantics"
+        }
+      ]
+    },
+    {
+      "delta_id": "delta-20260811-release-artifact-hash-boundary",
+      "generated_at": "2026-08-10T15:02:57.010Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "e859c02d24d09622bbd5a8f9868d39c70bf86d95",
+      "target_base_commit": "e859c02d24d09622bbd5a8f9868d39c70bf86d95",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "scripts/lib/app-pages-release-contract.mjs",
+          "target_blob": "91529c59388eb5851be022a9dd8870a507ff5676",
+          "reason": "separate frontend runtime hashes from backend-owned Pages release files"
+        }
+      ]
+    },
+    {
+      "delta_id": "app-security-header-authority-20260811",
+      "generated_at": "2026-08-10T16:20:11.614Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "bedb63d7f44fa929b1286220a45622dbefe14fb2",
+      "target_base_commit": "bedb63d7f44fa929b1286220a45622dbefe14fb2",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "data/security-headers.manifest.json",
+          "target_blob": "51a88b099081f13a646c140dc7d09935daabf732",
+          "reason": "Converge enforced CSP reporting and host-only HSTS across backend Pages authority and React production emitter"
+        }
+      ]
     }
   ]
 }

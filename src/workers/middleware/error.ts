@@ -26,6 +26,11 @@ const CODE_TO_STATUS: Record<string, number> = {
   INTERNAL_ERROR: 500,
   READINESS_PERSISTENCE_FAILED: 500,
   SERVICE_UNAVAILABLE: 503,
+  PROVIDER_UNAVAILABLE: 503,
+  RELAY_REQUIRED: 503,
+  ADAPTER_UNAVAILABLE: 503,
+  RUNTIME_PREFERENCE_INVALID: 422,
+  MODEL_NOT_AVAILABLE: 422,
   // T1/P3 (260710) · source-connection contract codes (mirrored in ApiErrorCode, dal/types/auth.ts).
   // An unregistered code silently downgrades to INTERNAL_ERROR on the wire — that latent bug was hitting
   // SOURCE_WORKSPACE_BINDING_REQUIRED (sources.ts sync, R50); registering both keeps status AND wire code.

@@ -21,6 +21,7 @@ import { clerkRoleToWorkspaceRole } from '../dal/visibility';
 import type { AuthContext } from '../dal/types';
 import { neonClient } from '../db/client';
 import { getCustomerTokenByHashRow, touchCustomerTokenRow } from '../dal/customer-token-store';
+import { requiredCustomerScope } from '../lib/customer-connector-scopes';
 
 export interface AuthEnv {
   CLERK_SECRET_KEY: string;
@@ -37,6 +38,7 @@ export interface AuthEnv {
   // this (falling back to DATABASE_URL) so per-request RLS context applies — a cross-route env binding.
   XLOOOP_RLS_APP_DATABASE_URL?: string;
   CUSTOMER_API_TOKENS_ENABLED?: string;
+  CLERK_AUTHORIZED_PARTIES?: string;
 }
 
 export type AuthVariables = {
@@ -109,6 +111,12 @@ export function clerkAuth(opts: ClerkAuthOptions = {}): MiddlewareHandler<{
     if (customer === 'expired') {
       return jsonError(ctx, 401, 'UNAUTHORIZED', 'customer connector token has expired');
     }
+    if (customer === 'authority_revoked') {
+      return jsonError(ctx, 401, 'AUTHORITY_REVOKED', 'the connector authorizing membership is no longer active');
+    }
+    if (customer === 'scope_denied') {
+      return jsonError(ctx, 403, 'FORBIDDEN', 'connector token scope does not authorize this operation');
+    }
     if (customer === 'error') {
       // Retryable infrastructure state, NOT an identity verdict — a valid token must never 401
       // because the lookup store blinked. 503 tells the client to retry; 401 tells it to
@@ -120,6 +128,7 @@ export function clerkAuth(opts: ClerkAuthOptions = {}): MiddlewareHandler<{
     try {
       const payload = await verifyToken(token, {
         secretKey: ctx.env.CLERK_SECRET_KEY,
+        authorizedParties: clerkAuthorizedParties(ctx.env.CLERK_AUTHORIZED_PARTIES),
       });
 
       const userId = (payload as any).sub as string | undefined;
@@ -251,7 +260,7 @@ async function customerTokenAuth(
   ctx: Context<{ Bindings: AuthEnv; Variables: AuthVariables }>,
   token: string,
   opts: ClerkAuthOptions,
-): Promise<'matched' | 'expired' | 'miss' | 'error'> {
+): Promise<'matched' | 'expired' | 'authority_revoked' | 'scope_denied' | 'miss' | 'error'> {
   if (!opts.allowCustomerToken) return 'miss';
   if (!envFlagTrue(ctx.env.CUSTOMER_API_TOKENS_ENABLED)) return 'miss';
   if (token.includes('.')) return 'miss'; // JWTs contain dots; customer tokens never do
@@ -275,6 +284,10 @@ async function customerTokenAuth(
   }
   if (!row) return 'miss';
   if (Date.parse(row.expires_at) <= Date.now()) return 'expired';
+  if (!row.issuer_membership_active) return 'authority_revoked';
+
+  const requiredScope = requiredCustomerScope(ctx.req.method, new URL(ctx.req.url).pathname);
+  if (!requiredScope || !row.scopes.includes(requiredScope)) return 'scope_denied';
 
   ctx.set('auth', {
     user_id: `svc_customer_${row.id}`,
@@ -285,6 +298,8 @@ async function customerTokenAuth(
     client_id: `customer-${row.role}`,
     token_expires_at: row.expires_at,
     packet_prefix: row.packet_prefix,
+    connector_scopes: row.scopes,
+    delegated_by_user_id: row.authority_mode === 'delegated_user' ? row.created_by : undefined,
   });
 
   try {
@@ -293,6 +308,13 @@ async function customerTokenAuth(
     /* no execution context (e.g. unit test) — heartbeat is best-effort */
   }
   return 'matched';
+}
+
+export function clerkAuthorizedParties(value?: string): string[] {
+  const configured = (value || '').split(',').map((entry) => entry.trim()).filter(Boolean);
+  return configured.length > 0
+    ? configured
+    : ['https://app.xlooop.com', 'https://www.xlooop.com'];
 }
 
 function normalizeSha256Hex(value?: string): string {

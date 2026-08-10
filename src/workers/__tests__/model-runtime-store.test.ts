@@ -10,9 +10,11 @@ import {
   listProvidersRow,
   getProviderCredentialRow,
   upsertProviderRow,
+  rotateProviderCredentialRow,
   deleteProviderRow,
   setDefaultProviderRow,
   setOverrideRow,
+  clearOverrideRow,
   PROVIDER_SPECS,
   MODEL_RUNTIME_PROVIDERS,
 } from '../dal/model-runtime-store';
@@ -113,6 +115,47 @@ describe('model-runtime-store · audited writes', () => {
     expect(upsert.values).toContain(null);
   });
 
+  it('rotateProviderCredentialRow replaces only sealed bytes and returns an atomic audit receipt', async () => {
+    const sql = makeSql((q) => (/UPDATE model_runtime_providers/.test(q) ? [{
+      provider_config_id: 'mrp_1', provider: 'anthropic',
+      updated_at: '2026-08-09T00:00:00Z', audit_event_id: 'audit_rotate_1',
+    }] : []));
+    const receipt = await rotateProviderCredentialRow(
+      sql,
+      'ws_a' as any,
+      'anthropic',
+      { ciphertext: 'xcp1.tenant-v2.CIPHER', iv: 'ROTATED_IV' },
+      'actor1' as any,
+      'tenant-v1',
+      'tenant-v2',
+    );
+    expect(receipt).toEqual({
+      provider: 'anthropic',
+      provider_config_id: 'mrp_1',
+      provider_config_version_id: 'model-runtime-provider:mrp_1:2026-08-09T00:00:00Z',
+      credential_rotation_receipt_id: 'model-runtime-credential-rotation:mrp_1:audit_rotate_1',
+      audit_event_id: 'audit_rotate_1',
+    });
+    const rotation = sql.calls[0];
+    expect(rotation.query).toContain('model_runtime_credential_rotate');
+    expect(rotation.query).toMatch(/credential_rotated AS/);
+    expect(rotation.query).toMatch(/JOIN audit_written ON TRUE/);
+    expect(rotation.values).toEqual(expect.arrayContaining([
+      'xcp1.tenant-v2.CIPHER', 'ROTATED_IV', 'ws_a', 'anthropic', 'actor1',
+      'rotate credential key tenant-v1 -> tenant-v2',
+    ]));
+  });
+
+  it('rotateProviderCredentialRow fails closed when the audit receipt is absent', async () => {
+    const sql = makeSql((q) => (/UPDATE model_runtime_providers/.test(q) ? [{
+      provider_config_id: 'mrp_1', provider: 'anthropic', updated_at: '2026-08-09T00:00:00Z',
+    }] : []));
+    await expect(rotateProviderCredentialRow(
+      sql, 'ws_a' as any, 'anthropic', { ciphertext: 'C', iv: 'I' },
+      'actor1' as any, null, 'tenant-v2',
+    )).rejects.toThrow(/audit receipt/);
+  });
+
   it('setDefaultProviderRow flips in one UPDATE and audits with model_runtime_default_change', async () => {
     const sql = makeSql((q) => (/UPDATE model_runtime_providers/.test(q) ? [{ ...maskedRow({ is_default: true }), audit_event_id: '9002' }] : []));
     const receipt = await setDefaultProviderRow(sql, 'ws_a' as any, 'mrp_1', 'actor1' as any);
@@ -157,6 +200,15 @@ describe('model-runtime-store · audited writes', () => {
     const sql = makeSql(() => []);
     await setOverrideRow(sql, 'u1' as any, 'ws_a' as any, 'mrp_1');
     expect(sql.calls.some((c: any) => /INSERT INTO user_runtime_override/.test(c.query))).toBe(true);
+    expect(sql.calls.some((c: any) => isAuditInsert(c.query))).toBe(false);
+  });
+
+  it('clearOverrideRow deletes only the caller/workspace preference and does not write an audit row', async () => {
+    const sql = makeSql(() => []);
+    await clearOverrideRow(sql, 'u1' as any, 'ws_a' as any);
+    expect(sql.calls).toHaveLength(1);
+    expect(sql.calls[0].query).toMatch(/DELETE FROM user_runtime_override/);
+    expect(sql.calls[0].values).toEqual(['u1', 'ws_a']);
     expect(sql.calls.some((c: any) => isAuditInsert(c.query))).toBe(false);
   });
 });

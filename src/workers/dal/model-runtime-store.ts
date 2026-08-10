@@ -3,7 +3,7 @@
 //
 // SECURITY BOUNDARY: this store handles ONLY the opaque sealed credential ({ciphertext, iv, last4}). It
 // never encrypts, decrypts, or sees plaintext or the master key — that is the ROUTE layer's job (it has
-// ctx.env.MODEL_RUNTIME_ENC_KEY; the DAL is constructed with sql only). listProvidersRow deliberately does
+// the versioned worker keyring; the DAL is constructed with sql only). listProvidersRow deliberately does
 // NOT select the ciphertext/iv columns (mask-by-construction) so a list read physically cannot leak the
 // sealed key; only getProviderCredentialRow returns them, and only for the internal provider-call path.
 // Every query is workspace-scoped (WHERE workspace_id = $w) so a caller only ever touches their own tenant.
@@ -34,22 +34,23 @@ export interface ProviderSpec {
   requires_key: boolean; // a credential MUST be present for a valid config
   requires_base_url: boolean; // a base_url MUST be present (local / azure / custom)
   locality: 'private' | 'anthropic' | 'external';
+  execution_mode: 'executable' | 'relay_required' | 'adapter_unavailable';
 }
 export const PROVIDER_SPECS: Record<ModelRuntimeProvider, ProviderSpec> = {
-  anthropic: { auth_kind: 'api_key', requires_key: true, requires_base_url: false, locality: 'anthropic' },
-  openai: { auth_kind: 'api_key', requires_key: true, requires_base_url: false, locality: 'external' },
-  google: { auth_kind: 'api_key', requires_key: true, requires_base_url: false, locality: 'external' },
-  mistral: { auth_kind: 'api_key', requires_key: true, requires_base_url: false, locality: 'external' },
-  deepseek: { auth_kind: 'api_key', requires_key: true, requires_base_url: false, locality: 'external' },
-  azure_openai: { auth_kind: 'azure_key', requires_key: true, requires_base_url: true, locality: 'external' },
-  aws_bedrock: { auth_kind: 'aws_sigv4', requires_key: true, requires_base_url: false, locality: 'external' },
-  openrouter: { auth_kind: 'api_key', requires_key: true, requires_base_url: false, locality: 'external' },
-  ollama: { auth_kind: 'none', requires_key: false, requires_base_url: true, locality: 'private' },
-  lm_studio: { auth_kind: 'none', requires_key: false, requires_base_url: true, locality: 'private' },
-  vllm: { auth_kind: 'none', requires_key: false, requires_base_url: true, locality: 'private' },
-  llama_cpp: { auth_kind: 'none', requires_key: false, requires_base_url: true, locality: 'private' },
+  anthropic: { auth_kind: 'api_key', requires_key: true, requires_base_url: false, locality: 'anthropic', execution_mode: 'executable' },
+  openai: { auth_kind: 'api_key', requires_key: true, requires_base_url: false, locality: 'external', execution_mode: 'executable' },
+  google: { auth_kind: 'api_key', requires_key: true, requires_base_url: false, locality: 'external', execution_mode: 'executable' },
+  mistral: { auth_kind: 'api_key', requires_key: true, requires_base_url: false, locality: 'external', execution_mode: 'executable' },
+  deepseek: { auth_kind: 'api_key', requires_key: true, requires_base_url: false, locality: 'external', execution_mode: 'executable' },
+  azure_openai: { auth_kind: 'azure_key', requires_key: true, requires_base_url: true, locality: 'external', execution_mode: 'executable' },
+  aws_bedrock: { auth_kind: 'aws_sigv4', requires_key: true, requires_base_url: false, locality: 'external', execution_mode: 'adapter_unavailable' },
+  openrouter: { auth_kind: 'api_key', requires_key: true, requires_base_url: false, locality: 'external', execution_mode: 'executable' },
+  ollama: { auth_kind: 'none', requires_key: false, requires_base_url: true, locality: 'private', execution_mode: 'relay_required' },
+  lm_studio: { auth_kind: 'none', requires_key: false, requires_base_url: true, locality: 'private', execution_mode: 'relay_required' },
+  vllm: { auth_kind: 'none', requires_key: false, requires_base_url: true, locality: 'private', execution_mode: 'relay_required' },
+  llama_cpp: { auth_kind: 'none', requires_key: false, requires_base_url: true, locality: 'private', execution_mode: 'relay_required' },
   // The escape hatch: an arbitrary OpenAI-compatible endpoint. base_url required; a key is OPTIONAL.
-  custom: { auth_kind: 'custom', requires_key: false, requires_base_url: true, locality: 'private' },
+  custom: { auth_kind: 'custom', requires_key: false, requires_base_url: true, locality: 'private', execution_mode: 'relay_required' },
 };
 
 /** The masked, client-safe shape of a provider config row — NO ciphertext/iv (they are never selected). */
@@ -83,6 +84,14 @@ export interface ProviderConfigDeleteReceipt {
 export interface ProviderDefaultWriteReceipt {
   provider: ProviderConfigRow;
   default_revision_id: string;
+  audit_event_id: string;
+}
+
+export interface ProviderCredentialRotationReceipt {
+  provider: ModelRuntimeProvider;
+  provider_config_id: string;
+  provider_config_version_id: string;
+  credential_rotation_receipt_id: string;
   audit_event_id: string;
 }
 
@@ -199,6 +208,54 @@ export async function upsertProviderRow(
   return { provider: providerRow, provider_config_version_id: providerConfigVersion(providerRow), audit_event_id };
 }
 
+/** Replace one workspace provider's sealed credential and audit the key rotation atomically. */
+export async function rotateProviderCredentialRow(
+  sql: Sql,
+  workspaceId: WorkspaceId,
+  provider: ModelRuntimeProvider,
+  sealed: { ciphertext: string; iv: string },
+  actorUserId: UserId,
+  fromKeyId: string | null,
+  toKeyId: string,
+): Promise<ProviderCredentialRotationReceipt | null> {
+  const reason = `rotate credential key ${fromKeyId ?? 'legacy'} -> ${toKeyId}`;
+  const rows = (await sql/*sql*/`
+    WITH credential_rotated AS (
+      UPDATE model_runtime_providers
+      SET credential_ciphertext = ${sealed.ciphertext}, credential_iv = ${sealed.iv}, updated_at = now()
+      WHERE workspace_id = ${workspaceId} AND provider = ${provider}
+        AND credential_ciphertext IS NOT NULL AND credential_iv IS NOT NULL
+      RETURNING id, provider, updated_at
+    ),
+    audit_written AS (
+      INSERT INTO audit_logs (actor_user_id, action, target_type, target_id, workspace_id, reason)
+      SELECT ${actorUserId}, 'model_runtime_credential_rotate'::text,
+             'model_runtime_provider', credential_rotated.id, ${workspaceId}, ${reason}
+      FROM credential_rotated
+      RETURNING id::text AS audit_event_id
+    )
+    SELECT credential_rotated.id AS provider_config_id, credential_rotated.provider,
+           credential_rotated.updated_at, audit_written.audit_event_id
+    FROM credential_rotated
+    JOIN audit_written ON TRUE
+  `) as Array<{
+    provider_config_id: string;
+    provider: ModelRuntimeProvider;
+    updated_at: string;
+    audit_event_id: string;
+  }>;
+  const row = rows[0];
+  if (!row) return null;
+  if (!row.audit_event_id) throw new Error('model runtime credential rotation missing audit receipt');
+  return {
+    provider: row.provider,
+    provider_config_id: row.provider_config_id,
+    provider_config_version_id: providerConfigVersion({ id: row.provider_config_id, updated_at: row.updated_at }),
+    credential_rotation_receipt_id: `model-runtime-credential-rotation:${row.provider_config_id}:${row.audit_event_id}`,
+    audit_event_id: row.audit_event_id,
+  };
+}
+
 /** Delete a provider config (audited). Returns true iff a row was removed. */
 export async function deleteProviderRow(sql: Sql, workspaceId: WorkspaceId, provider: ModelRuntimeProvider, actorUserId: UserId): Promise<ProviderConfigDeleteReceipt | null> {
   const rows = (await sql/*sql*/`
@@ -287,4 +344,12 @@ export async function setOverrideRow(sql: Sql, userId: UserId, workspaceId: Work
     DO UPDATE SET provider_id = EXCLUDED.provider_id, updated_at = now()
   `;
   return providerId;
+}
+
+/** Clear the caller's own per-workspace override so resolution returns to the workspace default. */
+export async function clearOverrideRow(sql: Sql, userId: UserId, workspaceId: WorkspaceId): Promise<void> {
+  await sql/*sql*/`
+    DELETE FROM user_runtime_override
+    WHERE user_id = ${userId} AND workspace_id = ${workspaceId}
+  `;
 }

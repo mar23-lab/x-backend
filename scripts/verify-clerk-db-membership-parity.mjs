@@ -225,7 +225,8 @@ function report(results) {
   if (advisory) console.log(`\n${advisory} advisory role mismatch(es) — mapping: org:admin→operator|owner|admin, org:member→viewer|client|member`);
 
   if (diverged.length === 0) {
-    console.log(`\nPASS clerk↔db membership parity (${results.length}/${results.length} workspaces in agreement)`);
+    const inAgreement = results.length - diverged.length;
+    console.log(`\nPASS clerk↔db membership parity (${inAgreement}/${results.length} workspaces in agreement)`);
     return 0;
   }
   const stranded = diverged.reduce((n, r) => n + r.clerkOnly.length, 0);

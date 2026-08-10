@@ -3,8 +3,8 @@
 // The operator cockpit chat (workspaces.ts POST /cockpit-chat) is operator-only — it 403s a customer
 // and reads the OPERATOR's events. This is the CUSTOMER counterpart: a signed-in customer asks about
 // THEIR OWN workspace and the AI chief-of-staff answers grounded in their events + their captured
-// company context (S1), reusing the SAME answerCockpitChat service + the Workers-AI → Claude →
-// deterministic ladder.
+// company context (S1), reusing the SAME answerCockpitChat service. Commercial mode resolves the
+// effective tenant/user runtime and returns a typed 503 when no live provider can answer.
 //
 // Why this exists: before this route, the in-app customer chat panel (CockpitChatPanel.jsx) short-
 // circuited to a hardcoded CLIENT-SIDE stub ("read-only validation / Available / Blocked") and NEVER
@@ -15,7 +15,8 @@
 // never from the request body; events are read workspace-scoped via dal.listEvents (the DAL tenant
 // guard). A customer can only ever ask about their own workspace.
 
-import { Hono } from 'hono';
+import { Hono, type Context } from 'hono';
+import { streamSSE } from 'hono/streaming';
 import { errorEnvelope } from '../middleware/error';
 import { emitEvent } from '../lib/observability'; // T3/P6
 import { gateCustomerWorkspace } from '../lib/workspace-gates';
@@ -36,9 +37,15 @@ import { persistAssistantContextLineage, completeAssistantSkillLineage, type Ass
 import { createModelExecutionObserver } from '../lib/model-execution-lineage';
 import { parseContextReferences } from '../lib/context-reference';
 import { resolveDocumentContext } from '../services/document-context';
+import { classifyCommercialChatHistory } from '../services/chat-history-classification';
 import { recordChatGroundingReads } from '../dal/document-access-store';
 import {
-  answerCockpitChat,
+  ProviderUnavailableError,
+  resolveEffectiveRuntimePlan,
+  type EffectiveRuntimePlan,
+} from '../services/model-runtime-execution';
+import {
+  answerLiveCockpitChat,
   classifyRequestedProjectFacts,
   classifyRequestedWorkspaceInventoryFacts,
   isProjectInventoryQuestion,
@@ -55,6 +62,11 @@ export interface CustomerChatEnv extends AuthEnv {
   DATABASE_URL: string;
   AI?: AiRunner;
   ANTHROPIC_API_KEY?: string;
+  MODEL_RUNTIME_ENC_KEY?: string; // legacy decrypt-only during rotation
+  MODEL_RUNTIME_ENC_KEYS?: string;
+  MODEL_RUNTIME_ACTIVE_KEY_ID?: string;
+  /** Deprecated compatibility input; customer chat is now always live-only. */
+  COMMERCIAL_LIVE_CHAT_REQUIRED?: string;
   // D-16 · grounding-tier consumer. Default OFF → byte-identical (no access_tier, no reorder). When on,
   // each source's effective per-project read_policy tier weights its place in the grounding fact bundle.
   SOURCE_TIER_GROUNDING_ENABLED?: string;
@@ -181,7 +193,7 @@ customerChatRoute.get('/customer-chat/history', async (ctx) => {
     const scope: CockpitChatScope = { workspace_id: scoped.ws, project_id: requestedProjectId, domain_id: null };
     try {
       const messages = await lister.call(gate.dal, auth.user_id, scope, 100);
-      return ctx.json({ messages: Array.isArray(messages) ? messages : [], scope });
+      return ctx.json({ messages: classifyCommercialChatHistory(Array.isArray(messages) ? messages : []), scope });
     } catch (err) {
       emitEvent('chat_history_persistence_failed', {
         workspace_id: scoped.ws,
@@ -208,8 +220,29 @@ async function messageIntentRef(message: string): Promise<string> {
   return `sha256:${Array.from(new Uint8Array(hash), (b) => b.toString(16).padStart(2, '0')).join('')}`;
 }
 
-customerChatRoute.post('/customer-chat', async (ctx) => {
+function canonicalJson(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(',')}]`;
+  if (value && typeof value === 'object') {
+    return `{${Object.keys(value as Record<string, unknown>).sort().map((key) =>
+      `${JSON.stringify(key)}:${canonicalJson((value as Record<string, unknown>)[key])}`).join(',')}}`;
+  }
+  return JSON.stringify(value) ?? 'null';
+}
+
+async function contentRef(prefix: string, value: unknown): Promise<string | null> {
+  if (value === null || value === undefined) return null;
+  const hash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(canonicalJson(value)));
+  return `${prefix}:${Array.from(new Uint8Array(hash)).map((byte) => byte.toString(16).padStart(2, '0')).join('')}`;
+}
+
+type CustomerChatContext = Context<{
+  Bindings: CustomerChatEnv;
+  Variables: CustomerChatVariables;
+}>;
+
+async function handleCustomerChat(ctx: CustomerChatContext) {
   try {
+    const commercialTurnFacade = ctx.req.path.endsWith('/chat/turns');
     const auth = ctx.get('auth');
     // Provisioning gate — the shared lib/workspace-gates.ts driver (S3; byte-identical responses).
     // Only a real, provisioned workspace can chat; no governed overlay (any provisioned member may ask).
@@ -225,6 +258,8 @@ customerChatRoute.post('/customer-chat', async (ctx) => {
       project_id?: string | null;
       interaction_id?: string;
       context_refs?: unknown;
+      runtime_id?: string | null;
+      model_id?: string | null;
     } | null;
     const message = typeof body?.message === 'string' ? body.message.trim() : '';
     if (!message || message.length > 1000) {
@@ -294,8 +329,50 @@ customerChatRoute.post('/customer-chat', async (ctx) => {
       }));
     }
     // User-selected model (the chat's model switcher). Default = free Llama; 'claude' uses the premium tier.
-    const llm: CockpitChatLLM = body?.llm === 'claude' ? 'claude' : 'llama';
-    const chatHistoryPersistenceRequired = envFlagTrue(ctx.env.CHAT_HISTORY_PERSISTENCE_REQUIRED);
+    // The versioned commercial facade never accepts the legacy client `llm` switch as authority.
+    // runtime_id/model_id are preferences only and are validated by the tenant-scoped resolver.
+    const llm: CockpitChatLLM = commercialTurnFacade
+      ? 'llama'
+      : body?.llm === 'claude' ? 'claude' : 'llama';
+    // All customer-facing chat routes are commercial live-AI surfaces. The
+    // unversioned alias remains for compatibility, but it may not opt out of
+    // live execution or return deterministic assistant prose.
+    const liveChatRequired = true;
+    let liveRuntimePlan: EffectiveRuntimePlan | undefined;
+    if (liveChatRequired) {
+      try {
+        // The retired wired adapter still sends `llm: "claude"`. It is not model
+        // authority, but while that client is being removed we must preserve the
+        // user's provider intent truthfully instead of showing Claude and silently
+        // executing Workers AI. The versioned facade ignores this compatibility
+        // mapping and accepts only server-validated runtime/model preferences.
+        const runtimePreference = typeof body?.runtime_id === 'string' && body.runtime_id.trim()
+          ? body.runtime_id.trim()
+          : !commercialTurnFacade && body?.llm === 'claude'
+            ? 'platform:anthropic'
+            : undefined;
+        liveRuntimePlan = await resolveEffectiveRuntimePlan({
+          facade: dal.modelRuntimes,
+          env: ctx.env,
+          userId: auth.user_id,
+          workspaceId,
+          runtimeId: runtimePreference,
+          modelId: body?.model_id,
+        });
+      } catch (err) {
+        if (!(err instanceof ProviderUnavailableError)) throw err;
+        emitEvent('chat_provider_unavailable', { workspace_id: workspaceId, stage: 'resolution' });
+        ctx.status(503);
+        return ctx.json({
+          error: 'no live model runtime is available',
+          code: 'PROVIDER_UNAVAILABLE',
+          request_id: ctx.get('request_id'),
+          retryable: true,
+        });
+      }
+    }
+    const chatHistoryPersistenceRequired = commercialTurnFacade
+      || envFlagTrue(ctx.env.CHAT_HISTORY_PERSISTENCE_REQUIRED);
     const appendChatExchange = (dal as unknown as {
       appendChatExchange?: (
         userId: string,
@@ -519,7 +596,20 @@ customerChatRoute.post('/customer-chat', async (ctx) => {
         clientEmpty = rsc.redactionProfile.expose === 'none';
         trace?.recordRoleProjection(rsc.auditLine);
         console.log(JSON.stringify({ kind: 'role_scoped_context', plane: 'customer', workspace_id: workspaceId, ...rsc.auditLine }));
-      } catch (_) { /* projection is fail-safe: legacy facts stand; the flag can be pulled */ }
+      } catch (err) {
+        emitEvent('chat_context_projection_failed', {
+          workspace_id: workspaceId,
+          plane: 'customer',
+          error: err instanceof Error ? err.message.slice(0, 200) : String(err).slice(0, 200),
+        });
+        ctx.status(503);
+        return ctx.json({
+          error: 'tenant-safe chat context could not be projected',
+          code: 'CONTEXT_PROJECTION_UNAVAILABLE',
+          request_id: ctx.get('request_id'),
+          retryable: true,
+        });
+      }
     }
 
     // T1/P3 (260710) · MECHANICAL source-truth override, flag-gated (OFF = byte-identical): a queued system
@@ -565,14 +655,13 @@ customerChatRoute.post('/customer-chat', async (ctx) => {
       : null;
 
     const scope: CockpitChatScope = { workspace_id: workspaceId, project_id: projectId, domain_id: null };
-    const ai = ctx.env.AI;
     const claudeKey = ctx.env.ANTHROPIC_API_KEY;
 
     // Commercial lineage gate: when explicitly enabled, no LLM call begins until its role/skill
     // resolution and customer-safe context packet are durable. Raw prompt text is never stored.
     let assistantLineage: AssistantContextLineage | null = null;
     let lineageSql: ReturnType<typeof neonClient> | null = null;
-    if (envFlagTrue(ctx.env.CONTEXT_PACKET_PERSISTENCE_ENABLED)) {
+    if (commercialTurnFacade || envFlagTrue(ctx.env.CONTEXT_PACKET_PERSISTENCE_ENABLED)) {
       lineageSql = ctx.get('sql') ?? neonClient(ctx.env.DATABASE_URL);
       assistantLineage = await persistAssistantContextLineage(lineageSql, ctx.env, {
         workspace_id: workspaceId,
@@ -605,31 +694,52 @@ customerChatRoute.post('/customer-chat', async (ctx) => {
     const executionObserver = assistantLineage && lineageSql
       ? createModelExecutionObserver(lineageSql, workspaceId, auth.user_id, assistantLineage)
       : undefined;
-    const result = await answerCockpitChat(
-      message,
-      // 260805 · `total` is the WHOLE-WORKSPACE count from a SQL aggregate, not `events.length`.
-      // `events` is a 40-row RECENCY page (MAX_EVENTS), and cockpit-chat.ts documents this field as
-      // "Total Plane-A count for the scope (may exceed events.length when capped)" — passing the
-      // page length made that promise false on every call, so the honesty hedge at
-      // cockpit-chat.ts:1059 ("I looked at the N most recent") was structurally dead: it compares
-      // events_considered against events_total, and both were the same number. Chat could state
-      // "1 item needs your sign-off" for a workspace holding eleven, and never disclose the cap.
-      //
-      // THE FALLBACK IS THE PAGE LENGTH, NEVER 0. cockpit-chat.ts:1032 switches to the empty-state
-      // narrative when events_total === 0, which drops source facts entirely. A degraded aggregate
-      // read must not under-report below what we can already see.
-      { workspaceName, companyContext, events, documents, projects, plan, projectSources, sources, total: chatTotals.total, scope, charter, personalizationProfile },
-      ai,
-      mode,
-      claudeKey,
-      llm,
-      executionObserver,
-    );
+    let result;
+    try {
+      if (!liveRuntimePlan) throw new ProviderUnavailableError('no live model runtime is available');
+      result = await answerLiveCockpitChat(
+        message,
+        // 260805 · `total` is the WHOLE-WORKSPACE count from a SQL aggregate, not `events.length`.
+        // `events` is a 40-row RECENCY page (MAX_EVENTS), and cockpit-chat.ts documents this field as
+        // "Total Plane-A count for the scope (may exceed events.length when capped)" — passing the
+        // page length made that promise false on every call, so the honesty hedge at
+        // cockpit-chat.ts:1059 ("I looked at the N most recent") was structurally dead: it compares
+        // events_considered against events_total, and both were the same number. Chat could state
+        // "1 item needs your sign-off" for a workspace holding eleven, and never disclose the cap.
+        //
+        // THE FALLBACK IS THE PAGE LENGTH, NEVER 0. cockpit-chat.ts:1032 switches to the empty-state
+        // narrative when events_total === 0, which drops source facts entirely. A degraded aggregate
+        // read must not under-report below what we can already see.
+        { workspaceName, companyContext, events, documents, projects, plan, projectSources, sources, total: chatTotals.total, scope, charter, personalizationProfile },
+        mode,
+        executionObserver,
+        liveRuntimePlan,
+      );
+    } catch (err) {
+      if (!(err instanceof ProviderUnavailableError)) throw err;
+      emitEvent('chat_provider_unavailable', {
+        workspace_id: workspaceId,
+        stage: 'execution',
+        attempts: err.attempts.length,
+      });
+      ctx.status(503);
+      return ctx.json({
+        error: 'configured live model providers are temporarily unavailable',
+        code: 'PROVIDER_UNAVAILABLE',
+        request_id: ctx.get('request_id'),
+        retryable: true,
+      });
+    }
+    if (liveChatRequired && result.generated_by !== 'llm') {
+      throw new Error('commercial live chat returned a non-LLM assistant result');
+    }
+    let skillInvocationReceiptIds: string[] = [];
     if (assistantLineage && lineageSql) {
       const receipts = await completeAssistantSkillLineage(lineageSql, ctx.env, assistantLineage, {
         workspace_id: workspaceId,
         principal_id: auth.user_id,
       });
+      skillInvocationReceiptIds = receipts;
       emitEvent('skill_invocation_completed', {
         workspace_id: workspaceId,
         action: assistantLineage.action,
@@ -673,6 +783,8 @@ customerChatRoute.post('/customer-chat', async (ctx) => {
       thread_id: string;
       user_message_id: string;
       assistant_message_id: string;
+      assistant_receipt_id: string | null;
+      audit_event_id: string | null;
     } | null = null;
     try {
       if (typeof appendChatExchange === 'function') {
@@ -691,6 +803,9 @@ customerChatRoute.post('/customer-chat', async (ctx) => {
             grounding_event_ids: receiptLinks,
             interaction_id: interactionId,
             entry_type: 'assistant_answer',
+            resolution_id: assistantLineage?.resolution_id ?? null,
+            execution_receipt_id: result.execution?.receipt_id ?? null,
+            packet_id: assistantLineage?.context_packet_id ?? null,
           },
         ]);
         const messages = Array.isArray(persisted?.messages) ? persisted.messages : [];
@@ -698,13 +813,16 @@ customerChatRoute.post('/customer-chat', async (ctx) => {
           entry.entry_type === 'user_request' || entry.role === 'you');
         const assistantMessage = messages.find((entry) =>
           entry.entry_type === 'assistant_answer' || entry.role === 'assistant');
-        if (!persisted?.thread_id || !userMessage?.id || !assistantMessage?.id) {
+        if (!persisted?.thread_id || !userMessage?.id || !assistantMessage?.id
+          || (commercialTurnFacade && !assistantMessage.receipt_uid)) {
           throw new Error('chat persistence did not return canonical conversation ids');
         }
         conversation = {
           thread_id: persisted.thread_id,
           user_message_id: userMessage.id,
           assistant_message_id: assistantMessage.id,
+          assistant_receipt_id: assistantMessage.receipt_uid ?? null,
+          audit_event_id: assistantMessage.audit_event_id ?? null,
         };
       } else if (chatHistoryPersistenceRequired) {
         throw new Error('appendChatExchange unavailable');
@@ -726,8 +844,17 @@ customerChatRoute.post('/customer-chat', async (ctx) => {
     }
 
     // AR-0.2 · customer-safe projection (flag-gated). OFF (default) = payload unchanged (byte-identical);
-    // ON collapses the engine name, drops the internal model id, reduces grounded_on to an evidence count.
-    return ctx.json(customerSafeChat({
+    // ON collapses legacy engine fields, keeps explicit live-runtime provenance, and reduces grounded_on
+    // to an evidence count.
+    const responseConversation = conversation && !commercialTurnFacade
+      ? {
+          thread_id: conversation.thread_id,
+          user_message_id: conversation.user_message_id,
+          assistant_message_id: conversation.assistant_message_id,
+        }
+      : conversation;
+    const response = customerSafeChat({
+      request_id: ctx.get('request_id'),
       interaction_id: interactionId,
       scope,
       answer: result.answer,
@@ -751,9 +878,94 @@ customerChatRoute.post('/customer-chat', async (ctx) => {
         context_receipt_id: assistantLineage.context_packet_id,
         role_skill_resolution_id: assistantLineage.resolution_id,
       } : null,
-      conversation,
-    }, customerSafeSerializerEnabled((ctx.env as { CUSTOMER_SAFE_SERIALIZER_ENABLED?: string }).CUSTOMER_SAFE_SERIALIZER_ENABLED))); // P3 (260714): DEFAULT-SAFE — a missing/malformed flag serializes; only an explicit 'false' (internal testing) yields raw. Was envFlagTrue = fail-open when the wrangler var vanished.
+      conversation: responseConversation,
+      execution: result.execution ? {
+        receipt_id: result.execution.receipt_id,
+        runtime_id: result.execution.runtime_id,
+        provider: result.execution.provider,
+        model: result.execution.model,
+        source: result.execution.source,
+        provider_config_version_id: result.execution.provider_config_version_id,
+        latency_ms: result.execution.latency_ms,
+        attempts: result.execution.attempts,
+        usage: result.usage ?? null,
+      } : null,
+    }, customerSafeSerializerEnabled((ctx.env as { CUSTOMER_SAFE_SERIALIZER_ENABLED?: string }).CUSTOMER_SAFE_SERIALIZER_ENABLED)); // P3 (260714): DEFAULT-SAFE — a missing/malformed flag serializes; only an explicit 'false' (internal testing) yields raw. Was envFlagTrue = fail-open when the wrangler var vanished.
+    if (!commercialTurnFacade) return ctx.json(response);
+    if (!conversation?.assistant_receipt_id || !conversation.audit_event_id
+      || !assistantLineage || !result.execution?.receipt_id) {
+      ctx.status(503);
+      return ctx.json({
+        error: 'commercial chat turn receipts could not be completed',
+        code: 'CHAT_TURN_RECEIPT_INCOMPLETE',
+        request_id: ctx.get('request_id'),
+        retryable: true,
+      });
+    }
+    const {
+      llm_requested: _ignoredLegacyLlm,
+      claude_available: _ignoredLegacyClaudeAvailability,
+      ...commercialResponse
+    } = response as Record<string, unknown>;
+    const turnPayload = {
+      schema_id: 'xlooop.chat_turn.v1',
+      ...commercialResponse,
+      context: {
+        packet_fingerprint: assistantLineage.context_fingerprint,
+        generated_at: assistantLineage.context_generated_at,
+        stale_after_s: assistantLineage.context_stale_after_s,
+        role_skill_catalog_hash: assistantLineage.catalog_manifest_sha256,
+        selected_skill_versions: assistantLineage.resolution.selected_skills,
+        effective_profile_ref: await contentRef(
+          'effective-personalization-profile.v1',
+          personalizationProfile,
+        ),
+        source_freshness: result.grounded_on.data_freshness,
+      },
+      citations: [
+        ...(result.grounded_on.event_ids ?? []).map((ref) => ({ kind: 'event', ref })),
+        ...result.grounded_on.documents.names.map((label) => ({ kind: 'document', label })),
+      ],
+      receipts: {
+        answer_receipt_id: conversation.assistant_receipt_id,
+        execution_receipt_id: result.execution.receipt_id,
+        context_receipt_id: assistantLineage.context_packet_id,
+        policy_resolution_id: assistantLineage.resolution_id,
+        audit_event_id: conversation.audit_event_id,
+        skill_invocation_receipt_ids: skillInvocationReceiptIds,
+      },
+      preference_disposition: {
+        runtime_id: body?.runtime_id ? 'server_validated' : 'not_supplied',
+        model_id: body?.model_id ? 'server_validated' : 'not_supplied',
+        legacy_llm: body?.llm ? 'ignored' : 'not_supplied',
+      },
+      streaming: {
+        status: 'enabled',
+        mode: 'atomic_post_completion',
+        provider_native: false,
+        receipt_before_stream: true,
+      },
+    };
+    if (ctx.req.header('accept')?.toLowerCase().includes('text/event-stream')) {
+      const answer = String((commercialResponse as { answer?: unknown }).answer ?? '');
+      const chunks = answer.match(/[\s\S]{1,160}/g) ?? [];
+      return streamSSE(ctx, async (stream) => {
+        await stream.writeSSE({ event: 'turn.started', data: JSON.stringify({
+          request_id: ctx.get('request_id'),
+          interaction_id: interactionId,
+          execution_receipt_id: turnPayload.receipts.execution_receipt_id,
+        }) });
+        for (const chunk of chunks) {
+          await stream.writeSSE({ event: 'turn.delta', data: JSON.stringify({ delta: chunk }) });
+        }
+        await stream.writeSSE({ event: 'turn.completed', data: JSON.stringify(turnPayload) });
+      });
+    }
+    return ctx.json(turnPayload);
   } catch (err) {
     return errorEnvelope(ctx, err);
   }
-});
+}
+
+customerChatRoute.post('/customer-chat', handleCustomerChat);
+customerChatRoute.post('/chat/turns', handleCustomerChat);

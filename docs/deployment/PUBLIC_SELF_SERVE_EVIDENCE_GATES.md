@@ -90,11 +90,16 @@ npm run verify:external-capability-live-prereqs
 XLOOOP_REQUIRE_EXTERNAL_DEFAULTS=1 npm run verify:external-capability-live-prereqs
 ```
 
-Strict mode requires the sandbox venv, MarkItDown CLI, sandbox Python, package-source identity, and a supported Headroom compression API before any default-promotion decision. Current verified posture on 2026-06-22:
+Strict mode requires the sandbox venv, MarkItDown CLI, sandbox Python, package-source identity, and a supported Headroom compression API before any default-promotion decision. Current verified posture on 2026-08-09 (Australia/Melbourne; machine receipts retain UTC):
 
-- MarkItDown: executable as an opt-in sandbox canary from `microsoft/markitdown` using Python 3.13 and `markitdown==0.1.6`; default adoption still requires full corpus coverage and strict runtime evidence.
-- Headroom: not default-ready; the registry source `chopratejas/headroom` currently requires Cargo >=1.85 for Rust `edition2024`, and no supported `headroom.compress` API is available in the sandbox.
+- MarkItDown: executable as an opt-in sandbox canary from `microsoft/markitdown` using `markitdown==0.1.6`. The expanded upstream run covered `14/14` document and structured-text classes, including PDF, DOCX, PPTX, XLSX and malicious YAML, with `100%` fidelity, source-span presence, redaction and replay; p95 was `1.10s` against the `<3s` gate. Global coverage is `14/16 = 87.5%`: image semantics require an approved multimodal/OCR lane and audio transcription currently crosses an implicit Google speech-provider boundary. The document lane is a scoped fallback candidate after backend-adapter and lifecycle receipts; image/audio and global default adoption remain blocked.
+- Headroom: `headroom-ai==0.34.0` is installed from the registered `chopratejas/headroom` source and exposes `headroom.compress`. The 8-case upstream structural canary measured `62.33%` token reduction with `100%` structural equivalence, citations, redaction and replay. The separate 40-case `qwen3:8b` semantic canary measured `58.29%` reduction with `100%` original/compressed task correctness, answer equivalence, citations, redaction and replay, and `0` leakage. It remains opt-in until a paid or platform-managed provider canary and owner approval pass.
+- Hyper-Extract: the native typed-extraction/`GraphSuggestion` lane measured `97%` typed fidelity and `100%` suggestion coverage with no authoritative graph writes; upstream graph/MCP/export/search/talk surfaces remain forbidden.
 - Aggregate `--capability=all` canaries must fail closed if any selected capability reports result-level failures or `opt_in_canary_allowed: false`.
+
+Source commands: `npm run canary:external-capabilities:live`, `npm run canary:headroom:semantic`, `npm run canary:headroom:semantic:provider`, and `npm run verify:external-capability-runtime-results -- --strict`. The provider lane requires `XLOOOP_HEADROOM_EVALUATOR_URL`, `XLOOOP_HEADROOM_EVALUATOR_API_KEY`, `XLOOOP_HEADROOM_EVALUATOR_MODEL`, and `XLOOOP_HEADROOM_EVALUATOR_PROVIDER_CLASS=paid|platform_managed`. Credentials and raw endpoint details are excluded from the report. Runtime reports belong in governed evidence storage; human-readable summaries are never accepted as raw runtime authority.
+
+The expanded MarkItDown fixture run also requires `reportlab`, `python-docx`, `python-pptx`, `openpyxl`, and `Pillow` in the disposable capability venv. These are canary fixture generators, not production backend dependencies.
 
 ## Live Evidence Authority Matrix
 

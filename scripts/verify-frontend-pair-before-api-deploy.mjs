@@ -59,8 +59,12 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   SHA_PATTERN,
+  assessReleaseManifest,
+  hashReleaseFiles,
   parseFrontendReleaseArtifact,
   parseFrontendReleaseHtml,
+  parseReactRuntimeManifest,
+  releaseManifestDigest,
 } from './lib/app-pages-release-contract.mjs';
 
 const selfPath = fileURLToPath(import.meta.url);
@@ -148,7 +152,22 @@ async function observeLiveFrontend(url) {
       headers: { 'cache-control': 'no-cache', pragma: 'no-cache' },
     });
     if (!response.ok) throw new Error(`frontend responded HTTP ${response.status}`);
-    return parseFrontendReleaseHtml(await response.text());
+    const html = await response.text();
+    try {
+      return parseFrontendReleaseHtml(html);
+    } catch (legacyError) {
+      const runtimeUrl = new URL('/runtime-manifest.json', target.origin);
+      runtimeUrl.searchParams.set('xlooop_pair_check', target.searchParams.get('xlooop_pair_check'));
+      if (selfTestChild) runtimeUrl.searchParams.set('xlooop_pair_source', target.pathname);
+      const runtimeResponse = await fetch(runtimeUrl, {
+        cache: 'no-store',
+        redirect: 'error',
+        signal: controller.signal,
+        headers: { 'cache-control': 'no-cache', pragma: 'no-cache' },
+      });
+      if (!runtimeResponse.ok) throw legacyError;
+      return parseReactRuntimeManifest(await runtimeResponse.json());
+    }
   } catch (error) {
     if (controller.signal.aborted) throw new Error(`timed out after ${timeoutMs()}ms`);
     throw error;
@@ -177,6 +196,9 @@ function assessPairedFrontendRelease(deployingSha) {
   if (!block || typeof block !== 'object' || Array.isArray(block)) {
     return { ok: false, reason: 'authority packet carries no paired_frontend_release block' };
   }
+  if (process.env.XLOOOP_PAIRED_CUTOVER_INTERNAL !== packet.cutover_id) {
+    return { ok: false, reason: 'paired release is not running inside its cutover orchestrator' };
+  }
   if (typeof block.artifact_dir !== 'string' || block.artifact_dir.trim() === '') {
     return { ok: false, reason: 'paired_frontend_release.artifact_dir is missing' };
   }
@@ -192,10 +214,22 @@ function assessPairedFrontendRelease(deployingSha) {
 
   const artifactDir = path.resolve(root, block.artifact_dir);
   let assembled;
+  let manifest;
   try {
     assembled = parseFrontendReleaseArtifact(artifactDir);
+    manifest = JSON.parse(readFileSync(path.join(artifactDir, 'release-manifest.json'), 'utf8'));
   } catch (error) {
     return { ok: false, reason: `paired release artifact unusable at ${artifactDir}: ${error instanceof Error ? error.message : String(error)}` };
+  }
+  const manifestAssessment = assessReleaseManifest(manifest, hashReleaseFiles(artifactDir));
+  if (!manifestAssessment.ok) {
+    return { ok: false, reason: `paired release manifest failed: ${manifestAssessment.problems.join(',')}` };
+  }
+  if (block.artifact_digest !== manifest.artifact_digest
+    || block.frontend_sha !== manifest.frontend_sha
+    || block.contract_hash !== manifest.contract_hash
+    || block.schema_head !== manifest.schema_head) {
+    return { ok: false, reason: 'paired_frontend_release does not exactly identify its artifact' };
   }
   if (assembled.backend_sha !== deployingSha) {
     return {
@@ -299,13 +333,12 @@ async function main() {
       consequence: 'API leads Pages inside a cutover window; users are stranded until the paired release is published',
     });
     banner([
-      `⚠  PAIRED CUTOVER — app.xlooop.com does NOT yet accept ${deployingSha.slice(0, 12)}`,
+      `PAIRED CUTOVER PREFLIGHT — app.xlooop.com does not yet accept ${deployingSha.slice(0, 12)}`,
       `   live frontend wants : ${live.backend_sha}`,
       `   paired release      : ${paired.artifactDir}`,
       `   paired frontend sha : ${paired.assembled.frontend_sha}`,
       `   receipt             : ${receipt}`,
-      '   Authenticated users are stranded from this deploy until that release is published.',
-      '   SHIP IT IN THE SAME WINDOW.',
+      '   The paired orchestrator must publish and ratify both surfaces or restore the prior pair.',
     ]);
     process.exit(0);
   }
@@ -316,7 +349,7 @@ async function main() {
     `app.xlooop.com wants: ${live.backend_sha}`,
     `live frontend sha   : ${live.frontend_sha}`,
     '',
-    'wired/live-data.js compares these by EXACT equality. Deploying now puts EVERY',
+    'The commercial frontend compares these by EXACT equality. Deploying now puts EVERY',
     'authenticated user on "Workspace unavailable" until the paired Pages release ships.',
     '',
     `paired-release escape not available: ${paired.reason}`,
@@ -352,6 +385,30 @@ function fixtureHtml({ backendSha, frontendSha = 'a'.repeat(40) }) {
   ].join('\n');
 }
 
+function fixtureReactManifest({ backendSha, frontendSha = 'a'.repeat(40) }) {
+  return {
+    schema_id: 'xlooop.frontend_runtime_manifest.v2',
+    runtime_class: 'production',
+    production_cutover_approved: true,
+    require_contract_handshake: true,
+    api_base: 'https://api.xlooop.com',
+    frontend_sha: frontendSha,
+    expected_backend_sha: backendSha,
+    expected_contract_hash: 'c'.repeat(64),
+    expected_schema_head: 100,
+    expected_environment: 'production',
+    expected_authority: 'production',
+    expected_feature_posture: {
+      single_intake: true,
+      role_skill_catalog: true,
+      context_packet_persistence: true,
+      chat_history_persistence_required: true,
+      tenant_projection_queue: false,
+      current_work_projection: true,
+    },
+  };
+}
+
 /**
  * Runs the gate as a real child process and resolves its REAL exit code.
  *
@@ -385,10 +442,20 @@ async function runSelfTest() {
   const otherSha = 'b'.repeat(40);
 
   const server = createServer((req, res) => {
-    const route = new URL(req.url, 'http://127.0.0.1').pathname;
+    const requestUrl = new URL(req.url, 'http://127.0.0.1');
+    const route = requestUrl.pathname;
     if (route === '/hang') return; // never responds — exercises the timeout path
+    if (route === '/runtime-manifest.json') {
+      if (requestUrl.searchParams.get('xlooop_pair_source') === '/react-match') {
+        res.writeHead(200, { 'content-type': 'application/json' });
+        return res.end(JSON.stringify(fixtureReactManifest({ backendSha: head })));
+      }
+      res.writeHead(404, { 'content-type': 'application/json' });
+      return res.end('{}');
+    }
     res.writeHead(route === '/notfound' ? 404 : 200, { 'content-type': 'text/html' });
     if (route === '/match') return res.end(fixtureHtml({ backendSha: head }));
+    if (route === '/react-match') return res.end('<!doctype html><div id="root"></div>');
     if (route === '/mismatch') return res.end(fixtureHtml({ backendSha: otherSha }));
     return res.end('<!doctype html><html><body>no xlooop markers here</body></html>');
   });
@@ -397,18 +464,46 @@ async function runSelfTest() {
 
   // A paired release that is genuinely compiled against the sha being deployed.
   const goodDir = mkdtempSync(path.join(tmpdir(), 'xlooop-paired-good-'));
-  writeFileSync(path.join(goodDir, 'index.html'), fixtureHtml({ backendSha: head }));
-  const goodPacket = path.join(goodDir, 'packet.json');
+  writeFileSync(path.join(goodDir, 'index.html'), '<div id="root"></div>');
+  writeFileSync(
+    path.join(goodDir, 'runtime-manifest.json'),
+    `${JSON.stringify(fixtureReactManifest({ backendSha: head }))}\n`,
+  );
+  const goodManifest = {
+    schema_id: 'xlooop.app_pages_release_manifest.v1', artifact_contract: 'react_vite_v2',
+    frontend_sha: 'a'.repeat(40), backend_sha: head, contract_hash: 'c'.repeat(64),
+    schema_head: 91, environment: 'production', authority: 'production',
+    api_base: 'https://api.xlooop.com',
+    feature_posture: fixtureReactManifest({ backendSha: head }).expected_feature_posture,
+    files: hashReleaseFiles(goodDir),
+  };
+  goodManifest.artifact_digest = releaseManifestDigest(goodManifest);
+  writeFileSync(path.join(goodDir, 'release-manifest.json'), `${JSON.stringify(goodManifest)}\n`);
+  const cutoverId = '11111111-2222-4333-8444-555555555555';
+  const goodPacket = path.join(tmpdir(), `xlooop-paired-good-packet-${process.pid}.json`);
   writeFileSync(goodPacket, JSON.stringify({
-    paired_frontend_release: { artifact_dir: goodDir, backend_sha: head },
+    cutover_id: cutoverId,
+    paired_frontend_release: {
+      artifact_dir: goodDir, artifact_digest: goodManifest.artifact_digest,
+      artifact_contract: goodManifest.artifact_contract, frontend_sha: goodManifest.frontend_sha,
+      backend_sha: head, contract_hash: goodManifest.contract_hash, schema_head: goodManifest.schema_head,
+    },
   }));
 
   // A packet that CLAIMS the pairing while the artifact on disk says otherwise.
   const lyingDir = mkdtempSync(path.join(tmpdir(), 'xlooop-paired-lying-'));
   writeFileSync(path.join(lyingDir, 'index.html'), fixtureHtml({ backendSha: otherSha }));
-  const lyingPacket = path.join(lyingDir, 'packet.json');
+  const lyingManifest = { ...goodManifest, artifact_contract: 'legacy_wired_v1', backend_sha: otherSha, files: hashReleaseFiles(lyingDir) };
+  lyingManifest.artifact_digest = releaseManifestDigest(lyingManifest);
+  writeFileSync(path.join(lyingDir, 'release-manifest.json'), `${JSON.stringify(lyingManifest)}\n`);
+  const lyingPacket = path.join(tmpdir(), `xlooop-paired-lying-packet-${process.pid}.json`);
   writeFileSync(lyingPacket, JSON.stringify({
-    paired_frontend_release: { artifact_dir: lyingDir, backend_sha: head },
+    cutover_id: cutoverId,
+    paired_frontend_release: {
+      artifact_dir: lyingDir, artifact_digest: lyingManifest.artifact_digest,
+      artifact_contract: lyingManifest.artifact_contract, frontend_sha: lyingManifest.frontend_sha,
+      backend_sha: head, contract_hash: lyingManifest.contract_hash, schema_head: lyingManifest.schema_head,
+    },
   }));
 
   // Every control asserts the exit code AND the reason. Exit code alone is not enough: a
@@ -417,6 +512,8 @@ async function runSelfTest() {
   const cases = [
     ['matching pair passes',
       { XLOOOP_FRONTEND_PAIR_URL: `${base}/match` }, 'zero', /PASS · live app\.xlooop\.com already expects/],
+    ['matching React runtime manifest passes',
+      { XLOOOP_FRONTEND_PAIR_URL: `${base}/react-match` }, 'zero', /PASS · live app\.xlooop\.com already expects/],
     ['mismatched backend sha is REFUSED',
       { XLOOOP_FRONTEND_PAIR_URL: `${base}/mismatch` }, 'nonzero', /does not accept the sha you are about to deploy/],
     ['unreachable frontend is REFUSED',
@@ -428,11 +525,13 @@ async function runSelfTest() {
     ['timeout is REFUSED',
       { XLOOOP_FRONTEND_PAIR_URL: `${base}/hang`, XLOOOP_FRONTEND_PAIR_TIMEOUT_MS: '800' }, 'nonzero', /timed out after 800ms/],
     ['paired release on disk rescues a mismatch',
-      { XLOOOP_FRONTEND_PAIR_URL: `${base}/mismatch`, XLOOOP_AUTHORITY_DECISION_PACKET: goodPacket },
+      { XLOOOP_FRONTEND_PAIR_URL: `${base}/mismatch`, XLOOOP_AUTHORITY_DECISION_PACKET: goodPacket,
+        XLOOOP_PAIRED_CUTOVER_INTERNAL: cutoverId },
       'zero', /PAIRED CUTOVER/],
     ['packet claiming a pairing its artifact contradicts is REFUSED',
-      { XLOOOP_FRONTEND_PAIR_URL: `${base}/mismatch`, XLOOOP_AUTHORITY_DECISION_PACKET: lyingPacket },
-      'nonzero', /is compiled against/],
+      { XLOOOP_FRONTEND_PAIR_URL: `${base}/mismatch`, XLOOOP_AUTHORITY_DECISION_PACKET: lyingPacket,
+        XLOOOP_PAIRED_CUTOVER_INTERNAL: cutoverId },
+      'nonzero', /does not exactly identify|is compiled against/],
     ['override with a reason passes and is recorded', {
       XLOOOP_FRONTEND_PAIR_URL: `${base}/mismatch`,
       XLOOOP_FRONTEND_PAIR_OVERRIDE: '1',

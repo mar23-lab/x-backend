@@ -25,7 +25,7 @@ no raw MB-P content · no "role/skill invocation is operational" claim.
 |---|---|---|
 | R5 — "W2 uses a bundled agent-roles.yml manifest at runtime" | **REFUTED** | v0 binding source = `ROLE_SKILL_V0_FLOOR = Object.freeze([])` (lib/role-skill-resolver.ts); zero runtime reads of agent-roles.yml in `src/workers/` (grep); the yml is consumed only by build-time gates. Consequence: "bundled-vs-catalog parity" is a pure kernel fixture test, not a runtime comparison. |
 | Receipt provenance gap (no source / deploy SHA / manifest hash) | **CONFIRMED → CLOSED** | 070 amended pre-apply (it was applied nowhere): `resolver_source` (`'v0-floor'|'catalog'|'mixed'`, NOT NULL), `deploy_sha` (nullable, from `XLOOOP_DEPLOY_SHA`), `catalog_manifest_sha256` (nullable, sha256 CHECK). Store + signing payload carry them; shadow derives them from the `BindingSource` seam. |
-| R3 — RLS may be bypassed by the owner connection | **CONFIRMED architecturally · LATENT operationally · now PROVEN at the DB layer** | See §4. Owner connection IS bypass (by design, migration 037's own header); zero read paths exist on the evidence tables; 100% of evidence reads repo-wide carry explicit `WHERE workspace_id`. The live probe (§4) proves the RLS second layer bites for a non-bypass role. |
+| R3 — RLS may be bypassed by the owner connection | **CONFIRMED architecturally · LATENT operationally · now PROVEN at the DB layer** | See §4. Owner connection IS bypass (by design, `db/operations/rls_app_role_grants.sql`); zero read paths exist on the evidence tables; 100% of evidence reads repo-wide carry explicit `WHERE workspace_id`. The live probe (§4) proves the RLS second layer bites for a non-bypass role. |
 | R4 — `waitUntil` receipt loss could be silent | **CONFIRMED → CLOSED for shadow** | `role_skill_receipt_write_failed` ObservabilityKind now emitted on any receipt-write rejection (safe fields only; test A5). Enforce-mode durable write/outbox remains a named precondition of any future enforce flip — NOT built in this wave, by design. |
 | R2 — Neon validation missing | **CLOSED** | §3. |
 
@@ -48,7 +48,7 @@ no raw MB-P content · no "role/skill invocation is operational" claim.
 
 **Connection topology (source-verified):** the Worker builds `sql = neonClient(DATABASE_URL)` (OWNER) and
 `rlsSql = XLOOOP_RLS_APP_DATABASE_URL ? neonClient(that) : sql` (index.ts request + cron paths). The owner
-BYPASSES RLS — stated verbatim in migration 037's header; the app-level `WHERE workspace_id` discipline is
+BYPASSES RLS — stated verbatim in `db/operations/rls_app_role_grants.sql`; the app-level `WHERE workspace_id` discipline is
 the load-bearing boundary today (verified: 100% of evidence reads carry it). The 070 shadow WRITES are
 owner-plane by design. RLS on the evidence tables is defense-in-depth that can now actually bite because
 070 grants `xlooop_app` SELECT (045/046/047 precedent).

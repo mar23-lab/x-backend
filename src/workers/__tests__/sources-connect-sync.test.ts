@@ -10,7 +10,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Controllable OAuth adapter: 'ok' returns a token snapshot; 'fail' throws a coded error.
-const oauthState: { mode: 'ok' | 'fail'; failCode?: string } = { mode: 'ok' };
+const oauthState: { mode: 'ok' | 'fail'; failCode?: string; scopes: string[] } = { mode: 'ok', scopes: ['repo'] };
 const translatorState: { translator: null | ((input: any) => Promise<any>); lastInput: any | null } = { translator: null, lastInput: null };
 vi.mock('../dal/clerk-oauth-adapter', () => ({
   makeClerkOAuthAdapter: () => ({
@@ -20,7 +20,7 @@ vi.mock('../dal/clerk-oauth-adapter', () => ({
         e.code = oauthState.failCode || 'OAUTH_CLERK_API_ERROR';
         throw e;
       }
-      return { external_account_id: 'eacc_1', label: 'octocat', scopes: ['repo'], token: 't_x' };
+      return { external_account_id: 'eacc_1', label: 'octocat', scopes: oauthState.scopes, token: 't_x' };
     },
   }),
 }));
@@ -77,6 +77,7 @@ function appFor(auth: Record<string, unknown>, dal: Record<string, unknown>) {
 beforeEach(() => {
   oauthState.mode = 'ok';
   oauthState.failCode = undefined;
+  oauthState.scopes = ['repo'];
   translatorState.translator = null;
   translatorState.lastInput = null;
 });
@@ -361,5 +362,30 @@ describe('POST /sources/connect/gmail · restricted-scope guard', () => {
     const app = appFor({ user_id: 'u1', workspace_id: 'org_acme' }, { getCustomerAuthorityState: async () => UNLOCKED, upsertUserSource });
     const res = await app.request('/api/v1/sources/connect/github', { method: 'POST' }, { ...ENV, SOURCE_SCOPE_ENFORCEMENT_ENABLED: 'true' } as never);
     expect(res.status).toBe(201);
+  });
+
+  it('flag ON + Google identity-only scopes cannot materialize a Drive connector', async () => {
+    const upsertUserSource = vi.fn(async () => connectReceipt(sourceRow({ provider: 'google_drive' })));
+    const app = appFor({ user_id: 'u1', workspace_id: 'org_acme' }, { getCustomerAuthorityState: async () => UNLOCKED, upsertUserSource });
+    const res = await app.request('/api/v1/sources/connect/google_drive', { method: 'POST' }, { ...ENV, SOURCE_SCOPE_ENFORCEMENT_ENABLED: 'true' } as never);
+    expect(res.status).toBe(422);
+    const json = (await res.json()) as Record<string, any>;
+    expect(json.code).toBe('SOURCE_SCOPE_MISSING');
+    expect(upsertUserSource).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['gmail', 'https://www.googleapis.com/auth/gmail.readonly'],
+    ['google_drive', 'https://www.googleapis.com/auth/drive.metadata.readonly'],
+  ])('flag ON + exact connect-time scope materializes %s with an audit receipt', async (provider, scope) => {
+    oauthState.scopes = ['openid', 'profile', 'email', scope];
+    const upsertUserSource = vi.fn(async () => connectReceipt(sourceRow({ provider })));
+    const app = appFor({ user_id: 'u1', workspace_id: 'org_acme' }, { getCustomerAuthorityState: async () => UNLOCKED, upsertUserSource });
+    const res = await app.request(`/api/v1/sources/connect/${provider}`, { method: 'POST' }, { ...ENV, SOURCE_SCOPE_ENFORCEMENT_ENABLED: 'true' } as never);
+    expect(res.status).toBe(201);
+    const json = (await res.json()) as Record<string, any>;
+    expect(json.source_connection_receipt_id).toBe('source-connect:src_1:audit_source_connect');
+    expect(json.audit_event_id).toBe('audit_source_connect');
+    expect(upsertUserSource.mock.calls[0][0].scopes).toContain(scope);
   });
 });

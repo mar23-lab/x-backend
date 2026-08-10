@@ -1,0 +1,27 @@
+{
+  "schema_id": "xlooop.headroom_semantic_benchmark_corpus.v1",
+  "purpose": "Redaction-safe representative contexts for measuring whether Headroom compression preserves decision and citation semantics for Xlooop workflows.",
+  "variants_per_scenario": 4,
+  "acceptance_gates": {
+    "case_count_min": 40,
+    "token_reduction_pct_min": 25,
+    "task_correctness_pct_min": 95,
+    "answer_equivalence_pct_min": 95,
+    "citation_coverage_pct_min": 95,
+    "redaction_invariant_pct": 100,
+    "sensitive_leakage_count": 0,
+    "replayability_pct": 100
+  },
+  "scenarios": [
+    { "id": "packet-approval", "source_type": "task_packet", "decision": "APPROVE", "owner": "delivery-lead", "due_date": "2026-08-18", "adversarial": false },
+    { "id": "evidence-hold", "source_type": "evidence_bundle", "decision": "HOLD", "owner": "risk-officer", "due_date": "2026-08-19", "adversarial": false },
+    { "id": "connector-escalation", "source_type": "source_connector", "decision": "ESCALATE", "owner": "integration-owner", "due_date": "2026-08-20", "adversarial": true },
+    { "id": "tool-log-reject", "source_type": "tool_log", "decision": "REJECT", "owner": "devsecops", "due_date": "2026-08-21", "adversarial": true },
+    { "id": "audit-approval", "source_type": "audit_receipt", "decision": "APPROVE", "owner": "compliance-owner", "due_date": "2026-08-22", "adversarial": false },
+    { "id": "tenant-hold", "source_type": "tenant_boundary", "decision": "HOLD", "owner": "tenant-admin", "due_date": "2026-08-23", "adversarial": true },
+    { "id": "runtime-escalation", "source_type": "runtime_receipt", "decision": "ESCALATE", "owner": "runtime-owner", "due_date": "2026-08-24", "adversarial": false },
+    { "id": "delete-reject", "source_type": "delete_export_receipt", "decision": "REJECT", "owner": "data-protection-owner", "due_date": "2026-08-25", "adversarial": true },
+    { "id": "profile-approval", "source_type": "effective_profile", "decision": "APPROVE", "owner": "company-admin", "due_date": "2026-08-26", "adversarial": false },
+    { "id": "graph-hold", "source_type": "graph_suggestion", "decision": "HOLD", "owner": "knowledge-architect", "due_date": "2026-08-27", "adversarial": true }
+  ]
+}

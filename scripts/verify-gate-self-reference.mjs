@@ -497,7 +497,8 @@ if (selfTest) {
     console.error(`  SELF-TEST FAIL — ${problems.length} case(s) wrong; this meta-gate is a false-green.\n`);
     process.exit(1);
   }
-  console.log(`  SELF-TEST PASS — ${rows.length}/${rows.length}, including an OBSERVED exit 1 on an injected mutant and an OBSERVED exit 2 on a missing corpus.\n`);
+  const passed = rows.length - problems.length;
+  console.log(`  SELF-TEST PASS — ${passed}/${rows.length}, including an OBSERVED exit 1 on an injected mutant and an OBSERVED exit 2 on a missing corpus.\n`);
   process.exit(0);
 }
 

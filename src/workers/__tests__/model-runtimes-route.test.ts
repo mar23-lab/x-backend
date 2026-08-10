@@ -1,14 +1,16 @@
 // model-runtimes-route.test.ts · Wave C · the /api/v1/model-runtimes route contract. Injects auth + a fake
-// dal.modelRuntimes facade + a real MODEL_RUNTIME_ENC_KEY, and asserts: masked reads (no ciphertext/plaintext
+// dal.modelRuntimes facade + real encryption material, and asserts: masked reads (no ciphertext/plaintext
 // ever in a response), owner/operator write-gating (viewer/client 403), provider + credential validation
 // (400/422/503), the audited default flip path, and the self-scoped override. Uses the REAL crypto lib so
 // the encrypt-on-write path is exercised end-to-end.
 
-import { describe, it, expect, vi } from 'vitest';
+import { afterEach, describe, it, expect, vi } from 'vitest';
 import { Hono } from 'hono';
 import { modelRuntimesRoute } from '../routes/model-runtimes';
+import { credentialEnvelopeKeyId, decryptCredential, encryptCredential } from '../lib/model-runtime-crypto';
 
 const KEY = btoa(String.fromCharCode(...Array.from({ length: 32 }, (_, i) => (i * 7 + 3) & 0xff)));
+const KEY_2 = btoa(String.fromCharCode(...Array.from({ length: 32 }, (_, i) => (i * 11 + 5) & 0xff)));
 const RAW_API_KEY = 'sk-ant-FIXTURE-PLAINTEXT-not-a-real-key-wxyz'; // fixture — synthetic, not a real Anthropic key
 
 const maskedRow = (over: Record<string, any> = {}) => ({
@@ -35,14 +37,23 @@ const deleteReceipt = (over: Record<string, any> = {}) => ({
 
 function makeDal(over: Record<string, any> = {}) {
   return {
+    appendAuditLog: vi.fn(async () => undefined),
     modelRuntimes: {
       listProviders: vi.fn(async () => [] as any[]),
       getOverride: vi.fn(async () => null),
       getProviderCredential: vi.fn(async () => null),
       upsertProvider: vi.fn(async () => providerReceipt()),
+      rotateProviderCredential: vi.fn(async () => ({
+        provider: 'anthropic',
+        provider_config_id: 'mrp_1',
+        provider_config_version_id: 'model-runtime-provider:mrp_1:2026-08-09T00:00:00Z',
+        credential_rotation_receipt_id: 'model-runtime-credential-rotation:mrp_1:audit_rotate_1',
+        audit_event_id: 'audit_rotate_1',
+      })),
       deleteProvider: vi.fn(async () => deleteReceipt()),
       setDefaultProvider: vi.fn(async () => defaultReceipt()),
       setOverride: vi.fn(async (_u: string, _w: string, id: string) => id),
+      clearOverride: vi.fn(async () => undefined),
       ...over,
     },
   };
@@ -59,9 +70,14 @@ function appFor(dal: any, auth: { user_id: string; workspace_id: string; role: s
   app.route('/api/v1', modelRuntimesRoute);
   return app;
 }
-const ENV = { MODEL_RUNTIME_ENC_KEY: KEY } as never;
+const ENV = {
+  MODEL_RUNTIME_ENC_KEYS: JSON.stringify({ 'tenant-v1': KEY }),
+  MODEL_RUNTIME_ACTIVE_KEY_ID: 'tenant-v1',
+} as never;
 const call = (app: Hono, path: string, method: string, body?: unknown) =>
   app.request('/api/v1' + path, { method, body: body === undefined ? undefined : JSON.stringify(body), headers: { 'content-type': 'application/json' } }, ENV);
+
+afterEach(() => vi.restoreAllMocks());
 
 describe('GET /model-runtimes/providers', () => {
   it('200 — returns the 13-provider masked catalog + default + override; NEVER any ciphertext/plaintext', async () => {
@@ -100,6 +116,88 @@ describe('GET /model-runtimes/providers', () => {
   it('401 — no auth', async () => {
     const res = await call(appFor(makeDal(), { user_id: '', workspace_id: 'org_a', role: 'operator' }), '/model-runtimes/providers', 'GET');
     expect(res.status).toBe(401);
+  });
+});
+
+describe('effective runtime + live provider operations', () => {
+  it('GET effective reports the runtime customer chat will actually use', async () => {
+    const res = await appFor(makeDal()).request('/api/v1/model-runtimes/effective', { method: 'GET' }, {
+      MODEL_RUNTIME_ENC_KEY: KEY,
+      AI: { run: async () => ({ response: 'live' }) },
+    } as never);
+    expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({
+      effective: { runtime_id: 'platform:workers_ai', provider: 'workers_ai', source: 'platform_default' },
+      fallback_count: 0,
+    });
+  });
+
+  it('GET models uses the stored tenant credential and never returns it', async () => {
+    const sealed = await encryptCredential(KEY, JSON.stringify({ api_key: RAW_API_KEY }));
+    const fetchSpy = vi.fn(async (_url: string, init: RequestInit) => {
+      expect((init.headers as Record<string, string>)['x-api-key']).toBe(RAW_API_KEY);
+      return new Response(JSON.stringify({ data: [{ id: 'claude-live' }, { id: 'claude-other' }] }), { status: 200 });
+    });
+    vi.stubGlobal('fetch', fetchSpy);
+    const dal = makeDal({
+      listProviders: vi.fn(async () => [maskedRow({ model: 'claude-live' })]),
+      getProviderCredential: vi.fn(async () => sealed),
+    });
+    const res = await call(appFor(dal), '/model-runtimes/providers/anthropic/models', 'GET');
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body).toMatchObject({
+      provider: 'anthropic',
+      models: expect.arrayContaining(['claude-live', 'claude-other']),
+    });
+    expect(dal.modelRuntimes.getProviderCredential).toHaveBeenCalledWith('org_a', 'anthropic');
+    expect(JSON.stringify(body)).not.toContain(RAW_API_KEY);
+  });
+
+  it('GET models returns typed relay-required for a customer-side runtime', async () => {
+    const dal = makeDal({
+      listProviders: vi.fn(async () => [maskedRow({ provider: 'ollama', model: 'llama-live', base_url: 'http://localhost:11434' })]),
+    });
+    const res = await call(appFor(dal), '/model-runtimes/providers/ollama/models', 'GET');
+    expect(res.status).toBe(503);
+    expect(await res.json()).toMatchObject({ code: 'RELAY_REQUIRED' });
+  });
+
+  it('POST validate uses the stored tenant credential and returns a redacted audit receipt', async () => {
+    const sealed = await encryptCredential(KEY, JSON.stringify({ api_key: RAW_API_KEY }));
+    vi.stubGlobal('fetch', vi.fn(async (_url: string, init: RequestInit) => {
+      expect((init.headers as Record<string, string>)['x-api-key']).toBe(RAW_API_KEY);
+      return new Response(JSON.stringify({
+      content: [{ type: 'text', text: 'Xlooop runtime ready.' }],
+      usage: { input_tokens: 9, output_tokens: 4 },
+      }), { status: 200, headers: { 'content-type': 'application/json' } });
+    }));
+    const dal = makeDal({
+      listProviders: vi.fn(async () => [maskedRow({ model: 'claude-live' })]),
+      getProviderCredential: vi.fn(async () => sealed),
+    });
+    const res = await appFor(dal).request('/api/v1/model-runtimes/providers/anthropic/validate', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: '{}',
+    }, { MODEL_RUNTIME_ENC_KEY: KEY, ANTHROPIC_API_KEY: 'platform-key' } as never);
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body).toMatchObject({
+      ok: true,
+      audit_recorded: true,
+      provider: 'anthropic',
+      model: 'claude-live',
+      usage: { tokens_in: 9, tokens_out: 4 },
+    });
+    expect(body.validation_receipt_id).toMatch(/^mrv_/);
+    expect(dal.appendAuditLog).toHaveBeenCalledWith(expect.objectContaining({
+      action: 'model_runtime_validate',
+      target_type: 'model_runtime_provider',
+      workspace_id: 'org_a',
+    }));
+    expect(dal.modelRuntimes.getProviderCredential).toHaveBeenCalledWith('org_a', 'anthropic');
+    expect(JSON.stringify(body)).not.toContain(RAW_API_KEY);
   });
 });
 
@@ -153,6 +251,14 @@ describe('PUT /model-runtimes/providers/:provider — encrypt-on-write', () => {
     expect(res.status).toBe(422);
   });
 
+  it('422 — a cloud provider cannot configure an arbitrary base_url', async () => {
+    const res = await call(appFor(makeDal()), '/model-runtimes/providers/anthropic', 'PUT', {
+      base_url: 'http://127.0.0.1:8787', credential: { api_key: RAW_API_KEY },
+    });
+    expect(res.status).toBe(422);
+    expect(await res.json()).toMatchObject({ code: 'UNPROCESSABLE' });
+  });
+
   it('422 — a cloud provider created with no credential is rejected', async () => {
     const dal = makeDal({ getProviderCredential: vi.fn(async () => null) }); // no existing key
     const res = await call(appFor(dal), '/model-runtimes/providers/openai', 'PUT', { model: 'gpt-x' });
@@ -166,7 +272,7 @@ describe('PUT /model-runtimes/providers/:provider — encrypt-on-write', () => {
     expect((await res.json()).provider.masked_key).toBeNull();
   });
 
-  it('503 — a credential write is refused when MODEL_RUNTIME_ENC_KEY is unset (never stores plaintext)', async () => {
+  it('503 — a credential write is refused when the versioned keyring is unset (never stores plaintext)', async () => {
     const dal = makeDal();
     const app = appFor(dal);
     const res = await app.request('/api/v1/model-runtimes/providers/anthropic', {
@@ -174,6 +280,69 @@ describe('PUT /model-runtimes/providers/:provider — encrypt-on-write', () => {
     }, {} as never); // env WITHOUT the key
     expect(res.status).toBe(503);
     expect(dal.modelRuntimes.upsertProvider).not.toHaveBeenCalled();
+  });
+});
+
+describe('POST /model-runtimes/providers/:provider/rotate-credential', () => {
+  it('re-encrypts a tenant credential under the active key and returns only audited metadata', async () => {
+    const oldConfig = { active_key_id: 'tenant-v1', keys: { 'tenant-v1': KEY } };
+    const rotationConfig = { active_key_id: 'tenant-v2', keys: { 'tenant-v1': KEY, 'tenant-v2': KEY_2 } };
+    const oldSealed = await encryptCredential(oldConfig, JSON.stringify({ api_key: RAW_API_KEY }));
+    const dal = makeDal({ getProviderCredential: vi.fn(async () => oldSealed) });
+    const response = await appFor(dal).request(
+      '/api/v1/model-runtimes/providers/anthropic/rotate-credential',
+      { method: 'POST' },
+      {
+        MODEL_RUNTIME_ENC_KEYS: JSON.stringify(rotationConfig.keys),
+        MODEL_RUNTIME_ACTIVE_KEY_ID: rotationConfig.active_key_id,
+      } as never,
+    );
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body).toMatchObject({
+      ok: true,
+      provider: 'anthropic',
+      from_key_id: 'tenant-v1',
+      to_key_id: 'tenant-v2',
+      credential_rotation_receipt_id: 'model-runtime-credential-rotation:mrp_1:audit_rotate_1',
+      audit_event_id: 'audit_rotate_1',
+    });
+    const rotated = dal.modelRuntimes.rotateProviderCredential.mock.calls[0][2];
+    expect(credentialEnvelopeKeyId(rotated)).toBe('tenant-v2');
+    expect(await decryptCredential(rotationConfig, rotated, { tenant_id: 'org_a', purpose: 'anthropic' }))
+      .toBe(JSON.stringify({ api_key: RAW_API_KEY }));
+    expect(JSON.stringify(body)).not.toContain(RAW_API_KEY);
+    expect(JSON.stringify(body)).not.toContain(rotated.ciphertext);
+  });
+
+  it('returns 409 and performs no write when the credential already uses the active key', async () => {
+    const config = { active_key_id: 'tenant-v2', keys: { 'tenant-v2': KEY_2 } };
+    const sealed = await encryptCredential(
+      config,
+      JSON.stringify({ api_key: RAW_API_KEY }),
+      { tenant_id: 'org_a', purpose: 'anthropic' },
+    );
+    const dal = makeDal({ getProviderCredential: vi.fn(async () => sealed) });
+    const response = await appFor(dal).request(
+      '/api/v1/model-runtimes/providers/anthropic/rotate-credential',
+      { method: 'POST' },
+      { MODEL_RUNTIME_ENC_KEYS: JSON.stringify(config.keys), MODEL_RUNTIME_ACTIVE_KEY_ID: config.active_key_id } as never,
+    );
+    expect(response.status).toBe(409);
+    expect(await response.json()).toMatchObject({ code: 'CREDENTIAL_ALREADY_ACTIVE' });
+    expect(dal.modelRuntimes.rotateProviderCredential).not.toHaveBeenCalled();
+  });
+
+  it('fails closed when only the legacy single encryption key is configured', async () => {
+    const dal = makeDal({ getProviderCredential: vi.fn(async () => null) });
+    const response = await appFor(dal).request(
+      '/api/v1/model-runtimes/providers/anthropic/rotate-credential',
+      { method: 'POST' },
+      { MODEL_RUNTIME_ENC_KEY: KEY } as never,
+    );
+    expect(response.status).toBe(503);
+    expect(await response.json()).toMatchObject({ code: 'SERVICE_UNAVAILABLE' });
+    expect(dal.modelRuntimes.getProviderCredential).not.toHaveBeenCalled();
   });
 });
 
@@ -244,5 +413,13 @@ describe('DELETE + override', () => {
   it('PUT override — a client cannot set an override', async () => {
     const res = await call(appFor(makeDal(), { user_id: 'c', workspace_id: 'org_a', role: 'client' }), '/model-runtimes/override', 'PUT', { provider_id: 'mrp_1' });
     expect(res.status).toBe(403);
+  });
+
+  it('PUT override clearOverride returns the caller to the workspace default', async () => {
+    const dal = makeDal();
+    const res = await call(appFor(dal), '/model-runtimes/override', 'PUT', { clear_override: true });
+    expect(res.status).toBe(200);
+    expect(dal.modelRuntimes.clearOverride).toHaveBeenCalledWith('u1', 'org_a');
+    expect(await res.json()).toMatchObject({ session_override: null, effective_source: 'workspace_default' });
   });
 });

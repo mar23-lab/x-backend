@@ -158,7 +158,8 @@ function selfTest() {
     for (const [name] of failed) console.error(`  - ${name}`);
     process.exit(1);
   }
-  console.log(`PASS schema93-invariants:self-test: ${cases.length}/${cases.length} cases, ${INVARIANTS.length} invariants declared`);
+  const passed = cases.length - failed.length;
+  console.log(`PASS schema93-invariants:self-test: ${passed}/${cases.length} cases, ${INVARIANTS.length} invariants declared`);
 }
 
 async function main() {

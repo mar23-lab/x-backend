@@ -6,7 +6,7 @@
 -- let a user override the provider for their own session. Cloudflare Workers have NO per-tenant secret
 -- vault, so a customer's provider credential is encrypted-at-rest here (AES-256-GCM; see
 -- src/workers/lib/model-runtime-crypto.ts). This table stores ONLY the ciphertext + iv + last4 — never the
--- plaintext key, never the master key (that is a worker secret, MODEL_RUNTIME_ENC_KEY).
+-- plaintext key, data key, or platform KEK (the versioned KEK keyring is a worker secret).
 --
 -- Idempotent + version-guarded (copies the 052 DO-block form). Additive only. Prod apply is
 -- OPERATOR-NAMED and manual (one migration at a time, read-verify before + after) — NEVER auto-applied
@@ -35,10 +35,10 @@ BEGIN
       credential_ciphertext TEXT,                                    -- base64(AES-256-GCM ct+tag); NULL for keyless-local
       credential_iv         TEXT,                                    -- base64(12-byte iv); NULL iff ciphertext NULL
       credential_last4      TEXT,                                    -- masked-display tail; NULL iff no credential
-      enc_version           SMALLINT    NOT NULL DEFAULT 1,          -- RESERVED for a future key-rotation impl
-                                                                     -- (NOT wired yet — rotating the master key
-                                                                     -- today orphans existing ciphertext; see
-                                                                     -- MODEL_RUNTIMES_ACTIVATION.md § Key rotation)
+      enc_version           SMALLINT    NOT NULL DEFAULT 1,          -- legacy column retained for compatibility;
+                                                                     -- current xcp2 key/envelope version is carried
+                                                                     -- inside credential_ciphertext and rotated with
+                                                                     -- an audited per-provider workflow
       enabled               BOOLEAN     NOT NULL DEFAULT true,
       is_default            BOOLEAN     NOT NULL DEFAULT false,
       created_by            TEXT        NOT NULL,

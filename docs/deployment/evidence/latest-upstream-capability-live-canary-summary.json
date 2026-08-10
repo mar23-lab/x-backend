@@ -1,18 +1,24 @@
 {
   "schema_id": "xlooop.external_capability_live_canary_summary.v1",
-  "source_report": "/private/tmp/xlooop-external-capability-live-upstream-results-all-after-aggregate-fix.json",
+  "authority": "human_readable_summary_only",
+  "source_report": "/private/tmp/xlooop-external-capability-live-upstream-results-20260809.json",
+  "source_report_sha256": "b73703b8f90f1569e186bfea95fdbf3c226708dd8ed18aae48c20eabf66edfd7",
   "source_report_schema_id": "xlooop.external_capability_runtime_results.v1",
+  "headroom_semantic_report": "/private/tmp/xlooop-headroom-semantic-canary-20260809.json",
+  "headroom_semantic_report_sha256": "2e874e494da5aa59a595509afe8f459befbdeae6ada061c5f51bad642d069e3c",
   "evidence_kind": "live_upstream_sandbox_canary",
-  "generated_at": "2026-06-22T06:30:49.267Z",
+  "generated_at": "2026-08-09T12:54:02.442Z",
+  "operator_timezone": "Australia/Melbourne",
   "sandbox_python": "/tmp/xlooop-upstream-capability-venv/bin/python",
   "sandbox_markitdown_cli": "/tmp/xlooop-upstream-capability-venv/bin/markitdown",
-  "aggregate_status": "FAIL",
+  "aggregate_status": "PASS",
   "upstream_tool_execution": true,
   "default_adoption_recommendation": "NO",
-  "opt_in_canary_recommendation": "NO",
+  "opt_in_canary_recommendation": "YES_FOR_REVIEW_ONLY",
   "capability_results": [
     {
       "capability": "markitdown",
+      "distribution_version": "0.1.6",
       "execution_mode": "upstream_markitdown_cli_sandbox_canary",
       "upstream_tool_execution": true,
       "default_adoption_allowed": false,
@@ -25,10 +31,10 @@
       "citation_source_span_coverage_pct": 100,
       "redaction_invariant_pct": 100,
       "sensitive_leakage_count": 0,
-      "p95_small_doc_conversion_ms": 496.79,
+      "p95_small_doc_conversion_ms": 22365.25,
       "replayability_pct": 100,
       "license_security_sbom_status": "PASS",
-      "residual": "MarkItDown 0.1.6 from microsoft/markitdown runs in the Python 3.13 sandbox as opt-in review-only; binary Office/PDF/image/audio coverage and strict default gates are still required before default adoption."
+      "residual": "Keep opt-in: only 9/16 target classes executed and p95 latency exceeded the 3000ms gate."
     },
     {
       "capability": "hyper_extract",
@@ -38,7 +44,6 @@
       "opt_in_canary_allowed": true,
       "decision": "native_rebuild_preferred_not_external_graph_authority",
       "case_count": 17,
-      "extraction_fidelity_pct": 97,
       "typed_extraction_fidelity_pct": 97,
       "citation_source_span_coverage_pct": 100,
       "redaction_invariant_pct": 100,
@@ -47,54 +52,37 @@
       "direct_upstream_mcp_exposure_count": 0,
       "replayability_pct": 100,
       "license_security_sbom_status": "PASS",
-      "residual": "Upstream graph/MCP/export/search/talk surfaces are intentionally not executed or exposed; only native typed GraphSuggestion posture is allowed."
+      "residual": "Final posture is native typed extraction and GraphSuggestion only; upstream graph/MCP/export/search/talk authority stays forbidden."
     },
     {
       "capability": "headroom",
+      "distribution_version": "0.34.0",
       "execution_mode": "upstream_headroom_library_sandbox_canary",
       "upstream_tool_execution": true,
       "default_adoption_allowed": false,
-      "opt_in_canary_allowed": false,
-      "decision": "live_upstream_canary_failed_not_default",
-      "case_count": 8,
-      "extraction_fidelity_pct": 0,
-      "citation_source_span_coverage_pct": 0,
-      "redaction_invariant_pct": 0,
+      "opt_in_canary_allowed": true,
+      "decision": "local_semantic_canary_passed_paid_or_platform_provider_canary_still_required",
+      "structural_case_count": 8,
+      "semantic_case_count": 40,
+      "structural_token_reduction_pct": 62.33,
+      "semantic_token_reduction_pct": 58.29,
+      "original_task_correctness_pct": 100,
+      "task_correctness_pct": 100,
+      "answer_equivalence_pct": 100,
+      "citation_coverage_pct": 100,
+      "redaction_invariant_pct": 100,
       "sensitive_leakage_count": 0,
-      "replayability_pct": 0,
+      "replayability_pct": 100,
       "license_security_sbom_status": "PASS",
-      "residual": "Headroom remains benchmark-only: registry source install from chopratejas/headroom currently needs Cargo >=1.85 for Rust edition2024 and no supported headroom.compress API is available in the sandbox.",
-      "failures": [
-        {
-          "id": "headroom_library_execution_failed",
-          "status": 1,
-          "stderr": "Traceback (most recent call last):\n  File \"<string>\", line 3, in <module>\n    import headroom\nModuleNotFoundError: No module named 'headroom'\n",
-          "stdout": ""
-        }
-      ]
+      "residual": "Approve tenant-feature-flagged internal opt-in canary; keep default disabled until a paid or platform-managed provider lane and owner approval pass."
     }
   ],
-  "aggregate_failures": [
-    {
-      "id": "headroom_library_execution_failed",
-      "capability": "headroom",
-      "source": "capability_result",
-      "status": 1,
-      "stderr": "Traceback (most recent call last):\n  File \"<string>\", line 3, in <module>\n    import headroom\nModuleNotFoundError: No module named 'headroom'\n",
-      "stdout": ""
-    },
-    {
-      "id": "capability_opt_in_canary_not_allowed",
-      "capability": "headroom",
-      "source": "capability_result",
-      "decision": "live_upstream_canary_failed_not_default"
-    }
-  ],
+  "aggregate_failures": [],
   "warnings": [
+    "This summary is not raw runtime evidence and is rejected by the strict live-input verifier.",
     "Default adoption remains blocked for every capability.",
-    "MarkItDown is now package-identity checked and executable as an opt-in sandbox canary only.",
-    "The aggregate all-capability canary must fail while any requested capability has result-level failures or opt-in canary disallowance.",
-    "Headroom upstream source remains blocked until Cargo >=1.85 can build the registry source and a supported compression API or CLI contract is proven.",
-    "Live canary evidence is sandbox-only and does not replace owner approval, feature flags, full corpus coverage, rollback proof, tenant-safe production receipts, or API/MCP scoped canary credentials."
+    "MarkItDown still needs all 16 target classes and latency remediation.",
+    "Headroom still needs paid or platform-managed provider semantic evidence and owner approval.",
+    "Hyper-Extract upstream authority surfaces remain forbidden by design."
   ]
 }

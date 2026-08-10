@@ -31,6 +31,12 @@
       "runtime_surface": "backend_sandboxed_file_conversion_adapter_after_approval",
       "risk_class": "file_conversion_can_be_lossy_and_runs_with_process_io_privileges",
       "current_local_adoption": "not_adopted",
+      "adoption_scope_decisions": {
+        "document_and_structured_text": "scoped_opt_in_fallback_candidate_after_backend_adapter_receipt",
+        "image_ocr": "blocked_until_approved_multimodal_or_ocr_lane_passes",
+        "audio_transcription": "blocked_until_approved_speech_provider_lane_passes",
+        "global_default": "forbidden_until_every_modality_has_independent_runtime_evidence"
+      },
       "allowed_scopes_if_approved": [
         "tenant_scoped_file_conversion",
         "sandboxed_connector_ingestion_normalization",
@@ -65,6 +71,8 @@
         "tenant_boundary_bypass_count": 0,
         "replayability_pct": 100,
         "p95_small_doc_conversion_ms_target": 3000,
+        "document_structured_class_coverage_pct_min": 100,
+        "global_target_class_coverage_pct_min_for_global_default": 100,
         "license_security_sbom_required": true,
         "tenant_feature_flag_required": true,
         "owner_approval_required": true
@@ -153,13 +161,17 @@
       "id": "headroom",
       "name": "chopratejas/headroom",
       "source_url": "https://github.com/chopratejas/headroom",
+      "source_aliases": [
+        "https://github.com/headroomlabs-ai/headroom"
+      ],
+      "distribution_name": "headroom-ai",
       "license": "Apache-2.0",
       "status": "benchmark_candidate",
       "adopted_by_default": false,
       "adoption_mode": "restricted_adapter_with_replay_required",
       "runtime_surface": "backend_only_adapter_after_approval",
       "risk_class": "context_compression_may_drop_decision_or_citation_context",
-      "current_local_adoption": "not_adopted; existing Xlooop headroom scripts are bundle/capacity checks, not this tool",
+      "current_local_adoption": "upstream sandbox and 40-case local semantic canaries implemented; disabled by default; paid/platform-provider semantic canary and owner approval still required",
       "allowed_scopes_if_approved": [
         "tenant_scoped_packet_compaction",
         "operator_log_compaction",
@@ -182,8 +194,11 @@
         "citation_check_after_decompression_required": true
       },
       "acceptance_gates": {
+        "semantic_case_count_min": 40,
         "token_reduction_pct_min": 25,
         "token_reduction_pct_target": 40,
+        "original_task_correctness_pct_min": 95,
+        "task_correctness_pct_min": 95,
         "answer_equivalence_pct_min": 95,
         "citation_coverage_pct_min": 95,
         "sensitive_leakage_count": 0,
@@ -191,12 +206,13 @@
         "reversible_replay_required": true,
         "license_security_sbom_required": true,
         "tenant_feature_flag_required": true,
+        "paid_or_platform_semantic_canary_required": true,
         "owner_approval_required": true
       },
       "approval_ref": null,
       "version_or_commit": null,
       "rollback_plan": "Disable tenant feature flag and replay from original uncompressed packet/evidence payload.",
-      "verifier": "npm run verify:headroom-replay-compression"
+      "verifier": "npm run verify:external-capability-runtime-results -- --strict --capability=headroom --headroom-semantic-input=<governed-report>"
     },
     {
       "id": "impeccable",

@@ -88,6 +88,18 @@ function verifyResult(result) {
   if (result.capability === 'markitdown') {
     minGate(gates, 'extraction_fidelity_pct', 95);
     minGate(gates, 'citation_source_span_coverage_pct', 95);
+    minGate(gates, 'document_structured_class_coverage_pct', 100);
+    const globalCoverage = Number(gates.global_target_class_coverage_pct || 0);
+    if (globalCoverage < 100) {
+      warnings.push({
+        id: 'markitdown_global_multimodal_coverage_incomplete',
+        actual: globalCoverage,
+        blocked_source_types: result.blocked_source_types || [],
+        message: 'Only the document/structured fallback lane is eligible for review; image and audio remain separately blocked.',
+      });
+    } else {
+      pass('markitdown_global_target_class_coverage_complete', { actual: globalCoverage });
+    }
     if (Number(gates.p95_small_doc_conversion_ms || 999999) > 3000) {
       fail('p95_small_doc_conversion_above_target', 'small-doc conversion p95 target exceeded', {
         actual: gates.p95_small_doc_conversion_ms,

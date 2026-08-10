@@ -6,10 +6,47 @@ import { fileURLToPath } from 'node:url';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const readJson = (file) => JSON.parse(fs.readFileSync(path.join(root, file), 'utf8'));
 const rootLock = readJson('package-lock.json');
+const rootPackage = readJson('package.json');
 const mcpLock = readJson('packages/xlooop-mcp-server/package-lock.json');
 const mcpPackage = readJson('packages/xlooop-mcp-server/package.json');
 
 const requirements = [
+  {
+    lock: rootLock,
+    path: 'node_modules/hono',
+    minimum: '4.12.34',
+    advisories: ['GHSA-54fx-42gc-7vw4', 'GHSA-79qm-7rj5-m7r9', 'GHSA-8j4g-w8fx-2239', 'GHSA-f23p-vx2j-j53r'],
+  },
+  {
+    lock: rootLock,
+    path: 'node_modules/nanoid',
+    minimum: '5.1.16',
+    advisories: ['GHSA-2v37-7h3g-55p8'],
+  },
+  {
+    lock: rootLock,
+    path: 'node_modules/postcss',
+    minimum: '8.5.23',
+    advisories: ['GHSA-fxqj-rqcc-2cmp'],
+  },
+  {
+    lock: rootLock,
+    path: 'node_modules/postcss/node_modules/nanoid',
+    minimum: '3.3.17',
+    advisories: ['GHSA-2v37-7h3g-55p8'],
+  },
+  {
+    lock: rootLock,
+    path: 'node_modules/undici',
+    minimum: '7.29.0',
+    advisories: [
+      'GHSA-8xcm-r25x-g524',
+      'GHSA-4cwx-7wf7-3272',
+      'GHSA-m8rv-5g2x-5cg5',
+      'GHSA-jr45-8vmc-qm54',
+      'GHSA-v3r7-h72x-cjcm',
+    ],
+  },
   {
     lock: rootLock,
     path: 'node_modules/sharp',
@@ -19,13 +56,13 @@ const requirements = [
   {
     lock: mcpLock,
     path: 'node_modules/fast-uri',
-    minimum: '3.1.4',
-    advisories: ['GHSA-v2hh-gcrm-f6hx', 'GHSA-4c8g-83qw-93j6'],
+    minimum: '3.1.5',
+    advisories: ['GHSA-v2hh-gcrm-f6hx', 'GHSA-4c8g-83qw-93j6', 'GHSA-7p8r-x3mc-p8w7'],
   },
   {
     lock: mcpLock,
     path: 'node_modules/hono',
-    minimum: '4.12.27',
+    minimum: '4.12.34',
     advisories: [
       'GHSA-hvrm-45r6-mjfj',
       'GHSA-w62v-xxxg-mg59',
@@ -35,7 +72,17 @@ const requirements = [
       'GHSA-88fw-hqm2-52qc',
       'GHSA-wwfh-h76j-fc44',
       'GHSA-j6c9-x7qj-28xf',
+      'GHSA-54fx-42gc-7vw4',
+      'GHSA-79qm-7rj5-m7r9',
+      'GHSA-8j4g-w8fx-2239',
+      'GHSA-f23p-vx2j-j53r',
     ],
+  },
+  {
+    lock: mcpLock,
+    path: 'node_modules/ip-address',
+    minimum: '10.3.1',
+    advisories: ['GHSA-22jq-vg5j-6vgg', 'GHSA-4xrf-jv44-h6hh', 'GHSA-mwp4-54f8-5fhr'],
   },
   {
     lock: mcpLock,
@@ -89,6 +136,35 @@ for (const requirement of requirements) {
 
 if (mcpPackage.overrides?.['@hono/node-server'] !== '2.0.11') {
   failures.push('packages/xlooop-mcp-server must pin @hono/node-server override to 2.0.11');
+}
+
+const requiredMcpOverrides = {
+  'fast-uri': '3.1.5',
+  hono: '4.13.1',
+  'ip-address': '10.3.1',
+};
+for (const [dependency, expected] of Object.entries(requiredMcpOverrides)) {
+  if (mcpPackage.overrides?.[dependency] !== expected) {
+    failures.push(`packages/xlooop-mcp-server must pin ${dependency} override to ${expected}`);
+  }
+}
+
+const requiredRootDevDependencies = {
+  '@cloudflare/vitest-pool-workers': '0.20.3',
+  '@cloudflare/workers-types': '5.20260810.1',
+  wrangler: '4.120.0',
+};
+for (const [dependency, expected] of Object.entries(requiredRootDevDependencies)) {
+  if (rootPackage.devDependencies?.[dependency] !== expected) {
+    failures.push(`root devDependency ${dependency} must be pinned to ${expected}`);
+  }
+}
+
+if (rootPackage.overrides?.postcss?.['.'] !== '8.5.23') {
+  failures.push('root postcss override must be pinned to 8.5.23');
+}
+if (rootPackage.overrides?.postcss?.nanoid !== '3.3.17') {
+  failures.push('root postcss nanoid override must be pinned to 3.3.17');
 }
 
 if (failures.length) {

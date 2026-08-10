@@ -6,7 +6,7 @@
 // DECLARED AXES: actor [operator · viewer] · mode [operator · watch] · entitlement [present · absent ·
 // runtime:configure denied] · flag [on · off].
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { Hono } from 'hono';
 
 vi.mock('../dal/principal-hydration', () => ({ resolvePrincipal: vi.fn() }));
@@ -41,11 +41,14 @@ const ON = { ENTITLEMENT_ENFORCEMENT: 'on', DATABASE_URL: 'postgres://fake@h/d' 
 const OFF = { DATABASE_URL: 'postgres://fake@h/d' } as never;
 const putDefault = (app: Hono, env: never) =>
   app.request('/model-runtimes/default', { method: 'PUT', body: JSON.stringify({ provider: 'ollama' }), headers: { 'content-type': 'application/json' } }, env);
+const validateProvider = (app: Hono, env: never) =>
+  app.request('/model-runtimes/providers/anthropic/validate', { method: 'POST' }, env);
 
 const OPERATOR = { user_id: 'u', role: 'operator', workspace_id: 'w' };
 const VIEWER = { user_id: 'v', role: 'viewer', workspace_id: 'w' };
 
 beforeEach(() => vi.clearAllMocks());
+afterEach(() => vi.restoreAllMocks());
 
 describe('runtime config · flag ON = mode + entitlement enforced', () => {
   it('operator mode + operator entitlement → gate PASSES (not 403)', async () => {
@@ -58,6 +61,14 @@ describe('runtime config · flag ON = mode + entitlement enforced', () => {
     (resolvePrincipal as never as ReturnType<typeof vi.fn>).mockResolvedValue(principal(['watch', 'test', 'operator'], ['*'], []));
     const res = await putDefault(appFor(OPERATOR, 'watch'), ON);
     expect(res.status).toBe(403);
+  });
+
+  it('WATCH mode also blocks the live provider validation side effect before dispatch', async () => {
+    (resolvePrincipal as never as ReturnType<typeof vi.fn>).mockResolvedValue(principal(['watch', 'test', 'operator'], ['*'], []));
+    const fetchSpy = vi.spyOn(globalThis, 'fetch');
+    const res = await validateProvider(appFor(OPERATOR, 'watch'), ON);
+    expect(res.status).toBe(403);
+    expect(fetchSpy).not.toHaveBeenCalled();
   });
 
   it('operator role but NO entitlement row → 403 (missing_entitlement)', async () => {

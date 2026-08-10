@@ -69,7 +69,10 @@ includesAll('route_learning_surfaces_present', route, [
 
 includesAll('mcp_customer_gateway_contract_present', mcpGateway, [
   'CUSTOMER_MCP_CONNECTOR_NAMESPACE',
-  'xlooop-customer-gateway',
+  "XCP_GATEWAY_NAME = 'xcp-gateway'",
+  "XCP_GATEWAY_PROFILE = 'customer'",
+  'xcp_session_start',
+  'xcp.session_start/v1',
   'xlooop.get_effective_templates',
   'xlooop.get_effective_profile',
   'xlooop.submit_learning_signal',
@@ -107,11 +110,17 @@ includesAll('docs_learning_architecture_present', doc, [
   'private by default',
   'explicit promotion',
   'Forbidden Weakening',
-  'Current Codex desktop sessions still enter through `mb-p-gateway`',
-  'customer experience should not surface this internal architecture',
-  'xlooop-customer-gateway',
-  'First call through that connector must be `xlooop.whoami`',
+  'tenant-scoped product data plane',
+  '`xcp-gateway` with `profile=customer`',
+  '`xcp_session_start`',
+  '`xcp.session_start/v1`',
 ]);
+
+if (mcpGateway.includes('xlooop-customer-gateway')) {
+  fail('legacy_gateway_absent_from_live_discovery', 'legacy connector name must not appear in the live gateway source');
+} else {
+  pass('legacy_gateway_absent_from_live_discovery');
+}
 
 if (pkg.scripts?.['verify:customer-learning-personalization']) {
   pass('package_script_present:verify:customer-learning-personalization');

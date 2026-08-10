@@ -1,7 +1,7 @@
 // llm-usage-metering.test.ts · G2 (260711) — per-tenant LLM usage metering.
 // DECLARED AXES: store wrapper [flag-off ⇒ makeSql never called · missing ws/user/model ⇒ no waitUntil ·
-// happy path ⇒ one accumulating upsert] · route integration [flag-off zero-writes byte-parity ·
-// flag-on LLM answer ⇒ upsert with (ws, model, user, tokens) · deterministic answer ⇒ NO write ·
+// happy path ⇒ one accumulating upsert] · route integration [provider-unavailable ⇒ typed 503/no write ·
+// flag-on LLM answer ⇒ upsert with (ws, model, user, tokens) ·
 // throwing sql ⇒ answer still 200] · capture unit [Claude usage mapped · Llama usage mapped ·
 // usage-absent ⇒ nulls] · read endpoint [owner 200 · viewer/client 403 via the governed gate].
 
@@ -86,20 +86,21 @@ const askChat = (app: Hono, env: Record<string, unknown>) => app.request('/api/v
   { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ message: 'hi' }) }, { CUSTOMER_SAFE_SERIALIZER_ENABLED: 'false', ...env } as never);
 
 describe('customer-chat metering integration', () => {
-  it('flag OFF: 200 and the response has no metering side effects (deterministic floor, no AI env)', async () => {
+  it('flag OFF + no live provider: typed 503 and no fabricated assistant answer', async () => {
     const res = await askChat(chatApp(null), {});
-    expect(res.status).toBe(200);
-    const body = await res.json() as { generated_by: string };
-    expect(body.generated_by).toBe('deterministic');
+    expect(res.status).toBe(503);
+    const body = await res.json() as Record<string, unknown>;
+    expect(body).toMatchObject({ code: 'PROVIDER_UNAVAILABLE', retryable: true });
+    expect(body.answer).toBeUndefined();
   });
 
-  it('flag ON + deterministic answer (no AI binding): still NO write (model null is the guard)', async () => {
-    // With no env.AI and no ANTHROPIC key the route answers deterministically → model null → skip.
-    // DATABASE_URL is unset here: if the guard failed, neonClient('') would throw → this test catches it.
+  it('flag ON + no live provider: typed 503 without attempting a metering write', async () => {
+    // DATABASE_URL is unset: provider resolution must fail before any usage write is scheduled.
     const res = await askChat(chatApp(null), { LLM_USAGE_METERING_ENABLED: 'true' });
-    expect(res.status).toBe(200);
-    const body = await res.json() as { generated_by: string; model: string | null };
-    expect(body.model).toBeNull();
+    expect(res.status).toBe(503);
+    const body = await res.json() as Record<string, unknown>;
+    expect(body).toMatchObject({ code: 'PROVIDER_UNAVAILABLE', retryable: true });
+    expect(body.answer).toBeUndefined();
   });
 
   it('flag ON + LLM answer: metered with model + tokens (AI stub returns usage)', async () => {

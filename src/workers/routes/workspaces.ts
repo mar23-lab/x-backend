@@ -25,17 +25,17 @@ import { buildWorkspaceDigestLLM, type AiRunner } from '../services/agent-digest
 import { refinePromptText } from '../services/prompt-refine';
 import { syncFolderSnapshot, folderChangeToPacketRow, type FolderBinding, type FolderChangeKind } from '../sources/translators/folder';
 import { generateIntentEnrichment } from '../services/packet-enrichment';
+import { classifyCommercialChatHistory } from '../services/chat-history-classification';
 import { inferSourceContext } from '../lib/infer-source-context';
 import { normalizeFolderSnapshot } from '../sources/folder-snapshot-core';
 import {
-  answerCockpitChat,
+  answerLiveCockpitChat,
   COCKPIT_CHAT_MAX_EVENTS,
   mapGovernanceRowsToEvents,
   mapContextCardsToEvents,
   type ContextCardInput,
   type CockpitChatScope,
   type CockpitChatMode,
-  type CockpitChatLLM,
   type DocumentFact,
   type GovernanceMappedEvent,
   type GovernanceStreamRow,
@@ -47,8 +47,15 @@ import { envFlagTrue } from '../lib/env-flag';
 import { idempotencyMiddleware } from '../lib/idempotency'; // J-W1/IDEM-4
 import { persistAssistantContextLineage, completeAssistantSkillLineage, type AssistantContextLineage } from '../lib/assistant-context-lineage';
 import { createModelExecutionObserver } from '../lib/model-execution-lineage';
+import {
+  ProviderUnavailableError,
+  resolveEffectiveRuntimePlan,
+  resolvePlatformRuntimePlan,
+  type EffectiveRuntimePlan,
+} from '../services/model-runtime-execution';
 import { listDocumentsRow } from '../dal/document-store';
 import { lineageFor } from '../lib/actor-lineage';
+import { emitEvent } from '../lib/observability';
 import type { EventListOpts, HarnessFlowEvent } from '../dal/types/event';
 // Plane B fallback (defense in depth): the build-time operations-live-stream bundle — the SAME source
 // the project board falls back to (mbp-projection.ts) — used only when the DB snapshot table is empty.
@@ -63,6 +70,12 @@ export interface WorkspacesEnv extends AuthEnv {
   RESOLUTION_RECEIPT_SIGNING_SECRET?: string;
   RESOLUTION_RECEIPT_SIGNING_KEY_ID?: string;
   XLOOOP_DEPLOY_SHA?: string;
+  AI?: AiRunner;
+  ANTHROPIC_API_KEY?: string;
+  MODEL_RUNTIME_ENC_KEY?: string; // legacy decrypt-only during rotation
+  MODEL_RUNTIME_ENC_KEYS?: string;
+  MODEL_RUNTIME_ACTIVE_KEY_ID?: string;
+  COMMERCIAL_LIVE_CHAT_REQUIRED?: string;
 }
 
 export interface WorkspacesVariables extends AuthVariables {
@@ -360,12 +373,12 @@ workspacesRoute.post('/cockpit-chat', async (ctx) => {
       ctx.status(400);
       return ctx.json({ error: 'body.message required (1-1000 chars)', code: 'VALIDATION_ERROR', request_id: ctx.get('request_id') });
     }
+    const interactionId = String(ctx.req.header('Idempotency-Key') || ctx.get('request_id')).trim();
     // Read-side mode of the unified Send dropdown (ask | plan | recommend | deep-research). Anything
     // else (incl. the write modes chat/command/intent, which never POST here) falls back to 'ask'.
     const ALLOWED_MODES: CockpitChatMode[] = ['ask', 'plan', 'recommend', 'deep-research'];
     const mode: CockpitChatMode = ALLOWED_MODES.includes(body?.mode as CockpitChatMode) ? (body!.mode as CockpitChatMode) : 'ask';
     // User-selected model (the chat's model switcher). Default = free Llama; 'claude' uses the premium tier.
-    const llm: CockpitChatLLM = body?.llm === 'claude' ? 'claude' : 'llama';
     const scopeIn = (body && typeof body.scope === 'object' && body.scope) || {};
     const workspaceId = typeof scopeIn.workspace_id === 'string' ? scopeIn.workspace_id.trim() : '';
     const projectId = typeof scopeIn.project_id === 'string' && scopeIn.project_id.trim() ? scopeIn.project_id.trim() : null;
@@ -407,6 +420,32 @@ workspacesRoute.post('/cockpit-chat', async (ctx) => {
       // HarnessFlowEvent's type omits domain_id, but the operator-overlay SELECT returns it
       // (migration 014). Read it defensively off the row without widening the shared type.
       events = events.filter((e) => e && ((e as { domain_id?: string | null }).domain_id ?? null) === domainId);
+    }
+
+    // Operator chat is also a conversational production surface: live provider
+    // execution or a typed unavailable response, never a deterministic answer.
+    const liveChatRequired = true;
+    let liveRuntimePlan: EffectiveRuntimePlan | undefined;
+    if (liveChatRequired) {
+      try {
+        liveRuntimePlan = workspaceId
+          ? await resolveEffectiveRuntimePlan({
+              facade: dal.modelRuntimes,
+              env: ctx.env,
+              userId: user_id,
+              workspaceId,
+            })
+          : resolvePlatformRuntimePlan(ctx.env);
+      } catch (err) {
+        if (!(err instanceof ProviderUnavailableError)) throw err;
+        ctx.status(503);
+        return ctx.json({
+          error: 'no live model runtime is available',
+          code: 'PROVIDER_UNAVAILABLE',
+          request_id: ctx.get('request_id'),
+          retryable: true,
+        });
+      }
     }
 
     // Plane B — the governance plane (operations-live-stream packets/decisions). Wave 5a: read the
@@ -524,9 +563,6 @@ workspacesRoute.post('/cockpit-chat', async (ctx) => {
       }
     } catch (_) { /* graph context is additive — the pinned-only lineage (or none) stands */ }
 
-    const ai = (ctx.env as { AI?: AiRunner }).AI;
-    // P6 · premium Claude tier (deep-research mode only) when ANTHROPIC_API_KEY is configured.
-    const claudeKey = (ctx.env as { ANTHROPIC_API_KEY?: string }).ANTHROPIC_API_KEY;
     // S1 (260628) · company-aware chat when scoped to a customer workspace: the chief-of-staff reads
     // the captured context (focus/maturity/tools) instead of a hardcoded "accountant" stereotype.
     // Unscoped (operator overlay across workspaces) → null → the generic fallback preamble.
@@ -646,54 +682,83 @@ workspacesRoute.post('/cockpit-chat', async (ctx) => {
         });
         trace?.recordRoleProjection(rsc.auditLine);
         console.log(JSON.stringify({ kind: 'role_scoped_context', plane: 'operator', workspace_id: workspaceId || null, ...rsc.auditLine }));
-      } catch (_) { /* projection is fail-safe: on an unexpected throw the legacy facts stand (flag can be pulled) */ }
-    }
-    let assistantLineage: AssistantContextLineage | null = null;
-    let lineageSql: ReturnType<typeof neonClient> | null = null;
-    if (envFlagTrue(ctx.env.CONTEXT_PACKET_PERSISTENCE_ENABLED)) {
-      if (!workspaceId) {
-        ctx.status(409);
+      } catch (err) {
+        emitEvent('chat_context_projection_failed', {
+          workspace_id: workspaceId || null,
+          plane: 'operator',
+          error: err instanceof Error ? err.message.slice(0, 200) : String(err).slice(0, 200),
+        });
+        ctx.status(503);
         return ctx.json({
-          error: 'strict context lineage requires one workspace target',
-          code: 'CONTEXT_LINEAGE_SCOPE_REQUIRED',
+          error: 'operator-safe chat context could not be projected',
+          code: 'CONTEXT_PROJECTION_UNAVAILABLE',
           request_id: ctx.get('request_id'),
+          retryable: true,
         });
       }
-      lineageSql = neonClient(ctx.env.DATABASE_URL);
-      assistantLineage = await persistAssistantContextLineage(lineageSql, ctx.env, {
-        workspace_id: workspaceId,
-        principal_id: user_id,
-        role: String(role || 'operator'),
-        mode,
-        intent_ref: await assistantIntentRef(message),
-        scope: {
-          event_count: events.length + governance.length,
-          document_count: documents.length,
-          unpromoted_document_count: documents.filter((d) => d.filename.startsWith('[UNPROMOTED DRAFT]')).length,
-          source_count: 0,
-        },
-        redaction_profile: roleScopedOn ? `${String(role || 'operator')}-scoped` : 'operator-full',
-        client_empty: false,
+    }
+    if (!workspaceId) {
+      ctx.status(409);
+      return ctx.json({
+        error: 'commercial chat requires one workspace target',
+        code: 'CONTEXT_LINEAGE_SCOPE_REQUIRED',
+        request_id: ctx.get('request_id'),
       });
     }
-    const executionObserver = assistantLineage && lineageSql
-      ? createModelExecutionObserver(lineageSql, workspaceId, user_id, assistantLineage)
-      : undefined;
-    const result = await answerCockpitChat(
-      message,
-      { events, governance, pinned, lineage, documents, total: events.length, scope, companyContext },
-      ai,
+    const injectedSql = ctx.get('sql' as never) as ReturnType<typeof neonClient> | undefined;
+    const lineageSql = injectedSql ?? neonClient(ctx.env.DATABASE_URL);
+    const assistantLineage: AssistantContextLineage = await persistAssistantContextLineage(lineageSql, ctx.env, {
+      workspace_id: workspaceId,
+      principal_id: user_id,
+      role: String(role || 'operator'),
       mode,
-      claudeKey,
-      llm,
-      executionObserver,
-    );
-    if (assistantLineage && lineageSql) {
-      await completeAssistantSkillLineage(lineageSql, ctx.env, assistantLineage, {
-        workspace_id: workspaceId,
-        principal_id: user_id,
+      intent_ref: await assistantIntentRef(message),
+      scope: {
+        event_count: events.length + governance.length,
+        document_count: documents.length,
+        unpromoted_document_count: documents.filter((d) => d.filename.startsWith('[UNPROMOTED DRAFT]')).length,
+        source_count: 0,
+      },
+      redaction_profile: roleScopedOn ? `${String(role || 'operator')}-scoped` : 'operator-full',
+      client_empty: false,
+    });
+    const executionObserver = createModelExecutionObserver(lineageSql, workspaceId, user_id, assistantLineage);
+    let result;
+    try {
+      if (!liveRuntimePlan) throw new ProviderUnavailableError('no live model runtime is available');
+      result = await answerLiveCockpitChat(
+        message,
+        { events, governance, pinned, lineage, documents, total: events.length, scope, companyContext },
+        mode,
+        executionObserver,
+        liveRuntimePlan,
+      );
+    } catch (err) {
+      if (!(err instanceof ProviderUnavailableError)) throw err;
+      ctx.status(503);
+      return ctx.json({
+        error: 'configured live model providers are temporarily unavailable',
+        code: 'PROVIDER_UNAVAILABLE',
+        request_id: ctx.get('request_id'),
+        retryable: true,
       });
     }
+    if (liveChatRequired && result.generated_by !== 'llm') {
+      throw new Error('commercial live chat returned a non-LLM assistant result');
+    }
+    if (!result.execution?.receipt_id) {
+      ctx.status(503);
+      return ctx.json({
+        error: 'commercial chat execution receipt could not be completed',
+        code: 'CHAT_TURN_RECEIPT_INCOMPLETE',
+        request_id: ctx.get('request_id'),
+        retryable: true,
+      });
+    }
+    const skillInvocationReceiptIds = await completeAssistantSkillLineage(lineageSql, ctx.env, assistantLineage, {
+      workspace_id: workspaceId,
+      principal_id: user_id,
+    });
     void role;
     // L1 · always record the operator-plane fact bundle when the trace flag is on — so flag-ON never
     // silently behaves like flag-OFF even if the role/graph sub-flags are off (the assembly is non-null).
@@ -716,32 +781,111 @@ workspacesRoute.post('/cockpit-chat', async (ctx) => {
     // Wave 3 · persist the exchange so the thread survives a reload / another browser. READ modes
     // (Ask/Plan/Recommend/Deep-research) render an answer; WRITE modes confirm capture client-side and
     // do not POST here, so every exchange that reaches this route is a Q&A pair worth remembering.
-    // Best-effort: a persistence failure must NEVER break the live answer.
+    // Commercial chat is receipt-backed. A live answer that cannot be durably recorded is not a
+    // successful customer response, because it cannot be replayed, audited, or resumed safely.
+    let conversation: {
+      thread_id: string;
+      user_message_id: string;
+      assistant_message_id: string;
+      assistant_receipt_id: string;
+      audit_event_id: string;
+    } | null = null;
     try {
       const appender = (dal as unknown as {
         appendChatExchange?: (u: string, s: CockpitChatScope, m: unknown[]) => Promise<unknown>;
       }).appendChatExchange;
-      if (typeof appender === 'function') {
+      if (typeof appender !== 'function') throw new Error('appendChatExchange unavailable');
+      {
         // W1 receipt substrate: live event links ride the assistant message only when the flag is on
         // (migration 058; chat-store degrades safely pre-058).
         const receiptLinks = envFlagTrue((ctx.env as { CHAT_RECEIPT_GROUNDING_ENABLED?: string }).CHAT_RECEIPT_GROUNDING_ENABLED)
           ? ((result.grounded_on as { event_ids?: string[] })?.event_ids ?? null)
           : null;
-        await appender.call(dal, user_id, scope, [
-          { role: 'you', body: message, mode },
+        const persisted = await appender.call(dal, user_id, scope, [
+          { role: 'you', body: message, mode, interaction_id: interactionId, entry_type: 'user_request' },
           // L1 · attachAssembly(g, null) returns g unchanged by reference — flag-off stays byte-identical.
-          { role: 'assistant', body: result.answer, mode, generated_by: result.generated_by, grounded_on: attachAssembly(result.grounded_on, trace), grounding_event_ids: receiptLinks },
-        ]);
+          {
+            role: 'assistant',
+            body: result.answer,
+            mode,
+            generated_by: result.generated_by,
+            grounded_on: attachAssembly(result.grounded_on, trace),
+            grounding_event_ids: receiptLinks,
+            interaction_id: interactionId,
+            entry_type: 'assistant_answer',
+            resolution_id: assistantLineage.resolution_id,
+            execution_receipt_id: result.execution.receipt_id,
+            packet_id: assistantLineage.context_packet_id,
+          },
+        ]) as {
+          thread_id?: string;
+          messages?: Array<{ id?: string; role?: string; entry_type?: string; receipt_uid?: string | null; audit_event_id?: string | null }>;
+        };
+        const messages = Array.isArray(persisted.messages) ? persisted.messages : [];
+        const userMessage = messages.find((entry) => entry.entry_type === 'user_request' || entry.role === 'you');
+        const assistantMessage = messages.find((entry) => entry.entry_type === 'assistant_answer' || entry.role === 'assistant');
+        if (!persisted.thread_id || !userMessage?.id || !assistantMessage?.id
+          || !assistantMessage.receipt_uid || !assistantMessage.audit_event_id) {
+          throw new Error('chat persistence did not return canonical receipt ids');
+        }
+        conversation = {
+          thread_id: persisted.thread_id,
+          user_message_id: userMessage.id,
+          assistant_message_id: assistantMessage.id,
+          assistant_receipt_id: assistantMessage.receipt_uid,
+          audit_event_id: assistantMessage.audit_event_id,
+        };
       }
-    } catch (_) { /* persistence is best-effort; the answer already stands */ }
+    } catch (err) {
+      emitEvent('chat_history_persistence_failed', {
+        workspace_id: workspaceId,
+        required: true,
+        error: err instanceof Error ? err.message.slice(0, 200) : String(err).slice(0, 200),
+      });
+      ctx.status(503);
+      return ctx.json({
+        error: 'chat answer could not be durably recorded',
+        code: 'CHAT_HISTORY_PERSISTENCE_FAILED',
+        request_id: ctx.get('request_id'),
+        retryable: true,
+      });
+    }
 
     return ctx.json({
+      schema_id: 'xlooop.chat_turn.v1',
+      request_id: ctx.get('request_id'),
+      interaction_id: interactionId,
       answer: result.answer,
       generated_by: result.generated_by,
       model: result.model ?? null,
       grounded_on: result.grounded_on,
       scope,
       mode,
+      conversation,
+      lineage: {
+        context_receipt_id: assistantLineage.context_packet_id,
+        policy_resolution_id: assistantLineage.resolution_id,
+        skill_invocation_receipt_ids: skillInvocationReceiptIds,
+      },
+      receipts: {
+        answer_receipt_id: conversation.assistant_receipt_id,
+        execution_receipt_id: result.execution.receipt_id,
+        context_receipt_id: assistantLineage.context_packet_id,
+        policy_resolution_id: assistantLineage.resolution_id,
+        audit_event_id: conversation.audit_event_id,
+        skill_invocation_receipt_ids: skillInvocationReceiptIds,
+      },
+      execution: result.execution ? {
+        receipt_id: result.execution.receipt_id,
+        runtime_id: result.execution.runtime_id,
+        provider: result.execution.provider,
+        model: result.execution.model,
+        source: result.execution.source,
+        provider_config_version_id: result.execution.provider_config_version_id,
+        latency_ms: result.execution.latency_ms,
+        attempts: result.execution.attempts,
+        usage: result.usage ?? null,
+      } : null,
     });
   } catch (err) {
     return errorEnvelope(ctx, err);
@@ -772,7 +916,7 @@ workspacesRoute.get('/cockpit-chat/history', async (ctx) => {
       if (typeof lister === 'function') messages = await lister.call(dal, user_id, scope, 100);
     } catch (_) { messages = []; }
 
-    return ctx.json({ messages, scope });
+    return ctx.json({ messages: classifyCommercialChatHistory(messages), scope });
   } catch (err) {
     return errorEnvelope(ctx, err);
   }

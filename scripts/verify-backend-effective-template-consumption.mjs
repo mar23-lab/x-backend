@@ -86,7 +86,7 @@ requireMarkers('layered_inheritance_and_weakening_guards_present', store, [
 ]);
 
 requireMarkers('mcp_consumes_scoped_surfaces_only', mcp, [
-  'xlooop.whoami',
+  'xcp_session_start',
   'xlooop.get_task_packet',
   'xlooop.submit_evidence',
   'xlooop.report_tool_event',
