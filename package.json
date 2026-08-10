@@ -164,6 +164,7 @@
     "verify:external-capability-default-hard-stop": "node scripts/verify-external-capability-default-hard-stop.mjs",
     "canary:external-capabilities:live": "node scripts/run-upstream-capability-live-canary.mjs",
     "canary:headroom:semantic": "node scripts/run-headroom-semantic-canary.mjs",
+    "canary:headroom:semantic:provider": "node scripts/run-headroom-semantic-canary.mjs --evaluator=openai-compatible",
     "verify:headroom-runtime-decision": "node scripts/verify-external-capability-runtime-decision.mjs --capability=headroom",
     "verify:markitdown-runtime-sandbox": "node scripts/verify-external-capability-runtime-decision.mjs --capability=markitdown",
     "verify:hyper-extract-native-graph-suggestion": "node scripts/verify-external-capability-runtime-decision.mjs --capability=hyper_extract",

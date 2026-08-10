@@ -198,6 +198,7 @@
         "reversible_replay_required": true,
         "license_security_sbom_required": true,
         "tenant_feature_flag_required": true,
+        "paid_or_platform_semantic_canary_required": true,
         "owner_approval_required": true
       },
       "approval_ref": null,

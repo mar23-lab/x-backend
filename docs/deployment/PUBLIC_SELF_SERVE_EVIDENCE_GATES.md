@@ -97,7 +97,7 @@ Strict mode requires the sandbox venv, MarkItDown CLI, sandbox Python, package-s
 - Hyper-Extract: the native typed-extraction/`GraphSuggestion` lane measured `97%` typed fidelity and `100%` suggestion coverage with no authoritative graph writes; upstream graph/MCP/export/search/talk surfaces remain forbidden.
 - Aggregate `--capability=all` canaries must fail closed if any selected capability reports result-level failures or `opt_in_canary_allowed: false`.
 
-Source commands: `npm run canary:external-capabilities:live`, `npm run canary:headroom:semantic`, and `npm run verify:external-capability-runtime-results -- --strict`. Runtime reports belong in governed evidence storage; human-readable summaries are never accepted as raw runtime authority.
+Source commands: `npm run canary:external-capabilities:live`, `npm run canary:headroom:semantic`, `npm run canary:headroom:semantic:provider`, and `npm run verify:external-capability-runtime-results -- --strict`. The provider lane requires `XLOOOP_HEADROOM_EVALUATOR_URL`, `XLOOOP_HEADROOM_EVALUATOR_API_KEY`, `XLOOOP_HEADROOM_EVALUATOR_MODEL`, and `XLOOOP_HEADROOM_EVALUATOR_PROVIDER_CLASS=paid|platform_managed`. Credentials and raw endpoint details are excluded from the report. Runtime reports belong in governed evidence storage; human-readable summaries are never accepted as raw runtime authority.
 
 ## Live Evidence Authority Matrix
 

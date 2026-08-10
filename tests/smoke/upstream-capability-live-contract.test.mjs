@@ -111,6 +111,87 @@ test('strict runtime verifier keeps structural equivalence distinct from live ta
   assert.ok(report.warnings.some((warning) => warning.id === 'headroom_semantic_task_equivalence_not_measured'));
 });
 
+test('Headroom semantic runner supports a credential-safe paid/platform evaluator lane', () => {
+  const source = fs.readFileSync(path.join(repoRoot, 'scripts/run-headroom-semantic-canary.mjs'), 'utf8');
+
+  assert.match(source, /openai-compatible/);
+  assert.match(source, /XLOOOP_HEADROOM_EVALUATOR_API_KEY/);
+  assert.match(source, /live_paid_or_platform_llm_semantic_canary/);
+  assert.match(source, /credential_material_present: false/);
+  assert.match(source, /delete env\.XLOOOP_HEADROOM_EVALUATOR_API_KEY/);
+  assert.doesNotMatch(source, /evaluator:\s*\{[^}]*api_key/is);
+});
+
+test('paid/platform semantic gate belongs only to Headroom', () => {
+  const registry = JSON.parse(fs.readFileSync(
+    path.join(repoRoot, 'docs/architecture/backend/EXTERNAL_CAPABILITY_REGISTRY.json'),
+    'utf8',
+  ));
+  const byId = new Map(registry.capabilities.map((capability) => [capability.id, capability]));
+
+  assert.equal(byId.get('headroom')?.acceptance_gates?.paid_or_platform_semantic_canary_required, true);
+  assert.equal(byId.get('markitdown')?.acceptance_gates?.paid_or_platform_semantic_canary_required, undefined);
+});
+
+test('strict runtime verifier recognizes paid/platform evidence but still requires owner approval', () => {
+  const input = writeFixture('headroom-paid-structural.json', {
+    schema_id: 'xlooop.external_capability_runtime_results.v1',
+    results: [headroomStructuralResult()],
+  });
+  const semantic = writeFixture('headroom-paid-semantic.json', {
+    schema_id: 'xlooop.headroom_semantic_canary.v1',
+    status: 'PASS',
+    evidence_kind: 'live_paid_or_platform_llm_semantic_canary',
+    upstream_headroom_execution: true,
+    provider_default_decision_authority: true,
+    default_adoption_allowed: false,
+    model: 'paid-model',
+    evaluator: {
+      lane: 'openai-compatible',
+      provider_class: 'paid',
+      endpoint_origin_sha256: 'a'.repeat(64),
+      credential_material_present: false,
+    },
+    gates: {
+      case_count: 40,
+      token_reduction_pct: 58,
+      original_task_correctness_pct: 100,
+      task_correctness_pct: 100,
+      answer_equivalence_pct: 100,
+      citation_coverage_pct: 100,
+      redaction_invariant_pct: 100,
+      sensitive_leakage_count: 0,
+      replayability_pct: 100,
+    },
+  });
+
+  const result = runRuntimeVerifier(input, semantic);
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+  const report = JSON.parse(result.stdout);
+  assert.ok(report.checks.some((check) => check.id === 'headroom_paid_or_platform_semantic_evidence_reviewed'));
+  assert.ok(report.warnings.some((warning) => warning.id === 'headroom_owner_approval_and_feature_flag_required'));
+  assert.ok(!report.warnings.some((warning) => warning.id === 'headroom_paid_or_platform_provider_canary_required'));
+});
+
+function headroomStructuralResult() {
+  return {
+    capability: 'headroom',
+    default_adoption_allowed: false,
+    answer_equivalence_measurement: 'structural_context_invariant_preservation_not_downstream_llm_semantics',
+    gates: {
+      token_reduction_pct: 58,
+      answer_equivalence_pct: 100,
+      citation_coverage_pct: 100,
+      redaction_invariant_pct: 100,
+      replayability_pct: 100,
+      sensitive_leakage_count: 0,
+      tenant_boundary_bypass_count: 0,
+      external_graph_authority_count: 0,
+      license_security_sbom_status: 'PASS',
+    },
+  };
+}
+
 function writeFixture(name, value) {
   const file = path.join(tempDir, name);
   fs.writeFileSync(file, `${JSON.stringify(value, null, 2)}\n`);
@@ -125,10 +206,11 @@ function runVerifier(input) {
   );
 }
 
-function runRuntimeVerifier(input) {
+function runRuntimeVerifier(input, semantic = '') {
+  const semanticArg = semantic ? [`--headroom-semantic-input=${semantic}`] : [];
   return spawnSync(
     process.execPath,
-    ['scripts/verify-external-capability-runtime-results.mjs', '--strict', '--format=json', `--input=${input}`],
+    ['scripts/verify-external-capability-runtime-results.mjs', '--strict', '--format=json', `--input=${input}`, ...semanticArg],
     { cwd: repoRoot, encoding: 'utf8' },
   );
 }

@@ -232,17 +232,40 @@ function verifyHeadroomSemanticEvidence(capability) {
   minGate(semanticLane, gates, 'redaction_invariant_pct', 100);
   minGate(semanticLane, gates, 'replayability_pct', 100);
   zeroGate(semanticLane, gates, 'sensitive_leakage_count');
-  pass('headroom_live_local_semantic_evidence_reviewed', {
+  const providerClass = semantic.evaluator?.provider_class || 'local';
+  const paidOrPlatform = ['paid', 'platform_managed'].includes(providerClass);
+  if (paidOrPlatform && (
+    semantic.evidence_kind !== 'live_paid_or_platform_llm_semantic_canary'
+    || semantic.provider_default_decision_authority !== true
+    || semantic.evaluator?.credential_material_present !== false
+    || !semantic.evaluator?.endpoint_origin_sha256
+  )) {
+    fail('headroom_paid_or_platform_evidence_authority_invalid', 'paid/platform semantic evidence must declare its governed lane without exposing credentials or endpoint details', {
+      capability,
+      evidence_kind: semantic.evidence_kind,
+      provider_class: providerClass,
+      provider_default_decision_authority: semantic.provider_default_decision_authority,
+    });
+    return;
+  }
+  pass(paidOrPlatform ? 'headroom_paid_or_platform_semantic_evidence_reviewed' : 'headroom_live_local_semantic_evidence_reviewed', {
     capability,
     model: semantic.model,
     evidence_kind: semantic.evidence_kind,
+    provider_class: providerClass,
     input: headroomSemanticInputPath,
   });
-  warnings.push({
-    id: 'headroom_paid_or_platform_provider_canary_required',
-    capability,
-    message: 'The 40-case local-LLM semantic canary passed, but customer-default adoption still requires a paid or platform-managed provider canary and owner approval.',
-  });
+  warnings.push(paidOrPlatform
+    ? {
+        id: 'headroom_owner_approval_and_feature_flag_required',
+        capability,
+        message: 'The paid/platform semantic canary passed; customer-default adoption still requires owner approval and a tenant feature flag.',
+      }
+    : {
+        id: 'headroom_paid_or_platform_provider_canary_required',
+        capability,
+        message: 'The 40-case local-LLM semantic canary passed, but customer-default adoption still requires a paid or platform-managed provider canary and owner approval.',
+      });
 }
 
 function minGate(capability, gates, key, min) {
