@@ -18,7 +18,11 @@ import {
   releaseManifestDigest,
   verifyStaticArtifactFiles,
 } from './lib/app-pages-release-contract.mjs';
-import { renderPagesHeaders } from './lib/security-header-contract.mjs';
+import {
+  renderPagesHeaders,
+  resolvePagesSecurityHeaderManifest,
+  rewritePagesWorkerSecurityHeaders,
+} from './lib/security-header-contract.mjs';
 import { readCandidateDeploymentContract } from './lib/candidate-deployment-contract.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -76,7 +80,8 @@ cpSync(artifactDir, outputDir, { recursive: true });
 const securityHeaders = JSON.parse(
   readFileSync(path.join(root, 'data/security-headers.manifest.json'), 'utf8'),
 );
-writeFileSync(path.join(outputDir, '_headers'), renderPagesHeaders(securityHeaders));
+const effectiveSecurityHeaders = resolvePagesSecurityHeaderManifest(securityHeaders, config.api_base);
+writeFileSync(path.join(outputDir, '_headers'), renderPagesHeaders(effectiveSecurityHeaders));
 
 const wrangler = path.join(root, 'node_modules', 'wrangler', 'bin', 'wrangler.js');
 const build = spawnSync(
@@ -102,7 +107,11 @@ if (build.status !== 0) fail(`Pages Functions build failed\n${build.stderr || bu
 const workerBundlePath = path.join(outputDir, '_worker.js', 'index.js');
 try {
   const workerBundle = readFileSync(workerBundlePath, 'utf8');
-  writeFileSync(workerBundlePath, normalizePagesFunctionsBundle(workerBundle));
+  const normalized = normalizePagesFunctionsBundle(workerBundle);
+  writeFileSync(
+    workerBundlePath,
+    rewritePagesWorkerSecurityHeaders(normalized, securityHeaders, effectiveSecurityHeaders),
+  );
 } catch (error) {
   fail(
     `Pages Functions bundle normalization failed: ${
