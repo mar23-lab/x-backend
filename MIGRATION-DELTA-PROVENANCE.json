@@ -7004,6 +7004,47 @@
           "reason": "governed paid/platform Headroom semantic evidence lane"
         }
       ]
+    },
+    {
+      "delta_id": "delta-20260811-markitdown-modality-contract",
+      "generated_at": "2026-08-10T14:21:53.352Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "2a6954a52243932c09d9158fb5f9ffe39541151b",
+      "target_base_commit": "2a6954a52243932c09d9158fb5f9ffe39541151b",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "docs/architecture/backend/EXTERNAL_CAPABILITY_REGISTRY.json",
+          "target_blob": "c0fe173a6e7f6c0eaada384331cee005e64c9ab8",
+          "reason": "expand MarkItDown binary corpus and separate document authority from image/audio semantics"
+        },
+        {
+          "path": "docs/deployment/PUBLIC_SELF_SERVE_EVIDENCE_GATES.md",
+          "target_blob": "6970c9189159fe67e8f1a49aadd05fe84aa30bca",
+          "reason": "expand MarkItDown binary corpus and separate document authority from image/audio semantics"
+        },
+        {
+          "path": "scripts/run-upstream-capability-live-canary.mjs",
+          "target_blob": "837b2875fe69f25fad01cea62f5b6cedcf30dc05",
+          "reason": "expand MarkItDown binary corpus and separate document authority from image/audio semantics"
+        },
+        {
+          "path": "scripts/verify-external-capability-live-prereqs.mjs",
+          "target_blob": "ede908fa45c8354e9425b44b742107ef61cf4f5d",
+          "reason": "expand MarkItDown binary corpus and separate document authority from image/audio semantics"
+        },
+        {
+          "path": "scripts/verify-external-capability-runtime-decision.mjs",
+          "target_blob": "5475ce55a64dbf11abb8cea0b553d458b334eed5",
+          "reason": "expand MarkItDown binary corpus and separate document authority from image/audio semantics"
+        },
+        {
+          "path": "scripts/verify-external-capability-runtime-results.mjs",
+          "target_blob": "576abd562ac6504f35ed7b328266124451fa4306",
+          "reason": "expand MarkItDown binary corpus and separate document authority from image/audio semantics"
+        }
+      ]
     }
   ]
 }

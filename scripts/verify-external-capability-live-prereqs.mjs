@@ -53,6 +53,35 @@ addCheck('markitdown_cli_exists', fs.existsSync(markitdown), { markitdown }, {
 });
 
 if (fs.existsSync(python)) {
+  const fixtureDependencies = pythonJson(`
+import importlib.metadata as md, importlib.util, json
+packages = {
+    "reportlab": "reportlab",
+    "docx": "python-docx",
+    "pptx": "python-pptx",
+    "openpyxl": "openpyxl",
+    "PIL": "Pillow",
+}
+out = {}
+for module, distribution in packages.items():
+    available = importlib.util.find_spec(module) is not None
+    try:
+        version = md.version(distribution) if available else None
+    except md.PackageNotFoundError:
+        version = None
+    out[module] = {"available": available, "distribution": distribution, "version": version}
+print(json.dumps(out))
+`);
+  const fixtureDependenciesReady = fixtureDependencies
+    && !fixtureDependencies.error
+    && Object.values(fixtureDependencies).every((item) => item.available && item.version);
+  addCheck('markitdown_binary_fixture_dependencies_available', fixtureDependenciesReady, {
+    modules: fixtureDependencies,
+  }, {
+    block: strict,
+    message: 'The expanded MarkItDown PDF/Office/media canary requires reportlab, python-docx, python-pptx, openpyxl, and Pillow in the disposable venv.',
+  });
+
   const metadata = pythonJson(`
 import importlib.metadata as md, json
 out = {}

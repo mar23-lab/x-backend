@@ -152,6 +152,22 @@ function verifyRuntimeResult(result) {
   } else if (capability === 'markitdown') {
     minGate(capability, gates, 'extraction_fidelity_pct', 95);
     minGate(capability, gates, 'citation_source_span_coverage_pct', 95);
+    minGate(capability, gates, 'document_structured_class_coverage_pct', 100);
+    const globalCoverage = Number(gates.global_target_class_coverage_pct || 0);
+    if (globalCoverage < 100) {
+      warnings.push({
+        id: 'markitdown_global_multimodal_coverage_incomplete',
+        capability,
+        actual: globalCoverage,
+        blocked_source_types: result.blocked_source_types || [],
+        message: 'MarkItDown may be reviewed only for the passing document/structured lane; global default authority remains blocked until image and audio semantic lanes pass separately.',
+      });
+    } else {
+      pass(`markitdown_global_target_class_coverage_complete:${capability}`, { actual: globalCoverage });
+    }
+    if (result.scoped_document_fallback_candidate === true) {
+      pass(`markitdown_scoped_document_fallback_candidate:${capability}`);
+    }
     const p95 = Number(gates.p95_small_doc_conversion_ms || 999999);
     if (p95 > 3000) {
       fail('p95_small_doc_conversion_above_target', 'small-doc conversion p95 target exceeded', {

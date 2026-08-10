@@ -108,9 +108,11 @@ process.exit(report.status === 'PASS' ? 0 : 1);
 
 function runMarkitdownLive(capability, cases) {
   const cli = path.join(venv, 'bin', 'markitdown');
-  const supported = cases.filter(isMarkitdownLiveSupported);
+  const supported = cases.filter(isMarkitdownDocumentLaneSupported);
+  const mediaCases = cases.filter((item) => ['image', 'audio'].includes(item.source_type));
   const timings = [];
   const failures = [];
+  const caseResults = [];
   let sourceSpanCount = 0;
   let fidelityPass = 0;
   let redactionPass = 0;
@@ -123,29 +125,79 @@ function runMarkitdownLive(capability, cases) {
   for (const item of supported) {
     const inputPath = writeMarkitdownInput(item);
     const started = performance.now();
-    const run = spawnSync(cli, [inputPath], { cwd: workdir, encoding: 'utf8', maxBuffer: 1024 * 1024 * 8 });
+    const run = spawnSync(cli, [inputPath], {
+      cwd: workdir,
+      encoding: 'utf8',
+      maxBuffer: 1024 * 1024 * 8,
+      timeout: 30_000,
+      env: markitdownEnvironment(),
+    });
     timings.push(performance.now() - started);
     if (run.status !== 0) {
-      failures.push({ case_id: item.id, status: run.status, stderr: (run.stderr || '').slice(-1000) });
+      const failure = {
+        case_id: item.id,
+        status: run.status,
+        signal: run.signal || null,
+        timed_out: run.error?.code === 'ETIMEDOUT',
+        stderr: (run.stderr || run.error?.message || '').slice(-1000),
+      };
+      failures.push(failure);
+      caseResults.push({ case_id: item.id, source_type: item.source_type, status: 'FAIL', ...failure });
       continue;
     }
     const converted = redact(`${run.stdout}\n${run.stderr || ''}`);
-    if (converted.includes(`source:${item.id}:line-1`)) sourceSpanCount += 1;
-    if (converted.includes(item.id) && converted.includes(item.tenant_scope)) fidelityPass += 1;
-    if (!containsSensitive(converted)) redactionPass += 1;
+    const normalized = normalizeMarkdownEscapes(converted);
+    const sourceSpanPassed = normalized.includes(`source:${item.id}:line-1`);
+    const fidelityPassed = normalized.includes(item.id) && normalized.includes(item.tenant_scope);
+    const redactionPassed = !containsSensitive(normalized);
+    if (sourceSpanPassed) sourceSpanCount += 1;
+    if (fidelityPassed) fidelityPass += 1;
+    if (redactionPassed) redactionPass += 1;
     else leaks += 1;
+    caseResults.push({
+      case_id: item.id,
+      source_type: item.source_type,
+      status: sourceSpanPassed && fidelityPassed && redactionPassed ? 'PASS' : 'FAIL',
+      source_span_passed: sourceSpanPassed,
+      fidelity_passed: fidelityPassed,
+      redaction_passed: redactionPassed,
+      latency_ms: round(timings.at(-1)),
+    });
   }
 
-  const skipped = cases.length - supported.length;
-  if (skipped) {
+  for (const item of mediaCases) {
+    writeMarkitdownInput(item);
+    const dependency = item.source_type === 'image'
+      ? 'approved_multimodal_llm_or_ocr_adapter_required'
+      : 'approved_speech_transcription_provider_required';
+    caseResults.push({
+      case_id: item.id,
+      source_type: item.source_type,
+      status: 'BLOCKED_DEPENDENCY',
+      dependency,
+      upstream_execution_attempted: false,
+      reason: item.source_type === 'image'
+        ? 'MarkItDown 0.1.6 does not perform image semantic extraction without an explicitly configured multimodal client.'
+        : 'MarkItDown 0.1.6 uses an outbound Google speech-recognition call; the no-network sandbox policy forbids that implicit provider boundary.',
+    });
+  }
+
+  const skipped = mediaCases.length;
+  if (mediaCases.length) {
     warnings.push({
-      id: 'markitdown_live_canary_partial_file_type_coverage',
-      message: 'Live MarkItDown canary used temp text/HTML/table-like fixtures only; binary Office/PDF/image/audio coverage still requires fuller sandbox fixtures before default adoption.',
+      id: 'markitdown_multimodal_semantic_lanes_blocked',
+      message: 'Document and structured-text conversion is evaluated separately from image OCR and audio transcription. Media lanes require explicit governed providers and cannot inherit document-lane adoption authority.',
       skipped,
       attempted: supported.length,
       total: cases.length,
+      blocked_source_types: mediaCases.map((item) => item.source_type),
     });
   }
+
+  const documentLanePassed = failures.length === 0
+    && fidelityPass === supported.length
+    && sourceSpanCount === supported.length
+    && redactionPass === supported.length;
 
   return {
     capability: capability.id,
@@ -154,10 +206,14 @@ function runMarkitdownLive(capability, cases) {
     upstream_tool_execution: true,
     decision: 'live_upstream_canary_executed_not_default',
     default_adoption_allowed: false,
-    opt_in_canary_allowed: failures.length === 0,
+    opt_in_canary_allowed: documentLanePassed,
+    scoped_document_fallback_candidate: documentLanePassed,
     case_count: supported.length,
     corpus_target_case_count: cases.length,
     skipped_case_count: skipped,
+    supported_source_types: supported.map((item) => item.source_type),
+    blocked_source_types: mediaCases.map((item) => item.source_type),
+    case_results: caseResults,
     failures,
     gates: {
       extraction_fidelity_pct: pct(fidelityPass, supported.length),
@@ -168,6 +224,10 @@ function runMarkitdownLive(capability, cases) {
       external_graph_authority_count: 0,
       replayability_pct: 100,
       p95_small_doc_conversion_ms: percentile(timings, 95),
+      document_structured_class_coverage_pct: pct(supported.length, cases.length - mediaCases.length),
+      global_target_class_coverage_pct: pct(supported.length, cases.length),
+      image_semantic_coverage_pct: 0,
+      audio_semantic_coverage_pct: 0,
       license_security_sbom_status: registryLicensePass(capability),
     },
   };
@@ -414,10 +474,12 @@ function safeFailureGates(capability) {
   };
 }
 
-function isMarkitdownLiveSupported(item) {
+function isMarkitdownDocumentLaneSupported(item) {
   return [
-    'packet',
-    'evidence_bundle',
+    'pdf',
+    'docx',
+    'pptx',
+    'xlsx',
     'html',
     'csv',
     'json',
@@ -425,7 +487,7 @@ function isMarkitdownLiveSupported(item) {
     'source_connector',
     'tool_log',
     'malicious_markdown',
-    'yaml_frontmatter',
+    'malicious_yaml',
     'malicious_html',
     'prompt_injection',
     'redaction_sensitive',
@@ -434,6 +496,33 @@ function isMarkitdownLiveSupported(item) {
 
 function writeMarkitdownInput(item) {
   const payload = syntheticPayload(item);
+  const binaryExtensions = {
+    pdf: 'pdf',
+    docx: 'docx',
+    pptx: 'pptx',
+    xlsx: 'xlsx',
+    image: 'png',
+    audio: 'wav',
+  };
+  if (binaryExtensions[item.source_type]) {
+    const filePath = path.join(workdir, `${item.id}.${binaryExtensions[item.source_type]}`);
+    const generator = path.join(repoRoot, 'scripts/generate-markitdown-canary-fixture.py');
+    const python = path.join(venv, 'bin', 'python');
+    const generated = spawnSync(
+      python,
+      [
+        generator,
+        `--source-type=${item.source_type}`,
+        `--output=${filePath}`,
+        `--payload-base64=${Buffer.from(payload).toString('base64')}`,
+      ],
+      { cwd: workdir, encoding: 'utf8', maxBuffer: 1024 * 1024 * 8, timeout: 30_000 },
+    );
+    if (generated.status !== 0 || !fs.existsSync(filePath)) {
+      throw new Error(`Failed to generate ${item.source_type} fixture for ${item.id}: ${(generated.stderr || generated.stdout || '').slice(-1000)}`);
+    }
+    return filePath;
+  }
   const ext =
     item.source_type === 'html' || item.source_type === 'malicious_html'
       ? 'html'
@@ -443,12 +532,25 @@ function writeMarkitdownInput(item) {
           ? 'json'
           : item.source_type === 'xml'
             ? 'xml'
-            : item.source_type === 'yaml_frontmatter'
+            : item.source_type === 'malicious_yaml'
               ? 'md'
               : 'txt';
   const filePath = path.join(workdir, `${item.id}.${ext}`);
   fs.writeFileSync(filePath, encodePayloadForExt(payload, item, ext));
   return filePath;
+}
+
+function markitdownEnvironment() {
+  const env = { ...process.env };
+  for (const key of Object.keys(env)) {
+    if (/OPENAI|ANTHROPIC|GEMINI|GOOGLE|AZURE|AWS|MISTRAL|DEEPSEEK/i.test(key)) delete env[key];
+  }
+  env.MARKITDOWN_ENABLE_PLUGINS = '0';
+  return env;
+}
+
+function normalizeMarkdownEscapes(value) {
+  return String(value).replace(/\\([_\\*`{}\[\]()#+.!-])/g, '$1');
 }
 
 function encodePayloadForExt(payload, item, ext) {

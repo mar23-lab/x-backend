@@ -133,6 +133,38 @@ test('paid/platform semantic gate belongs only to Headroom', () => {
   assert.equal(byId.get('markitdown')?.acceptance_gates?.paid_or_platform_semantic_canary_required, undefined);
 });
 
+test('MarkItDown live canary separates document authority from media semantics', () => {
+  const source = fs.readFileSync(
+    path.join(repoRoot, 'scripts/run-upstream-capability-live-canary.mjs'),
+    'utf8',
+  );
+
+  assert.match(source, /scoped_document_fallback_candidate/);
+  assert.match(source, /markitdown_multimodal_semantic_lanes_blocked/);
+  assert.match(source, /approved_multimodal_llm_or_ocr_adapter_required/);
+  assert.match(source, /approved_speech_transcription_provider_required/);
+  assert.match(source, /malicious_yaml/);
+  assert.doesNotMatch(source, /'yaml_frontmatter'/);
+  assert.match(source, /timeout: 30_000/);
+});
+
+test('MarkItDown verifier prevents document evidence from becoming global media authority', () => {
+  const runtimeVerifier = fs.readFileSync(
+    path.join(repoRoot, 'scripts/verify-external-capability-runtime-results.mjs'),
+    'utf8',
+  );
+  const decisionVerifier = fs.readFileSync(
+    path.join(repoRoot, 'scripts/verify-external-capability-runtime-decision.mjs'),
+    'utf8',
+  );
+
+  for (const source of [runtimeVerifier, decisionVerifier]) {
+    assert.match(source, /document_structured_class_coverage_pct/);
+    assert.match(source, /markitdown_global_multimodal_coverage_incomplete/);
+    assert.match(source, /global_target_class_coverage_pct/);
+  }
+});
+
 test('strict runtime verifier recognizes paid/platform evidence but still requires owner approval', () => {
   const input = writeFixture('headroom-paid-structural.json', {
     schema_id: 'xlooop.external_capability_runtime_results.v1',
