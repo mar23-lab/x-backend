@@ -18,6 +18,7 @@ import {
   releaseManifestDigest,
   verifyStaticArtifactFiles,
 } from './lib/app-pages-release-contract.mjs';
+import { renderPagesHeaders } from './lib/security-header-contract.mjs';
 import { readCandidateDeploymentContract } from './lib/candidate-deployment-contract.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -68,6 +69,14 @@ if (!assessment.ok || fileProblems.length) {
 rmSync(outputDir, { recursive: true, force: true });
 mkdirSync(outputDir, { recursive: true });
 cpSync(artifactDir, outputDir, { recursive: true });
+
+// The backend manifest is the sole deployment authority for app-plane headers.
+// Always replace any donor file so a frontend build can never smuggle or retain
+// an independent production header policy.
+const securityHeaders = JSON.parse(
+  readFileSync(path.join(root, 'data/security-headers.manifest.json'), 'utf8'),
+);
+writeFileSync(path.join(outputDir, '_headers'), renderPagesHeaders(securityHeaders));
 
 const wrangler = path.join(root, 'node_modules', 'wrangler', 'bin', 'wrangler.js');
 const build = spawnSync(

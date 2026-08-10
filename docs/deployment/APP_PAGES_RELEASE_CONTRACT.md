@@ -67,7 +67,8 @@ This is one deployed frontend with a cross-repository release boundary, not a se
 - The API packet, Pages packet, and assembled manifest carry one immutable artifact digest and exact
   schema/contract/feature-posture tuple. Any cross-surface mismatch is refused before authorization
   consumption.
-- The React artifact includes Vite assets and production `_headers`, and excludes legacy
+- The React artifact includes Vite assets and no deployment-header authority. Backend assembly
+  always emits production `_headers` from `data/security-headers.manifest.json`, and excludes legacy
   `clerk-boot.js`, `live-data.js`, `support.js`, and `vendor/` runtime authority.
 - The frontend's expected backend SHA equals the backend checkout `HEAD`.
 - Frontend build and backend assembly/deploy checkouts are clean; dirty code cannot inherit a committed SHA.

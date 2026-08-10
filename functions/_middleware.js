@@ -9,7 +9,7 @@
 // real XSS surface) - but those are SEPARATE policies (the API one is deliberately stricter).
 //
 // SINGLE SOURCE OF TRUTH: data/security-headers.manifest.json (also consumed by
-// scripts/prepare-cloudflare-pages.mjs to write the static _headers file). Edit header
+// scripts/prepare-app-pages-release.mjs to write the static _headers file). Edit header
 // values ONLY in the manifest; scripts/verify-app-security-header-parity.mjs asserts the
 // live deploy matches it. The JSON is bundled into the _worker.js at build time by wrangler.
 

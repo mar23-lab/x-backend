@@ -7098,6 +7098,30 @@
           "reason": "Register live R2 lifecycle receipt commands and operator runbook."
         }
       ]
+    },
+    {
+      "delta_id": "security-header-deploy-authority-v3-20260811",
+      "generated_at": "2026-08-10T19:13:36Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "e8a5819b6fbf0ec2c7aa5aac37d7c268748e200a",
+      "target_base_commit": "e8a5819b6fbf0ec2c7aa5aac37d7c268748e200a",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        { "path": "data/security-headers.manifest.json", "target_blob": "b647e3214c13863047c44a431f307e9d9200cc57", "reason": "Make backend manifest the deploy/runtime header authority with host-only HSTS and enforced CSP reporting." },
+        { "path": "functions/_lib/frontend-release-provenance.js", "target_blob": "d86d1ee72a6a4bf137f2367ac8304139514ad3b1", "reason": "Replace inline Sentry configuration and event handlers with a same-origin external bootstrap contract." },
+        { "path": "functions/_middleware.js", "target_blob": "255766edf9f6f67f33dc382d2d9a1d29c9cf4346", "reason": "Inject only the governed same-origin Sentry bootstrap while enforcing manifest headers." },
+        { "path": "functions/api/csp-report.js", "target_blob": "54f484d0695b1f39c554a0633156a87837997be1", "reason": "Align CSP report collector documentation with enforced policy." },
+        { "path": "functions/sentry-bootstrap.js", "target_blob": "b2dc48256ded13d202868cf0562234cf0c029a6a", "reason": "Serve no-store same-origin external Sentry bootstrap JavaScript." },
+        { "path": "scripts/lib/app-pages-release-contract.mjs", "target_blob": "bd45aae57fd5a0ceea395e8179e4970377c5b17c", "reason": "Remove frontend deployment-header authority from the React donor contract." },
+        { "path": "scripts/lib/security-header-contract.mjs", "target_blob": "29a0f95a7d5d574855f2bc99d7646a37f5defb81", "reason": "Render Cloudflare Pages headers deterministically from the backend manifest." },
+        { "path": "scripts/prepare-app-pages-release.mjs", "target_blob": "6aef12f9c5d1d7496b49cce760eb9ed1766d23c8", "reason": "Overwrite donor headers during backend release assembly." },
+        { "path": "scripts/verify-app-security-header-parity.mjs", "target_blob": "21cd7a529f685eece77fe7b0d7dd6ea51d55538e", "reason": "Enforce exact HSTS, CSP, artifact rendering, no inline script, and no legacy widget exception." },
+        { "path": "scripts/verify-pages-sentry-release.mjs", "target_blob": "bfa065e8cc7bdf26f0aae0f2efb30ee7f70a6695", "reason": "Prove the same-origin bootstrap and SDK initialization execute once without inline handlers." },
+        { "path": "scripts/verify-rollback-target-authority.mjs", "target_blob": "6fff31cc0ca6bedfab4b1599a0648cdca8cd516d", "reason": "Preserve Wrangler JSON output and fail clearly on empty or malformed rollback evidence." },
+        { "path": "src/workers/middleware/security-headers.ts", "target_blob": "14ff4b54ba5afdc1be96fcd6174bef4cb33ae90c", "reason": "Align API HSTS with the approved host-only 86400-second ramp." },
+        { "path": "docs/deployment/APP_PAGES_RELEASE_CONTRACT.md", "target_blob": "fc1cbc822a3b9dc85423e89dabe0a0140de51bcf", "reason": "Document backend-owned deploy-time header authority." }
+      ]
     }
   ]
 }
