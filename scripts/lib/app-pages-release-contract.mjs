@@ -124,10 +124,15 @@ export function assessFrontendReleaseArtifact(config, expected) {
   const expectedApiBase = expected?.api_base || 'https://api.xlooop.com';
   const expectedEnvironment = expected?.environment || 'production';
   const expectedAuthority = expected?.authority || 'production';
-  if (config.build_mode !== 'production') problems.push('build_mode');
-  if (config.artifact_contract === 'react_vite_v2'
-    && config.production_cutover_approved !== true) {
-    problems.push('production_cutover_approved');
+  const expectedBuildMode = expectedEnvironment === 'production' ? 'production' : 'staging';
+  if (config.artifact_contract === 'react_vite_v2') {
+    if (config.build_mode !== expectedBuildMode) problems.push('build_mode');
+    const expectedCutoverApproval = expectedEnvironment === 'production';
+    if (config.production_cutover_approved !== expectedCutoverApproval) {
+      problems.push('production_cutover_approved');
+    }
+  } else if (config.build_mode !== 'production') {
+    problems.push('build_mode');
   }
   if (config.require_contract_handshake !== true) problems.push('require_contract_handshake');
   if (config.api_base !== expectedApiBase) problems.push('api_base');

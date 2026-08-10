@@ -239,6 +239,8 @@
     "verify:pilot-shadow-soak-rollback-evidence:self-test": "node scripts/verify-pilot-shadow-soak-rollback-evidence.mjs --self-test",
     "verify:bundle": "DEPLOY_MIGRATION_GATE_NONPROD=1 wrangler deploy --config wrangler.toml --dry-run --outdir dist-workers-dryrun",
     "verify:pilot-shadow-config": "node scripts/verify-pilot-shadow-config.mjs",
+    "deploy:pilot-shadow": "node scripts/deploy-pilot-shadow.mjs",
+    "deploy:pilot-shadow:self-test": "node scripts/deploy-pilot-shadow.mjs --self-test",
     "secret-scan": "node scripts/secret-scan.mjs --all",
     "deploy:api:receipt": "node scripts/emit-deploy-receipt.mjs --wait 120 --receipt docs/deployment/evidence/latest-cloudflare-api-deploy-receipt.json",
     "deploy:api:ratify": "node scripts/ratify-authority-decision-packet.mjs --wait 120",

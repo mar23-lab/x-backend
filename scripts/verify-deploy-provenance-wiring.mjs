@@ -29,6 +29,7 @@ try {
     'utf8',
   );
   const deploy = pkg.scripts?.['deploy:api'];
+  const pilotDeploy = pkg.scripts?.['deploy:pilot-shadow'];
   const dev = pkg.scripts?.['dev:api'];
   const bundle = pkg.scripts?.['verify:bundle'];
   const authorityDeploy = pkg.scripts?.['verify:authority-decision:deploy'];
@@ -36,10 +37,21 @@ try {
   if (typeof deploy !== 'string') throw new Error('scripts["deploy:api"] missing or not a string');
   const pairedDeploy = readFileSync(join(root, 'scripts', 'deploy-paired-prod.mjs'), 'utf8');
   const deployContract = `${deploy}\n${pairedDeploy}`;
+  const pilotDeploySource = readFileSync(join(root, 'scripts', 'deploy-pilot-shadow.mjs'), 'utf8');
 
   const missing = [];
   if (!/`BUILD_SHA:\$\{head\}`/.test(deployContract)) missing.push('--var BUILD_SHA:<sha>');
   if (!/`BUILD_TIME:\$\{new Date\(\)/.test(deployContract)) missing.push('--var BUILD_TIME:<iso>');
+  if (typeof pilotDeploy !== 'string' || !/deploy-pilot-shadow\.mjs/.test(pilotDeploy)) {
+    missing.push('scripts["deploy:pilot-shadow"] governed deploy producer');
+  }
+  if (!/wrangler\.pilot-shadow\.toml/.test(pilotDeploySource)
+      || !/`BUILD_SHA:\$\{head\}`/.test(pilotDeploySource)
+      || !/`BUILD_TIME:\$\{builtAt\}`/.test(pilotDeploySource)
+      || !/assessPilotShadowHealth/.test(pilotDeploySource)
+      || !/XLOOOP_PILOT_SHADOW_DEPLOY_APPROVAL_REF/.test(pilotDeploySource)) {
+    missing.push('pilot-shadow exact target/provenance/health/approval contract');
+  }
   if (!/`XLOOOP_SCHEMA_HEAD:\$\{process\.env\.XLOOOP_SCHEMA_HEAD\}`/.test(deployContract)) {
     missing.push('--var XLOOOP_SCHEMA_HEAD:$XLOOOP_SCHEMA_HEAD');
   }

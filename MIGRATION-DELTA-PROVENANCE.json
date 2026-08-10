@@ -7287,6 +7287,32 @@
           "reason": "Bind pilot-shadow CSP target and authoritative R2 lifecycle proofs"
         }
       ]
+    },
+    {
+      "delta_id": "pilot-shadow-deploy-ratification-20260811",
+      "generated_at": "2026-08-10T23:44:47.153Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "d1c9ff9aceb5c43b5e9f440e9727591a80ca9b44",
+      "target_base_commit": "d1c9ff9aceb5c43b5e9f440e9727591a80ca9b44",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "package.json",
+          "target_blob": "beb72958b165c0f4e92dbdd3c8eef0ff3d5204d2",
+          "reason": "Rectify staging artifact authority and require exact SHA-bound pilot-shadow deploy health ratification"
+        },
+        {
+          "path": "scripts/lib/app-pages-release-contract.mjs",
+          "target_blob": "02839327d5343545cbab21b356cd966ab618d700",
+          "reason": "Rectify staging artifact authority and require exact SHA-bound pilot-shadow deploy health ratification"
+        },
+        {
+          "path": "scripts/verify-deploy-provenance-wiring.mjs",
+          "target_blob": "1547339b4abfedc35e94506fca97014434efd274",
+          "reason": "Rectify staging artifact authority and require exact SHA-bound pilot-shadow deploy health ratification"
+        }
+      ]
     }
   ]
 }

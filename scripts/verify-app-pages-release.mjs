@@ -116,6 +116,8 @@ function runSelfTest() {
   const pilotApiBase = 'https://xlooop-api-pilot-shadow.xlooop23.workers.dev';
   const pilotReact = {
     ...reactParsed,
+    build_mode: 'staging',
+    production_cutover_approved: false,
     api_base: pilotApiBase,
     environment: 'pilot-shadow',
     authority: 'shadow',
@@ -212,6 +214,18 @@ function runSelfTest() {
     ['React/Vite v2 feature posture drift is rejected',
       !wrongReactPosture.ok && wrongReactPosture.problems.includes('feature_posture_mismatch')],
     ['pilot-shadow artifact is valid only against the explicit pilot target', validPilotReact.ok],
+    ['pilot-shadow artifact cannot claim production cutover approval',
+      !assessFrontendReleaseArtifact(
+        { ...pilotReact, production_cutover_approved: true },
+        {
+          frontend_sha: frontendSha,
+          backend_sha: backendSha,
+          contract_hash: contractHash,
+          environment: 'pilot-shadow',
+          authority: 'shadow',
+          api_base: pilotApiBase,
+        },
+      ).ok],
     ['pilot-shadow artifact is rejected by the production-default contract',
       !pilotReactRejectedWithoutExplicitTarget.ok
         && pilotReactRejectedWithoutExplicitTarget.problems.includes('api_base')
