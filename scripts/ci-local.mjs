@@ -104,6 +104,7 @@ const gates = [
   ['operation-event source-tool constraint', 'npm', ['run', 'verify:operation-event-source-tool-constraint']],
   ['operation-event source-tool constraint controls', 'npm', ['run', 'verify:operation-event-source-tool-constraint:self-test']],
   ['pilot live RLS evidence producer', 'npm', ['run', 'produce:pilot-shadow-live-rls-evidence:self-test']],
+  ['pilot-shadow canary binding preparation controls', 'npm', ['run', 'prepare:pilot-shadow-canary-bindings:self-test']],
   ['predeploy migration fail-closed classifier', 'npm', ['run', 'verify:predeploy-migration-gate:self-test']],
   // META-GATE P-2 and the three estate self-tests that actually OBSERVE a red. The meta-gate is a
   // ratchet over docs/contracts/GATE_SELF_REFERENCE_BASELINE.json: known violations are frozen, new

@@ -7123,6 +7123,32 @@
         { "path": "src/workers/middleware/security-headers.ts", "target_blob": "14ff4b54ba5afdc1be96fcd6174bef4cb33ae90c", "reason": "Align API HSTS with the approved host-only 86400-second ramp." },
         { "path": "docs/deployment/APP_PAGES_RELEASE_CONTRACT.md", "target_blob": "fc1cbc822a3b9dc85423e89dabe0a0140de51bcf", "reason": "Document backend-owned deploy-time header authority." }
       ]
+    },
+    {
+      "delta_id": "pilot-canary-binding-safety-20260811",
+      "generated_at": "2026-08-10T21:00:42.789Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "cf877336301f7e538df0471be8a4846e099c99f9",
+      "target_base_commit": "cf877336301f7e538df0471be8a4846e099c99f9",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "docs/architecture/backend/AUTH_TENANCY_MODEL.md",
+          "target_blob": "b4deff4177b391b31b00f1cef13953cd7ff5d89f",
+          "reason": "Add parser-safe canary binding preparation and live A/B entrypoint"
+        },
+        {
+          "path": "package.json",
+          "target_blob": "af0bd3e8b9651af71d301962c9228d83c19f9a84",
+          "reason": "Add parser-safe canary binding preparation and live A/B entrypoint"
+        },
+        {
+          "path": "scripts/ci-local.mjs",
+          "target_blob": "7f03492a5f745bcb64c124949b0d7586d9095edb",
+          "reason": "Add parser-safe canary binding preparation and live A/B entrypoint"
+        }
+      ]
     }
   ]
 }

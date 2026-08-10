@@ -154,22 +154,40 @@ The canary service principal must never expose or invoke:
 Only the token hash is stored in Workers. The raw token is local/operator-held
 and must not be committed.
 
-Generate a local canary token and hash:
+Generate a local canary token:
 
 ```bash
 TOKEN="$(openssl rand -base64 48 | tr -d '\n')"
 printf '%s' "$TOKEN" > /tmp/xlooop-canary-api-token.txt
 chmod 600 /tmp/xlooop-canary-api-token.txt
-printf '%s' "$TOKEN" | shasum -a 256
 unset TOKEN
 ```
 
-Set Worker secrets:
+For pilot-shadow, prepare the two hash bindings with the maintained parser. The
+helper hashes the token **value**, never the env file containing it, writes no
+raw token, refuses repository-local output, and does not call Cloudflare:
 
 ```bash
-npx wrangler secret put XLOOOP_CANARY_API_TOKEN_SHA256
-npx wrangler secret put XLOOOP_CANARY_WORKSPACE_ID
+npm run prepare:pilot-shadow-canary-bindings -- \
+  --read-env-file="$HOME/.xlooop/pilot-telemetry/secrets/xlooop-canary-api-token.env" \
+  --lifecycle-token-file=/tmp/xlooop-canary-lifecycle-api-token.txt \
+  --output=/private/tmp/xlooop-pilot-shadow-canary-secret-bundle.json
 ```
+
+After exact operator approval, apply that hash-only bundle to the isolated
+Worker, verify live parity, and delete the temporary bundle:
+
+```bash
+npx wrangler secret bulk /private/tmp/xlooop-pilot-shadow-canary-secret-bundle.json \
+  --config wrangler.pilot-shadow.toml
+XLOOOP_API_BASE=https://xlooop-api-pilot-shadow.xlooop23.workers.dev \
+  npm run verify:internal-company-a-b-canary -- --format=json
+rm /private/tmp/xlooop-pilot-shadow-canary-secret-bundle.json
+```
+
+`XLOOOP_CANARY_WORKSPACE_ID` is provisioned separately and is never inferred
+from a token file. Production uses its own exact approval and secret bundle;
+the pilot-shadow helper must not be repointed to `wrangler.toml`.
 
 Run the API/MCP parity verifier without a short-lived browser JWT:
 
