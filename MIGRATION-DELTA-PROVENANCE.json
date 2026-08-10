@@ -7118,7 +7118,8 @@
         { "path": "scripts/prepare-app-pages-release.mjs", "target_blob": "6aef12f9c5d1d7496b49cce760eb9ed1766d23c8", "reason": "Overwrite donor headers during backend release assembly." },
         { "path": "scripts/verify-app-security-header-parity.mjs", "target_blob": "21cd7a529f685eece77fe7b0d7dd6ea51d55538e", "reason": "Enforce exact HSTS, CSP, artifact rendering, no inline script, and no legacy widget exception." },
         { "path": "scripts/verify-pages-sentry-release.mjs", "target_blob": "bfa065e8cc7bdf26f0aae0f2efb30ee7f70a6695", "reason": "Prove the same-origin bootstrap and SDK initialization execute once without inline handlers." },
-        { "path": "scripts/verify-rollback-target-authority.mjs", "target_blob": "6fff31cc0ca6bedfab4b1599a0648cdca8cd516d", "reason": "Preserve Wrangler JSON output and fail clearly on empty or malformed rollback evidence." },
+        { "path": "scripts/lib/rollback-target-authority-contract.mjs", "target_blob": "9d6241fd0eb2b632f0fd288da8c390c20fda9c07", "reason": "Accept Wrangler Pages display JSON while requiring a meaningful commit prefix before live full-SHA verification." },
+        { "path": "scripts/verify-rollback-target-authority.mjs", "target_blob": "d703b7d03b7773371f1f78e75c26e232c83527d0", "reason": "Preserve Wrangler JSON output, target the exact Worker name, accept live Pages list and legacy SPA fallback shapes, and fail clearly on invalid rollback evidence." },
         { "path": "src/workers/middleware/security-headers.ts", "target_blob": "14ff4b54ba5afdc1be96fcd6174bef4cb33ae90c", "reason": "Align API HSTS with the approved host-only 86400-second ramp." },
         { "path": "docs/deployment/APP_PAGES_RELEASE_CONTRACT.md", "target_blob": "fc1cbc822a3b9dc85423e89dabe0a0140de51bcf", "reason": "Document backend-owned deploy-time header authority." }
       ]
