@@ -198,11 +198,18 @@ export function verifyStaticArtifactFiles(artifactDir, contractHash) {
       const manifest = JSON.parse(readFileSync(reactManifest, 'utf8'));
       if (manifest.expected_contract_hash !== contractHash) problems.push('contract_hash_mismatch');
       const declared = manifest.files;
-      const actual = hashReleaseFiles(artifactDir, new Set(['runtime-manifest.json']));
       if (!declared || typeof declared !== 'object' || Array.isArray(declared)) {
         problems.push('runtime_manifest_files');
-      } else if (JSON.stringify(declared) !== JSON.stringify(actual)) {
-        problems.push('runtime_manifest_file_hashes');
+      } else {
+        // The frontend manifest owns only the files emitted by the frontend build. During
+        // backend assembly the same directory also gains Pages Functions, routes, and the
+        // release manifest; those files are governed by the outer release manifest. Compare
+        // every frontend-declared path without treating backend-owned additions as drift.
+        const releaseFiles = hashReleaseFiles(artifactDir, new Set(['runtime-manifest.json']));
+        const declaredFilesMatch = Object.entries(declared).every(
+          ([file, digest]) => releaseFiles[file] === digest,
+        );
+        if (!declaredFilesMatch) problems.push('runtime_manifest_file_hashes');
       }
     } catch {
       problems.push('runtime_manifest_invalid');

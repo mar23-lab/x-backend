@@ -114,6 +114,11 @@ function runSelfTest() {
     feature_posture: { ...posture, current_work_projection: true },
   });
   const reactStaticProblems = verifyStaticArtifactFiles(reactRoot, contractHash);
+  mkdirSync(path.join(reactRoot, '_worker.js'), { recursive: true });
+  writeFileSync(path.join(reactRoot, '_worker.js', 'index.js'), 'export default {};');
+  writeFileSync(path.join(reactRoot, '_routes.json'), '{}');
+  writeFileSync(path.join(reactRoot, 'release-manifest.json'), '{}');
+  const assembledReactProblems = verifyStaticArtifactFiles(reactRoot, contractHash);
   writeFileSync(path.join(reactRoot, 'assets/app.js'), 'tampered-after-manifest');
   const tamperedReactProblems = verifyStaticArtifactFiles(reactRoot, contractHash);
   writeFileSync(path.join(reactRoot, 'assets/app.js'), '');
@@ -168,6 +173,8 @@ function runSelfTest() {
     ['React/Vite v2 feature posture drift is rejected',
       !wrongReactPosture.ok && wrongReactPosture.problems.includes('feature_posture_mismatch')],
     ['React/Vite v2 static files are valid', reactStaticProblems.length === 0],
+    ['React/Vite v2 frontend hashes remain valid after backend-owned release assembly',
+      assembledReactProblems.length === 0],
     ['React/Vite v2 post-manifest asset mutation is rejected',
       tamperedReactProblems.includes('runtime_manifest_file_hashes')],
     ['valid manifest', validManifest.ok],

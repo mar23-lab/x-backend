@@ -7045,6 +7045,22 @@
           "reason": "expand MarkItDown binary corpus and separate document authority from image/audio semantics"
         }
       ]
+    },
+    {
+      "delta_id": "delta-20260811-release-artifact-hash-boundary",
+      "generated_at": "2026-08-10T15:02:57.010Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "e859c02d24d09622bbd5a8f9868d39c70bf86d95",
+      "target_base_commit": "e859c02d24d09622bbd5a8f9868d39c70bf86d95",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "scripts/lib/app-pages-release-contract.mjs",
+          "target_blob": "91529c59388eb5851be022a9dd8870a507ff5676",
+          "reason": "separate frontend runtime hashes from backend-owned Pages release files"
+        }
+      ]
     }
   ]
 }
