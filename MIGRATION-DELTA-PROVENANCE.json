@@ -6891,6 +6891,37 @@
           "reason": "bind paired production cutover, rollback authority, model-keyring readiness, live chat provenance, canonical deployed-surface convergence, fresh redacted MB-P projection, and merge-safe provenance reconciliation"
         }
       ]
+    },
+    {
+      "delta_id": "security-dependency-floor-20260810",
+      "generated_at": "2026-08-10T10:10:54.232Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "f60485a49fbab6d7e2ab06abb88ab864e96793b0",
+      "target_base_commit": "f60485a49fbab6d7e2ab06abb88ab864e96793b0",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "package.json",
+          "target_blob": "b44b9d39fc051a88d20bc848f19a15647975074b",
+          "reason": "patch backend and MCP dependency graph to current zero-audit advisory floors"
+        },
+        {
+          "path": "package-lock.json",
+          "target_blob": "3f9d66c0d6dd44a1b1da3d050f69803c719fc2ee",
+          "reason": "patch backend and MCP dependency graph to current zero-audit advisory floors"
+        },
+        {
+          "path": "packages/xlooop-mcp-server/package.json",
+          "target_blob": "0bb4317b46345549dd1c4670584f94f28474f26c",
+          "reason": "patch backend and MCP dependency graph to current zero-audit advisory floors"
+        },
+        {
+          "path": "packages/xlooop-mcp-server/package-lock.json",
+          "target_blob": "c68dbd9f6658b4c53cf44a1508ddb4e92dffb53e",
+          "reason": "patch backend and MCP dependency graph to current zero-audit advisory floors"
+        }
+      ]
     }
   ]
 }
