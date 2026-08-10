@@ -45,6 +45,10 @@ function migrationFiles() {
     .map((name) => resolve(MIGRATION_DIR, name));
 }
 
+export function latestMigrationVersion(files) {
+  return Math.max(...files.map((file) => Number(file.match(/\/(\d{3})_[^/]+\.sql$/)?.[1] ?? 0)));
+}
+
 function replaySequence(files) {
   const sequence = [];
   for (const file of files) {
@@ -75,6 +79,19 @@ function runPsql(binary, url, args, stdio = 'inherit') {
   return String(result.stdout ?? '').trim();
 }
 
+function ensureReplayRole(binary, url) {
+  runPsql(binary, url, [
+    '--command',
+    `DO $role$
+     BEGIN
+       IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'xlooop_app') THEN
+         CREATE ROLE xlooop_app NOLOGIN;
+       END IF;
+     END
+     $role$;`,
+  ]);
+}
+
 if (process.argv.includes('--self-test')) {
   const files = [
     '/tmp/091_conversation.sql',
@@ -82,6 +99,7 @@ if (process.argv.includes('--self-test')) {
     '/tmp/093_strict.sql',
   ];
   const sequence = replaySequence(files);
+  const headFiles = ['/tmp/099_chat.sql', '/tmp/100_authority.sql'];
   const cases = [
     assessEnvironment({}).length === 2,
     assessEnvironment({
@@ -98,18 +116,19 @@ if (process.argv.includes('--self-test')) {
       XLOOOP_SCHEMA_REPLAY_DISPOSABLE: '1',
     }).includes('replay database must not equal DATABASE_URL'),
     sequence[1] === BRIDGE_PATH && sequence.filter((item) => item === BRIDGE_PATH).length === 1,
+    latestMigrationVersion(headFiles) === 100,
   ];
   if (cases.every(Boolean)) {
-    console.log('replay-schema93-postgres self-test PASS');
+    console.log('replay-schema-head-postgres self-test PASS');
     process.exit(0);
   }
-  console.error('replay-schema93-postgres self-test FAIL');
+  console.error('replay-schema-head-postgres self-test FAIL');
   process.exit(1);
 }
 
 const problems = assessEnvironment(process.env);
 if (problems.length) {
-  console.error(`replay-schema93-postgres · FAIL-CLOSED · ${problems.join('; ')}`);
+  console.error(`replay-schema-head-postgres · FAIL-CLOSED · ${problems.join('; ')}`);
   process.exit(2);
 }
 
@@ -120,12 +139,16 @@ const publicTableCount = runPsql(binary, url, [
   "SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace WHERE n.nspname = 'public' AND c.relkind IN ('r', 'p');",
 ], 'pipe');
 if (publicTableCount !== '0') {
-  console.error(`replay-schema93-postgres · FAIL-CLOSED · database is not empty (${publicTableCount} public tables)`);
+  console.error(`replay-schema-head-postgres · FAIL-CLOSED · database is not empty (${publicTableCount} public tables)`);
   process.exit(2);
 }
 
-for (const file of replaySequence(migrationFiles())) {
-  console.log(`replay-schema93-postgres · apply ${file.replace(`${process.cwd()}/`, '')}`);
+ensureReplayRole(binary, url);
+
+const files = migrationFiles();
+const expectedHead = latestMigrationVersion(files);
+for (const file of replaySequence(files)) {
+  console.log(`replay-schema-head-postgres · apply ${file.replace(`${process.cwd()}/`, '')}`);
   runPsql(binary, url, ['--file', file]);
 }
 
@@ -144,9 +167,10 @@ const verification = runPsql(binary, url, [
      (SELECT count(*) FROM user_source_connections_legacy_v0_260606);`,
 ], 'pipe');
 
-if (verification !== '93|3|3|0|0|0') {
-  console.error(`replay-schema93-postgres · FAIL · expected 93|3|3|0|0|0, received ${verification}`);
+const expectedVerification = `${expectedHead}|3|3|0|0|0`;
+if (verification !== expectedVerification) {
+  console.error(`replay-schema-head-postgres · FAIL · expected ${expectedVerification}, received ${verification}`);
   process.exit(1);
 }
 
-console.log('replay-schema93-postgres · PASS · empty source replay reached schema 93; bridge tables 3/3 RLS-enabled and empty');
+console.log(`replay-schema-head-postgres · PASS · empty source replay reached schema ${expectedHead}; bridge tables 3/3 RLS-enabled and empty`);

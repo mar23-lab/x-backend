@@ -92,7 +92,7 @@ addCheck('canary_lifecycle_token_configured', hasLifecycleToken, {
 run('static_mcp_api_lifecycle_contract', 'npm', ['run', '--silent', 'verify:mcp-api-lifecycle-parity-live'], {
   block: true,
 });
-run('customer_revocation_end_to_end', 'npm', ['run', '--silent', 'verify:customer-revocation-end-to-end'], {
+run('customer_revocation_authority', 'npm', ['run', '--silent', 'verify:customer-revocation-authority'], {
   block: true,
 });
 run('api_mcp_lifecycle_parity_live', 'npm', ['run', '--silent', 'verify:api-mcp-lifecycle-parity', '--', '--format=json'], {

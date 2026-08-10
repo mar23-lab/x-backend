@@ -1,142 +1,94 @@
 {
-  "schema_version": "xlooop.cloud_deployment_readiness.v1",
-  "last_updated": "2026-05-17",
-  "stage": "development_and_customer_feedback",
-  "canonical_public_domain": "xlooop.com",
-  "retired_after_launch_domains": [
-    {
-      "domain": "xlooop.ai",
-      "disposition": "remove_or_301_redirect_after_xlooop_com_launch",
-      "reason": "xlooop.com is the strategic canonical brand domain; xlooop.ai is legacy visibility and must not remain a duplicate canonical site."
-    }
-  ],
-  "allowed_environments": [
-    "dev",
-    "test"
-  ],
-  "blocked_environment_names": [
-    "customer-feedback",
-    "feedback",
-    "staging",
-    "production"
-  ],
+  "schema_version": "xlooop.cloud_deployment_readiness.v2",
+  "last_updated": "2026-08-11",
+  "stage": "paired_production_controlled_validation",
+  "canonical_public_domains": {
+    "app": "https://app.xlooop.com",
+    "api": "https://api.xlooop.com",
+    "marketing": "https://www.xlooop.com"
+  },
+  "public_self_serve": {
+    "status": "hold_pending_live_evidence",
+    "required_before_go": [
+      "ratified_exact_api_and_app_pair",
+      "production_database_and_rls_authority",
+      "api_mcp_live_canary",
+      "production_delete_export_legal_hold_receipt",
+      "two_company_24_48h_live_pilot"
+    ]
+  },
+  "deployment_topology": {
+    "kind": "paired_worker_api_and_react_pages",
+    "single_mutation_command": "deploy:paired:prod",
+    "api_runtime": "cloudflare_workers",
+    "app_runtime": "cloudflare_pages",
+    "frontend_source_repo": "x-ai-front",
+    "frontend_artifact_contract": "react_vite_v2",
+    "backend_source_repo": "x-backend",
+    "release_manifest": "dist-app-pages-release/release-manifest.json",
+    "standalone_api_or_pages_production_deploy_allowed": false,
+    "compensating_rollback_required": true
+  },
   "github_actions": {
     "active": false,
-    "reason": "GitHub Actions is unpaid/unavailable for this private repository; failed runs stop before job steps and logs.",
-    "canonical_deploy": "local_cloudflare_direct_upload",
-    "active_workflow_directory_policy": ".github/workflows must contain no YAML workflows while unpaid/unavailable",
-    "preserved_templates": "deployment/github-actions-disabled",
-    "required_local_gates": [
-      "verify:github-actions-disabled",
-      "verify:cloud-deployment-readiness",
-      "verify:cloudflare-deployment-signal",
-      "verify:cloudflare-access-evidence",
-      "verify:feedback-d1-cloudflare",
-      "verify:feedback-annotations",
-      "verify:feedback-cloud-smoke",
-      "verify:retrospective-closeout-composed",
-      "verify:hosted-deployment-evidence",
-      "verify:hosted-ci-runner-health",
-      "verify:external-capability-live-prereqs",
-      "verify:external-capability-default-hard-stop",
-      "verify:api-mcp-live-canary-hard-stop",
-      "verify:live-evidence-authority-matrix",
-      "verify:public-production-readiness-hard-stop"
-    ]
+    "reason": "GitHub-hosted checks are not release authority while runs can terminate before checkout and produce no application-step evidence.",
+    "canonical_deploy": "local_operator_approved_paired_cutover",
+    "active_workflow_directory_policy": ".github/workflows must contain no YAML workflows while unavailable or non-authoritative",
+    "preserved_templates": "deployment/github-actions-disabled"
   },
+  "required_local_gates": [
+    "verify:github-actions-disabled",
+    "verify:orchestrator-script-contracts",
+    "verify:cloud-deployment-readiness",
+    "verify:cloudflare-deployment-signal",
+    "verify:deployed-surfaces",
+    "verify:deploy-provenance",
+    "verify:deploy-schema-head",
+    "verify:frontend-pair:self-test",
+    "verify:rollback-target-authority:self-test",
+    "verify:app-pages-release:self-test",
+    "deploy:paired:prod:self-test",
+    "verify:hosted-deployment-evidence",
+    "verify:hosted-ci-runner-health",
+    "verify:api-mcp-live-canary-hard-stop",
+    "verify:public-production-readiness-hard-stop"
+  ],
   "surfaces": [
     {
-      "surface_id": "xlooop",
-      "product_name": "Xlooop",
-      "technical_repo_name": "Xlooop-XCP-demo",
-      "purpose": "Business operations cockpit and customer feedback surface.",
-      "environments": [
-        {
-          "environment": "dev",
-          "domain": "dev.xlooop.com",
-          "access": "cloudflare_access_internal_owner",
-          "data_posture": "internal_full_owner_operations_allowed",
-          "operator_mode": "owner_operator_allowed",
-          "claim_posture": "internal_learning_testing_only"
-        },
-        {
-          "environment": "test",
-          "domain": "test.xlooop.com",
-          "access": "cloudflare_access_named_testers_plus_invitation_code",
-          "data_posture": "redacted_or_owner_approved_dataset_only",
-          "operator_mode": "watch_or_proposal_only_by_default",
-          "claim_posture": "customer_feedback_no_production_saas_claim"
-        }
-      ]
+      "surface_id": "api",
+      "url": "https://api.xlooop.com",
+      "runtime": "cloudflare_workers",
+      "authority": "production",
+      "source_repo": "x-backend",
+      "deploy_script": "deploy:paired:prod",
+      "ratification": "health tuple, schema head, contract hash, build SHA, keyring health"
     },
     {
-      "surface_id": "xcp",
-      "product_name": "XCP",
-      "technical_repo_name": "xcp-platform",
-      "purpose": "AI-governed infrastructure and control-plane dashboard.",
-      "environments": [
-        {
-          "environment": "dev",
-          "domain": "xcp-dev.xlooop.com",
-          "access": "cloudflare_access_internal_admins",
-          "data_posture": "infrastructure_control_plane_internal",
-          "operator_mode": "admin_entitlement_required_per_user",
-          "claim_posture": "internal_infrastructure_testing_only"
-        },
-        {
-          "environment": "test",
-          "domain": "xcp-test.xlooop.com",
-          "access": "cloudflare_access_named_testers_plus_admin_entitlement",
-          "data_posture": "sanitized_infrastructure_read_model_only",
-          "operator_mode": "disabled_unless_admin_switch_enables_user",
-          "claim_posture": "reference_only"
-        }
-      ]
+      "surface_id": "app",
+      "url": "https://app.xlooop.com",
+      "runtime": "cloudflare_pages",
+      "authority": "production",
+      "source_repo": "x-ai-front",
+      "serving_source": "app",
+      "forbidden_serving_source": "wired",
+      "deploy_script": "deploy:paired:prod",
+      "ratification": "release manifest, public hashes, backend tuple, security headers, authenticated journey"
     }
   ],
-  "access_policy": {
-    "waiting_list": {
-      "allowed": true,
-      "purpose": "Collect external interest and issue explicit test invitations.",
-      "security_role": "lead_capture_only"
-    },
-    "access_code": {
-      "encoding": "base64url_style_opaque_code_allowed",
-      "security_role": "invitation_routing_hint_not_authentication",
-      "required_controls": [
-        "server_side_code_validation",
-        "cloudflare_access_identity",
-        "expiry",
-        "single_use_or_rate_limited",
-        "audit_log"
-      ]
-    },
-    "xlooop_first_level_access": {
-      "default_surface": "Xlooop",
-      "default_test_mode": "watch_or_proposal_only",
-      "operator_mode_requires": [
-        "owner_or_admin_approval",
-        "risk_lane",
-        "receipt_path"
-      ]
-    },
-    "xcp_second_level_access": {
-      "default": "disabled",
-      "enabled_by": "admin_per_user_entitlement",
-      "must_be_separate_from": "xlooop_first_level_access"
-    }
-  },
-  "marketing_policy": {
-    "canonical_domain": "xlooop.com",
-    "marketing_site_public_after_claim_signoff": true,
-    "forward_looking_required": true,
-    "forbidden_claims": [
-      "production SaaS",
-      "production-ready customer operations",
-      "unrestricted live MB-P operations",
-      "xlooop.ai as canonical domain",
-      "customer-feedback.xlooop.com",
-      "feedback.xlooop.com"
-    ]
+  "authority_contract": {
+    "exact_operator_approval_required": true,
+    "single_use_authorization_required": true,
+    "maximum_authorization_minutes": 30,
+    "candidate_tuple": [
+      "backend_sha",
+      "frontend_sha",
+      "contract_hash",
+      "schema_head",
+      "feature_posture",
+      "artifact_digest"
+    ],
+    "rollback_pair_must_be_preverified": true,
+    "failed_ratification_triggers_compensating_rollback": true,
+    "deployment_is_not_public_self_serve_authority": true
   }
 }
