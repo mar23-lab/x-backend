@@ -44,6 +44,22 @@ XLOOOP_DELETE_EXPORT_RECEIPT_FILE=/path/to/receipt.json \
 shape. `verify:public-self-serve-production-receipts` is the strict promotion
 gate and fails unless the receipt is `production_live_receipt`.
 
+Generate the live receipt with internal non-customer data against real
+Cloudflare R2 storage:
+
+```bash
+npm run canary:delete-export-lifecycle:live -- \
+  --output=/private/tmp/xlooop-delete-export-production-receipt.json
+```
+
+The producer creates or reuses the dedicated
+`xlooop-production-lifecycle-receipts` bucket, verifies a one-day bucket lock
+blocks deletion, releases that exact bounded validation hold, deletes the
+validation payload, proves a negative read, and locks the resulting receipt
+and export manifest indefinitely. The bounded hold avoids leaving an unbounded
+validation lock after interruption. It fails closed when R2 is not enabled and
+never uses customer data.
+
 `synthetic_internal_canary` receipts may pass the contract but are not
 public-self-serve authority.
 

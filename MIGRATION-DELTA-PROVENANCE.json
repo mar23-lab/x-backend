@@ -7077,6 +7077,27 @@
           "reason": "Converge enforced CSP reporting and host-only HSTS across backend Pages authority and React production emitter"
         }
       ]
+    },
+    {
+      "delta_id": "r2-lifecycle-live-receipt-20260811",
+      "generated_at": "2026-08-10T17:33:31.641Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "2a755036f3678d4cb08ad5e5ce6b2d60df609d0e",
+      "target_base_commit": "2a755036f3678d4cb08ad5e5ce6b2d60df609d0e",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "package.json",
+          "target_blob": "32c12287180ccb125ec52b01ed288e1b4fa4d76a",
+          "reason": "Register live R2 lifecycle receipt commands and operator runbook."
+        },
+        {
+          "path": "docs/deployment/PUBLIC_SELF_SERVE_EVIDENCE_GATES.md",
+          "target_blob": "daa1168f4e0b2ba1c53a51c085efd38c0fb5b72a",
+          "reason": "Register live R2 lifecycle receipt commands and operator runbook."
+        }
+      ]
     }
   ]
 }
