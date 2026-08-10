@@ -5,7 +5,7 @@ import path from 'node:path';
 const root = process.cwd();
 const manifest = JSON.parse(fs.readFileSync(path.join(root, 'docs/contracts/model-execution-callsite-manifest.json'), 'utf8'));
 const errors = [];
-const callableFunctions = ['answerCockpitChat', 'buildWorkspaceDigestLLM', 'buildOnboardingWelcomeDraft', 'refinePromptText', 'generateIntentEnrichment'];
+const callableFunctions = ['answerLiveCockpitChat', 'buildWorkspaceDigestLLM', 'buildOnboardingWelcomeDraft', 'refinePromptText', 'generateIntentEnrichment'];
 
 if (manifest.schema_version !== 'xlooop.model_execution_callsites.v1') errors.push('unexpected schema_version');
 if (!Array.isArray(manifest.callsites) || manifest.callsites.length === 0) errors.push('callsites must be a non-empty array');
@@ -19,6 +19,9 @@ for (const entry of manifest.callsites ?? []) {
     errors.push(`${entry.id}: conversational production surface must be live_or_typed_unavailable`);
   }
   if (entry.surface_kind === 'conversation') {
+    if (entry.function !== 'answerLiveCockpitChat') {
+      errors.push(`${entry.id}: conversational route must use the required-runtime live boundary`);
+    }
     if (entry.deterministic_success_forbidden !== true) {
       errors.push(`${entry.id}: conversational production surface must forbid deterministic success`);
     }

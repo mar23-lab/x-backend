@@ -25,17 +25,17 @@ import { buildWorkspaceDigestLLM, type AiRunner } from '../services/agent-digest
 import { refinePromptText } from '../services/prompt-refine';
 import { syncFolderSnapshot, folderChangeToPacketRow, type FolderBinding, type FolderChangeKind } from '../sources/translators/folder';
 import { generateIntentEnrichment } from '../services/packet-enrichment';
+import { classifyCommercialChatHistory } from '../services/chat-history-classification';
 import { inferSourceContext } from '../lib/infer-source-context';
 import { normalizeFolderSnapshot } from '../sources/folder-snapshot-core';
 import {
-  answerCockpitChat,
+  answerLiveCockpitChat,
   COCKPIT_CHAT_MAX_EVENTS,
   mapGovernanceRowsToEvents,
   mapContextCardsToEvents,
   type ContextCardInput,
   type CockpitChatScope,
   type CockpitChatMode,
-  type CockpitChatLLM,
   type DocumentFact,
   type GovernanceMappedEvent,
   type GovernanceStreamRow,
@@ -379,7 +379,6 @@ workspacesRoute.post('/cockpit-chat', async (ctx) => {
     const ALLOWED_MODES: CockpitChatMode[] = ['ask', 'plan', 'recommend', 'deep-research'];
     const mode: CockpitChatMode = ALLOWED_MODES.includes(body?.mode as CockpitChatMode) ? (body!.mode as CockpitChatMode) : 'ask';
     // User-selected model (the chat's model switcher). Default = free Llama; 'claude' uses the premium tier.
-    const llm: CockpitChatLLM = body?.llm === 'claude' ? 'claude' : 'llama';
     const scopeIn = (body && typeof body.scope === 'object' && body.scope) || {};
     const workspaceId = typeof scopeIn.workspace_id === 'string' ? scopeIn.workspace_id.trim() : '';
     const projectId = typeof scopeIn.project_id === 'string' && scopeIn.project_id.trim() ? scopeIn.project_id.trim() : null;
@@ -564,9 +563,6 @@ workspacesRoute.post('/cockpit-chat', async (ctx) => {
       }
     } catch (_) { /* graph context is additive — the pinned-only lineage (or none) stands */ }
 
-    const ai = (ctx.env as { AI?: AiRunner }).AI;
-    // P6 · premium Claude tier (deep-research mode only) when ANTHROPIC_API_KEY is configured.
-    const claudeKey = (ctx.env as { ANTHROPIC_API_KEY?: string }).ANTHROPIC_API_KEY;
     // S1 (260628) · company-aware chat when scoped to a customer workspace: the chief-of-staff reads
     // the captured context (focus/maturity/tools) instead of a hardcoded "accountant" stereotype.
     // Unscoped (operator overlay across workspaces) → null → the generic fallback preamble.
@@ -729,13 +725,11 @@ workspacesRoute.post('/cockpit-chat', async (ctx) => {
     const executionObserver = createModelExecutionObserver(lineageSql, workspaceId, user_id, assistantLineage);
     let result;
     try {
-      result = await answerCockpitChat(
+      if (!liveRuntimePlan) throw new ProviderUnavailableError('no live model runtime is available');
+      result = await answerLiveCockpitChat(
         message,
         { events, governance, pinned, lineage, documents, total: events.length, scope, companyContext },
-        ai,
         mode,
-        claudeKey,
-        llm,
         executionObserver,
         liveRuntimePlan,
       );
@@ -922,7 +916,7 @@ workspacesRoute.get('/cockpit-chat/history', async (ctx) => {
       if (typeof lister === 'function') messages = await lister.call(dal, user_id, scope, 100);
     } catch (_) { messages = []; }
 
-    return ctx.json({ messages, scope });
+    return ctx.json({ messages: classifyCommercialChatHistory(messages), scope });
   } catch (err) {
     return errorEnvelope(ctx, err);
   }

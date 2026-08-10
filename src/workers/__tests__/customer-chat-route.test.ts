@@ -150,6 +150,71 @@ describe('POST /api/v1/customer-chat', () => {
     expect(body.answer).not.toMatch(/deterministic|fixture/i);
   });
 
+  it('never returns the repeated stale digest for hey and lets do a proper work', async () => {
+    const aiRun = vi.fn(async (_model: string, input: { messages?: Array<{ role?: string; content?: string }> }) => {
+      const user = String(input.messages?.find((message) => message.role === 'user')?.content ?? '');
+      const operatorQuestion = user.match(/Operator question:\s*([\s\S]*)$/)?.[1]?.trim() ?? '';
+      return {
+        response: operatorQuestion === 'hey'
+          ? 'Hello. I am live and ready to help with this project using its current governed context.'
+          : 'Let us begin the real work. Tell me the outcome you want, and I will use the current project context.',
+        usage: { prompt_tokens: 29, completion_tokens: 18 },
+      };
+    });
+    const currentDal = dalStub({
+      modelRuntimes: {
+        listProviders: vi.fn(async () => []),
+        getOverride: vi.fn(async () => null),
+        getProviderCredential: vi.fn(async () => null),
+      },
+    });
+    const app = appFor(AUTH, currentDal);
+    const responses = [];
+    for (const message of ['hey', 'lets do a proper work']) {
+      const res = await app.request('/api/v1/customer-chat', {
+        method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ message }),
+      }, { CUSTOMER_SAFE_SERIALIZER_ENABLED: 'false', AI: { run: aiRun } });
+      expect(res.status).toBe(200);
+      responses.push(await res.json() as Record<string, any>);
+    }
+
+    expect(aiRun).toHaveBeenCalledTimes(2);
+    expect(responses.map((body) => body.generated_by)).toEqual(['llm', 'llm']);
+    expect(responses.map((body) => body.execution?.provider)).toEqual(['workers_ai', 'workers_ai']);
+    expect(responses[0].answer).not.toBe(responses[1].answer);
+    expect(responses.map((body) => body.answer).join('\n')).not.toMatch(/Here is what is happening in this project/);
+  });
+
+  it('maps the retired legacy Claude selector to the live platform Anthropic runtime', async () => {
+    const currentDal = dalStub({
+      modelRuntimes: {
+        listProviders: vi.fn(async () => []),
+        getOverride: vi.fn(async () => null),
+        getProviderCredential: vi.fn(async () => null),
+      },
+    });
+    const fetchSpy = vi.fn(async () => new Response(JSON.stringify({
+      content: [{ type: 'text', text: 'A live Anthropic answer for the selected customer project.' }],
+      usage: { input_tokens: 21, output_tokens: 12 },
+    }), { status: 200, headers: { 'content-type': 'application/json' } }));
+    vi.stubGlobal('fetch', fetchSpy);
+    const res = await appFor(AUTH, currentDal).request('/api/v1/customer-chat', {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ message: 'hey', llm: 'claude' }),
+    }, {
+      CUSTOMER_SAFE_SERIALIZER_ENABLED: 'false',
+      AI: { run: async () => ({ response: 'Workers fallback should not be selected.' }) },
+      ANTHROPIC_API_KEY: 'platform-anthropic-key',
+    });
+
+    expect(res.status).toBe(200);
+    const body = await res.json() as Record<string, any>;
+    expect(body.execution).toMatchObject({
+      runtime_id: 'platform:anthropic', provider: 'anthropic', source: 'request_preference',
+    });
+    expect(fetchSpy).toHaveBeenCalledWith('https://api.anthropic.com/v1/messages', expect.any(Object));
+  });
+
   it('answers COMPANY-AWARE through a live runtime using the source-bound draft', async () => {
     const res = await ask(appFor(AUTH, dalStub()), { message: 'what should I do?' });
     expect(res.status).toBe(200);
@@ -707,6 +772,7 @@ describe('GET /api/v1/customer-chat/history', () => {
     const stored = [
       { role: 'you', body: 'What is blocking us?', created_at: '2026-07-24T01:00:00.000Z' },
       { role: 'assistant', body: 'One approval is waiting.', created_at: '2026-07-24T01:00:01.000Z' },
+      { role: 'assistant', body: 'A current live answer.', generated_by: 'llm', created_at: '2026-08-10T01:00:01.000Z' },
     ];
     const captured: { userId?: string; scope?: Record<string, unknown>; limit?: number } = {};
     const dal = dalStub({
@@ -720,7 +786,16 @@ describe('GET /api/v1/customer-chat/history', () => {
     const res = await history(appFor(AUTH, dal), '?workspace_id=org_ATTACKER');
     expect(res.status).toBe(200);
     const body = await res.json() as { messages: unknown[]; scope: Record<string, unknown> };
-    expect(body.messages).toEqual(stored);
+    expect(body.messages).toEqual([
+      expect.objectContaining({ role: 'you', activity_class: 'user_input', is_live_assistant: false }),
+      expect.objectContaining({
+        role: 'assistant', activity_class: 'legacy_non_live_projection', is_live_assistant: false,
+        commercial_render_policy: 'historical_projection_only',
+      }),
+      expect.objectContaining({
+        role: 'assistant', generated_by: 'llm', activity_class: 'live_assistant_turn', is_live_assistant: true,
+      }),
+    ]);
     expect(body.scope).toEqual({ workspace_id: 'org_hy', project_id: null, domain_id: null });
     expect(captured).toEqual({
       userId: 'u1',

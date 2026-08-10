@@ -6717,6 +6717,78 @@
           "reason": "preserve model runtime route below the 500-line maintainability threshold"
         }
       ]
+    },
+    {
+      "delta_id": "live-chat-legacy-selector-20260810",
+      "generated_at": "2026-08-10T03:46:53.359Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "a23c9f9c9d80afe20412618794dfa6f042520452",
+      "target_base_commit": "a23c9f9c9d80afe20412618794dfa6f042520452",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/routes/customer-chat.ts",
+          "target_blob": "aa259a7cc586c495234c379cfcfd82eb43406045",
+          "reason": "Map the retired Claude selector to a governed Anthropic platform preference and prove live-only replies for the reported production prompts"
+        },
+        {
+          "path": "src/workers/__tests__/customer-chat-route.test.ts",
+          "target_blob": "f73724a5bebae054135676f644a20578784d1fa6",
+          "reason": "Map the retired Claude selector to a governed Anthropic platform preference and prove live-only replies for the reported production prompts"
+        }
+      ]
+    },
+    {
+      "delta_id": "commercial-live-chat-fail-closed-20260810",
+      "generated_at": "2026-08-10T04:07:49.084Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "a23c9f9c9d80afe20412618794dfa6f042520452",
+      "target_base_commit": "a23c9f9c9d80afe20412618794dfa6f042520452",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/routes/customer-chat.ts",
+          "target_blob": "e1c19bbff03fadc1a4f626570064f16e1224bbb3",
+          "reason": "Require the live chat service boundary, reject stale current-state claims, classify legacy history, and enforce governed conversational callsites"
+        },
+        {
+          "path": "docs/contracts/model-execution-callsite-manifest.json",
+          "target_blob": "0e5897ecc2928b190ac7a2c66a880d8eb0342f5c",
+          "reason": "Require the live chat service boundary, reject stale current-state claims, classify legacy history, and enforce governed conversational callsites"
+        },
+        {
+          "path": "scripts/verify-model-execution-callsites.mjs",
+          "target_blob": "283fb95752e41bf6ae9c3256b275ac0101ca4c81",
+          "reason": "Require the live chat service boundary, reject stale current-state claims, classify legacy history, and enforce governed conversational callsites"
+        },
+        {
+          "path": "src/workers/__tests__/cockpit-chat-route.test.ts",
+          "target_blob": "091a5b150135a08d8aebd592623143b492b6f5eb",
+          "reason": "Require the live chat service boundary, reject stale current-state claims, classify legacy history, and enforce governed conversational callsites"
+        },
+        {
+          "path": "src/workers/__tests__/cockpit-chat.test.ts",
+          "target_blob": "7a5dae64d70132ba492e67f077c85d9bccd6f761",
+          "reason": "Require the live chat service boundary, reject stale current-state claims, classify legacy history, and enforce governed conversational callsites"
+        },
+        {
+          "path": "src/workers/routes/workspaces.ts",
+          "target_blob": "2ec375477aa2a1d0a789b7de09971ab07f7f65b8",
+          "reason": "Require the live chat service boundary, reject stale current-state claims, classify legacy history, and enforce governed conversational callsites"
+        },
+        {
+          "path": "src/workers/services/cockpit-chat.ts",
+          "target_blob": "d5e2c6891efad6a8c019afefeda1f159933afb1e",
+          "reason": "Require the live chat service boundary, reject stale current-state claims, classify legacy history, and enforce governed conversational callsites"
+        },
+        {
+          "path": "src/workers/__tests__/customer-chat-route.test.ts",
+          "target_blob": "d20a198d83d6b28d180c5257c7c159d910a2c727",
+          "reason": "Require the live chat service boundary, reject stale current-state claims, classify legacy history, and enforce governed conversational callsites"
+        }
+      ]
     }
   ]
 }

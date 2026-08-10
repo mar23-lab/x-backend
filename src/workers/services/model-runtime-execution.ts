@@ -252,8 +252,10 @@ export async function resolveEffectiveRuntimePlan(input: {
       'model_id requires a tenant-scoped runtime_id',
     );
   }
+  const platformCandidates = platformRuntimes(input.env);
   const preferredRow = runtimeId ? rows.find((row) => row.id === runtimeId) : undefined;
-  if (runtimeId && !preferredRow) {
+  const preferredPlatform = runtimeId ? platformCandidates.find((runtime) => runtime.runtime_id === runtimeId) : undefined;
+  if (runtimeId && !preferredRow && !preferredPlatform) {
     throw new RuntimePreferenceError(
       'RUNTIME_PREFERENCE_INVALID',
       'runtime_id is not configured for this workspace',
@@ -271,7 +273,15 @@ export async function resolveEffectiveRuntimePlan(input: {
   const candidates: ResolvedRuntime[] = [];
   const resolutionAttempts: RuntimeResolutionAttempt[] = [];
   const seen = new Set<string>();
-
+  if (preferredPlatform) {
+    if (modelId && !supportedModels(preferredPlatform.provider, preferredPlatform.model).includes(modelId)) {
+      throw new RuntimePreferenceError('MODEL_NOT_AVAILABLE', 'model_id is not available from the selected platform runtime');
+    }
+    candidates.push({
+      ...preferredPlatform, source: 'request_preference', ...(modelId ? { model: modelId } : {}),
+    });
+    seen.add(preferredPlatform.runtime_id);
+  }
   for (const item of requested) {
     if (!item.row) {
       resolutionAttempts.push({
@@ -330,7 +340,7 @@ export async function resolveEffectiveRuntimePlan(input: {
     candidates.push(resolved.runtime);
   }
 
-  for (const runtime of platformRuntimes(input.env)) {
+  for (const runtime of platformCandidates) {
     if (!candidates.some((candidate) => candidate.runtime_id === runtime.runtime_id)) candidates.push(runtime);
   }
   if (candidates.length === 0) {
@@ -416,6 +426,7 @@ export async function executeEffectiveRuntimePlan(input: {
   user: string;
   maxTokens: number;
   minTextLength?: number;
+  validateText?: (text: string) => string | null;
   observer?: ModelExecutionObserver;
 }): Promise<RuntimeExecutionResult> {
   const attempts: RuntimeExecutionAttempt[] = [];
@@ -425,6 +436,7 @@ export async function executeEffectiveRuntimePlan(input: {
     try {
       const result = await executeRuntime(runtime, input.system, input.user, input.maxTokens);
       if (result.text.length < (input.minTextLength ?? 40)) throw new Error('SHORT_RESPONSE');
+      const validationError = input.validateText?.(result.text); if (validationError) throw new Error(validationError);
       const latency = Date.now() - startedAt;
       await execution?.complete({
         status: 'completed',

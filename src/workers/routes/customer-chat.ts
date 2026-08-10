@@ -37,6 +37,7 @@ import { persistAssistantContextLineage, completeAssistantSkillLineage, type Ass
 import { createModelExecutionObserver } from '../lib/model-execution-lineage';
 import { parseContextReferences } from '../lib/context-reference';
 import { resolveDocumentContext } from '../services/document-context';
+import { classifyCommercialChatHistory } from '../services/chat-history-classification';
 import { recordChatGroundingReads } from '../dal/document-access-store';
 import {
   ProviderUnavailableError,
@@ -44,7 +45,7 @@ import {
   type EffectiveRuntimePlan,
 } from '../services/model-runtime-execution';
 import {
-  answerCockpitChat,
+  answerLiveCockpitChat,
   classifyRequestedProjectFacts,
   classifyRequestedWorkspaceInventoryFacts,
   isProjectInventoryQuestion,
@@ -192,7 +193,7 @@ customerChatRoute.get('/customer-chat/history', async (ctx) => {
     const scope: CockpitChatScope = { workspace_id: scoped.ws, project_id: requestedProjectId, domain_id: null };
     try {
       const messages = await lister.call(gate.dal, auth.user_id, scope, 100);
-      return ctx.json({ messages: Array.isArray(messages) ? messages : [], scope });
+      return ctx.json({ messages: classifyCommercialChatHistory(Array.isArray(messages) ? messages : []), scope });
     } catch (err) {
       emitEvent('chat_history_persistence_failed', {
         workspace_id: scoped.ws,
@@ -325,12 +326,22 @@ async function handleCustomerChat(ctx: CustomerChatContext) {
     let liveRuntimePlan: EffectiveRuntimePlan | undefined;
     if (liveChatRequired) {
       try {
+        // The retired wired adapter still sends `llm: "claude"`. It is not model
+        // authority, but while that client is being removed we must preserve the
+        // user's provider intent truthfully instead of showing Claude and silently
+        // executing Workers AI. The versioned facade ignores this compatibility
+        // mapping and accepts only server-validated runtime/model preferences.
+        const runtimePreference = typeof body?.runtime_id === 'string' && body.runtime_id.trim()
+          ? body.runtime_id.trim()
+          : !commercialTurnFacade && body?.llm === 'claude'
+            ? 'platform:anthropic'
+            : undefined;
         liveRuntimePlan = await resolveEffectiveRuntimePlan({
           facade: dal.modelRuntimes,
           env: ctx.env,
           userId: auth.user_id,
           workspaceId,
-          runtimeId: body?.runtime_id,
+          runtimeId: runtimePreference,
           modelId: body?.model_id,
         });
       } catch (err) {
@@ -629,7 +640,6 @@ async function handleCustomerChat(ctx: CustomerChatContext) {
       : null;
 
     const scope: CockpitChatScope = { workspace_id: workspaceId, project_id: projectId, domain_id: null };
-    const ai = ctx.env.AI;
     const claudeKey = ctx.env.ANTHROPIC_API_KEY;
 
     // Commercial lineage gate: when explicitly enabled, no LLM call begins until its role/skill
@@ -671,7 +681,8 @@ async function handleCustomerChat(ctx: CustomerChatContext) {
       : undefined;
     let result;
     try {
-      result = await answerCockpitChat(
+      if (!liveRuntimePlan) throw new ProviderUnavailableError('no live model runtime is available');
+      result = await answerLiveCockpitChat(
         message,
         // 260805 · `total` is the WHOLE-WORKSPACE count from a SQL aggregate, not `events.length`.
         // `events` is a 40-row RECENCY page (MAX_EVENTS), and cockpit-chat.ts documents this field as
@@ -685,10 +696,7 @@ async function handleCustomerChat(ctx: CustomerChatContext) {
         // narrative when events_total === 0, which drops source facts entirely. A degraded aggregate
         // read must not under-report below what we can already see.
         { workspaceName, companyContext, events, documents, projects, plan, projectSources, sources, total: chatTotals.total, scope, charter, personalizationProfile },
-        ai,
         mode,
-        claudeKey,
-        llm,
         executionObserver,
         liveRuntimePlan,
       );

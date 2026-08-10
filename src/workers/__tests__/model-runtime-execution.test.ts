@@ -127,6 +127,30 @@ describe('effective model-runtime resolution', () => {
     })).rejects.toBeInstanceOf(RuntimePreferenceError);
   });
 
+  it('accepts an available governed platform runtime preference and keeps other live runtimes as fallbacks', async () => {
+    const plan = await resolveEffectiveRuntimePlan({
+      facade: facade([], null),
+      env: {
+        AI: { run: async () => ({ response: 'live Workers AI fallback response long enough for chat' }) },
+        ANTHROPIC_API_KEY: 'platform-anthropic-key',
+      },
+      userId: 'u', workspaceId: 'w', runtimeId: 'platform:anthropic',
+    });
+
+    expect(plan.primary).toMatchObject({
+      runtime_id: 'platform:anthropic', provider: 'anthropic', source: 'request_preference',
+    });
+    expect(plan.fallbacks.map((runtime) => runtime.runtime_id)).toContain('platform:workers_ai');
+  });
+
+  it('rejects an unavailable platform runtime preference instead of silently changing providers', async () => {
+    await expect(resolveEffectiveRuntimePlan({
+      facade: facade([], null),
+      env: { AI: { run: async () => ({ response: 'live Workers AI response long enough for chat' }) } },
+      userId: 'u', workspaceId: 'w', runtimeId: 'platform:anthropic',
+    })).rejects.toBeInstanceOf(RuntimePreferenceError);
+  });
+
   it('returns RELAY_REQUIRED without fetching an arbitrary local/custom URL', async () => {
     const fetchSpy = vi.fn();
     vi.stubGlobal('fetch', fetchSpy);
@@ -193,6 +217,29 @@ describe('live provider dispatch', () => {
     expect(result.runtime.provider).toBe('workers_ai');
     expect(result.attempts.map((attempt) => attempt.status)).toEqual(['failed', 'completed']);
     expect(result.text).not.toMatch(/deterministic|fixture/i);
+  });
+
+  it('treats a semantic validation failure as a provider failure and retries a live fallback', async () => {
+    const runtime = (id: string, response: string): ResolvedRuntime => ({
+      runtime_id: id, provider: 'workers_ai', model: '@cf/test', source: 'platform_default',
+      provider_config_version_id: null, base_url: null, credential: null,
+      ai: { run: async () => ({ response }) },
+    });
+    const result = await executeEffectiveRuntimePlan({
+      plan: {
+        primary: runtime('unsafe', 'An unsafe current-state answer long enough to pass the length gate.'),
+        fallbacks: [runtime('safe', 'A source-bounded answer that passes semantic validation safely.')],
+        resolution_attempts: [],
+      },
+      system: 'Grounded only.', user: 'Summarise.', maxTokens: 100,
+      validateText: (text) => text.includes('unsafe') ? 'GROUNDING_VALIDATION_FAILED' : null,
+    });
+
+    expect(result.runtime.runtime_id).toBe('safe');
+    expect(result.attempts).toEqual([
+      expect.objectContaining({ runtime_id: 'unsafe', status: 'failed', error_code: 'GROUNDING_VALIDATION_FAILED' }),
+      expect.objectContaining({ runtime_id: 'safe', status: 'completed' }),
+    ]);
   });
 
   it('returns typed provider-unavailable when every live provider fails', async () => {

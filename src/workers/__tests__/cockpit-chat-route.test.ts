@@ -137,7 +137,7 @@ describe('POST /cockpit-chat', () => {
 
   it('uses the LLM answer (still grounded provenance) when a Workers-AI binding is present', async () => {
     const cap: { opts?: Record<string, unknown>; ids?: string[] } = {};
-    const ai = { run: async () => ({ response: 'This project has 3 events on record, recently shipping the project banner fix and the operator overlay; one item awaits your sign-off.' }) };
+    const ai = { run: async () => ({ response: 'This stale snapshot has 3 events on record, including the project banner fix and operator overlay; one item awaited your sign-off as of the recorded date.' }) };
     const res = await chat({ user_id: MBP_OWNER }, 'summarize', COCKPIT_SCOPE, cap, {
       ...ENV,
       COMMERCIAL_LIVE_CHAT_REQUIRED: 'true',
