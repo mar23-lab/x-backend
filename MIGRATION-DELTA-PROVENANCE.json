@@ -6973,6 +6973,37 @@
           "reason": "Separate identity sign-in from connect-time Gmail and Drive consent; enforce backend registry/config authority."
         }
       ]
+    },
+    {
+      "delta_id": "headroom-paid-provider-semantic-canary-20260810",
+      "generated_at": "2026-08-10T13:56:31.406Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "4382fde270e536f0622c6174e802973e16214052",
+      "target_base_commit": "4382fde270e536f0622c6174e802973e16214052",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "package.json",
+          "target_blob": "b66ec78c23ef4c8e71de25bfc44a171f53d5f486",
+          "reason": "governed paid/platform Headroom semantic evidence lane"
+        },
+        {
+          "path": "docs/architecture/backend/EXTERNAL_CAPABILITY_REGISTRY.json",
+          "target_blob": "7a3cd116d108d2b6270186188e60efcdbb3c64bb",
+          "reason": "governed paid/platform Headroom semantic evidence lane"
+        },
+        {
+          "path": "docs/deployment/PUBLIC_SELF_SERVE_EVIDENCE_GATES.md",
+          "target_blob": "0fd95871641b04cdfa32e7670f0dd42bc95ebe55",
+          "reason": "governed paid/platform Headroom semantic evidence lane"
+        },
+        {
+          "path": "scripts/verify-external-capability-runtime-results.mjs",
+          "target_blob": "eca64ef2a9dc126af1cbf65a439b36ba0332e56e",
+          "reason": "governed paid/platform Headroom semantic evidence lane"
+        }
+      ]
     }
   ]
 }
