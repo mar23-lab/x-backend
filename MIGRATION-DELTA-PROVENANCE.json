@@ -7429,10 +7429,10 @@
     },
     {
       "delta_id": "dedicated-connector-oauth-authority-20260811",
-      "generated_at": "2026-08-11T11:17:31.547Z",
+      "generated_at": "2026-08-11T11:24:00.151Z",
       "source_repo": "mar23-lab/x-backend",
-      "source_commit": "ec488855c2741bbc5df01625c2114a8e49969329",
-      "target_base_commit": "ec488855c2741bbc5df01625c2114a8e49969329",
+      "source_commit": "e516941706384f78018b4f1da7b8fb15bbcefdf5",
+      "target_base_commit": "e516941706384f78018b4f1da7b8fb15bbcefdf5",
       "authority": "source_authority_no_automatic_deploy",
       "copied_files": [],
       "transformed_files": [
@@ -7468,13 +7468,13 @@
         },
         {
           "path": "package.json",
-          "target_blob": "cd3ed15ae01b889c7919877021526b953d67543c",
-          "reason": "Establish tenant-scoped connector OAuth authority, commercial verification posture, and mutation-proven governance controls"
+          "target_blob": "bc5f9c5b77696f42fc791f0665b365f467b8a0c1",
+          "reason": "Add rollback-contained live Postgres proof and guard migration 101 constraint replacement"
         },
         {
           "path": "scripts/ci-local.mjs",
-          "target_blob": "cd14226f68ae5114c9d179d1e74390cd607b5332",
-          "reason": "Establish tenant-scoped connector OAuth authority, commercial verification posture, and mutation-proven governance controls"
+          "target_blob": "dc63aeb63fc6683d5f630ecdeabee2eeaf2a41d1",
+          "reason": "Add rollback-contained live Postgres proof and guard migration 101 constraint replacement"
         },
         {
           "path": "docs/architecture/backend/PRODUCTION_DEPENDENCIES.md",
@@ -7525,6 +7525,11 @@
           "path": "src/workers/dal/types/oauth.ts",
           "target_blob": "544f972bd9b7da9f0ae082367f9e906873e6c68f",
           "reason": "Establish tenant-scoped connector OAuth authority, commercial verification posture, and governed metric/provider lineage"
+        },
+        {
+          "path": "src/workers/db/migrations/README.md",
+          "target_blob": "c4b89948f7a80ebc33997fa2f44c6bb3246f0cd8",
+          "reason": "Document governed non-additive constraint replacement and schema 101 proof requirements"
         }
       ]
     }

@@ -8,6 +8,8 @@
 BEGIN;
 
 DO $$
+DECLARE
+  legacy_uniqueness_definition TEXT;
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM workers_schema_version WHERE version = 101) THEN
     CREATE TABLE connector_oauth_grants (
@@ -50,6 +52,17 @@ BEGIN
     -- Dedicated grants are tenant-scoped, so the same employee may authorize
     -- the same provider independently for two companies without moving or
     -- sharing either tenant's credential authority.
+    SELECT pg_get_constraintdef(oid)
+      INTO legacy_uniqueness_definition
+    FROM pg_constraint
+    WHERE conrelid = 'user_source_connections'::regclass
+      AND conname = 'user_source_connections_user_id_provider_key';
+    IF legacy_uniqueness_definition IS NOT NULL
+       AND legacy_uniqueness_definition <> 'UNIQUE (user_id, provider)' THEN
+      RAISE EXCEPTION
+        'migration 101 refuses unexpected user_source_connections_user_id_provider_key definition: %',
+        legacy_uniqueness_definition;
+    END IF;
     ALTER TABLE user_source_connections
       DROP CONSTRAINT IF EXISTS user_source_connections_user_id_provider_key;
     DROP INDEX IF EXISTS idx_usc_user_provider;
