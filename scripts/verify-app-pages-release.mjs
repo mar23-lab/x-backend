@@ -21,7 +21,10 @@ import {
   releaseManifestDigest,
   verifyStaticArtifactFiles,
 } from './lib/app-pages-release-contract.mjs';
-import { readCandidateDeploymentContract } from './lib/candidate-deployment-contract.mjs';
+import {
+  localMigrationHead,
+  readCandidateDeploymentContract,
+} from './lib/candidate-deployment-contract.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const releaseDir = path.resolve(process.env.XLOOOP_APP_PAGES_RELEASE_DIR || path.join(root, 'dist-app-pages-release'));
@@ -30,6 +33,7 @@ const problems = [];
 const selfTest = process.argv.includes('--self-test');
 
 function runSelfTest() {
+  const candidateSchemaHead = String(localMigrationHead(root));
   const testRoot = path.join(os.tmpdir(), `xlooop-app-pages-contract-${process.pid}`);
   rmSync(testRoot, { recursive: true, force: true });
   mkdirSync(path.join(testRoot, 'vendor'), { recursive: true });
@@ -185,16 +189,16 @@ function runSelfTest() {
     }
   })();
   const productionDeployment = readCandidateDeploymentContract(root, {
-    XLOOOP_SCHEMA_HEAD: '100',
+    XLOOOP_SCHEMA_HEAD: candidateSchemaHead,
   });
   const pilotShadowDeployment = readCandidateDeploymentContract(root, {
-    XLOOOP_SCHEMA_HEAD: '100',
+    XLOOOP_SCHEMA_HEAD: candidateSchemaHead,
     XLOOOP_DEPLOYMENT_WRANGLER_CONFIG: 'wrangler.pilot-shadow.toml',
   });
   const unknownDeploymentConfigRejected = (() => {
     try {
       readCandidateDeploymentContract(root, {
-        XLOOOP_SCHEMA_HEAD: '100',
+        XLOOOP_SCHEMA_HEAD: candidateSchemaHead,
         XLOOOP_DEPLOYMENT_WRANGLER_CONFIG: '../wrangler.toml',
       });
       return false;

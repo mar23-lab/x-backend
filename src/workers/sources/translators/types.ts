@@ -5,14 +5,13 @@
 // shape `runTranslator(input) → result` so R50.3d cron can dispatch
 // uniformly across providers.
 
-import type { ClerkOAuthAdapter } from '../../dal/clerk-oauth-adapter';
 import type { DalAdapter } from '../../dal/DalAdapter';
-import type { UserSourceConnection } from '../../dal/types';
+import type { SourceOAuthTokenAdapter, UserSourceConnection } from '../../dal/types';
 
 /** Common input shape for every translator. */
 export interface TranslatorInput {
-  /** Clerk OAuth adapter (provides fresh access tokens). */
-  adapter: ClerkOAuthAdapter;
+  /** Credential-authority-neutral OAuth adapter (provides fresh access tokens). */
+  adapter: SourceOAuthTokenAdapter;
   /** DAL adapter (writes operation_events + reads/updates user_source_connections). */
   dal: DalAdapter;
   /** The user_source_connections row being synced. */

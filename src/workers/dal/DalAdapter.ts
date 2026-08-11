@@ -976,7 +976,7 @@ export interface DalAdapter {
   runPropagationTick(actorUserId: UserId): Promise<PropagationTickResult>;
 
   // ============================================================
-  // R50.3b · Clerk OAuth source connectors · user_source_connections CRUD
+  // Source connectors · identity-backed legacy rows plus dedicated tenant grants
   // ============================================================
   //
   // These methods are user-scoped (NOT workspace-scoped) because Clerk-managed
@@ -1003,6 +1003,39 @@ export interface DalAdapter {
    * Returns the canonical row (with DB-generated id + timestamps).
    */
   upsertUserSource(input: import('./types').UserSourceConnectionInput): Promise<import('./source-store').SourceConnectionWriteReceipt>;
+
+  registerConnectorOAuthStateNonce(input: import('./connector-oauth-store').ConnectorOAuthStateNonceInput): Promise<void>;
+  claimConnectorOAuthStateNonce(
+    input: Omit<import('./connector-oauth-store').ConnectorOAuthStateNonceInput, 'expires_at'>,
+  ): Promise<boolean>;
+  connectConnectorOAuthSource(
+    input: import('./connector-oauth-store').ConnectorOAuthConnectionInput,
+  ): Promise<import('./connector-oauth-store').ConnectorOAuthConnectionReceipt>;
+  getConnectorOAuthGrantSecret(
+    workspaceId: WorkspaceId,
+    userId: UserId,
+    grantId: string,
+  ): Promise<import('./types').ConnectorOAuthGrantSecret | null>;
+  updateConnectorOAuthGrantTokens(
+    input: Pick<import('./types').ConnectorOAuthGrantUpsertInput,
+      'id' | 'workspace_id' | 'user_id' | 'token_ciphertext' | 'token_iv' | 'scopes' | 'access_expires_at'>,
+  ): Promise<boolean>;
+  markConnectorOAuthGrantRefreshError(
+    input: { id: string; workspace_id: string; user_id: UserId; error: string },
+  ): Promise<void>;
+  countActiveConnectorGrantSources(
+    workspaceId: WorkspaceId,
+    userId: UserId,
+    grantId: string,
+  ): Promise<number>;
+  disconnectConnectorOAuthSource(
+    input: {
+      workspace_id: WorkspaceId;
+      user_id: UserId;
+      source_id: string;
+      authority: import('./connector-oauth-store').ConnectorOAuthDisconnectAuthority;
+    },
+  ): Promise<import('./connector-oauth-store').ConnectorOAuthDisconnectReceipt>;
 
   /**
    * DELETE /api/v1/sources/:id · disconnect a source.

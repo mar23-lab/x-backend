@@ -96,6 +96,8 @@
     "verify:known-dependency-advisories": "node scripts/verify-known-dependency-advisories.mjs",
     "verify:connector-provider-ssot": "node scripts/verify-connector-provider-ssot.mjs",
     "verify:connector-provider-ssot:self-test": "node scripts/verify-connector-provider-ssot.mjs --self-test",
+    "verify:connector-oauth-authority": "node scripts/verify-connector-oauth-authority.mjs",
+    "verify:connector-oauth-authority:self-test": "node scripts/verify-connector-oauth-authority.mjs --self-test",
     "typecheck": "tsc --noEmit -p tsconfig.workers.json",
     "test": "node scripts/run-worker-test-batches.mjs",
     "test:watch": "vitest --config vitest.workers.config.ts",

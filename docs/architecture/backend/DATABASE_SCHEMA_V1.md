@@ -274,6 +274,41 @@ CREATE TABLE metric_deltas (
 
 ---
 
+## Dedicated connector OAuth authority (migration 101)
+
+`connector_oauth_grants` stores tenant/user-scoped provider authorization
+separately from sign-in identity. Provider access and refresh tokens are held
+only inside a purpose-bound encrypted envelope. The active key id is embedded
+in that envelope to support rotation; plaintext credentials are never database
+columns or API fields.
+
+`user_source_connections.oauth_grant_id` uses a composite foreign key over
+`(oauth_grant_id, workspace_id, user_id)`. A source therefore cannot reference
+a grant belonging to another tenant or user. Gmail and Drive can intentionally
+share one Google grant.
+
+Connection uniqueness is authority-aware: legacy identity-backed rows remain
+unique by `(user_id, provider)`, while dedicated connector rows are unique by
+`(workspace_id, user_id, provider)`. A user who works for multiple companies
+must authorize each tenant independently; no grant is moved or shared between
+tenants.
+
+`connector_oauth_state_nonces` stores only a hash of each callback nonce and
+atomically stamps `consumed_at`. A callback is accepted once, for the same
+tenant, user and provider, before expiry.
+
+Both credential tables have workspace RLS policies and explicitly revoke every
+privilege from `xlooop_app`. Only the Worker owner-side credential service may
+read encrypted token material; customer reads receive masked source/grant
+metadata through governed routes.
+
+On last-source disconnect, the provider grant is revoked and verified first.
+The database transition then blanks the encrypted envelope, marks the grant
+revoked, soft-disconnects every remaining source reference, and writes the
+audit receipt in one SQL statement.
+
+---
+
 ## Migration runbook (Neon branching workflow)
 
 ```bash

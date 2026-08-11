@@ -1,6 +1,7 @@
 // sources.ts · GET/POST/DELETE /api/v1/sources/* (R50.3b)
 //
-// Authority: R50 plan stage R50.3b · CLERK_OAUTH_PROVIDER_CONFIG.md
+// Authority: dedicated connector OAuth for Gmail/Drive; legacy identity-backed
+// authorization remains only for providers not yet migrated.
 //
 // Routes:
 //   GET    /api/v1/sources                 list user's connected sources
@@ -9,8 +10,8 @@
 //   DELETE /api/v1/sources/:id             revoke upstream grant, then soft-disconnect
 //   POST   /api/v1/sources/:id/sync        verify token + mark last_sync_at
 //
-// AUTH: all routes require Clerk-authenticated user; routes are USER-scoped
-// (not workspace-scoped) because OAuth connections belong to the user account.
+// AUTH: all routes require Clerk-authenticated identity. Dedicated OAuth grants
+// are tenant + user scoped; legacy connections retain their prior user scope.
 //
 // CONTRACT: this route surface is purely the OPERATOR-facing REST API. Actual
 // per-provider event ingestion (calling GitHub/Google/Dropbox APIs with the
@@ -24,7 +25,7 @@ import { withDataClass } from '../lib/response-envelope';
 import { withAuthority } from '../lib/allowed-actions';
 import type { AuthEnv, AuthVariables } from '../middleware/auth';
 import type { DalAdapter } from '../dal/DalAdapter';
-import type { OAuthProvider, UserSourceConnection, SourceReadPolicy } from '../dal/types';
+import type { OAuthProvider, UserSourceConnection, SourceReadPolicy, SourceOAuthTokenAdapter } from '../dal/types';
 import { OAUTH_PROVIDER_TO_CLERK_SLUG } from '../dal/types';
 import { withIdempotency } from '../lib/idempotency'; // G2 · Idempotency-Key on the access-level PATCH
 import { makeClerkOAuthAdapter } from '../dal/clerk-oauth-adapter';
@@ -34,8 +35,28 @@ import type { TranslatorResult } from '../sources/translators/types';
 import { buildConnectorCatalog, CONNECTOR_REGISTRY } from '../lib/connector-registry';
 import { emitEvent } from '../lib/observability'; // T3/P6 · source-sync outcome events
 import { listProviderFolders, FOLDER_PROVIDERS } from '../sources/folder-pickers';
+import {
+  connectorOAuthGrantId,
+  connectorOAuthNonceHash,
+  isConnectorOAuthEncryptionConfigured,
+  openConnectorOAuthState,
+  openConnectorTokens,
+  sealConnectorOAuthState,
+  sealConnectorTokens,
+  type ConnectorOAuthEncryptionEnv,
+} from '../lib/connector-oauth-crypto';
+import {
+  createCodeVerifier,
+  exchangeGoogleAuthorizationCode,
+  googleAuthorizationUrl,
+  googleConnectorScopes,
+  isGoogleConnectorOAuthConfigured,
+  revokeGoogleGrant,
+  type ConnectorOAuthProviderEnv,
+} from '../services/connector-oauth-provider';
+import { makeConnectorOAuthGrantAdapter, type ConnectorOAuthRuntimeEnv } from '../dal/connector-oauth-adapter';
 
-export interface SourcesEnv extends AuthEnv {
+export interface SourcesEnv extends AuthEnv, ConnectorOAuthEncryptionEnv, ConnectorOAuthProviderEnv {
   DATABASE_URL: string;
   CLERK_SECRET_KEY: string;
   /**
@@ -43,6 +64,8 @@ export interface SourcesEnv extends AuthEnv {
    * link-only in Clerk and are not accepted as sign-in methods.
    */
   CONNECTOR_OAUTH_REVOCATION_MODE?: string;
+  /** Activates the Xlooop-owned Google connector authorization broker. */
+  CONNECTOR_OAUTH_AUTHORITY_MODE?: string;
 }
 
 export interface SourcesVariables extends AuthVariables {
@@ -61,6 +84,34 @@ const VALID_PROVIDERS: ReadonlySet<OAuthProvider> = new Set([
 
 function isValidProvider(s: string): s is OAuthProvider {
   return VALID_PROVIDERS.has(s as OAuthProvider);
+}
+
+function isDedicatedGoogleProvider(provider: OAuthProvider): provider is 'google_drive' | 'gmail' {
+  return provider === 'google_drive' || provider === 'gmail';
+}
+
+function connectorTokenAdapter(
+  env: SourcesEnv,
+  dal: DalAdapter,
+  userId: string,
+  source: UserSourceConnection,
+): SourceOAuthTokenAdapter {
+  if (source.oauth_grant_id) {
+    if (!source.workspace_id || !isDedicatedGoogleProvider(source.provider)) {
+      throw Object.assign(new Error('dedicated connector grant binding is invalid'), { code: 'OAUTH_GRANT_BINDING_INVALID' });
+    }
+    return makeConnectorOAuthGrantAdapter({
+      dal,
+      env: env as ConnectorOAuthRuntimeEnv,
+      workspace_id: source.workspace_id,
+      user_id: userId,
+      grant_id: source.oauth_grant_id,
+    });
+  }
+  if (!env.CLERK_SECRET_KEY) {
+    throw Object.assign(new Error('CLERK_SECRET_KEY not configured'), { code: 'CONFIG_ERROR' });
+  }
+  return makeClerkOAuthAdapter(env.CLERK_SECRET_KEY);
 }
 
 function sourceMatchesActiveWorkspace(
@@ -104,6 +155,7 @@ function toApiResponse(c: UserSourceConnection) {
     id: c.id,
     workspace_id: c.workspace_id,
     workspace_binding: c.workspace_id ? 'workspace_bound' : 'legacy_user_account_unbound',
+    credential_authority: c.oauth_grant_id ? 'xlooop_connector_grant' : 'legacy_identity_provider',
     provider: c.provider,
     provider_username: c.provider_username,
     scopes: c.scopes,
@@ -129,15 +181,9 @@ const LEVEL_TO_READ_POLICY: Record<string, SourceReadPolicy> = {
 // GET /api/v1/sources
 // ============================================================
 //
-// Returns the DB rows verbatim. Does NOT re-query Clerk on every list call
-// for two reasons:
-//   1. Cost (Clerk free tier rate limit is 100 req/10s/IP)
-//   2. Single source of truth — the DB row is authoritative for sync state
-//      (last_sync_at, last_sync_error); Clerk is authoritative for token state
-// The POST /connect/:provider route handles initial materialization from
-// Clerk. If the user disconnects in Clerk's dashboard, our DB row remains
-// until the next sync attempt fails — at which point status='error' surfaces
-// the discrepancy in the UI.
+// Returns tenant-filtered connection metadata only. Credential state is
+// authoritative in the dedicated encrypted grant store when oauth_grant_id is
+// present; legacy providers retain their identity-provider token authority.
 sourcesRoute.get('/sources', async (ctx) => {
   try {
     const auth = ctx.get('auth');
@@ -181,11 +227,7 @@ sourcesRoute.get('/sources/:id/repos', async (ctx) => {
     if (existing.provider !== 'github') {
       return errorEnvelope(ctx, { status: 400, code: 'UNSUPPORTED_PROVIDER', message: `repo listing is only supported for github (source is ${existing.provider})` });
     }
-    const secretKey = ctx.env.CLERK_SECRET_KEY;
-    if (!secretKey) {
-      return errorEnvelope(ctx, { status: 500, code: 'CONFIG_ERROR', message: 'CLERK_SECRET_KEY not configured' });
-    }
-    const adapter = makeClerkOAuthAdapter(secretKey);
+    const adapter = connectorTokenAdapter(ctx.env, dal, auth.user_id, existing);
     let token: string;
     try {
       const snap = await adapter.getAccessToken(auth.user_id, 'github');
@@ -229,11 +271,7 @@ sourcesRoute.get('/sources/:id/folders', async (ctx) => {
     if (!FOLDER_PROVIDERS.has(existing.provider)) {
       return errorEnvelope(ctx, { status: 400, code: 'UNSUPPORTED_PROVIDER', message: `folder listing is only supported for Google Drive / Dropbox (source is ${existing.provider})` });
     }
-    const secretKey = ctx.env.CLERK_SECRET_KEY;
-    if (!secretKey) {
-      return errorEnvelope(ctx, { status: 500, code: 'CONFIG_ERROR', message: 'CLERK_SECRET_KEY not configured' });
-    }
-    const adapter = makeClerkOAuthAdapter(secretKey);
+    const adapter = connectorTokenAdapter(ctx.env, dal, auth.user_id, existing);
     let token: string;
     try {
       const snap = await adapter.getAccessToken(auth.user_id, existing.provider);
@@ -255,7 +293,176 @@ sourcesRoute.get('/sources/:id/folders', async (ctx) => {
 });
 
 // ============================================================
-// POST /api/v1/sources/connect/:provider
+// POST /api/v1/sources/oauth/:provider/start|complete
+// ============================================================
+// Dedicated connector authorization. Clerk remains identity-only; the provider
+// refresh token is purpose-bound, encrypted, tenant/user scoped, and never sent
+// back to the browser.
+sourcesRoute.post('/sources/oauth/:provider/start', async (ctx) => {
+  try {
+    const auth = ctx.get('auth');
+    const provider = ctx.req.param('provider') as OAuthProvider;
+    if (!auth?.user_id) {
+      return errorEnvelope(ctx, { status: 401, code: 'UNAUTHORIZED', message: 'auth required' });
+    }
+    if (!auth.workspace_id) {
+      return errorEnvelope(ctx, { status: 409, code: 'SOURCE_WORKSPACE_BINDING_REQUIRED', message: 'A tenant workspace is required for connector authorization.' });
+    }
+    if (!isDedicatedGoogleProvider(provider)) {
+      return errorEnvelope(ctx, { status: 400, code: 'CONNECTOR_OAUTH_PROVIDER_UNAVAILABLE', message: 'Dedicated connector OAuth currently supports Google Drive and Gmail.' });
+    }
+    if (ctx.env.CONNECTOR_OAUTH_AUTHORITY_MODE !== 'dedicated_google') {
+      return errorEnvelope(ctx, { status: 503, code: 'CONNECTOR_OAUTH_BROKER_UNAVAILABLE', message: 'Dedicated connector authorization is not enabled for this deployment.' });
+    }
+    if (!await isConnectorOAuthEncryptionConfigured(ctx.env) || !isGoogleConnectorOAuthConfigured(ctx.env)) {
+      return errorEnvelope(ctx, { status: 503, code: 'CONNECTOR_OAUTH_BROKER_UNAVAILABLE', message: 'Connector authorization keys or provider configuration are incomplete.' });
+    }
+    const dal = ctx.get('dal');
+    const authority = await dal.getCustomerAuthorityState(auth.workspace_id);
+    if (!authority.unlocked) {
+      return errorEnvelope(ctx, { status: 403, code: 'FORBIDDEN', message: 'AUTHORITY_REQUIRED: workspace authority and consent must be recorded before connecting resources.' });
+    }
+    const codeVerifier = createCodeVerifier();
+    const nonce = crypto.randomUUID();
+    const expiresAtMs = Date.now() + 10 * 60 * 1000;
+    const redirectUri = String(ctx.env.CONNECTOR_OAUTH_REDIRECT_URI || '');
+    const state = await sealConnectorOAuthState(ctx.env.CONNECTOR_OAUTH_STATE_KEY, {
+      user_id: auth.user_id,
+      workspace_id: auth.workspace_id,
+      provider,
+      code_verifier: codeVerifier,
+      redirect_uri: redirectUri,
+      nonce,
+      expires_at_ms: expiresAtMs,
+    });
+    await dal.registerConnectorOAuthStateNonce({
+      nonce_hash: await connectorOAuthNonceHash(nonce),
+      workspace_id: auth.workspace_id,
+      user_id: auth.user_id,
+      provider,
+      expires_at: new Date(expiresAtMs).toISOString(),
+    });
+    const authorizationUrl = await googleAuthorizationUrl(ctx.env, provider, state, codeVerifier);
+    return ctx.json({
+      provider,
+      authorization_url: authorizationUrl,
+      expires_at: new Date(expiresAtMs).toISOString(),
+      request_id: ctx.get('request_id'),
+      credential_authority: 'xlooop_connector_grant',
+    }, 201);
+  } catch (err) {
+    return errorEnvelope(ctx, err);
+  }
+});
+
+sourcesRoute.post('/sources/oauth/:provider/complete', async (ctx) => {
+  try {
+    const auth = ctx.get('auth');
+    const provider = ctx.req.param('provider') as OAuthProvider;
+    if (!auth?.user_id) {
+      return errorEnvelope(ctx, { status: 401, code: 'UNAUTHORIZED', message: 'auth required' });
+    }
+    if (!auth.workspace_id) {
+      return errorEnvelope(ctx, { status: 409, code: 'SOURCE_WORKSPACE_BINDING_REQUIRED', message: 'A tenant workspace is required for connector authorization.' });
+    }
+    if (!isDedicatedGoogleProvider(provider)) {
+      return errorEnvelope(ctx, { status: 400, code: 'CONNECTOR_OAUTH_PROVIDER_UNAVAILABLE', message: 'Dedicated connector OAuth currently supports Google Drive and Gmail.' });
+    }
+    if (ctx.env.CONNECTOR_OAUTH_AUTHORITY_MODE !== 'dedicated_google') {
+      return errorEnvelope(ctx, { status: 503, code: 'CONNECTOR_OAUTH_BROKER_UNAVAILABLE', message: 'Dedicated connector authorization is not enabled for this deployment.' });
+    }
+    const body = await ctx.req.json().catch(() => null) as { code?: unknown; state?: unknown } | null;
+    const code = typeof body?.code === 'string' ? body.code.trim() : '';
+    const stateValue = typeof body?.state === 'string' ? body.state : '';
+    if (!code || !stateValue) {
+      return errorEnvelope(ctx, { status: 400, code: 'VALIDATION_ERROR', message: 'OAuth code and state are required.' });
+    }
+    const state = await openConnectorOAuthState(ctx.env.CONNECTOR_OAUTH_STATE_KEY, stateValue);
+    if (
+      !state ||
+      state.user_id !== auth.user_id ||
+      state.workspace_id !== auth.workspace_id ||
+      state.provider !== provider ||
+      state.redirect_uri !== ctx.env.CONNECTOR_OAUTH_REDIRECT_URI
+    ) {
+      return errorEnvelope(ctx, { status: 400, code: 'CONNECTOR_OAUTH_STATE_INVALID', message: 'Connector authorization state is invalid or expired.' });
+    }
+    const dal = ctx.get('dal');
+    const claimed = await dal.claimConnectorOAuthStateNonce({
+      nonce_hash: await connectorOAuthNonceHash(state.nonce),
+      workspace_id: auth.workspace_id,
+      user_id: auth.user_id,
+      provider,
+    });
+    if (!claimed) {
+      return errorEnvelope(ctx, { status: 409, code: 'CONNECTOR_OAUTH_STATE_REPLAYED', message: 'Connector authorization state was already used or expired.' });
+    }
+    const exchange = await exchangeGoogleAuthorizationCode(
+      ctx.env,
+      provider,
+      code,
+      state.code_verifier,
+    );
+    const grantId = await connectorOAuthGrantId({
+      workspace_id: auth.workspace_id,
+      user_id: auth.user_id,
+      authority_provider: exchange.authority_provider,
+      provider_account_id: exchange.provider_account_id,
+    });
+    const priorGrant = await dal.getConnectorOAuthGrantSecret(auth.workspace_id, auth.user_id, grantId);
+    const requiredScopes = googleConnectorScopes(provider);
+    const missingScopes = requiredScopes.filter((scope) => !exchange.tokens.scopes.includes(scope));
+    if (missingScopes.length) {
+      if (!priorGrant) await revokeGoogleGrant(ctx.env, exchange.tokens).catch(() => undefined);
+      return errorEnvelope(ctx, { status: 422, code: 'SOURCE_SCOPE_MISSING', message: `${provider} authorization omitted required scopes: ${missingScopes.join(', ')}` });
+    }
+    const existing = (await dal.listUserSources(auth.user_id)).find((source) =>
+      source.provider === provider && source.workspace_id === auth.workspace_id,
+    );
+    if (existing?.oauth_grant_id && existing.oauth_grant_id !== grantId) {
+      if (!priorGrant) await revokeGoogleGrant(ctx.env, exchange.tokens).catch(() => undefined);
+      return errorEnvelope(ctx, {
+        status: 409,
+        code: 'SOURCE_ACCOUNT_SWITCH_REQUIRES_DISCONNECT',
+        message: 'Disconnect the current provider account before authorizing a different account.',
+      });
+    }
+    const sealed = await sealConnectorTokens(
+      ctx.env,
+      exchange.tokens,
+      { workspace_id: auth.workspace_id, user_id: auth.user_id, grant_id: grantId },
+    );
+    try {
+      const write = await dal.connectConnectorOAuthSource({
+        id: grantId,
+        workspace_id: auth.workspace_id,
+        user_id: auth.user_id,
+        authority_provider: exchange.authority_provider,
+        provider_account_id: exchange.provider_account_id,
+        provider_label: exchange.provider_label,
+        scopes: exchange.tokens.scopes,
+        token_ciphertext: sealed.ciphertext,
+        token_iv: sealed.iv,
+        access_expires_at: exchange.tokens.expires_at,
+        source_provider: provider,
+      });
+      return ctx.json({
+        source: toApiResponse(write.source),
+        source_binding_id: write.source_binding_id,
+        connector_grant_receipt_id: write.connector_grant_receipt_id,
+        audit_event_id: write.audit_event_id,
+      }, 201);
+    } catch (error) {
+      if (!priorGrant) await revokeGoogleGrant(ctx.env, exchange.tokens).catch(() => undefined);
+      throw error;
+    }
+  } catch (err) {
+    return errorEnvelope(ctx, err);
+  }
+});
+
+// ============================================================
+// POST /api/v1/sources/connect/:provider (legacy identity-backed path)
 // ============================================================
 //
 // Flow:
@@ -280,6 +487,14 @@ sourcesRoute.post('/sources/connect/:provider', async (ctx) => {
         status: 400,
         code: 'INVALID_PROVIDER',
         message: `provider must be one of: ${Array.from(VALID_PROVIDERS).join(', ')}; got: ${provider}`,
+      });
+    }
+
+    if (isDedicatedGoogleProvider(provider) && ctx.env.CONNECTOR_OAUTH_AUTHORITY_MODE === 'dedicated_google') {
+      return errorEnvelope(ctx, {
+        status: 409,
+        code: 'USE_DEDICATED_CONNECTOR_OAUTH',
+        message: `Start ${provider} authorization through /api/v1/sources/oauth/${provider}/start; Clerk sign-in identity is not connector authority.`,
       });
     }
 
@@ -387,10 +602,10 @@ sourcesRoute.post('/sources/connect/:provider', async (ctx) => {
 // ============================================================
 //
 // Commercial invariant: disconnect means the upstream grant is absent, not
-// merely that Xlooop hid its local row. Clerk external accounts may also be
-// login identities, so deletion is enabled only when deployment configuration
-// proves the provider is link-only. Shared grants (Drive + Gmail, OneDrive +
-// Outlook) require a future explicit group-revoke flow and fail closed here.
+// merely that Xlooop hid its local row. Dedicated Google grants retain a shared
+// Drive/Gmail grant until its final source is disconnected, then revoke and
+// verify it before the atomic local write. Legacy Clerk external accounts may
+// also be login identities, so that path remains link-only and fail-closed.
 sourcesRoute.delete('/sources/:id', async (ctx) => {
   try {
     const auth = ctx.get('auth');
@@ -406,6 +621,73 @@ sourcesRoute.delete('/sources/:id', async (ctx) => {
     const existing = await dal.getUserSource(auth.user_id, id);
     if (!existing || !sourceMatchesActiveWorkspace(existing, auth.workspace_id)) {
       return errorEnvelope(ctx, { status: 404, code: 'NOT_FOUND', message: `source ${id} not found` });
+    }
+    if (existing.oauth_grant_id) {
+      if (!existing.workspace_id || !isDedicatedGoogleProvider(existing.provider)) {
+        return errorEnvelope(ctx, { status: 409, code: 'OAUTH_GRANT_BINDING_INVALID', message: 'Dedicated connector grant binding is incomplete; no source state was changed.' });
+      }
+      const activeReferences = await dal.countActiveConnectorGrantSources(
+        existing.workspace_id,
+        auth.user_id,
+        existing.oauth_grant_id,
+      );
+      if (activeReferences > 1) {
+        const retained = {
+          authority: 'xlooop_connector_grant' as const,
+          authority_mode: 'dedicated_connector' as const,
+          oauth_grant_id: existing.oauth_grant_id,
+          upstream_status: 'retained_shared' as const,
+          identity_preserved: true as const,
+          upstream_verified_at: new Date().toISOString(),
+          request_id: ctx.get('request_id') || null,
+        };
+        const write = await dal.disconnectConnectorOAuthSource({
+          workspace_id: existing.workspace_id,
+          user_id: auth.user_id,
+          source_id: id,
+          authority: retained,
+        });
+        return ctx.json({ ...write, upstream_revocation: retained });
+      }
+      if (activeReferences !== 1) {
+        return errorEnvelope(ctx, { status: 409, code: 'SOURCE_GRANT_CARDINALITY_CHANGED', message: 'Connector grant state changed; retry disconnect.' });
+      }
+      const grant = await dal.getConnectorOAuthGrantSecret(existing.workspace_id, auth.user_id, existing.oauth_grant_id);
+      if (!grant || grant.status === 'revoked') {
+        return errorEnvelope(ctx, { status: 409, code: 'SOURCE_GRANT_RECONNECT_REQUIRED', message: 'Connector grant is absent or already revoked; reconnect before changing source state.' });
+      }
+      let tokens;
+      try {
+        tokens = await openConnectorTokens(
+          ctx.env,
+          { ciphertext: grant.token_ciphertext, iv: grant.token_iv },
+          { workspace_id: existing.workspace_id, user_id: auth.user_id, grant_id: existing.oauth_grant_id },
+        );
+      } catch {
+        return errorEnvelope(ctx, { status: 502, code: 'OAUTH_TOKEN_DECRYPTION_FAILED', message: 'Connector grant could not be opened; no source state was changed.' });
+      }
+      let upstream;
+      try {
+        upstream = await revokeGoogleGrant(ctx.env, tokens);
+      } catch (error) {
+        return errorEnvelope(ctx, { status: 502, code: 'CONNECTOR_OAUTH_REVOCATION_FAILED', message: `${(error as Error).message}. No source state was changed.` });
+      }
+      const authority = {
+        authority: 'xlooop_connector_grant' as const,
+        authority_mode: 'dedicated_connector' as const,
+        oauth_grant_id: existing.oauth_grant_id,
+        upstream_status: upstream.status,
+        identity_preserved: true as const,
+        upstream_verified_at: upstream.verified_at,
+        request_id: ctx.get('request_id') || null,
+      };
+      const write = await dal.disconnectConnectorOAuthSource({
+        workspace_id: existing.workspace_id,
+        user_id: auth.user_id,
+        source_id: id,
+        authority,
+      });
+      return ctx.json({ ...write, upstream_revocation: authority });
     }
     if (ctx.env.CONNECTOR_OAUTH_REVOCATION_MODE !== 'clerk_link_only') {
       return errorEnvelope(ctx, {
@@ -584,16 +866,11 @@ sourcesRoute.post('/sources/:id/sync', async (ctx) => {
       emitted_events: emittedEvents,
     });
 
-    const secretKey = ctx.env.CLERK_SECRET_KEY;
-    if (!secretKey) {
-      return errorEnvelope(ctx, { status: 500, code: 'CONFIG_ERROR', message: 'CLERK_SECRET_KEY not configured' });
-    }
-
     // R50.3d · "sync" = verify the OAuth token is still valid, THEN invoke the
     // per-provider translator (R50.3c) to ingest provider metadata into
     // operation_events (the translator writes via the DAL). Token-only verify
     // remains the fallback for any provider without a registered translator.
-    const adapter = makeClerkOAuthAdapter(secretKey);
+    const adapter = connectorTokenAdapter(ctx.env, dal, auth.user_id, existing);
     try {
       await adapter.getAccessToken(auth.user_id, existing.provider, { force_refresh: true });
     } catch (err) {
@@ -607,7 +884,7 @@ sourcesRoute.post('/sources/:id/sync', async (ctx) => {
       );
       requireCompleteSyncReceipt(failureWrite);
       const e = err as { code?: string };
-      return errorEnvelope(ctx, { status: 502, code: e.code || 'OAUTH_CLERK_API_ERROR', message: msg });
+      return errorEnvelope(ctx, { status: 502, code: e.code || 'OAUTH_TOKEN_ERROR', message: msg });
     }
 
     let sync: TranslatorResult | null = null;

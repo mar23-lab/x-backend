@@ -14,6 +14,8 @@ const gates = [
   ['known dependency advisory floors', 'npm', ['run', 'verify:known-dependency-advisories']],
   ['connector provider authority controls', 'npm', ['run', 'verify:connector-provider-ssot:self-test']],
   ['connector provider authority', 'npm', ['run', 'verify:connector-provider-ssot']],
+  ['dedicated connector OAuth authority controls', 'npm', ['run', 'verify:connector-oauth-authority:self-test']],
+  ['dedicated connector OAuth authority', 'npm', ['run', 'verify:connector-oauth-authority']],
   ['MCP server typecheck', 'npm', ['--prefix', 'packages/xlooop-mcp-server', 'run', 'typecheck']],
   ['MCP server build', 'npm', ['--prefix', 'packages/xlooop-mcp-server', 'run', 'build']],
   ['MCP server tests', 'npm', ['--prefix', 'packages/xlooop-mcp-server', 'test']],

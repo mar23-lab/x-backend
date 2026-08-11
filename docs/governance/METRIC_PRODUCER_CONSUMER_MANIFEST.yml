@@ -57,6 +57,30 @@ observability_kinds:  # class (b) — producer: the named emission site; consume
     producer: lib/policy-shadow.ts (observePolicyShadow · A7 260713, flag POLICY_ENGINE_ENABLED; SHADOW-only, never enforces; wired at routes/synthetic-domains.ts goal.create/complete)
   - kind: role_skill_resolution
     producer: lib/role-skill-shadow.ts (observeRoleSkillResolution · OAR-W2 260713, flag ROLE_SKILL_RESOLVER_ENABLED; SHADOW-only at lib/spine-authority.ts authorizeSpineWrite; durable rows = dal/role-skill-resolution-store.ts → role_skill_resolutions + authority_denial_receipts, mig 070)
+  - kind: context_packet_persisted
+    producer: routes/customer-chat.ts (context packet persisted before live provider invocation)
+  - kind: skill_invocation_completed
+    producer: routes/customer-chat.ts (durable skill invocation receipt completed)
+  - kind: chat_history_persistence_unavailable
+    producer: routes/customer-chat.ts (strict chat lineage DAL contract unavailable)
+  - kind: chat_history_persistence_failed
+    producer: routes/customer-chat.ts and routes/workspaces.ts (strict/default chat history append failed)
+  - kind: chat_project_inventory_failed
+    producer: services/cockpit-chat.ts (explicit tenant project inventory read failed)
+  - kind: chat_workspace_identity_failed
+    producer: services/cockpit-chat.ts (explicit workspace identity read failed)
+  - kind: chat_project_plan_failed
+    producer: services/cockpit-chat.ts (selected project plan grounding failed)
+  - kind: chat_project_sources_failed
+    producer: services/cockpit-chat.ts (selected project source grounding failed)
+  - kind: chat_context_projection_failed
+    producer: routes/customer-chat.ts (required role-scoped context projection failed)
+  - kind: chat_provider_unavailable
+    producer: routes/customer-chat.ts (effective runtime unavailable or all live attempts failed)
+  - kind: model_runtime_validated
+    producer: routes/model-runtimes.ts (content-free provider validation passed)
+  - kind: model_runtime_credential_rotated
+    producer: routes/model-runtimes.ts (credential envelope rotated to active key)
   - kind: role_skill_receipt_write_failed
     producer: lib/role-skill-shadow.ts (swallowWithTelemetry · Track A 260713; fires when a deferred shadow receipt write rejects — evidence loss is telemetered, never silent; safe fields only, no tenant payload)
 
