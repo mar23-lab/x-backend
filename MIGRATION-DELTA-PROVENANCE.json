@@ -7619,6 +7619,42 @@
           "reason": "Bind internal company A/B validation to explicit approved pilot-shadow hosts and keep production fail-closed"
         }
       ]
+    },
+    {
+      "delta_id": "canary-target-hardening-convergence-20260812",
+      "generated_at": "2026-08-11T17:03:11.095Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "55d1acdcd6c50e98893af9a1953449e62007cc68",
+      "target_base_commit": "55d1acdcd6c50e98893af9a1953449e62007cc68",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "package.json",
+          "target_blob": "09d8a41ced05356ea96bc3b47a4c453e8c8b595a",
+          "reason": "validated exact-target canary and two-company live-evidence closure"
+        },
+        {
+          "path": "docs/governance/GOVERNANCE_PILLARS.yml",
+          "target_blob": "49c3ca7946b6f2faaea3a8f54aeda65444e544ba",
+          "reason": "validated exact-target canary and two-company live-evidence closure"
+        },
+        {
+          "path": "scripts/verify-commercial-governance-hardening.mjs",
+          "target_blob": "239ca136b5e8bb1ae02a19133da5c0b389b88d9c",
+          "reason": "validated exact-target canary and two-company live-evidence closure"
+        },
+        {
+          "path": "scripts/verify-internal-company-a-b-canary.mjs",
+          "target_blob": "bb655bcac3c6af1a16e8b6262363623e8f25e10a",
+          "reason": "validated exact-target canary and two-company live-evidence closure"
+        },
+        {
+          "path": "scripts/verify-api-mcp-live-canary-hard-stop.mjs",
+          "target_blob": "005eaab61e273557fe9d8319c99753204a6c9cf5",
+          "reason": "validated exact-target canary and two-company live-evidence closure"
+        }
+      ]
     }
   ]
 }
