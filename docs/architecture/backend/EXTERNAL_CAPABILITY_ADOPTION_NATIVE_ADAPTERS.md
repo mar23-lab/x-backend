@@ -45,6 +45,63 @@ Headroom remains a backend-only compression benchmark candidate.
 
 Compression can only be considered when original payload hash, compressed payload hash, reversible replay, post-decompression citation checks, redaction invariants, and answer-equivalence gates are present.
 
+## Runtime Adapter Authority
+
+MarkItDown and Headroom now have a production-shaped, private runtime adapter contract. This is an
+implementation of the restricted-adapter lane, not approval to make either capability a default.
+
+```text
+tenant API Worker
+  -> disabled-by-default tenant capability flag
+  -> private Cloudflare service binding
+  -> non-public Capability Worker
+  -> one-request, no-egress Cloudflare Sandbox
+  -> pinned MarkItDown or Headroom package
+  -> hashed receipt
+  -> native audit/outbox lineage or live-model execution receipt
+```
+
+The Capability Worker has no route, `workers.dev` endpoint, or preview URL. Its custom Sandbox class
+disables Internet access. Every request uses a new sandbox identity, a fixed environment-cleared
+command, bounded payload and execution time, package versions pinned in the container image, and
+best-effort destruction after the response. Raw workspace identifiers never cross the service
+boundary; the API sends a one-way tenant reference. The image installs only MarkItDown's Office
+extras (`docx`, `pptx`, `xlsx`), not its network-capable Azure, speech, YouTube, image, or PDF lanes.
+Headroom's tokenizer data is fetched and pinned while building the image, so runtime execution does
+not attempt an outbound tokenizer download.
+
+MarkItDown is wired only to Office document conversion. It emits normalized text, a document-level
+source reference, source/output hashes, tool version, latency, and replay status. The original bytes
+remain in the native tenant document record, while the conversion receipt is written to both the
+audit record and projection outbox. Office formats are rejected unless the private binding and flag
+are active. Existing native text/PDF behavior remains the baseline even when the flag is enabled:
+the current upstream corpus showed PDF cold conversion above the `<3s` target, so the adapter is not
+allowed to take over that native lane.
+
+Headroom is wired only as a pre-provider prompt optimization. Obvious credentials are redacted before
+the private call, and the adapter hashes that redacted source plus the compressed output. The API
+recomputes both hashes and accepts the result only when replay is declared and per-request token
+reduction is at least `25%`. The system policy must remain byte-identical, and the operator question,
+citations, identifiers, dates, and quoted customer facts must remain present. Any timeout, malformed
+receipt, semantic-guard failure, lower reduction, or adapter failure sends the untouched original
+in-memory prompt through the same live-provider plan. Compression never creates an assistant answer
+and never becomes context or graph authority.
+
+Both production and pilot-shadow flags remain `false`. Deployment order is capability Worker first,
+then the API binding. A staging enablement additionally requires an exact owner-approved deployment
+tuple and receipt-backed tenant canary. The 2026-08-12 local Wrangler dry run built the exact
+container image successfully. Direct `--network none` execution converted the governed DOCX with
+valid source/output hashes and replay status, and compressed a representative governed packet by
+`55.2%` while preserving its decision, tenant, citation, owner, due date, and replay hash. The
+dependency-surface check found none of the forbidden Azure, speech, YouTube, or PDF packages. Local
+latency is diagnostic only because the Cloudflare amd64 image runs through emulation on the arm64
+developer host; staging receipts remain the deployment-latency authority.
+
+Hyper-Extract is intentionally absent from this external runtime Worker. Its approved native lane
+continues to emit typed extraction candidates and `GraphSuggestion` records only.
+
+Runtime contract verifier: `npm run verify:external-capability-runtime-adapter`.
+
 ## Impeccable
 
 Impeccable is accepted as a customer-UI quality detector only. It may run as a pinned CLI canary against source text and controlled hosted routes to catch typography drift, layout overflow, brittle motion, generic AI-design tells, and design-system violations.

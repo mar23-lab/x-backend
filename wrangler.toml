@@ -138,9 +138,18 @@ simple = { limit = 5000, period = 60 }
 [ai]
 binding = "AI"
 
+# Private Worker-to-Worker boundary for sandboxed external capabilities. The callee has no public
+# route and no product authority. Both feature flags below remain false until a separately approved
+# tenant canary; binding deployment order is capability adapter first, API second.
+[[services]]
+binding = "EXTERNAL_CAPABILITY_ADAPTER"
+service = "xlooop-capability-adapter"
+
 # Non-secret build/runtime config (secrets set via `wrangler secret put`)
 [vars]
 ENVIRONMENT = "production"
+MARKITDOWN_ADAPTER_ENABLED = "false"
+HEADROOM_COMPRESSION_ENABLED = "false"
 # W9-H1 (260722, operator-ratified): declare the authority this worker has de-facto held since
 # the ~260719 cutover. XLOOOP_AUTHORITY_MODE has exactly ONE runtime consumer (routes/health.ts,
 # reporting only — no behavioral branch), so this is a truthful-attestation change, not a

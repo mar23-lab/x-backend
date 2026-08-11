@@ -16,6 +16,7 @@ import type { HarnessFlowEvent, EventStatus } from '../dal/types/event';
 import type { AiRunner } from './agent-digest';
 import { companyContextPreamble } from '../dal/customer-context-store';
 import type { ModelExecutionObserver } from '../lib/model-execution-lineage';
+import type { PromptCompressionResult } from './external-capability-adapter';
 import {
   executeEffectiveRuntimePlan,
   ProviderUnavailableError,
@@ -243,6 +244,7 @@ export interface CockpitChatResult {
     provider_config_version_id: string | null;
     latency_ms: number;
     attempts: RuntimeExecutionAttempt[];
+    compression?: PromptCompressionResult['receipt'] | null;
   };
   /** Provenance the UI shows so the answer visibly references the real record. */
   grounded_on: {
@@ -1357,6 +1359,7 @@ export async function answerCockpitChat(
   llmChoice: CockpitChatLLM = 'llama',
   executionObserver?: ModelExecutionObserver,
   liveRuntimePlan?: EffectiveRuntimePlan,
+  promptCompressor?: (input: { system: string; user: string }) => Promise<PromptCompressionResult>,
 ): Promise<CockpitChatResult> {
   const grounded = compileChatFacts(facts, message);
   // P0.1 · the deterministic FLOOR must be honest about staleness too (it is the guaranteed fallback).
@@ -1521,10 +1524,28 @@ export async function answerCockpitChat(
   // deterministic assistant prose. The legacy ladder below remains available only to explicitly
   // non-commercial callers while they migrate to the resolver.
   if (liveRuntimePlan) {
+    let executionSystem = systemPrompt;
+    let executionUser = userPrompt;
+    let compressionReceipt: PromptCompressionResult['receipt'] | null = null;
+    if (promptCompressor) {
+      try {
+        const compressed = await promptCompressor({ system: systemPrompt, user: userPrompt });
+        executionSystem = compressed.system;
+        executionUser = compressed.user;
+        compressionReceipt = compressed.receipt;
+      } catch (error) {
+        // Compression is an optimization, never answer authority. Preserve the original in-memory
+        // prompt and continue through the same live provider plan when the private adapter degrades.
+        console.log(JSON.stringify({
+          kind: 'headroom_compression_fallback_original',
+          error: error instanceof Error ? error.message.slice(0, 200) : String(error).slice(0, 200),
+        }));
+      }
+    }
     const live = await executeEffectiveRuntimePlan({
       plan: liveRuntimePlan,
-      system: systemPrompt,
-      user: userPrompt,
+      system: executionSystem,
+      user: executionUser,
       maxTokens: mode === 'deep-research' ? 900 : 700,
       validateText: (text) => validateLiveGrounding(text, grounded),
       observer: executionObserver,
@@ -1544,6 +1565,7 @@ export async function answerCockpitChat(
         provider_config_version_id: live.runtime.provider_config_version_id,
         latency_ms: live.latency_ms,
         attempts: live.attempts,
+        compression: compressionReceipt,
       },
     };
   }
@@ -1663,9 +1685,10 @@ export async function answerLiveCockpitChat(
   mode: CockpitChatMode,
   executionObserver: ModelExecutionObserver | undefined,
   liveRuntimePlan: EffectiveRuntimePlan,
+  promptCompressor?: (input: { system: string; user: string }) => Promise<PromptCompressionResult>,
 ): Promise<LiveCockpitChatResult> {
   const result = await answerCockpitChat(
-    message, facts, undefined, mode, undefined, 'llama', executionObserver, liveRuntimePlan,
+    message, facts, undefined, mode, undefined, 'llama', executionObserver, liveRuntimePlan, promptCompressor,
   );
   if (result.generated_by !== 'llm' || !result.execution) {
     throw new ProviderUnavailableError(

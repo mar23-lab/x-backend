@@ -19,8 +19,14 @@ import { idempotencyMiddleware } from '../lib/idempotency';
 import type { AuthEnv, AuthVariables } from '../middleware/auth';
 import { insertDocumentWithAuthorityRow, listDocumentsRow, updateDocumentAdmissibilityWithAuthorityRow, getLatestDocumentVersionRow, sha256Hex } from '../dal/document-store';
 import { emitEvent } from '../lib/observability'; // T3/P6
+import {
+  convertDocumentWithMarkitdown,
+  markitdownEnabled,
+  type CapabilityReceipt,
+  type ExternalCapabilityAdapterEnv,
+} from '../services/external-capability-adapter';
 
-export interface DocumentsEnv extends AuthEnv {
+export interface DocumentsEnv extends AuthEnv, ExternalCapabilityAdapterEnv {
   DATABASE_URL: string;
   IDEMPOTENCY_ENABLED?: string;
 }
@@ -30,8 +36,13 @@ export const documentsRoute = new Hono<{ Bindings: DocumentsEnv; Variables: Docu
 documentsRoute.use('*', idempotencyMiddleware()); // Wave-Y: flag-off ⇒ passthrough
 
 // Production-backed intake types only (matches AddDocsCard's honesty: no method we cannot fulfil).
-const ALLOWED_CONTENT_TYPES = new Set([
+const CORE_CONTENT_TYPES = new Set([
   'text/plain', 'text/markdown', 'text/x-markdown', 'text/csv', 'application/json', 'application/pdf',
+]);
+const MARKITDOWN_CONTENT_TYPES = new Set([
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
 ]);
 const MAX_BYTES = 5 * 1024 * 1024; // 5 MB — matches the documents_size_cap CHECK
 
@@ -66,7 +77,8 @@ documentsRoute.post('/documents', async (ctx) => {
     const projectId = (typeof projectRaw === 'string' && projectRaw.length > 0) ? projectRaw : null;
 
     const contentType = file.type || 'application/octet-stream';
-    if (!ALLOWED_CONTENT_TYPES.has(contentType)) {
+    const markitdownAvailable = markitdownEnabled(ctx.env);
+    if (!CORE_CONTENT_TYPES.has(contentType) && !(markitdownAvailable && MARKITDOWN_CONTENT_TYPES.has(contentType))) {
       return errorEnvelope(ctx, { status: 415, code: 'UNSUPPORTED_TYPE', message: `unsupported file type: ${contentType}` });
     }
     if (file.size > MAX_BYTES) {
@@ -77,13 +89,32 @@ documentsRoute.post('/documents', async (ctx) => {
     if (bytes.byteLength === 0) return errorEnvelope(ctx, { status: 400, code: 'EMPTY_FILE', message: 'the file is empty' });
     if (bytes.byteLength > MAX_BYTES) return errorEnvelope(ctx, { status: 413, code: 'TOO_LARGE', message: 'file exceeds the limit' });
 
-    // Ingestion: text types → store decoded text (chief-of-staff can read it); binary (PDF) stored
-    // bytes-only with extraction deferred. Never fabricate extracted text.
+    const filename = (file.name || 'document').slice(0, 255);
+    const contentBase64 = toBase64(bytes);
+    const contentHash = await sha256Hex(bytes);
+
+    // Ingestion: native text stays in-isolate. Binary conversion enters only through the private,
+    // no-egress capability service binding. Office formats are accepted only when that binding and
+    // tenant flag are both active, so the API never reports a fake-success stored document.
     let extractedText: string | null = null;
     let status = 'stored';
+    let conversionReceipt: CapabilityReceipt | null = null;
     if (isTextType(contentType)) {
       try { extractedText = new TextDecoder('utf-8', { fatal: false }).decode(bytes).slice(0, 200000); status = 'ingested'; }
       catch { extractedText = null; }
+    } else if (markitdownAvailable && MARKITDOWN_CONTENT_TYPES.has(contentType)) {
+      const converted = await convertDocumentWithMarkitdown({
+        env: ctx.env,
+        workspace_id: auth.workspace_id,
+        request_id: ctx.get('request_id') || null,
+        filename,
+        content_type: contentType,
+        content_base64: contentBase64,
+        source_hash: contentHash,
+      });
+      extractedText = converted.extracted_text.slice(0, 200000);
+      conversionReceipt = converted.receipt;
+      status = 'ingested';
     } else if (contentType === 'application/pdf') {
       // P1.2 (260629) · in-isolate PDF text extraction (unpdf, MIT — CF-Worker-designed: a serverless pdf.js
       // build, no canvas / no worker thread). Born-digital PDFs become answerable by the chief-of-staff chat
@@ -113,11 +144,9 @@ documentsRoute.post('/documents', async (ctx) => {
     // fallback matches the sibling call sites so an environment without the RLS secret bound keeps
     // working instead of silently reading zero rows.
     const readSql = resolveRlsSql(ctx.env, neonClient(ctx.env.DATABASE_URL));
-    const filename = (file.name || 'document').slice(0, 255);
     // A-W5 · version chain: content_hash = SHA-256 of the bytes (the immutable version identity an evidence
     // content_hash matches); if a prior version of this logical document (same project + filename) exists,
     // this upload chains to it (version+1, supersedes_id). Best-effort lookup — a failure yields a fresh v1.
-    const contentHash = await sha256Hex(bytes);
     let priorVersion: { id: string; version: number } | null = null;
     try { priorVersion = await getLatestDocumentVersionRow(readSql, auth.workspace_id, projectId, filename); }
     catch (err) { console.warn('[documents] prior-version lookup failed (best-effort; fresh v1)', { error: (err as Error)?.message }); }
@@ -128,7 +157,7 @@ documentsRoute.post('/documents', async (ctx) => {
       filename,
       content_type: contentType,
       size_bytes: bytes.byteLength,
-      content_base64: toBase64(bytes),
+      content_base64: contentBase64,
       extracted_text: extractedText,
       uploaded_by: auth.user_id,
       status,
@@ -139,6 +168,7 @@ documentsRoute.post('/documents', async (ctx) => {
       operation_event_id: crypto.randomUUID(),
       projection_outbox_id: crypto.randomUUID(),
       request_id: ctx.get('request_id') || null,
+      capability_receipt: conversionReceipt,
     });
     emitEvent('document_uploaded', {
       workspace_id: auth.workspace_id,
@@ -152,6 +182,7 @@ documentsRoute.post('/documents', async (ctx) => {
       operation_event_id: write.operation_event_id,
       audit_event_id: write.audit_event_id,
       projection_outbox_id: write.projection_outbox_id,
+      conversion: conversionReceipt,
       audit_event: {
         status: 'recorded',
         source_tool: 'document_upload',

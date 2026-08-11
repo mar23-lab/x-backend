@@ -15,6 +15,7 @@ import type { Sql } from '../db/client';
 import { withWorkspaceRlsContext } from './operational-spine-store';
 import type { Admissibility } from '../lib/admissibility';
 import type { SourceTool } from './types/event';
+import type { CapabilityReceipt } from '../services/external-capability-adapter';
 
 const DOCUMENT_AUTHORITY_SOURCE: SourceTool = 'document_upload';
 
@@ -62,6 +63,7 @@ export interface DocumentAuthorityInput {
   operation_event_id: string;
   projection_outbox_id: string;
   request_id: string | null;
+  capability_receipt?: CapabilityReceipt | null;
 }
 
 export interface DocumentWriteReceipt {
@@ -86,6 +88,9 @@ export async function insertDocumentWithAuthorityRow(
   doc: InsertDocumentInput,
   authority: DocumentAuthorityInput,
 ): Promise<DocumentWriteReceipt> {
+  const capabilityReceiptJson = authority.capability_receipt
+    ? JSON.stringify(authority.capability_receipt)
+    : null;
   const rows = (await sql`
     WITH document_written AS (
       INSERT INTO documents (
@@ -128,6 +133,7 @@ export async function insertDocumentWithAuthorityRow(
           'document_id', document_written.id,
           'content_hash', document_written.content_hash,
           'version', document_written.version,
+          'capability_receipt', ${capabilityReceiptJson}::jsonb,
           -- ::text is LOad-BEARING. jsonb_build_object is variadic "any", so a bare parameter has no
           -- inferable type and PostgreSQL raises 42P18 "could not determine data type of parameter"
           -- on EVERY call. Without this cast POST /api/v1/documents returned 500 unconditionally and
@@ -150,7 +156,8 @@ export async function insertDocumentWithAuthorityRow(
           'operation_event_id', event_written.id,
           'audit_event_id', audit_written.audit_event_id,
           'content_hash', document_written.content_hash,
-          'version', document_written.version
+          'version', document_written.version,
+          'capability_receipt', ${capabilityReceiptJson}::jsonb
         )
       FROM document_written
       JOIN event_written ON TRUE

@@ -1,0 +1,24 @@
+name = "xlooop-capability-adapter"
+main = "src/capability-worker/index.ts"
+compatibility_date = "2026-08-12"
+compatibility_flags = ["nodejs_compat"]
+workers_dev = false
+preview_urls = false
+
+[[containers]]
+class_name = "CapabilitySandbox"
+image = "./Dockerfile.capabilities"
+instance_type = "lite"
+max_instances = 3
+
+[[durable_objects.bindings]]
+class_name = "CapabilitySandbox"
+name = "CapabilitySandbox"
+
+[[migrations]]
+new_sqlite_classes = ["CapabilitySandbox"]
+tag = "v1"
+
+[observability]
+enabled = true
+head_sampling_rate = 1
