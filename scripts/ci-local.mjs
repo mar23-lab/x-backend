@@ -16,6 +16,7 @@ const gates = [
   ['connector provider authority', 'npm', ['run', 'verify:connector-provider-ssot']],
   ['dedicated connector OAuth authority controls', 'npm', ['run', 'verify:connector-oauth-authority:self-test']],
   ['dedicated connector OAuth authority', 'npm', ['run', 'verify:connector-oauth-authority']],
+  ['schema 101 PostgreSQL proof controls', 'npm', ['run', 'verify:schema101-postgres:self-test']],
   ['MCP server typecheck', 'npm', ['--prefix', 'packages/xlooop-mcp-server', 'run', 'typecheck']],
   ['MCP server build', 'npm', ['--prefix', 'packages/xlooop-mcp-server', 'run', 'build']],
   ['MCP server tests', 'npm', ['--prefix', 'packages/xlooop-mcp-server', 'test']],
