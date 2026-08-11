@@ -1,9 +1,17 @@
 # Migrations
 
 Sequential SQL migrations for the Neon Postgres backend. Each migration:
-- Is **idempotent** (uses `IF NOT EXISTS` everywhere) — safe to re-run on partial DBs
-- Is **additive** (per `BACKEND_ROLE_DEFINITION.md §4`) — no `DROP TABLE`/`DROP COLUMN`
+- Is **transactional and version-guarded** — a failed migration rolls back and an applied version is not re-run
+- Is **additive by default** (per `BACKEND_ROLE_DEFINITION.md §4`) — no `DROP TABLE`/`DROP COLUMN`
 - Records its version in `workers_schema_version` for traceability
+
+An existing constraint or index may be replaced only when the product contract
+cannot be expressed additively. That exception must prove the exact prior
+definition before dropping it, run inside one transaction, provide a
+database-backed verifier with negative controls, and receive explicit
+environment-scoped owner approval. Migration 101 is the reference pattern: it
+replaces global user/provider uniqueness with separate legacy and tenant-scoped
+partial uniqueness while preserving all rows and columns.
 
 ## Workflow
 

@@ -20,6 +20,8 @@ describe('migration 101 dedicated connector OAuth authority', () => {
   });
 
   it('separates tenant-scoped dedicated connections from legacy user authority', () => {
+    expect(migration).toContain("legacy_uniqueness_definition <> 'UNIQUE (user_id, provider)'");
+    expect(migration).toContain('migration 101 refuses unexpected user_source_connections_user_id_provider_key definition');
     expect(migration).toContain('DROP CONSTRAINT IF EXISTS user_source_connections_user_id_provider_key');
     expect(migration).toContain('user_source_connections_legacy_user_provider_key');
     expect(migration).toContain('WHERE oauth_grant_id IS NULL');

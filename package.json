@@ -68,6 +68,8 @@
     "ensure:mbp-projection-fresh": "node scripts/ensure-mbp-projection-fresh.mjs",
     "verify:schema93-invariants": "node scripts/verify-schema93-invariants.mjs",
     "verify:schema93-invariants:self-test": "node scripts/verify-schema93-invariants.mjs --self-test",
+    "verify:schema101-postgres": "node scripts/verify-schema101-postgres.mjs",
+    "verify:schema101-postgres:self-test": "node scripts/verify-schema101-postgres.mjs --self-test",
     "verify:release-debt": "node scripts/verify-release-debt.mjs",
     "verify:release-debt:self-test": "node scripts/verify-release-debt.mjs --self-test",
     "verify:schema-head-source-replay": "node scripts/replay-schema93-postgres.mjs",
