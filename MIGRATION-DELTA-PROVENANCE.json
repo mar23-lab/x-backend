@@ -7583,6 +7583,42 @@
           "reason": "Document explicit live canary target selection in closeout evidence"
         }
       ]
+    },
+    {
+      "delta_id": "internal-canary-target-policy-20260812",
+      "generated_at": "2026-08-11T14:39:53.788Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "a01517256e57098dd8890cc30bdf9215dc7ef67a",
+      "target_base_commit": "a01517256e57098dd8890cc30bdf9215dc7ef67a",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "package.json",
+          "target_blob": "900112ac7411b742b576ca25a69c2661e3964d6d",
+          "reason": "Bind internal company A/B validation to explicit approved pilot-shadow hosts and keep production fail-closed"
+        },
+        {
+          "path": "scripts/ci-local.mjs",
+          "target_blob": "6dcbcfcbc48c6a45ad2141bae60f0fc839a4fee7",
+          "reason": "Bind internal company A/B validation to explicit approved pilot-shadow hosts and keep production fail-closed"
+        },
+        {
+          "path": "scripts/verify-internal-company-a-b-canary.mjs",
+          "target_blob": "978b8744efffcabcea02aa64c753ec4a286031c9",
+          "reason": "Bind internal company A/B validation to explicit approved pilot-shadow hosts and keep production fail-closed"
+        },
+        {
+          "path": "scripts/verify-pilot-shadow-config.mjs",
+          "target_blob": "fea1eaccccb65da41f59f34323d899077ea0ab64",
+          "reason": "Bind internal company A/B validation to explicit approved pilot-shadow hosts and keep production fail-closed"
+        },
+        {
+          "path": "wrangler.pilot-shadow.toml",
+          "target_blob": "aa382524a0d9e6d6d20a67fae4346ed478df0de0",
+          "reason": "Bind internal company A/B validation to explicit approved pilot-shadow hosts and keep production fail-closed"
+        }
+      ]
     }
   ]
 }

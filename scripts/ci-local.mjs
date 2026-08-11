@@ -10,6 +10,7 @@ const gates = [
   ['customer feedback hardening contract', 'npm', ['run', 'verify:customer-feedback-tools-hardening']],
   ['customer API access guidance contract', 'npm', ['run', 'verify:customer-api-access-guidance']],
   ['API/MCP canary packet provisioner controls', 'npm', ['run', 'provision:api-mcp-canary-packet:self-test']],
+  ['internal company A/B canary target controls', 'npm', ['run', 'verify:internal-company-a-b-canary:self-test']],
   ['installed dependency parity', 'npm', ['run', 'verify:installed-dependencies']],
   ['known dependency advisory floors', 'npm', ['run', 'verify:known-dependency-advisories']],
   ['connector provider authority controls', 'npm', ['run', 'verify:connector-provider-ssot:self-test']],

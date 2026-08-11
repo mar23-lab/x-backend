@@ -153,6 +153,7 @@
     "provision:api-mcp-canary-packet": "node scripts/provision-api-mcp-canary-packet.mjs",
     "provision:api-mcp-canary-packet:self-test": "node scripts/provision-api-mcp-canary-packet.mjs --self-test",
     "verify:internal-company-a-b-canary": "node scripts/verify-internal-company-a-b-canary.mjs",
+    "verify:internal-company-a-b-canary:self-test": "node scripts/verify-internal-company-a-b-canary.mjs --self-test",
     "prepare:pilot-shadow-canary-bindings": "node scripts/prepare-pilot-shadow-canary-secret-bundle.mjs",
     "prepare:pilot-shadow-canary-bindings:self-test": "node scripts/prepare-pilot-shadow-canary-secret-bundle.mjs --self-test",
     "verify:customer-connector-token-safety": "node scripts/verify-customer-connector-token-safety.mjs",
