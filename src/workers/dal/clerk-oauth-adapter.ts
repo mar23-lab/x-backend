@@ -32,6 +32,7 @@ import type {
   OAuthAccessTokenSnapshot,
   OAuthAdapterError,
   OAuthAdapterErrorCode,
+  OAuthGrantRevocationReceipt,
   OAuthProvider,
   UserId,
 } from './types';
@@ -146,6 +147,17 @@ export interface ClerkOAuthAdapter {
 
   /** List ALL OAuth providers the user has connected in Clerk (any provider, not just our 5). */
   listConnectedProviders(userId: UserId): Promise<string[]>;
+
+  /**
+   * Revoke a connector-only Clerk external account and verify it is absent.
+   * The caller must prove this provider is configured as link-only. This method
+   * also refuses to remove the user's last viable identity factor.
+   */
+  revokeLinkOnlyGrant(
+    userId: UserId,
+    provider: OAuthProvider,
+    externalAccountId: string,
+  ): Promise<OAuthGrantRevocationReceipt>;
 
   /** Manually invalidate the cached token for (user, provider). Used by R50.3d on rate-limit 429s. */
   invalidateCache(userId: UserId, provider: OAuthProvider): void;
@@ -264,11 +276,114 @@ export function makeClerkOAuthAdapter(secretKey: string): ClerkOAuthAdapter {
     }
   }
 
+  async function revokeLinkOnlyGrant(
+    userId: UserId,
+    provider: OAuthProvider,
+    externalAccountId: string,
+  ): Promise<OAuthGrantRevocationReceipt> {
+    if (!externalAccountId) {
+      throw buildError(
+        'OAUTH_EXTERNAL_ACCOUNT_ID_REQUIRED',
+        `Cannot revoke ${provider}: the source has no Clerk external-account id`,
+        { provider, user_id: userId },
+      );
+    }
+    const clerkSlug = OAUTH_PROVIDER_TO_CLERK_SLUG[provider];
+    if (!clerkSlug) {
+      throw buildError('OAUTH_INVALID_PROVIDER', `Unknown OAuth provider: ${provider}`, { provider, user_id: userId });
+    }
+
+    let user;
+    try {
+      user = await clerk.users.getUser(userId);
+    } catch (raw) {
+      throw mapClerkError(raw, provider, userId);
+    }
+    const accounts = (user as {
+      externalAccounts?: Array<{ id?: string; provider?: string }>;
+      passwordEnabled?: boolean;
+      emailAddresses?: unknown[];
+      phoneNumbers?: unknown[];
+      samlAccounts?: unknown[];
+    }).externalAccounts || [];
+    const target = accounts.find((account) => account.id === externalAccountId);
+    if (!target) {
+      invalidateCache(userId, provider);
+      return {
+        authority: 'clerk_external_account',
+        authority_mode: 'clerk_link_only',
+        provider,
+        external_account_id: externalAccountId,
+        status: 'already_absent',
+        identity_preserved: true,
+        verified_at: new Date().toISOString(),
+      };
+    }
+    const targetProvider = (target.provider || '').replace(/^oauth_/, '');
+    if (targetProvider !== clerkSlug) {
+      throw buildError(
+        'OAUTH_EXTERNAL_ACCOUNT_ID_REQUIRED',
+        `External account ${externalAccountId} belongs to ${targetProvider || 'an unknown provider'}, not ${provider}`,
+        { provider, user_id: userId },
+      );
+    }
+
+    const typedUser = user as {
+      passwordEnabled?: boolean;
+      emailAddresses?: unknown[];
+      phoneNumbers?: unknown[];
+      samlAccounts?: unknown[];
+    };
+    const hasAlternativeIdentity = Boolean(
+      typedUser.passwordEnabled ||
+      (typedUser.emailAddresses?.length ?? 0) > 0 ||
+      (typedUser.phoneNumbers?.length ?? 0) > 0 ||
+      (typedUser.samlAccounts?.length ?? 0) > 0 ||
+      accounts.some((account) => account.id !== externalAccountId),
+    );
+    if (!hasAlternativeIdentity) {
+      throw buildError(
+        'OAUTH_IDENTITY_FALLBACK_REQUIRED',
+        `Cannot revoke ${provider}: the Clerk external account may be the user's only sign-in factor`,
+        { provider, user_id: userId },
+      );
+    }
+
+    try {
+      await clerk.users.deleteUserExternalAccount({ userId, externalAccountId });
+      const after = await clerk.users.getUser(userId);
+      const remaining = (after as { externalAccounts?: Array<{ id?: string }> }).externalAccounts || [];
+      if (remaining.some((account) => account.id === externalAccountId)) {
+        throw buildError(
+          'OAUTH_REVOCATION_VERIFICATION_FAILED',
+          `Clerk still returns external account ${externalAccountId} after deletion`,
+          { provider, user_id: userId },
+        );
+      }
+    } catch (raw) {
+      if ((raw as OAuthAdapterError)?.code === 'OAUTH_REVOCATION_VERIFICATION_FAILED') throw raw;
+      throw mapClerkError(raw, provider, userId);
+    }
+
+    for (const internalProvider of Object.keys(OAUTH_PROVIDER_TO_CLERK_SLUG) as OAuthProvider[]) {
+      if (OAUTH_PROVIDER_TO_CLERK_SLUG[internalProvider] === clerkSlug) invalidateCache(userId, internalProvider);
+    }
+    return {
+      authority: 'clerk_external_account',
+      authority_mode: 'clerk_link_only',
+      provider,
+      external_account_id: externalAccountId,
+      status: 'revoked',
+      identity_preserved: true,
+      verified_at: new Date().toISOString(),
+    };
+  }
+
   function invalidateCache(userId: UserId, provider: OAuthProvider): void {
     tokenCache.delete(cacheKey(userId, provider));
   }
 
-  return { getAccessToken, listConnectedProviders, invalidateCache };
+  return { getAccessToken, listConnectedProviders, revokeLinkOnlyGrant, invalidateCache };
 }
 
 // Re-export error helpers for routes that want to construct adapter errors

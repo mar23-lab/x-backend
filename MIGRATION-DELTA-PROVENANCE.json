@@ -7359,6 +7359,73 @@
           "reason": "normalize Clerk SDK token verification and least-privilege staging auth contract"
         }
       ]
+    },
+    {
+      "delta_id": "connector-revocation-authority-20260811",
+      "generated_at": "2026-08-11T09:40:34.998Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "54e4a4ff7fd3f2d6481e83bdcb2231603a292991",
+      "target_base_commit": "54e4a4ff7fd3f2d6481e83bdcb2231603a292991",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/dal/clerk-oauth-adapter.ts",
+          "target_blob": "74fbe9baa258e4ffd8aeddfc28acddcc343881ba",
+          "reason": "Require verified upstream connector revocation before local disconnect while preserving sign-in identity"
+        },
+        {
+          "path": "src/workers/dal/types/oauth.ts",
+          "target_blob": "3a970f068c000117c62985fe8fc932b7e750bb9e",
+          "reason": "Require verified upstream connector revocation before local disconnect while preserving sign-in identity"
+        }
+      ]
+    },
+    {
+      "delta_id": "connector-revocation-authority-surface-20260811",
+      "generated_at": "2026-08-11T09:40:55.037Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "54e4a4ff7fd3f2d6481e83bdcb2231603a292991",
+      "target_base_commit": "54e4a4ff7fd3f2d6481e83bdcb2231603a292991",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "docs/architecture/backend/API_CONTRACT_V1.md",
+          "target_blob": "ad42f17d48522b2d82ce095d1762977f7070ee5c",
+          "reason": "Enforce fail-closed upstream connector revocation, expose readiness, and preserve audit lineage"
+        },
+        {
+          "path": "src/workers/__tests__/destructive-op-event-mirror.test.ts",
+          "target_blob": "750cfd63eecde79bd9156f9dc1937619ab3c1a79",
+          "reason": "Enforce fail-closed upstream connector revocation, expose readiness, and preserve audit lineage"
+        },
+        {
+          "path": "src/workers/__tests__/sources-connect-sync.test.ts",
+          "target_blob": "d19e08fd2572e80c3e8cf5c5337fcee68a7f5c2a",
+          "reason": "Enforce fail-closed upstream connector revocation, expose readiness, and preserve audit lineage"
+        },
+        {
+          "path": "src/workers/dal/DalAdapter.ts",
+          "target_blob": "5378f9b643b77aedc8f6446275a3bc5c0b5702a8",
+          "reason": "Enforce fail-closed upstream connector revocation, expose readiness, and preserve audit lineage"
+        },
+        {
+          "path": "src/workers/dal/WorkersDalAdapter.ts",
+          "target_blob": "36b5b837923bfa3aa8937b4b437d77da4b86e293",
+          "reason": "Enforce fail-closed upstream connector revocation, expose readiness, and preserve audit lineage"
+        },
+        {
+          "path": "src/workers/dal/source-store.ts",
+          "target_blob": "1b6e1072348f0aad92274446c132658bded19a19",
+          "reason": "Enforce fail-closed upstream connector revocation, expose readiness, and preserve audit lineage"
+        },
+        {
+          "path": "src/workers/routes/sources.ts",
+          "target_blob": "c245ec0dcccd0114e2fa6dc53783c475ac08b251",
+          "reason": "Enforce fail-closed upstream connector revocation, expose readiness, and preserve audit lineage"
+        }
+      ]
     }
   ]
 }

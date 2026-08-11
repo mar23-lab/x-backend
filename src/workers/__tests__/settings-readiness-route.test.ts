@@ -36,13 +36,14 @@ function appFor(currentDal: Record<string, unknown>, auth: Record<string, unknow
 }
 
 describe('GET /api/v1/settings/readiness', () => {
-  it('returns eight tenant-safe live checks and never invents lifecycle readiness', async () => {
+  it('returns nine tenant-safe live checks and never invents lifecycle readiness', async () => {
     const res = await appFor(dal()).request('/api/v1/settings/readiness', {}, {
       DATABASE_URL: 'postgres://redacted',
       XLOOOP_RLS_APP_DATABASE_URL: 'postgres://redacted-app-role',
       XLOOOP_AUTHORITY_MODE: 'production',
       XLOOOP_SCHEMA_HEAD: '93',
       SINGLE_INTAKE_ENABLED: 'true',
+      CONNECTOR_OAUTH_REVOCATION_MODE: 'clerk_link_only',
       AI: { run: async () => ({ response: 'live' }) },
     } as never);
     expect(res.status).toBe(200);
@@ -50,12 +51,15 @@ describe('GET /api/v1/settings/readiness', () => {
     expect(body.schema_id).toBe('xlooop.settings_readiness.v1');
     expect(body.checks.map((item: any) => item.id)).toEqual([
       'auth_tenant', 'api_gateway', 'database_schema_rls', 'effective_runtime',
-      'mcp_oauth', 'sources_freshness', 'telemetry', 'delete_export',
+      'mcp_oauth', 'sources_freshness', 'connector_revocation', 'telemetry', 'delete_export',
     ]);
     expect(body.checks.find((item: any) => item.id === 'database_schema_rls')).toMatchObject({
       status: 'ready', details: { schema_head: 93, rls_binding: 'app' },
     });
     expect(body.checks.find((item: any) => item.id === 'delete_export').status).toBe('attention');
+    expect(body.checks.find((item: any) => item.id === 'connector_revocation')).toMatchObject({
+      status: 'ready', details: { shared_grant_policy: 'fail_closed' },
+    });
     expect(JSON.stringify(body)).not.toContain('postgres://');
   });
 
@@ -71,6 +75,7 @@ describe('GET /api/v1/settings/readiness', () => {
     expect(body.checks.find((item: any) => item.id === 'effective_runtime').status).toBe('unavailable');
     expect(body.checks.find((item: any) => item.id === 'sources_freshness').status).toBe('unavailable');
     expect(body.checks.find((item: any) => item.id === 'api_gateway').status).toBe('attention');
+    expect(body.checks.find((item: any) => item.id === 'connector_revocation').status).toBe('attention');
   });
 
   it('does not promote keyword-rich generic evidence to production lifecycle readiness', async () => {

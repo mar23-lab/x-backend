@@ -94,6 +94,9 @@ export type OAuthAdapterErrorCode =
   | 'OAUTH_REVOKED'              // token was revoked by user or by provider
   | 'OAUTH_PROVIDER_NOT_CONFIGURED' // provider isn't enabled in Clerk dashboard
   | 'OAUTH_INVALID_PROVIDER'     // caller passed a provider not in OAuthProvider union
+  | 'OAUTH_EXTERNAL_ACCOUNT_ID_REQUIRED' // revoke cannot prove which upstream account owns the grant
+  | 'OAUTH_IDENTITY_FALLBACK_REQUIRED' // deleting this account could remove the user's only sign-in method
+  | 'OAUTH_REVOCATION_VERIFICATION_FAILED' // Clerk accepted delete but still returns the external account
   | 'OAUTH_CLERK_API_ERROR';     // generic catch-all for Clerk-side errors
 
 export interface OAuthAdapterError extends Error {
@@ -114,4 +117,14 @@ export interface OAuthAccessTokenSnapshot {
   scopes: string[];
   label: string | null;
   fetched_at: string; // ISO8601 (timestamp of this fetch; for cache TTL)
+}
+
+export interface OAuthGrantRevocationReceipt {
+  authority: 'clerk_external_account';
+  authority_mode: 'clerk_link_only';
+  provider: OAuthProvider;
+  external_account_id: string;
+  status: 'revoked' | 'already_absent';
+  identity_preserved: true;
+  verified_at: string;
 }

@@ -1590,8 +1590,13 @@ export class WorkersDalAdapter implements DalAdapter {
     return upsertUserSourceRow(this.sql, input);
   }
 
-  async disconnectUserSource(userId: UserId, id: string, workspaceId?: WorkspaceId | null): Promise<import('./source-store').SourceDisconnectWriteReceipt> {
-    return disconnectUserSourceRow(this.sql, userId, id, workspaceId);
+  async disconnectUserSource(
+    userId: UserId,
+    id: string,
+    workspaceId: WorkspaceId | null | undefined,
+    authority: import('./source-store').SourceDisconnectAuthorityInput,
+  ): Promise<import('./source-store').SourceDisconnectWriteReceipt> {
+    return disconnectUserSourceRow(this.sql, userId, id, workspaceId, authority);
   }
 
   async markUserSourceSync(
