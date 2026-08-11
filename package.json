@@ -197,6 +197,8 @@
     "verify:upstream-capability-live-canary": "node scripts/verify-upstream-capability-sandbox-canary.mjs",
     "verify:external-capability-live-prereqs": "node scripts/verify-external-capability-live-prereqs.mjs",
     "verify:external-capability-live-contract": "node --test tests/smoke/upstream-capability-live-contract.test.mjs",
+    "verify:clerk-token-boundary": "node --test tests/smoke/clerk-token-boundary.test.mjs",
+    "verify:rls-app-propagation-grants": "node --test tests/smoke/rls-app-propagation-grants.test.mjs",
     "verify:read-only-gates-do-not-dirty-worktree": "node scripts/verify-commercial-governance-hardening.mjs --check=read_only_gates_do_not_dirty_worktree",
     "verify:connector-token-revocation": "node scripts/verify-commercial-governance-hardening.mjs --check=connector_token_revocation",
     "verify:new-user-api-mcp-onboarding-scenario": "node scripts/verify-commercial-governance-hardening.mjs --check=new_user_api_mcp_onboarding_scenario",

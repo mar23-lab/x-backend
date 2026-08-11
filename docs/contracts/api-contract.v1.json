@@ -16,7 +16,7 @@
     "factory_mount_count": 1,
     "auth_classified_count": 230,
     "auth_unknown_count": 0,
-    "authorization_hash": "ab68962e117f137a1733dbb521ff0404923277fd20a5c849419ada357c355a77",
+    "authorization_hash": "c51d91911b4306cdc153630d349db760d3d7cb2dbf1fd5a3086a04bc4015bfb2",
     "authorization_evidence_scope": "mounted entry policy plus declared middleware/handler-guard presence; not exhaustive in-handler role, entitlement, or RLS proof",
     "auth_policy_counts": {
       "clerk_jwt_admin": 17,
@@ -2212,11 +2212,11 @@
         "method": "GET",
         "path": "/api/v1/session",
         "auth_policy": "clerk_jwt_session_state",
-        "auth_source": "src/workers/routes/session.ts: verifyToken",
+        "auth_source": "src/workers/routes/session.ts: verifyClerkSessionToken",
         "auth_scope": "entry",
         "auth_evidence_kind": "route_handler_call",
         "auth_guard_helpers": [
-          "verifyToken"
+          "verifyClerkSessionToken"
         ],
         "router": "src/workers/routes/session.ts#sessionRoute"
       },

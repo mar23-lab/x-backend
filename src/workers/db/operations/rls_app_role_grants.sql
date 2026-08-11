@@ -45,6 +45,14 @@ BEGIN
   -- without a permission error. Enabling RLS on operation_events for a 2nd layer is a separate increment.
   EXECUTE 'GRANT SELECT ON operation_events TO xlooop_app';
 
+  -- Pilot-shadow may deliberately run its full Worker with the restricted role.
+  -- The propagation cron needs only the singleton cursor plus tenant-filtered
+  -- propagation tables; granting these operations prevents a scheduled task
+  -- from silently failing while preserving RLS on tenant-bearing rows.
+  EXECUTE 'GRANT SELECT, UPDATE ON propagation_tick_state TO xlooop_app';
+  EXECUTE 'GRANT SELECT, UPDATE ON synthetic_domain_propagation_rules TO xlooop_app';
+  EXECUTE 'GRANT SELECT, INSERT, UPDATE ON synthetic_domain_recommendations TO xlooop_app';
+
   -- 4. The GUC-reader function the policies use (USING workspace_id = xlooop_rls_workspace_id()).
   IF EXISTS (SELECT 1 FROM pg_proc WHERE proname = 'xlooop_rls_workspace_id') THEN
     EXECUTE 'GRANT EXECUTE ON FUNCTION xlooop_rls_workspace_id() TO xlooop_app';
