@@ -885,9 +885,39 @@ returns `404`; an event, audit, or outbox failure rolls back the update.
 user-only source without an active workspace returns
 `409 SOURCE_WORKSPACE_BINDING_REQUIRED`.
 `GET /sources` and source actions expose only rows bound to the active
-workspace; a provider already bound elsewhere returns
-`409 SOURCE_BOUND_TO_OTHER_WORKSPACE` on connect instead of being silently
-moved between tenants.
+workspace. Legacy identity-backed connections remain one-per-user/provider and
+return `409 SOURCE_BOUND_TO_OTHER_WORKSPACE` instead of being silently moved.
+Dedicated Gmail/Drive grants are authorized independently per tenant, so a
+multi-company employee can connect the same provider in two workspaces without
+sharing or moving either tenant's credential authority.
+
+Google Drive and Gmail use a dedicated connector authorization flow when
+`CONNECTOR_OAUTH_AUTHORITY_MODE=dedicated_google`:
+
+1. `POST /sources/oauth/:provider/start` verifies the authenticated tenant,
+   workspace authority and connector-key readiness, persists a one-time hashed
+   state nonce, and returns a PKCE authorization URL. It never returns a token.
+2. The approved Xlooop app callback sends `{code,state}` to
+   `POST /sources/oauth/:provider/complete` under the same authenticated user
+   and tenant. The backend consumes the nonce exactly once, exchanges the code,
+   resolves the provider account, encrypts the token envelope with
+   tenant/user/grant-bound AAD, and atomically writes the grant, source and audit
+   receipt.
+3. Gmail and Drive may share one Google grant. Disconnecting one source retains
+   that grant while another active source references it. Disconnecting the last
+   source revokes the provider refresh token, proves subsequent refresh returns
+   `invalid_grant`, wipes the local encrypted envelope, and then records the
+   source/audit receipt.
+
+Clerk remains authentication authority. Dedicated connector tokens are never
+Clerk external accounts and cannot add, remove or weaken a sign-in factor.
+Legacy identity-backed providers remain explicitly labelled and fail closed
+when their revocation authority is not proven.
+
+`gmail.readonly` is a restricted Google scope. Pilot execution is limited to
+declared test users. Public customer execution additionally requires a verified
+Google OAuth app and the applicable restricted-scope security assessment;
+runtime configuration alone is not commercial approval.
 
 Successful sync returns:
 
@@ -927,7 +957,7 @@ sync, not a false-green success.
 | `chat-receipt.ts` | GET /chat/receipt/:receipt_uid; GET /chat/turns/:id/receipt | tenant JWT | tenant-safe answer receipt; the commercial facade is JSON-only and distinguishes policy resolution from a persisted audit event |
 | `settings-readiness.ts` | GET /settings/readiness | tenant JWT | live customer-safe readiness matrix, including connector-revocation authority; unknown or incomplete proof remains `attention`/`unavailable` |
 | `documents.ts` | POST/GET /documents | tenant JWT | Stage-2 source-intake documents (bytea storage; metadata list is RLS-routed, 046) |
-| `sources.ts` | GET/POST/DELETE /sources/* | tenant JWT | Clerk-OAuth source connectors; disconnect fails closed unless link-only identity separation is configured, the exact upstream grant is revoked and verified absent, and the local soft-disconnect (044) records that authority in its audit receipt |
+| `sources.ts` | GET/POST/DELETE /sources/* | tenant JWT | Dedicated tenant connector grants for Gmail/Drive plus labelled legacy identity-backed providers; one-time PKCE state, encrypted token envelopes, shared-grant retention, verified last-source revocation, and audited local state transitions |
 | `workspaces.ts` | GET/POST /workspaces/* | operator/tenant | workspace create/list, activity-summary, doc grounding, and live-provider-only operator cockpit chat |
 | `model-runtimes.ts` | GET/POST/PUT/DELETE /model-runtimes/* | tenant member / owner/operator by operation | masked provider configuration, effective runtime resolution, model catalog, content-free live validation, defaults, and user override |
 | `members.ts` | GET /members | tenant JWT | real workspace members (membership-gated; non-member → 403) |

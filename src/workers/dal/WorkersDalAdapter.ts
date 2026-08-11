@@ -314,6 +314,16 @@ import {
   markUserSourceSyncRow,
 } from './source-store';
 import {
+  registerConnectorOAuthStateNonceRow,
+  claimConnectorOAuthStateNonceRow,
+  connectConnectorOAuthSourceRow,
+  getConnectorOAuthGrantSecretRow,
+  updateConnectorOAuthGrantTokensRow,
+  markConnectorOAuthGrantRefreshErrorRow,
+  countActiveConnectorGrantSourcesRow,
+  disconnectConnectorOAuthSourceRow,
+} from './connector-oauth-store';
+import {
   getInvestorEntitlementRow,
   grantInvestorEntitlementRow,
   getLatestNdaAcceptanceRow,
@@ -1588,6 +1598,64 @@ export class WorkersDalAdapter implements DalAdapter {
     input: import('./types').UserSourceConnectionInput,
   ): Promise<import('./source-store').SourceConnectionWriteReceipt> {
     return upsertUserSourceRow(this.sql, input);
+  }
+
+  async registerConnectorOAuthStateNonce(
+    input: import('./connector-oauth-store').ConnectorOAuthStateNonceInput,
+  ): Promise<void> {
+    return registerConnectorOAuthStateNonceRow(this.sql, input);
+  }
+
+  async claimConnectorOAuthStateNonce(
+    input: Omit<import('./connector-oauth-store').ConnectorOAuthStateNonceInput, 'expires_at'>,
+  ): Promise<boolean> {
+    return claimConnectorOAuthStateNonceRow(this.sql, input);
+  }
+
+  async connectConnectorOAuthSource(
+    input: import('./connector-oauth-store').ConnectorOAuthConnectionInput,
+  ): Promise<import('./connector-oauth-store').ConnectorOAuthConnectionReceipt> {
+    return connectConnectorOAuthSourceRow(this.sql, input);
+  }
+
+  async getConnectorOAuthGrantSecret(
+    workspaceId: WorkspaceId,
+    userId: UserId,
+    grantId: string,
+  ): Promise<import('./types').ConnectorOAuthGrantSecret | null> {
+    return getConnectorOAuthGrantSecretRow(this.sql, workspaceId, userId, grantId);
+  }
+
+  async updateConnectorOAuthGrantTokens(
+    input: Pick<import('./types').ConnectorOAuthGrantUpsertInput,
+      'id' | 'workspace_id' | 'user_id' | 'token_ciphertext' | 'token_iv' | 'scopes' | 'access_expires_at'>,
+  ): Promise<boolean> {
+    return updateConnectorOAuthGrantTokensRow(this.sql, input);
+  }
+
+  async markConnectorOAuthGrantRefreshError(
+    input: { id: string; workspace_id: string; user_id: UserId; error: string },
+  ): Promise<void> {
+    return markConnectorOAuthGrantRefreshErrorRow(this.sql, input);
+  }
+
+  async countActiveConnectorGrantSources(
+    workspaceId: WorkspaceId,
+    userId: UserId,
+    grantId: string,
+  ): Promise<number> {
+    return countActiveConnectorGrantSourcesRow(this.sql, workspaceId, userId, grantId);
+  }
+
+  async disconnectConnectorOAuthSource(
+    input: {
+      workspace_id: WorkspaceId;
+      user_id: UserId;
+      source_id: string;
+      authority: import('./connector-oauth-store').ConnectorOAuthDisconnectAuthority;
+    },
+  ): Promise<import('./connector-oauth-store').ConnectorOAuthDisconnectReceipt> {
+    return disconnectConnectorOAuthSourceRow(this.sql, input);
   }
 
   async disconnectUserSource(

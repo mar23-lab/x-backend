@@ -5,6 +5,7 @@
 # governance-discoverable projection. DRIFT-GATED: scripts/verify-governance-manifests.mjs asserts a 3-way
 # id-set equality between (a) CONNECTOR_REGISTRY, (b) routes/sources.ts VALID_PROVIDERS (+ 'outlook', which
 # is connectable-but-uncatalogued by design until its tile ships), and (c) the providers below.
+# credential_authority distinguishes Xlooop-owned connector grants from legacy identity-provider links.
 # owner: backend seat · consumer: governance/audit + the FE connector modal (via GET /api/v1/connectors)
 # freshness: regenerate whenever a provider is added (the gate fails on drift).
 
@@ -17,16 +18,22 @@ providers:
     label: GitHub
     tier: free_active
     clerk_slug: github
+    credential_authority: legacy_identity_provider
     capability: repos
   - id: google_drive
     label: Google Drive
     tier: free_active
     clerk_slug: google
+    credential_authority: dedicated_connector
+    oauth_verification_required: true
     capability: folders
   - id: gmail
     label: Gmail
     tier: free_active
     clerk_slug: google
+    credential_authority: dedicated_connector
+    oauth_verification_required: true
+    restricted_scope_security_assessment_required: true
     capability: null
     restricted_scope_mode: connect_time_only
     restricted_scopes:
@@ -35,16 +42,19 @@ providers:
     label: Dropbox
     tier: free_active
     clerk_slug: dropbox
+    credential_authority: legacy_identity_provider
     capability: folders
   - id: gitlab
     label: GitLab
     tier: paid_queued
     clerk_slug: gitlab
+    credential_authority: legacy_identity_provider
     capability: repos
   - id: microsoft_onedrive
     label: Microsoft OneDrive
     tier: paid_queued
     clerk_slug: microsoft
+    credential_authority: legacy_identity_provider
     capability: folders
 
 # Connectable but deliberately uncatalogued (no FE tile yet; translator + VALID_PROVIDERS carry it):

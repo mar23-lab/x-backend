@@ -5,6 +5,7 @@ import { settingsReadinessRoute } from '../routes/settings-readiness';
 const AUTH = {
   user_id: 'user_a', workspace_id: 'workspace_a', role: 'owner', auth_method: 'clerk_jwt',
 };
+const key = (fill: number) => Buffer.alloc(32, fill).toString('base64url');
 
 function dal(overrides: Record<string, unknown> = {}) {
   return {
@@ -43,7 +44,14 @@ describe('GET /api/v1/settings/readiness', () => {
       XLOOOP_AUTHORITY_MODE: 'production',
       XLOOOP_SCHEMA_HEAD: '93',
       SINGLE_INTAKE_ENABLED: 'true',
-      CONNECTOR_OAUTH_REVOCATION_MODE: 'clerk_link_only',
+      CONNECTOR_OAUTH_AUTHORITY_MODE: 'dedicated_google',
+      CONNECTOR_OAUTH_ENC_KEYS: JSON.stringify({ c1: key(1) }),
+      CONNECTOR_OAUTH_ACTIVE_KEY_ID: 'c1',
+      CONNECTOR_OAUTH_STATE_KEY: key(2),
+      CONNECTOR_GOOGLE_CLIENT_ID: 'client-id',
+      CONNECTOR_GOOGLE_CLIENT_SECRET: 'client-secret',
+      CONNECTOR_GOOGLE_OAUTH_VERIFICATION_STATUS: 'verified',
+      CONNECTOR_OAUTH_REDIRECT_URI: 'https://app.xlooop.com/settings/integrations',
       AI: { run: async () => ({ response: 'live' }) },
     } as never);
     expect(res.status).toBe(200);
@@ -58,9 +66,44 @@ describe('GET /api/v1/settings/readiness', () => {
     });
     expect(body.checks.find((item: any) => item.id === 'delete_export').status).toBe('attention');
     expect(body.checks.find((item: any) => item.id === 'connector_revocation')).toMatchObject({
-      status: 'ready', details: { shared_grant_policy: 'fail_closed' },
+      status: 'ready', details: {
+        authority_mode: 'dedicated_google',
+        shared_grant_policy: 'retain_until_last_source_then_revoke',
+        encryption_ready: true,
+        provider_ready: true,
+        canary_ready: true,
+        commercial_authorization_ready: true,
+        oauth_verification_status: 'verified',
+      },
     });
     expect(JSON.stringify(body)).not.toContain('postgres://');
+  });
+
+  it('keeps a test-user canary visibly below commercial readiness', async () => {
+    const res = await appFor(dal()).request('/api/v1/settings/readiness', {}, {
+      DATABASE_URL: 'postgres://redacted',
+      XLOOOP_RLS_APP_DATABASE_URL: 'postgres://redacted-app-role',
+      XLOOOP_SCHEMA_HEAD: '101',
+      SINGLE_INTAKE_ENABLED: 'true',
+      CONNECTOR_OAUTH_AUTHORITY_MODE: 'dedicated_google',
+      CONNECTOR_OAUTH_ENC_KEYS: JSON.stringify({ c1: key(1) }),
+      CONNECTOR_OAUTH_ACTIVE_KEY_ID: 'c1',
+      CONNECTOR_OAUTH_STATE_KEY: key(2),
+      CONNECTOR_GOOGLE_CLIENT_ID: 'client-id',
+      CONNECTOR_GOOGLE_CLIENT_SECRET: 'client-secret',
+      CONNECTOR_GOOGLE_OAUTH_VERIFICATION_STATUS: 'pilot_test_users',
+      CONNECTOR_OAUTH_REDIRECT_URI: 'https://test.xlooop.com/settings/integrations',
+      AI: { run: async () => ({ response: 'live' }) },
+    } as never);
+    const body = await res.json() as Record<string, any>;
+    expect(body.checks.find((item: any) => item.id === 'connector_revocation')).toMatchObject({
+      status: 'attention',
+      details: {
+        canary_ready: true,
+        commercial_authorization_ready: false,
+        oauth_verification_status: 'pilot_test_users',
+      },
+    });
   });
 
   it('keeps runtime and source failures visible instead of returning a false ready state', async () => {

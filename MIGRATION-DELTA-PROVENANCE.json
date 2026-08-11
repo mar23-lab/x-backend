@@ -7426,6 +7426,107 @@
           "reason": "Enforce fail-closed upstream connector revocation, expose readiness, and preserve audit lineage"
         }
       ]
+    },
+    {
+      "delta_id": "dedicated-connector-oauth-authority-20260811",
+      "generated_at": "2026-08-11T11:17:31.547Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "ec488855c2741bbc5df01625c2114a8e49969329",
+      "target_base_commit": "ec488855c2741bbc5df01625c2114a8e49969329",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "docs/architecture/backend/DATABASE_SCHEMA_V1.md",
+          "target_blob": "f8a33207b77703ce207c858ea6428219ef627bd7",
+          "reason": "Establish tenant-scoped connector OAuth authority, commercial verification posture, and governed metric/provider lineage"
+        },
+        {
+          "path": "docs/governance/METRIC_PRODUCER_CONSUMER_MANIFEST.yml",
+          "target_blob": "229865691a5c3a9e6cec0cb5bf44964bd4e982ae",
+          "reason": "Establish tenant-scoped connector OAuth authority, commercial verification posture, and governed metric/provider lineage"
+        },
+        {
+          "path": "docs/governance/SOURCE_PROVIDER_REGISTRY.yml",
+          "target_blob": "6dc0518e8b61ddf3c2cae050f0f0d09d3cb113eb",
+          "reason": "Establish tenant-scoped connector OAuth authority, commercial verification posture, and governed metric/provider lineage"
+        },
+        {
+          "path": "scripts/verify-governance-manifests.mjs",
+          "target_blob": "c117d27898a51eb75b258682289345f43c97d8b1",
+          "reason": "Establish tenant-scoped connector OAuth authority, commercial verification posture, and governed metric/provider lineage"
+        },
+        {
+          "path": "docs/contracts/api-contract.v1.json",
+          "target_blob": "027d485a3b6e4dc3aebf24436d0406788f38c8b7",
+          "reason": "Establish tenant-scoped connector OAuth authority, commercial verification posture, and governed metric/provider lineage"
+        },
+        {
+          "path": "src/workers/dal/DalAdapter.ts",
+          "target_blob": "3429f990a595f7d104b75f4c7484ee0582834634",
+          "reason": "Establish tenant-scoped connector OAuth authority, commercial verification posture, and governed metric/provider lineage"
+        },
+        {
+          "path": "package.json",
+          "target_blob": "cd3ed15ae01b889c7919877021526b953d67543c",
+          "reason": "Establish tenant-scoped connector OAuth authority, commercial verification posture, and mutation-proven governance controls"
+        },
+        {
+          "path": "scripts/ci-local.mjs",
+          "target_blob": "cd14226f68ae5114c9d179d1e74390cd607b5332",
+          "reason": "Establish tenant-scoped connector OAuth authority, commercial verification posture, and mutation-proven governance controls"
+        },
+        {
+          "path": "docs/architecture/backend/PRODUCTION_DEPENDENCIES.md",
+          "target_blob": "78254a438bd51f2d65e026261a5cb1ecfda68428",
+          "reason": "Establish tenant-scoped connector OAuth authority, commercial verification posture, and governed metric/provider lineage"
+        },
+        {
+          "path": "src/workers/dal/WorkersDalAdapter.ts",
+          "target_blob": "4b8558bb9372ee425c0495a9c592ba2961c53c0d",
+          "reason": "Establish tenant-scoped connector OAuth authority, commercial verification posture, and governed metric/provider lineage"
+        },
+        {
+          "path": "wrangler.pilot-shadow.toml",
+          "target_blob": "32303ad38d3c5c2b6e4743d5fc7209297c95cf6c",
+          "reason": "Establish tenant-scoped connector OAuth authority, commercial verification posture, and governed metric/provider lineage"
+        },
+        {
+          "path": "src/workers/dal/source-store.ts",
+          "target_blob": "437c38a68cb3e811af4b2998627850cedd18cb3f",
+          "reason": "Establish tenant-scoped connector OAuth authority, commercial verification posture, and governed metric/provider lineage"
+        },
+        {
+          "path": "src/workers/routes/sources.ts",
+          "target_blob": "c2b5426a175eb27f60c7a4e729a962ee2c29bbb0",
+          "reason": "Establish tenant-scoped connector OAuth authority, commercial verification posture, and mutation-proven governance controls"
+        },
+        {
+          "path": "docs/architecture/backend/API_CONTRACT_V1.md",
+          "target_blob": "d33eeee0aa60f0514b1f3a07260fd781105ded41",
+          "reason": "Establish tenant-scoped connector OAuth authority, commercial verification posture, and governed metric/provider lineage"
+        },
+        {
+          "path": "wrangler.toml",
+          "target_blob": "21503b6a38a6168e736335ea451bff6ee05436fd",
+          "reason": "Establish tenant-scoped connector OAuth authority, commercial verification posture, and governed metric/provider lineage"
+        },
+        {
+          "path": "src/workers/sources/translators/types.ts",
+          "target_blob": "b9e3a5a8d2f7d0c6fd70f66f235de2b413ca7b50",
+          "reason": "Establish tenant-scoped connector OAuth authority, commercial verification posture, and governed metric/provider lineage"
+        },
+        {
+          "path": "src/workers/lib/connector-registry.ts",
+          "target_blob": "ddddd52e3fca2debfd92d8fbf8ecebb7b3a17ced",
+          "reason": "Establish tenant-scoped connector OAuth authority, commercial verification posture, and governed metric/provider lineage"
+        },
+        {
+          "path": "src/workers/dal/types/oauth.ts",
+          "target_blob": "544f972bd9b7da9f0ae082367f9e906873e6c68f",
+          "reason": "Establish tenant-scoped connector OAuth authority, commercial verification posture, and governed metric/provider lineage"
+        }
+      ]
     }
   ]
 }

@@ -45,7 +45,9 @@ for (const f of manifestFields) {
 
 // ── 3. observability kinds, both directions ───────────────────────────────────────────────────────
 const obsTs = read('src/workers/lib/observability.ts');
-const unionBlock = obsTs.match(/export type ObservabilityKind =([\s\S]*?);/)?.[1] ?? '';
+// Delimit by the next declaration, not the first semicolon: explanatory comments
+// inside union members may legitimately contain semicolons.
+const unionBlock = obsTs.match(/export type ObservabilityKind =([\s\S]*?)\n\n\/\*\* Emit/)?.[1] ?? '';
 const codeKinds = [...unionBlock.matchAll(/'([a-z_]+)'/g)].map((m) => m[1]);
 const metricYaml = read('docs/governance/METRIC_PRODUCER_CONSUMER_MANIFEST.yml');
 const kindsBlock = metricYaml.match(/observability_kinds:[^\n]*\n([\s\S]*?)\n\n/)?.[1] ?? '';

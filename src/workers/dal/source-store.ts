@@ -84,7 +84,7 @@ export interface SourceReadPolicyWriteReceipt {
 function isUndefinedColumn(err: unknown): boolean {
   const code = (err as { code?: string } | null)?.code;
   const msg = (err as { message?: string } | null)?.message || '';
-  return code === '42703' || /read_policy/.test(msg) && /column/i.test(msg);
+  return code === '42703' || /(read_policy|oauth_grant_id)/.test(msg) && /column/i.test(msg);
 }
 
 // ------------------------------------------------------------
@@ -97,7 +97,7 @@ function isUndefinedColumn(err: unknown): boolean {
  * configurations; we normalize to ISO8601 strings for stable JSON).
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function rowToUserSourceConnection(row: any): UserSourceConnection {
+export function rowToUserSourceConnection(row: any): UserSourceConnection {
   const toIso = (v: unknown): string | null => {
     if (v === null || v === undefined) return null;
     if (typeof v === 'string') return v;
@@ -111,6 +111,7 @@ function rowToUserSourceConnection(row: any): UserSourceConnection {
     provider: row.provider,
     provider_user_id: row.provider_user_id ?? null,
     provider_username: row.provider_username ?? null,
+    oauth_grant_id: row.oauth_grant_id ?? null,
     scopes: Array.isArray(row.scopes) ? row.scopes : [],
     contract: row.contract ?? {
       version: 1,
@@ -142,7 +143,7 @@ export async function listUserSourcesRow(sql: Sql, userId: UserId): Promise<User
   // normalizeProjectRow / normalizeBoardCardRow elsewhere in this file.
   try {
     const rows = (await sql`
-      SELECT id, workspace_id, user_id, provider, provider_user_id, provider_username,
+      SELECT id, workspace_id, user_id, provider, provider_user_id, provider_username, oauth_grant_id,
              scopes, contract, status, read_policy, connected_at, last_sync_at, last_sync_error,
              created_at, updated_at
       FROM user_source_connections
@@ -197,7 +198,7 @@ export async function listWorkspaceSourcesRow(sql: Sql, workspaceId: string): Pr
   if (!workspaceId) throw new Error('listWorkspaceSources: workspaceId required');
   try {
     const rows = (await sql`
-      SELECT id, workspace_id, user_id, provider, provider_user_id, provider_username,
+      SELECT id, workspace_id, user_id, provider, provider_user_id, provider_username, oauth_grant_id,
              scopes, contract, status, read_policy, connected_at, last_sync_at, last_sync_error,
              created_at, updated_at
       FROM user_source_connections
@@ -228,7 +229,7 @@ export async function getUserSourceRow(
   if (!id) return null;
   try {
     const rows = (await sql`
-      SELECT id, workspace_id, user_id, provider, provider_user_id, provider_username,
+      SELECT id, workspace_id, user_id, provider, provider_user_id, provider_username, oauth_grant_id,
              scopes, contract, status, read_policy, connected_at, last_sync_at, last_sync_error,
              created_at, updated_at
       FROM user_source_connections
@@ -268,23 +269,27 @@ export async function upsertUserSourceRow(
     WITH source_written AS (
       INSERT INTO user_source_connections (
         id, workspace_id, user_id, provider, provider_user_id, provider_username,
-        scopes, contract, status, connected_at, created_at, updated_at
+        oauth_grant_id, scopes, contract, status, connected_at, created_at, updated_at
       ) VALUES (
         ${id}, ${input.workspace_id}, ${input.user_id}, ${input.provider},
         ${input.provider_user_id}, ${input.provider_username},
+        ${input.oauth_grant_id ?? null},
         ${scopes}::text[],
         ${contractJson === null ? sql`DEFAULT` : sql`${contractJson}::jsonb`},
         ${status}, now(), now(), now()
       )
-      ON CONFLICT (user_id, provider) DO UPDATE SET
+      ON CONFLICT (user_id, provider)
+        WHERE oauth_grant_id IS NULL
+      DO UPDATE SET
         workspace_id = EXCLUDED.workspace_id,
         provider_user_id = EXCLUDED.provider_user_id,
         provider_username = EXCLUDED.provider_username,
+        oauth_grant_id = EXCLUDED.oauth_grant_id,
         scopes = EXCLUDED.scopes,
         status = EXCLUDED.status,
         disconnected_at = NULL,  -- 044 · reconnecting a soft-disconnected source reactivates it
         updated_at = now()
-      RETURNING id, workspace_id, user_id, provider, provider_user_id, provider_username,
+      RETURNING id, workspace_id, user_id, provider, provider_user_id, provider_username, oauth_grant_id,
                 scopes, contract, status, connected_at, last_sync_at, last_sync_error,
                 created_at, updated_at
     ),
@@ -301,7 +306,7 @@ export async function upsertUserSourceRow(
       RETURNING id::text AS audit_event_id
     )
     SELECT source_written.id, source_written.workspace_id, source_written.user_id, source_written.provider,
-           source_written.provider_user_id, source_written.provider_username, source_written.scopes,
+           source_written.provider_user_id, source_written.provider_username, source_written.oauth_grant_id, source_written.scopes,
            source_written.contract, source_written.status,
            source_written.connected_at, source_written.last_sync_at, source_written.last_sync_error,
            source_written.created_at, source_written.updated_at, audit_written.audit_event_id
@@ -549,7 +554,7 @@ export async function setUserSourceReadPolicyRow(
         UPDATE user_source_connections
         SET read_policy = ${readPolicy}, updated_at = now()
         WHERE id = ${id} AND user_id = ${userId} AND disconnected_at IS NULL
-        RETURNING id, workspace_id, user_id, provider, provider_user_id, provider_username,
+        RETURNING id, workspace_id, user_id, provider, provider_user_id, provider_username, oauth_grant_id,
                   scopes, contract, status, read_policy, connected_at, last_sync_at, last_sync_error,
                   created_at, updated_at
       ),
@@ -566,7 +571,7 @@ export async function setUserSourceReadPolicyRow(
         RETURNING id::text AS audit_event_id
       )
       SELECT source_updated.id, source_updated.workspace_id, source_updated.user_id, source_updated.provider,
-             source_updated.provider_user_id, source_updated.provider_username, source_updated.scopes,
+             source_updated.provider_user_id, source_updated.provider_username, source_updated.oauth_grant_id, source_updated.scopes,
              source_updated.contract, source_updated.status, source_updated.read_policy,
              source_updated.connected_at, source_updated.last_sync_at, source_updated.last_sync_error,
              source_updated.created_at, source_updated.updated_at, audit_written.audit_event_id

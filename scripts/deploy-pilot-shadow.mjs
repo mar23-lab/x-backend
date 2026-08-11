@@ -4,7 +4,10 @@ import { execFileSync, spawnSync } from 'node:child_process';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { readCandidateDeploymentContract } from './lib/candidate-deployment-contract.mjs';
+import {
+  localMigrationHead,
+  readCandidateDeploymentContract,
+} from './lib/candidate-deployment-contract.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const CONFIG = 'wrangler.pilot-shadow.toml';
@@ -116,7 +119,7 @@ async function main() {
 
   const candidate = readCandidateDeploymentContract(ROOT, {
     ...process.env,
-    XLOOOP_SCHEMA_HEAD: '100',
+    XLOOOP_SCHEMA_HEAD: String(localMigrationHead(ROOT)),
     XLOOOP_DEPLOYMENT_WRANGLER_CONFIG: CONFIG,
   });
   if (candidate.worker_name !== WORKER || candidate.api_base !== API_BASE

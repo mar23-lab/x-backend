@@ -14,6 +14,20 @@ endpoint sweep (all 200/403-correct, zero 5xx). Companion: [API_CONTRACT_V1.md](
 | `MBP_LIVE_STREAM_INGEST_TOKEN` | POST /mbp-live-stream/ingest | live-stream ingest 503 |
 | `OPERATIONAL_SPINE_PACKET_SIGNING_SECRET` | MCP task-packet HMAC (mcp-gateway.ts) | GET /mcp/task-packets/:id 503 |
 
+Dedicated Gmail/Drive connector activation additionally requires
+`CONNECTOR_OAUTH_ENC_KEYS`, `CONNECTOR_OAUTH_ACTIVE_KEY_ID`,
+`CONNECTOR_OAUTH_STATE_KEY`, `CONNECTOR_GOOGLE_CLIENT_ID`, and
+`CONNECTOR_GOOGLE_CLIENT_SECRET`. `CONNECTOR_GOOGLE_OAUTH_VERIFICATION_STATUS`
+must be `pilot_test_users` for an isolated canary or `verified` for commercial
+customer use. Their absence does not affect authentication or unrelated
+providers; the dedicated start/complete/disconnect path reports unavailable
+and changes no source state. `CONNECTOR_OAUTH_AUTHORITY_MODE` must remain
+disabled until schema 101 and the approved callback URI are live-proven.
+
+Gmail uses Google's restricted `gmail.readonly` scope. Public customer use
+requires Google OAuth app verification and the applicable security assessment;
+pilot test-user proof cannot satisfy that commercial gate.
+
 ## 2 · DEGRADE-class secrets (absence = graceful fallback)
 
 | Secret | Degrades to |

@@ -15,6 +15,12 @@ import {
   resolveEffectiveRuntimePlan,
   type LiveRuntimeEnv,
 } from '../services/model-runtime-execution';
+import { isConnectorOAuthEncryptionConfigured, type ConnectorOAuthEncryptionEnv } from '../lib/connector-oauth-crypto';
+import {
+  googleConnectorOAuthVerificationStatus,
+  isGoogleConnectorOAuthConfigured,
+  type ConnectorOAuthProviderEnv,
+} from '../services/connector-oauth-provider';
 
 type ReadinessStatus = 'ready' | 'attention' | 'unavailable';
 
@@ -28,7 +34,7 @@ interface ReadinessCheck {
   details?: Record<string, unknown>;
 }
 
-export interface SettingsReadinessEnv extends AuthEnv, LiveRuntimeEnv {
+export interface SettingsReadinessEnv extends AuthEnv, LiveRuntimeEnv, ConnectorOAuthEncryptionEnv, ConnectorOAuthProviderEnv {
   DATABASE_URL: string;
   XLOOOP_RLS_APP_DATABASE_URL?: string;
   XLOOOP_AUTHORITY_MODE?: string;
@@ -36,6 +42,7 @@ export interface SettingsReadinessEnv extends AuthEnv, LiveRuntimeEnv {
   SINGLE_INTAKE_ENABLED?: string;
   SENTRY_DSN?: string;
   CONNECTOR_OAUTH_REVOCATION_MODE?: string;
+  CONNECTOR_OAUTH_AUTHORITY_MODE?: string;
 }
 
 export interface SettingsReadinessVariables extends AuthVariables {
@@ -178,19 +185,33 @@ settingsReadinessRoute.get('/settings/readiness', async (ctx) => {
     }));
   }
 
-  const connectorRevocationReady = ctx.env.CONNECTOR_OAUTH_REVOCATION_MODE === 'clerk_link_only';
+  const connectorEncryptionReady = await isConnectorOAuthEncryptionConfigured(ctx.env);
+  const connectorProviderReady = isGoogleConnectorOAuthConfigured(ctx.env);
+  const connectorVerificationStatus = googleConnectorOAuthVerificationStatus(ctx.env);
+  const connectorCanaryReady = ctx.env.CONNECTOR_OAUTH_AUTHORITY_MODE === 'dedicated_google'
+    && connectorEncryptionReady
+    && connectorProviderReady;
+  const connectorCommercialReady = connectorCanaryReady && connectorVerificationStatus === 'verified';
   checks.push(check(checkedAt, {
     id: 'connector_revocation',
-    status: connectorRevocationReady ? 'ready' : 'attention',
-    summary: connectorRevocationReady
-      ? 'Connector disconnect revokes and verifies the upstream link-only grant before changing Xlooop state.'
-      : 'Connector disconnect is fail-closed until identity and connector OAuth separation is proven.',
+    status: connectorCommercialReady ? 'ready' : 'attention',
+    summary: connectorCommercialReady
+      ? 'Connector authorization is separate from sign-in identity, encrypted, tenant-scoped, and revocation-verified.'
+      : connectorCanaryReady
+        ? 'Connector authorization is executable for approved pilot test users; commercial OAuth verification remains incomplete.'
+        : 'Connector disconnect is fail-closed until the dedicated connector OAuth broker is fully configured.',
     receipt_refs: [],
-    source_refs: ['CONNECTOR_OAUTH_REVOCATION_MODE', 'DELETE /api/v1/sources/:id'],
+    source_refs: ['CONNECTOR_OAUTH_AUTHORITY_MODE', 'CONNECTOR_OAUTH_ENC_KEYS', 'CONNECTOR_OAUTH_STATE_KEY', 'DELETE /api/v1/sources/:id'],
     details: {
-      authority_mode: connectorRevocationReady ? 'clerk_link_only' : 'unproven_shared_identity',
+      authority_mode: connectorCanaryReady ? 'dedicated_google' : 'unproven_or_incomplete',
+      encryption_ready: connectorEncryptionReady,
+      provider_ready: connectorProviderReady,
+      canary_ready: connectorCanaryReady,
+      commercial_authorization_ready: connectorCommercialReady,
+      oauth_verification_status: connectorVerificationStatus,
       disconnect_semantics: 'upstream_revoke_then_local_soft_disconnect',
-      shared_grant_policy: 'fail_closed',
+      shared_grant_policy: 'retain_until_last_source_then_revoke',
+      legacy_clerk_revocation_mode: ctx.env.CONNECTOR_OAUTH_REVOCATION_MODE || 'disabled',
     },
   }));
 

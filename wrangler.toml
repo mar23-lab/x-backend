@@ -437,6 +437,17 @@ XLOOOP_JOURNEY_SEED_ENABLED = "true"
 #   MODEL_RUNTIME_ENC_KEY   — legacy decrypt-only compatibility during audited keyring migration.
 #                             Absent/malformed keyring or active id -> provider-credential writes 503;
 #                             plaintext is never a fallback. Retain old KEKs until all envelopes are rotated.
+#   CONNECTOR_OAUTH_ENC_KEYS — dedicated connector KEK keyring (JSON key-id -> base64url 32-byte key).
+#   CONNECTOR_OAUTH_ACTIVE_KEY_ID — active connector KEK id; old ids remain decrypt-only during rotation.
+#   CONNECTOR_OAUTH_STATE_KEY — independent base64url 32-byte key for one-time OAuth callback state.
+#   CONNECTOR_GOOGLE_CLIENT_ID / CONNECTOR_GOOGLE_CLIENT_SECRET — connector-only Google OAuth app;
+#                             never reuse Clerk sign-in credentials as connector authority.
+#   CONNECTOR_GOOGLE_OAUTH_VERIFICATION_STATUS — `pilot_test_users` permits only isolated test-user
+#                             canaries; `verified` is required before Settings reports commercial ready.
+# Non-secret connector controls:
+#   CONNECTOR_OAUTH_AUTHORITY_MODE=dedicated_google only after migration, secrets, callback and live
+#                             revoke verification pass. Default/unset remains fail-closed.
+#   CONNECTOR_OAUTH_REDIRECT_URI — approved app.xlooop.com or test.xlooop.com HTTPS callback.
 
 # ---- Local dev (wrangler dev) ----
 # Pulls from .dev.vars (NOT committed). See .dev.vars.example for the template.

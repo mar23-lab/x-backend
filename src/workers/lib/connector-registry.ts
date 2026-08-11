@@ -14,6 +14,7 @@ import type { OAuthProvider } from '../dal/types/oauth';
 
 export type ConnectorTier = 'free_active' | 'paid_queued';
 export type ConnectorCapability = 'repos' | 'folders';
+export type ConnectorCredentialAuthority = 'dedicated_connector' | 'legacy_identity_provider';
 
 export interface ConnectorDescriptor {
   /** Our internal provider id — matches OAuthProvider + the /sources/connect/:provider path param. */
@@ -23,6 +24,8 @@ export interface ConnectorDescriptor {
   tier: ConnectorTier;
   /** Clerk OAuth strategy slug (the `oauth_<slug>` passed to createExternalAccount). */
   clerk_slug: string;
+  /** Intended credential authority. Runtime readiness still depends on deployment configuration. */
+  credential_authority: ConnectorCredentialAuthority;
   /** Scoped-picker capability (C3). `null` = connect-all (no scoping UI yet). */
   capability: ConnectorCapability | null;
   /**
@@ -38,12 +41,12 @@ export interface ConnectorDescriptor {
 }
 
 export const CONNECTOR_REGISTRY: readonly ConnectorDescriptor[] = Object.freeze([
-  { id: 'github', label: 'GitHub', description: 'Commits, PRs, issues (metadata only)', tier: 'free_active', clerk_slug: 'github', capability: 'repos' },
-  { id: 'google_drive', label: 'Google Drive', description: 'Folder + file metadata (no content download)', tier: 'free_active', clerk_slug: 'google', capability: 'folders', restricted_scope_mode: 'connect_time_only', restricted_scopes: Object.freeze(['https://www.googleapis.com/auth/drive.metadata.readonly']) },
-  { id: 'gmail', label: 'Gmail', description: 'Recent email metadata — From/Subject/Date + snippet, read-only (never the full body)', tier: 'free_active', clerk_slug: 'google', capability: null, restricted_scope_mode: 'connect_time_only', restricted_scopes: Object.freeze(['https://www.googleapis.com/auth/gmail.readonly']) },
-  { id: 'dropbox', label: 'Dropbox', description: 'Folder metadata (cursor pagination)', tier: 'free_active', clerk_slug: 'dropbox', capability: 'folders' },
-  { id: 'gitlab', label: 'GitLab', description: 'Commits, MRs, issues', tier: 'paid_queued', clerk_slug: 'gitlab', capability: 'repos' },
-  { id: 'microsoft_onedrive', label: 'Microsoft OneDrive', description: 'OneDrive recent files via Microsoft Graph', tier: 'paid_queued', clerk_slug: 'microsoft', capability: 'folders' },
+  { id: 'github', label: 'GitHub', description: 'Commits, PRs, issues (metadata only)', tier: 'free_active', clerk_slug: 'github', credential_authority: 'legacy_identity_provider', capability: 'repos' },
+  { id: 'google_drive', label: 'Google Drive', description: 'Folder + file metadata (no content download)', tier: 'free_active', clerk_slug: 'google', credential_authority: 'dedicated_connector', capability: 'folders', restricted_scope_mode: 'connect_time_only', restricted_scopes: Object.freeze(['https://www.googleapis.com/auth/drive.metadata.readonly']) },
+  { id: 'gmail', label: 'Gmail', description: 'Recent email metadata — From/Subject/Date + snippet, read-only (never the full body)', tier: 'free_active', clerk_slug: 'google', credential_authority: 'dedicated_connector', capability: null, restricted_scope_mode: 'connect_time_only', restricted_scopes: Object.freeze(['https://www.googleapis.com/auth/gmail.readonly']) },
+  { id: 'dropbox', label: 'Dropbox', description: 'Folder metadata (cursor pagination)', tier: 'free_active', clerk_slug: 'dropbox', credential_authority: 'legacy_identity_provider', capability: 'folders' },
+  { id: 'gitlab', label: 'GitLab', description: 'Commits, MRs, issues', tier: 'paid_queued', clerk_slug: 'gitlab', credential_authority: 'legacy_identity_provider', capability: 'repos' },
+  { id: 'microsoft_onedrive', label: 'Microsoft OneDrive', description: 'OneDrive recent files via Microsoft Graph', tier: 'paid_queued', clerk_slug: 'microsoft', credential_authority: 'legacy_identity_provider', capability: 'folders' },
 ]);
 
 /** The wire shape served by GET /api/v1/connectors (frozen; safe to JSON.stringify). */

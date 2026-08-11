@@ -19,6 +19,9 @@ export type OAuthProvider =
   | 'gmail' // Wave C · S5b (260628) · first picker-provider translator; reuses the Clerk `google` provider (+ gmail.readonly scope)
   | 'outlook'; // Wave C · S5b (260628) · reuses the Clerk `microsoft` provider (+ Mail.Read scope), like microsoft_onedrive
 
+export type ConnectorOAuthAuthorityProvider = 'google';
+export type ConnectorOAuthGrantStatus = 'active' | 'refresh_required' | 'revoked' | 'error';
+
 // Mapping from our internal OAuthProvider id to the Clerk SDK provider
 // argument (post-v1.13 the `oauth_` prefix is deprecated; pass the bare name).
 // Note: our `microsoft_onedrive` maps to Clerk's bare `microsoft` because
@@ -64,6 +67,8 @@ export interface UserSourceConnection {
   provider: OAuthProvider;
   provider_user_id: string | null;
   provider_username: string | null;
+  /** Dedicated connector credential authority. Null identifies a legacy Clerk-backed source. */
+  oauth_grant_id: string | null;
   scopes: string[];
   contract: SourceConnectionContract;
   status: UserSourceConnectionStatus;
@@ -82,6 +87,7 @@ export interface UserSourceConnectionInput {
   provider: OAuthProvider;
   provider_user_id: string | null;
   provider_username: string | null;
+  oauth_grant_id?: string | null;
   scopes: string[];
   contract?: SourceConnectionContract; // optional · falls back to migration-008 default
   status?: UserSourceConnectionStatus;  // defaults to 'connected'
@@ -127,4 +133,50 @@ export interface OAuthGrantRevocationReceipt {
   status: 'revoked' | 'already_absent';
   identity_preserved: true;
   verified_at: string;
+}
+
+/** Client-safe metadata for a dedicated connector grant. Token fields never appear here. */
+export interface ConnectorOAuthGrant {
+  id: string;
+  workspace_id: string;
+  user_id: UserId;
+  authority_provider: ConnectorOAuthAuthorityProvider;
+  provider_account_id: string;
+  provider_label: string | null;
+  scopes: string[];
+  access_expires_at: string | null;
+  status: ConnectorOAuthGrantStatus;
+  last_refresh_at: string | null;
+  last_refresh_error: string | null;
+  revocation_verified_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+/** Internal-only encrypted grant row. Never serialize this from a route. */
+export interface ConnectorOAuthGrantSecret extends ConnectorOAuthGrant {
+  token_ciphertext: string;
+  token_iv: string;
+}
+
+export interface ConnectorOAuthGrantUpsertInput {
+  id: string;
+  workspace_id: string;
+  user_id: UserId;
+  authority_provider: ConnectorOAuthAuthorityProvider;
+  provider_account_id: string;
+  provider_label: string | null;
+  scopes: string[];
+  token_ciphertext: string;
+  token_iv: string;
+  access_expires_at: string | null;
+}
+
+/** Adapter contract consumed by translators; identity and connector implementations can coexist safely. */
+export interface SourceOAuthTokenAdapter {
+  getAccessToken(
+    userId: UserId,
+    provider: OAuthProvider,
+    opts?: { force_refresh?: boolean },
+  ): Promise<OAuthAccessTokenSnapshot>;
 }
