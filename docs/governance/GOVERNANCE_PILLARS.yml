@@ -59,7 +59,7 @@ pillars:
       - id: source-and-bundle-isolation
         statement: source bindings and served bundles never leak cross-tenant
         enforcement: gate
-        gates: [verify:tenant-source-isolation, verify:tenant-bundle-isolation]
+        gates: [verify:tenant-source-isolation, verify:two-tenant-commercial-pilot]
 
   - id: context-assembly-and-grounding
     intent: what the LLM grounds on is a PROJECTION of the asker's authority, assembled from graph/sources/receipts — and every assembly decision is traceable per answer

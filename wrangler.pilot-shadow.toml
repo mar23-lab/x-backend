@@ -5,6 +5,9 @@ compatibility_date = "2026-06-20"
 compatibility_flags = ["nodejs_compat"]
 workers_dev = true
 keep_vars = true
+routes = [
+  { pattern = "api-test.xlooop.com", custom_domain = true }
+]
 
 [triggers]
 crons = ["*/5 * * * *"]

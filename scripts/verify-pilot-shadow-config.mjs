@@ -17,6 +17,7 @@ const configuredSchemaHead = Number(
 
 requireMatch(/^name\s*=\s*"xlooop-api-pilot-shadow"$/m, 'worker name must be pilot-shadow');
 requireMatch(/^workers_dev\s*=\s*true$/m, 'workers.dev preview must be enabled');
+requireMatch(/^\s*\{\s*pattern\s*=\s*"api-test\.xlooop\.com",\s*custom_domain\s*=\s*true\s*\}\s*$/m, 'pilot API must use the isolated api-test.xlooop.com custom domain');
 requireMatch(/^ENVIRONMENT\s*=\s*"pilot-shadow"$/m, 'environment must be pilot-shadow');
 requireMatch(/^XLOOOP_AUTHORITY_MODE\s*=\s*"shadow"$/m, 'authority must remain shadow');
 if (!Number.isInteger(migrationHead) || configuredSchemaHead !== migrationHead) {
@@ -34,7 +35,7 @@ requireMatch(/^EXECUTOR_MODE\s*=\s*"disabled"$/m, 'executor must remain disabled
 requireMatch(/^ENTITLEMENT_ENFORCEMENT\s*=\s*"off"$/m, 'entitlement cutover must remain off');
 requireMatch(/^PURGE_DELETED_ENABLED\s*=\s*"false"$/m, 'irreversible purge must remain disabled');
 
-if (/\[\[routes\]\]|api\.xlooop\.com|XLOOOP_AUTHORITY_MODE\s*=\s*"production"/.test(activeSource)) {
+if (/\[\[routes\]\]|(?:^|[^-])api\.xlooop\.com|XLOOOP_AUTHORITY_MODE\s*=\s*"production"/.test(activeSource)) {
   errors.push('pilot-shadow config must not contain a production route or production authority');
 }
 if (/DIGEST_SWEEP_ENABLED\s*=\s*"true"|RECLASSIFY_CRON_ENABLED\s*=\s*"true"/.test(activeSource)) {
@@ -46,4 +47,4 @@ if (errors.length) {
   for (const error of errors) console.error(`- ${error}`);
   process.exit(1);
 }
-console.log(`PASS pilot-shadow deployment boundary: isolated worker, queue, shadow authority, schema ${migrationHead}, no production route`);
+console.log(`PASS pilot-shadow deployment boundary: isolated worker, api-test custom domain, queue, shadow authority, schema ${migrationHead}, no production route`);

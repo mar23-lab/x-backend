@@ -10,6 +10,7 @@ const gates = [
   ['customer feedback hardening contract', 'npm', ['run', 'verify:customer-feedback-tools-hardening']],
   ['customer API access guidance contract', 'npm', ['run', 'verify:customer-api-access-guidance']],
   ['API/MCP canary packet provisioner controls', 'npm', ['run', 'provision:api-mcp-canary-packet:self-test']],
+  ['internal company A/B canary target controls', 'npm', ['run', 'verify:internal-company-a-b-canary:self-test']],
   ['installed dependency parity', 'npm', ['run', 'verify:installed-dependencies']],
   ['known dependency advisory floors', 'npm', ['run', 'verify:known-dependency-advisories']],
   ['connector provider authority controls', 'npm', ['run', 'verify:connector-provider-ssot:self-test']],
@@ -115,6 +116,7 @@ const gates = [
   ['operation-event source-tool constraint controls', 'npm', ['run', 'verify:operation-event-source-tool-constraint:self-test']],
   ['pilot live RLS evidence producer', 'npm', ['run', 'produce:pilot-shadow-live-rls-evidence:self-test']],
   ['pilot-shadow canary binding preparation controls', 'npm', ['run', 'prepare:pilot-shadow-canary-bindings:self-test']],
+  ['API/MCP canary target isolation controls', 'npm', ['run', 'verify:api-mcp-live-canary-hard-stop:self-test']],
   ['predeploy migration fail-closed classifier', 'npm', ['run', 'verify:predeploy-migration-gate:self-test']],
   // META-GATE P-2 and the three estate self-tests that actually OBSERVE a red. The meta-gate is a
   // ratchet over docs/contracts/GATE_SELF_REFERENCE_BASELINE.json: known violations are frozen, new

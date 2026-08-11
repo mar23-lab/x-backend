@@ -27,13 +27,23 @@ const DEFAULT_CANARY_ENV_FILE = path.join(
   'xlooop-canary-api-token.env',
 );
 
+const ALLOWED_INTERNAL_CANARY_HOSTS = new Set([
+  'api-test.xlooop.com',
+  'xlooop-api-pilot-shadow.xlooop23.workers.dev',
+]);
+
+if (process.argv.includes('--self-test')) {
+  runSelfTest();
+}
+
 const canaryConfig = loadCanaryConfigFromEnvFile(
   process.env.XLOOOP_CANARY_API_TOKEN_ENV_FILE || DEFAULT_CANARY_ENV_FILE,
 );
+const canaryTarget = assessCanaryTarget(process.env.XLOOOP_API_BASE || canaryConfig.apiBase);
 
 const baseEnv = {
   ...process.env,
-  XLOOOP_API_BASE: process.env.XLOOOP_API_BASE || 'https://api.xlooop.com',
+  XLOOOP_API_BASE: canaryTarget.apiBase,
   XLOOOP_PARITY_PACKET_ID: process.env.XLOOOP_PARITY_PACKET_ID || canaryConfig.packetId,
 };
 
@@ -50,6 +60,15 @@ const result = {
   failures: [],
   warnings: [],
 };
+
+if (!canaryTarget.ok) {
+  result.status = 'FAIL';
+  result.failures.push({
+    id: 'internal_canary_target_policy',
+    reason: canaryTarget.reason,
+  });
+  finish();
+}
 
 runCheck('new_user_api_mcp_onboarding_scenario', [
   'node',
@@ -75,16 +94,127 @@ runCheck('api_mcp_lifecycle_parity_live_read_only', [
 finish();
 
 function loadCanaryConfigFromEnvFile(filePath) {
-  if (!filePath || !fs.existsSync(filePath)) return { token: '', packetId: '' };
+  if (!filePath || !fs.existsSync(filePath)) return { apiBase: '', token: '', packetId: '' };
   const text = fs.readFileSync(filePath, 'utf8');
   const value = (name) => {
     const match = text.match(new RegExp(`^\\s*(?:export\\s+)?${name}=(['"]?)([^'"\\n]+)\\1\\s*$`, 'm'));
     return match ? match[2].trim() : '';
   };
   return {
+    apiBase: value('XLOOOP_API_BASE'),
     token: value('XLOOOP_CANARY_API_TOKEN'),
     packetId: value('XLOOOP_PARITY_PACKET_ID'),
   };
+}
+
+function assessCanaryTarget(rawApiBase) {
+  const candidate = String(rawApiBase || '').trim();
+  if (!candidate) {
+    return {
+      ok: false,
+      apiBase: '',
+      reason: 'XLOOOP_API_BASE is required; the internal company A/B canary never defaults to production',
+    };
+  }
+
+  let url;
+  try {
+    url = new URL(candidate);
+  } catch {
+    return { ok: false, apiBase: candidate, reason: 'XLOOOP_API_BASE must be an absolute URL' };
+  }
+
+  if (url.protocol !== 'https:') {
+    return { ok: false, apiBase: candidate, reason: 'internal company A/B canary requires HTTPS' };
+  }
+  if (url.username || url.password || url.port || url.search || url.hash) {
+    return {
+      ok: false,
+      apiBase: candidate,
+      reason: 'internal company A/B canary target cannot contain credentials, a custom port, query parameters, or fragments',
+    };
+  }
+  if (url.pathname !== '/' && url.pathname !== '') {
+    return {
+      ok: false,
+      apiBase: candidate,
+      reason: 'internal company A/B canary target must use the approved host root',
+    };
+  }
+  if (!ALLOWED_INTERNAL_CANARY_HOSTS.has(url.hostname)) {
+    return {
+      ok: false,
+      apiBase: candidate,
+      reason: `internal company A/B canary target is not an approved pilot-shadow host: ${url.hostname}`,
+    };
+  }
+
+  url.pathname = url.pathname.replace(/\/$/, '');
+  return { ok: true, apiBase: url.toString().replace(/\/$/, ''), reason: null };
+}
+
+function runSelfTest() {
+  const cases = [
+    {
+      id: 'missing_target_fails_closed',
+      actual: assessCanaryTarget(''),
+      expected: false,
+    },
+    {
+      id: 'invalid_url_fails_closed',
+      actual: assessCanaryTarget('not-a-url'),
+      expected: false,
+    },
+    {
+      id: 'plaintext_http_fails_closed',
+      actual: assessCanaryTarget('http://api-test.xlooop.com'),
+      expected: false,
+    },
+    {
+      id: 'production_api_fails_closed',
+      actual: assessCanaryTarget('https://api.xlooop.com'),
+      expected: false,
+    },
+    {
+      id: 'unknown_workers_host_fails_closed',
+      actual: assessCanaryTarget('https://unapproved.workers.dev'),
+      expected: false,
+    },
+    {
+      id: 'approved_host_custom_port_fails_closed',
+      actual: assessCanaryTarget('https://api-test.xlooop.com:8443'),
+      expected: false,
+    },
+    {
+      id: 'approved_host_path_fails_closed',
+      actual: assessCanaryTarget('https://api-test.xlooop.com/unapproved-base'),
+      expected: false,
+    },
+    {
+      id: 'pilot_workers_host_passes',
+      actual: assessCanaryTarget('https://xlooop-api-pilot-shadow.xlooop23.workers.dev/'),
+      expected: true,
+    },
+    {
+      id: 'durable_pilot_domain_passes',
+      actual: assessCanaryTarget('https://api-test.xlooop.com'),
+      expected: true,
+    },
+  ].map((testCase) => ({
+    id: testCase.id,
+    status: testCase.actual.ok === testCase.expected ? 'PASS' : 'FAIL',
+    expected_ok: testCase.expected,
+    actual_ok: testCase.actual.ok,
+    reason: testCase.actual.reason,
+  }));
+  const failures = cases.filter((testCase) => testCase.status === 'FAIL');
+  console.log(JSON.stringify({
+    schema_id: 'xlooop.internal_company_a_b_canary.target_policy.self_test.v1',
+    status: failures.length === 0 ? 'PASS' : 'FAIL',
+    checks: cases,
+    failures: failures.map((testCase) => testCase.id),
+  }, null, 2));
+  process.exit(failures.length === 0 ? 0 : 1);
 }
 
 function runCheck(id, command, options = {}) {

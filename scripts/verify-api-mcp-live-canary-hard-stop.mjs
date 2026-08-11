@@ -16,6 +16,20 @@ import { fileURLToPath } from 'node:url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..');
 const strictLive = process.argv.includes('--strict-live') || process.env.XLOOOP_REQUIRE_API_MCP_LIVE_CANARY === '1';
+const selfTest = process.argv.includes('--self-test');
+const declaredTarget = parseArg('target') || process.env.XLOOOP_CANARY_TARGET || '';
+const requestedApiBase = parseArg('api-base') || process.env.XLOOOP_API_BASE || '';
+const targetContract = resolveCanaryTarget({
+  declaredTarget,
+  requestedApiBase,
+  strictLive,
+});
+
+if (selfTest) {
+  runSelfTest();
+  process.exit(0);
+}
+
 const packetId = process.env.XLOOOP_PARITY_PACKET_ID || '';
 const readTokenFile = process.env.XLOOOP_CANARY_API_TOKEN_FILE || '/tmp/xlooop-canary-api-token.txt';
 const lifecycleTokenFile = process.env.XLOOOP_CANARY_LIFECYCLE_API_TOKEN_FILE || '/tmp/xlooop-canary-lifecycle-api-token.txt';
@@ -24,6 +38,11 @@ const hasLifecycleToken = Boolean(process.env.XLOOOP_CANARY_LIFECYCLE_API_TOKEN)
 const checks = [];
 const failures = [];
 const warnings = [];
+const childEnv = {
+  ...process.env,
+  XLOOOP_API_BASE: targetContract.apiBase,
+  ...(targetContract.target ? { XLOOOP_CANARY_TARGET: targetContract.target } : {}),
+};
 
 function addCheck(id, ok, details = {}, options = {}) {
   const status = ok ? 'PASS' : (options.warnOnly ? 'WARN' : 'FAIL');
@@ -39,7 +58,7 @@ function run(id, command, args, options = {}) {
     cwd: repoRoot,
     encoding: 'utf8',
     maxBuffer: 1024 * 1024 * 12,
-    env: process.env,
+    env: childEnv,
   });
   const row = {
     id,
@@ -75,6 +94,23 @@ function run(id, command, args, options = {}) {
   return row;
 }
 
+addCheck('canary_target_declared', targetContract.declared, {
+  argument: '--target=production|pilot-shadow',
+  target: targetContract.target || null,
+}, {
+  block: strictLive,
+  warnOnly: !strictLive,
+  message: 'Strict live canaries require an explicit --target or XLOOOP_CANARY_TARGET.',
+});
+addCheck('canary_target_api_base_match', targetContract.ok, {
+  target: targetContract.target || null,
+  api_base: targetContract.apiBase,
+  expected_api_base: targetContract.expectedApiBase,
+  reason: targetContract.reason || null,
+}, {
+  block: true,
+});
+
 addCheck('canary_packet_id_configured', Boolean(packetId), {
   env: 'XLOOOP_PARITY_PACKET_ID',
   configured: Boolean(packetId),
@@ -95,14 +131,32 @@ run('static_mcp_api_lifecycle_contract', 'npm', ['run', '--silent', 'verify:mcp-
 run('customer_revocation_authority', 'npm', ['run', '--silent', 'verify:customer-revocation-authority'], {
   block: true,
 });
-run('api_mcp_lifecycle_parity_live', 'npm', ['run', '--silent', 'verify:api-mcp-lifecycle-parity', '--', '--format=json'], {
-  block: strictLive,
-  requiredForLive: true,
-  message: 'Set XLOOOP_PARITY_PACKET_ID and scoped canary tokens before claiming live API/MCP lifecycle parity authority.',
-});
+// No live network execution is allowed without an explicit named target, even
+// in advisory mode. Advisory compatibility may still resolve a default for
+// reporting, but it must never turn omission into a production request.
+if (shouldRunLiveCanary(targetContract)) {
+  run('api_mcp_lifecycle_parity_live', 'npm', ['run', '--silent', 'verify:api-mcp-lifecycle-parity', '--', '--format=json'], {
+    block: strictLive,
+    requiredForLive: true,
+    message: 'Set XLOOOP_PARITY_PACKET_ID and scoped canary tokens before claiming live API/MCP lifecycle parity authority.',
+  });
+} else {
+  checks.push({
+    id: 'api_mcp_lifecycle_parity_live',
+    status: 'SKIP',
+    required_for_live: true,
+    reason: 'target_contract_invalid_live_execution_refused',
+  });
+}
 
 const liveRun = checks.find((row) => row.id === 'api_mcp_lifecycle_parity_live');
-const liveAuthority = strictLive && liveRun?.status === 'PASS' && Boolean(packetId) && hasReadToken && hasLifecycleToken;
+const liveAuthority = strictLive
+  && targetContract.declared
+  && targetContract.ok
+  && liveRun?.status === 'PASS'
+  && Boolean(packetId)
+  && hasReadToken
+  && hasLifecycleToken;
 if (strictLive && !liveAuthority) {
   failures.push({
     id: 'api_mcp_live_canary_authority_blocked',
@@ -119,7 +173,10 @@ const report = {
   api_mcp_live_canary_authority: liveAuthority,
   internal_static_boundary_authority: status === 'PASS' && liveAuthority === false,
   configured_inputs: {
-    api_base: process.env.XLOOOP_API_BASE || 'https://api.xlooop.com',
+    target: targetContract.target || null,
+    target_declared: targetContract.declared,
+    api_base: targetContract.apiBase,
+    expected_api_base: targetContract.expectedApiBase,
     packet_id_configured: Boolean(packetId),
     packet_id_canary_prefixed: packetId.startsWith('pkt-canary-'),
     read_token_configured: hasReadToken,
@@ -142,4 +199,118 @@ function parseLastJson(text) {
   const candidate = start >= 0 ? text.slice(start + 1) : text.slice(text.indexOf('{'));
   if (!candidate || !candidate.trim().startsWith('{')) return null;
   return JSON.parse(candidate);
+}
+
+function parseArg(name) {
+  const prefix = `--${name}=`;
+  const value = process.argv.slice(2).find((item) => item.startsWith(prefix));
+  return value ? value.slice(prefix.length) : '';
+}
+
+function normalizeApiBase(value) {
+  const raw = String(value || '').trim().replace(/\/+$/, '');
+  if (!raw) return '';
+  try {
+    const url = new URL(raw);
+    return `${url.protocol}//${url.host}${url.pathname === '/' ? '' : url.pathname}`;
+  } catch {
+    return raw;
+  }
+}
+
+function resolveCanaryTarget({ declaredTarget: targetInput, requestedApiBase: apiInput, strictLive: strict }) {
+  const targets = {
+    production: 'https://api.xlooop.com',
+    'pilot-shadow': 'https://xlooop-api-pilot-shadow.xlooop23.workers.dev',
+  };
+  const declared = Boolean(String(targetInput || '').trim());
+  const target = String(targetInput || '').trim().toLowerCase();
+  if (declared && !Object.hasOwn(targets, target)) {
+    return {
+      ok: false,
+      declared,
+      target,
+      apiBase: normalizeApiBase(apiInput),
+      expectedApiBase: null,
+      reason: 'unknown_canary_target',
+    };
+  }
+  if (strict && !declared) {
+    return {
+      ok: false,
+      declared,
+      target: '',
+      apiBase: normalizeApiBase(apiInput || targets.production),
+      expectedApiBase: null,
+      reason: 'strict_live_target_missing',
+    };
+  }
+  const effectiveTarget = target || 'production';
+  const expectedApiBase = targets[effectiveTarget];
+  const apiBase = normalizeApiBase(apiInput || expectedApiBase);
+  return {
+    ok: apiBase === expectedApiBase,
+    declared,
+    target: effectiveTarget,
+    apiBase,
+    expectedApiBase,
+    reason: apiBase === expectedApiBase ? '' : 'canary_target_api_base_mismatch',
+  };
+}
+
+function shouldRunLiveCanary(contract) {
+  return contract.ok === true && contract.declared === true;
+}
+
+function runSelfTest() {
+  const cases = [
+    ['production canonical', { declaredTarget: 'production', requestedApiBase: '', strictLive: true }, true],
+    ['pilot-shadow canonical', { declaredTarget: 'pilot-shadow', requestedApiBase: '', strictLive: true }, true],
+    ['pilot-shadow refuses production', { declaredTarget: 'pilot-shadow', requestedApiBase: 'https://api.xlooop.com', strictLive: true }, false],
+    ['production refuses pilot-shadow', { declaredTarget: 'production', requestedApiBase: 'https://xlooop-api-pilot-shadow.xlooop23.workers.dev', strictLive: true }, false],
+    ['strict target required', { declaredTarget: '', requestedApiBase: 'https://api.xlooop.com', strictLive: true }, false],
+    ['unknown target refused', { declaredTarget: 'staging-ish', requestedApiBase: '', strictLive: true }, false],
+    ['non-strict compatibility', { declaredTarget: '', requestedApiBase: '', strictLive: false }, true],
+  ];
+  const failures = cases
+    .map(([name, input, expected]) => ({ name, actual: resolveCanaryTarget(input).ok, expected }))
+    .filter((row) => row.actual !== row.expected);
+  const undeclaredAdvisory = resolveCanaryTarget({
+    declaredTarget: '',
+    requestedApiBase: '',
+    strictLive: false,
+  });
+  if (undeclaredAdvisory.declared || !undeclaredAdvisory.ok) {
+    failures.push({
+      name: 'advisory compatibility stays reportable but undeclared',
+      actual: undeclaredAdvisory,
+      expected: { declared: false, ok: true },
+    });
+  }
+  if (shouldRunLiveCanary(undeclaredAdvisory)) {
+    failures.push({
+      name: 'undeclared advisory target never executes live',
+      actual: true,
+      expected: false,
+    });
+  }
+  const declaredPilot = resolveCanaryTarget({
+    declaredTarget: 'pilot-shadow',
+    requestedApiBase: '',
+    strictLive: false,
+  });
+  if (!shouldRunLiveCanary(declaredPilot)) {
+    failures.push({
+      name: 'declared valid pilot target executes live',
+      actual: false,
+      expected: true,
+    });
+  }
+  console.log(JSON.stringify({
+    schema_id: 'xlooop.api_mcp_live_canary_target_contract.self_test.v1',
+    status: failures.length ? 'FAIL' : 'PASS',
+    check_count: cases.length + 3,
+    failures,
+  }, null, 2));
+  if (failures.length) process.exit(1);
 }

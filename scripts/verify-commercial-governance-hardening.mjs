@@ -453,7 +453,6 @@ async function verifyDeleteExportObjectStorageExecution() {
 async function verifyTwoCompanyPilotEvidence() {
   const scripts = packageScripts();
   for (const script of [
-    'verify:tenant-bundle-isolation',
     'verify:tenant-source-isolation',
     'verify:tenant-search-isolation',
     'verify:paid-pilot-boundary',
