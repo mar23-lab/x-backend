@@ -127,11 +127,18 @@ function assessCanaryTarget(rawApiBase) {
   if (url.protocol !== 'https:') {
     return { ok: false, apiBase: candidate, reason: 'internal company A/B canary requires HTTPS' };
   }
-  if (url.username || url.password || url.search || url.hash) {
+  if (url.username || url.password || url.port || url.search || url.hash) {
     return {
       ok: false,
       apiBase: candidate,
-      reason: 'internal company A/B canary target cannot contain credentials, query parameters, or fragments',
+      reason: 'internal company A/B canary target cannot contain credentials, a custom port, query parameters, or fragments',
+    };
+  }
+  if (url.pathname !== '/' && url.pathname !== '') {
+    return {
+      ok: false,
+      apiBase: candidate,
+      reason: 'internal company A/B canary target must use the approved host root',
     };
   }
   if (!ALLOWED_INTERNAL_CANARY_HOSTS.has(url.hostname)) {
@@ -171,6 +178,16 @@ function runSelfTest() {
     {
       id: 'unknown_workers_host_fails_closed',
       actual: assessCanaryTarget('https://unapproved.workers.dev'),
+      expected: false,
+    },
+    {
+      id: 'approved_host_custom_port_fails_closed',
+      actual: assessCanaryTarget('https://api-test.xlooop.com:8443'),
+      expected: false,
+    },
+    {
+      id: 'approved_host_path_fails_closed',
+      actual: assessCanaryTarget('https://api-test.xlooop.com/unapproved-base'),
       expected: false,
     },
     {

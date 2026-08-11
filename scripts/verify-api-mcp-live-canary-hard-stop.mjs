@@ -131,7 +131,10 @@ run('static_mcp_api_lifecycle_contract', 'npm', ['run', '--silent', 'verify:mcp-
 run('customer_revocation_authority', 'npm', ['run', '--silent', 'verify:customer-revocation-authority'], {
   block: true,
 });
-if (targetContract.ok && (!strictLive || targetContract.declared)) {
+// No live network execution is allowed without an explicit named target, even
+// in advisory mode. Advisory compatibility may still resolve a default for
+// reporting, but it must never turn omission into a production request.
+if (shouldRunLiveCanary(targetContract)) {
   run('api_mcp_lifecycle_parity_live', 'npm', ['run', '--silent', 'verify:api-mcp-lifecycle-parity', '--', '--format=json'], {
     block: strictLive,
     requiredForLive: true,
@@ -255,6 +258,10 @@ function resolveCanaryTarget({ declaredTarget: targetInput, requestedApiBase: ap
   };
 }
 
+function shouldRunLiveCanary(contract) {
+  return contract.ok === true && contract.declared === true;
+}
+
 function runSelfTest() {
   const cases = [
     ['production canonical', { declaredTarget: 'production', requestedApiBase: '', strictLive: true }, true],
@@ -268,10 +275,41 @@ function runSelfTest() {
   const failures = cases
     .map(([name, input, expected]) => ({ name, actual: resolveCanaryTarget(input).ok, expected }))
     .filter((row) => row.actual !== row.expected);
+  const undeclaredAdvisory = resolveCanaryTarget({
+    declaredTarget: '',
+    requestedApiBase: '',
+    strictLive: false,
+  });
+  if (undeclaredAdvisory.declared || !undeclaredAdvisory.ok) {
+    failures.push({
+      name: 'advisory compatibility stays reportable but undeclared',
+      actual: undeclaredAdvisory,
+      expected: { declared: false, ok: true },
+    });
+  }
+  if (shouldRunLiveCanary(undeclaredAdvisory)) {
+    failures.push({
+      name: 'undeclared advisory target never executes live',
+      actual: true,
+      expected: false,
+    });
+  }
+  const declaredPilot = resolveCanaryTarget({
+    declaredTarget: 'pilot-shadow',
+    requestedApiBase: '',
+    strictLive: false,
+  });
+  if (!shouldRunLiveCanary(declaredPilot)) {
+    failures.push({
+      name: 'declared valid pilot target executes live',
+      actual: false,
+      expected: true,
+    });
+  }
   console.log(JSON.stringify({
     schema_id: 'xlooop.api_mcp_live_canary_target_contract.self_test.v1',
     status: failures.length ? 'FAIL' : 'PASS',
-    check_count: cases.length,
+    check_count: cases.length + 3,
     failures,
   }, null, 2));
   if (failures.length) process.exit(1);
