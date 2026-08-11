@@ -925,9 +925,9 @@ sync, not a false-green success.
 |---|---|---|---|
 | `customer-chat.ts` | POST /customer-chat; POST /chat/turns | tenant JWT | tenant-scoped, live-provider-only assistant; `/chat/turns` is the durable commercial facade with validated runtime preferences and typed `503` without an answer |
 | `chat-receipt.ts` | GET /chat/receipt/:receipt_uid; GET /chat/turns/:id/receipt | tenant JWT | tenant-safe answer receipt; the commercial facade is JSON-only and distinguishes policy resolution from a persisted audit event |
-| `settings-readiness.ts` | GET /settings/readiness | tenant JWT | live customer-safe readiness matrix; unknown or incomplete proof remains `attention`/`unavailable` |
+| `settings-readiness.ts` | GET /settings/readiness | tenant JWT | live customer-safe readiness matrix, including connector-revocation authority; unknown or incomplete proof remains `attention`/`unavailable` |
 | `documents.ts` | POST/GET /documents | tenant JWT | Stage-2 source-intake documents (bytea storage; metadata list is RLS-routed, 046) |
-| `sources.ts` | GET/POST /sources/* | tenant JWT | Clerk-OAuth source connectors (github/google/dropbox/microsoft); disconnect is SOFT (044) |
+| `sources.ts` | GET/POST/DELETE /sources/* | tenant JWT | Clerk-OAuth source connectors; disconnect fails closed unless link-only identity separation is configured, the exact upstream grant is revoked and verified absent, and the local soft-disconnect (044) records that authority in its audit receipt |
 | `workspaces.ts` | GET/POST /workspaces/* | operator/tenant | workspace create/list, activity-summary, doc grounding, and live-provider-only operator cockpit chat |
 | `model-runtimes.ts` | GET/POST/PUT/DELETE /model-runtimes/* | tenant member / owner/operator by operation | masked provider configuration, effective runtime resolution, model catalog, content-free live validation, defaults, and user override |
 | `members.ts` | GET /members | tenant JWT | real workspace members (membership-gated; non-member → 403) |

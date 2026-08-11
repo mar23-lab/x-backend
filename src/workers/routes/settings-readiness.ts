@@ -35,6 +35,7 @@ export interface SettingsReadinessEnv extends AuthEnv, LiveRuntimeEnv {
   XLOOOP_SCHEMA_HEAD?: string;
   SINGLE_INTAKE_ENABLED?: string;
   SENTRY_DSN?: string;
+  CONNECTOR_OAUTH_REVOCATION_MODE?: string;
 }
 
 export interface SettingsReadinessVariables extends AuthVariables {
@@ -176,6 +177,22 @@ settingsReadinessRoute.get('/settings/readiness', async (ctx) => {
       source_refs: ['tenant_scoped_user_sources'],
     }));
   }
+
+  const connectorRevocationReady = ctx.env.CONNECTOR_OAUTH_REVOCATION_MODE === 'clerk_link_only';
+  checks.push(check(checkedAt, {
+    id: 'connector_revocation',
+    status: connectorRevocationReady ? 'ready' : 'attention',
+    summary: connectorRevocationReady
+      ? 'Connector disconnect revokes and verifies the upstream link-only grant before changing Xlooop state.'
+      : 'Connector disconnect is fail-closed until identity and connector OAuth separation is proven.',
+    receipt_refs: [],
+    source_refs: ['CONNECTOR_OAUTH_REVOCATION_MODE', 'DELETE /api/v1/sources/:id'],
+    details: {
+      authority_mode: connectorRevocationReady ? 'clerk_link_only' : 'unproven_shared_identity',
+      disconnect_semantics: 'upstream_revoke_then_local_soft_disconnect',
+      shared_grant_policy: 'fail_closed',
+    },
+  }));
 
   const sentryActive = isSentryActive();
   checks.push(check(checkedAt, {

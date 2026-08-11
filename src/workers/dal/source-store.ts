@@ -45,6 +45,16 @@ export interface SourceDisconnectWriteReceipt {
   audit_event_id: string;
 }
 
+export interface SourceDisconnectAuthorityInput {
+  authority: 'clerk_external_account';
+  authority_mode: 'clerk_link_only';
+  external_account_id: string;
+  upstream_status: 'revoked' | 'already_absent';
+  identity_preserved: true;
+  upstream_verified_at: string;
+  request_id: string | null;
+}
+
 export interface SourceSyncWriteReceipt {
   source_sync_receipt_id: string;
   audit_event_id: string;
@@ -313,9 +323,18 @@ export async function upsertUserSourceRow(
   };
 }
 
-export async function disconnectUserSourceRow(sql: Sql, userId: UserId, id: string, workspaceId?: WorkspaceId | null): Promise<SourceDisconnectWriteReceipt> {
+export async function disconnectUserSourceRow(
+  sql: Sql,
+  userId: UserId,
+  id: string,
+  workspaceId: WorkspaceId | null | undefined,
+  authority: SourceDisconnectAuthorityInput,
+): Promise<SourceDisconnectWriteReceipt> {
   if (!userId) throw new Error('disconnectUserSource: userId required');
   if (!id) throw new Error('disconnectUserSource: id required');
+  if (!authority?.external_account_id || !authority?.upstream_verified_at || authority.identity_preserved !== true) {
+    throw new Error('disconnectUserSource: verified upstream revocation authority required');
+  }
   // 044 · SOFT delete (overturns R50.3b per operator 260706): preserve the row + its sync-error
   // history so disconnect is recoverable, consistent with the customer-recoverability doctrine.
   // Reads filter `disconnected_at IS NULL`, so a disconnected source leaves the active list but its
@@ -335,7 +354,11 @@ export async function disconnectUserSourceRow(sql: Sql, userId: UserId, id: stri
              COALESCE(source_disconnected.workspace_id, ${workspaceId}, source_disconnected.user_id),
              COALESCE(source_disconnected.workspace_id, ${workspaceId}),
              'source disconnect',
-             jsonb_build_object('source_id', source_disconnected.id, 'provider', source_disconnected.provider)
+             jsonb_build_object(
+               'source_id', source_disconnected.id,
+               'provider', source_disconnected.provider,
+               'upstream_revocation', ${JSON.stringify(authority)}::jsonb
+             )
       FROM source_disconnected
       RETURNING id::text AS audit_event_id
     )

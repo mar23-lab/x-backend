@@ -6,7 +6,7 @@
 //   GET    /api/v1/sources                 list user's connected sources
 //   GET    /api/v1/sources/:id/repos       list a github source's repos (repo picker)
 //   POST   /api/v1/sources/connect/:provider  materialize DB row from Clerk state
-//   DELETE /api/v1/sources/:id             disconnect a source (remove DB row)
+//   DELETE /api/v1/sources/:id             revoke upstream grant, then soft-disconnect
 //   POST   /api/v1/sources/:id/sync        verify token + mark last_sync_at
 //
 // AUTH: all routes require Clerk-authenticated user; routes are USER-scoped
@@ -38,6 +38,11 @@ import { listProviderFolders, FOLDER_PROVIDERS } from '../sources/folder-pickers
 export interface SourcesEnv extends AuthEnv {
   DATABASE_URL: string;
   CLERK_SECRET_KEY: string;
+  /**
+   * Explicit deployment proof that connector providers are configured as
+   * link-only in Clerk and are not accepted as sign-in methods.
+   */
+  CONNECTOR_OAUTH_REVOCATION_MODE?: string;
 }
 
 export interface SourcesVariables extends AuthVariables {
@@ -381,10 +386,11 @@ sourcesRoute.post('/sources/connect/:provider', async (ctx) => {
 // DELETE /api/v1/sources/:id
 // ============================================================
 //
-// Removes the DB row. Does NOT revoke at Clerk — operator must do that
-// at https://accounts.xlooop.com → Account → Connections (Clerk hosted).
-// The next call to POST /sources/connect/:provider will materialize a
-// fresh row if the operator re-authorizes.
+// Commercial invariant: disconnect means the upstream grant is absent, not
+// merely that Xlooop hid its local row. Clerk external accounts may also be
+// login identities, so deletion is enabled only when deployment configuration
+// proves the provider is link-only. Shared grants (Drive + Gmail, OneDrive +
+// Outlook) require a future explicit group-revoke flow and fail closed here.
 sourcesRoute.delete('/sources/:id', async (ctx) => {
   try {
     const auth = ctx.get('auth');
@@ -401,11 +407,68 @@ sourcesRoute.delete('/sources/:id', async (ctx) => {
     if (!existing || !sourceMatchesActiveWorkspace(existing, auth.workspace_id)) {
       return errorEnvelope(ctx, { status: 404, code: 'NOT_FOUND', message: `source ${id} not found` });
     }
-    const write = await dal.disconnectUserSource(auth.user_id, id, auth.workspace_id || existing.workspace_id || null);
+    if (ctx.env.CONNECTOR_OAUTH_REVOCATION_MODE !== 'clerk_link_only') {
+      return errorEnvelope(ctx, {
+        status: 409,
+        code: 'SOURCE_IDENTITY_CONNECTOR_SEPARATION_REQUIRED',
+        message: 'Disconnect is blocked because connector OAuth and sign-in identity have not been proven separate. No source state was changed.',
+      });
+    }
+    if (!existing.provider_user_id) {
+      return errorEnvelope(ctx, {
+        status: 409,
+        code: 'SOURCE_RECONNECT_REQUIRED',
+        message: 'This legacy source has no upstream account identifier. Reconnect it before revocation; no source state was changed.',
+      });
+    }
+    const shared = (await dal.listUserSources(auth.user_id)).filter((source) =>
+      source.id !== existing.id &&
+      source.provider_user_id === existing.provider_user_id,
+    );
+    if (shared.length > 0) {
+      return errorEnvelope(ctx, {
+        status: 409,
+        code: 'SOURCE_SHARED_UPSTREAM_GRANT',
+        message: `This OAuth grant is shared by ${[existing.provider, ...shared.map((source) => source.provider)].join(', ')}. Revoke the connector group together; no source state was changed.`,
+      });
+    }
+    const secretKey = ctx.env.CLERK_SECRET_KEY;
+    if (!secretKey) {
+      return errorEnvelope(ctx, { status: 500, code: 'CONFIG_ERROR', message: 'CLERK_SECRET_KEY not configured' });
+    }
+    const adapter = makeClerkOAuthAdapter(secretKey);
+    let upstream;
+    try {
+      upstream = await adapter.revokeLinkOnlyGrant(auth.user_id, existing.provider, existing.provider_user_id);
+    } catch (err) {
+      const oauth = err as { code?: string; message?: string };
+      const status = oauth.code === 'OAUTH_IDENTITY_FALLBACK_REQUIRED' || oauth.code === 'OAUTH_EXTERNAL_ACCOUNT_ID_REQUIRED'
+        ? 409
+        : 502;
+      return errorEnvelope(ctx, {
+        status,
+        code: oauth.code || 'OAUTH_CLERK_API_ERROR',
+        message: `${oauth.message || 'Upstream OAuth revocation failed'}. No source state was changed.`,
+      });
+    }
+    const write = await dal.disconnectUserSource(
+      auth.user_id,
+      id,
+      auth.workspace_id || existing.workspace_id || null,
+      {
+        authority: upstream.authority,
+        authority_mode: upstream.authority_mode,
+        external_account_id: upstream.external_account_id,
+        upstream_status: upstream.status,
+        identity_preserved: upstream.identity_preserved,
+        upstream_verified_at: upstream.verified_at,
+        request_id: ctx.get('request_id') || null,
+      },
+    );
     if (!write.source_disconnect_receipt_id || !write.audit_event_id) {
       return errorEnvelope(ctx, { status: 500, code: 'SOURCE_RECEIPT_MISSING', message: 'source disconnect did not produce an audit receipt' });
     }
-    return ctx.json(write);
+    return ctx.json({ ...write, upstream_revocation: upstream });
   } catch (err) {
     return errorEnvelope(ctx, err);
   }

@@ -1006,10 +1006,14 @@ export interface DalAdapter {
 
   /**
    * DELETE /api/v1/sources/:id · disconnect a source.
-   * Soft-disconnects the user_source_connections row and returns an audit receipt.
-   * Does NOT revoke at Clerk; the operator must visit dashboard.clerk.com → Account → Connections to revoke.
+   * Soft-disconnects only after upstream revocation is verified, then returns an audit receipt.
    */
-  disconnectUserSource(userId: UserId, id: string, workspaceId?: WorkspaceId | null): Promise<import('./source-store').SourceDisconnectWriteReceipt>;
+  disconnectUserSource(
+    userId: UserId,
+    id: string,
+    workspaceId: WorkspaceId | null | undefined,
+    authority: import('./source-store').SourceDisconnectAuthorityInput,
+  ): Promise<import('./source-store').SourceDisconnectWriteReceipt>;
 
   /**
    * POST /api/v1/sources/:id/sync result · update last_sync_at + last_sync_error.

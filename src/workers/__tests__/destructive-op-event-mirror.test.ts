@@ -9,12 +9,25 @@
 // Mocks the DAL (ctx.set) — same pattern as projects-events-operator-overlay.test.ts.
 
 import { describe, it, expect, vi } from 'vitest';
+
+vi.mock('../dal/clerk-oauth-adapter', () => ({
+  makeClerkOAuthAdapter: () => ({
+    revokeLinkOnlyGrant: async (_userId: string, provider: string, externalAccountId: string) => ({
+      authority: 'clerk_external_account', authority_mode: 'clerk_link_only', provider,
+      external_account_id: externalAccountId, status: 'revoked', identity_preserved: true,
+      verified_at: '2026-08-11T08:00:00.000Z',
+    }),
+  }),
+}));
 import { Hono } from 'hono';
 import { projectsRoute } from '../routes/projects';
 import { sourcesRoute } from '../routes/sources';
 import { workspacesRoute } from '../routes/workspaces';
 
-const ENV = { MBP_OWNER_USER_ID: 'user_op', MBP_OWNER_LINKED_USER_IDS: '', DATABASE_URL: 'x' };
+const ENV = {
+  MBP_OWNER_USER_ID: 'user_op', MBP_OWNER_LINKED_USER_IDS: '', DATABASE_URL: 'x',
+  CLERK_SECRET_KEY: 'sk_test_x', CONNECTOR_OAUTH_REVOCATION_MODE: 'clerk_link_only',
+};
 type EventCall = { ws: string; event: Record<string, unknown> };
 
 function appFor(route: Hono, auth: Record<string, unknown>, dal: Record<string, unknown>) {
@@ -87,7 +100,8 @@ describe('destructive-op event mirror (recoverability doctrine 260706)', () => {
     const events: EventCall[] = [];
     let disconnectArgs: unknown[] | null = null;
     const dal = {
-      getUserSource: async () => ({ id: 'src-1', workspace_id: 'ws-a', provider: 'google' }),
+      getUserSource: async () => ({ id: 'src-1', workspace_id: 'ws-a', provider: 'google_drive', provider_user_id: 'eacc-1' }),
+      listUserSources: async () => [{ id: 'src-1', workspace_id: 'ws-a', provider: 'google_drive', provider_user_id: 'eacc-1' }],
       disconnectUserSource: async (...args: unknown[]) => {
         disconnectArgs = args;
         return {
@@ -104,14 +118,15 @@ describe('destructive-op event mirror (recoverability doctrine 260706)', () => {
     const body = await res.json() as { source_disconnect_receipt_id?: string; audit_event_id?: string };
     expect(body.source_disconnect_receipt_id).toBe('source-disconnect:src-1:audit-source-disconnect');
     expect(body.audit_event_id).toBe('audit-source-disconnect');
-    expect(disconnectArgs).toEqual(['u1', 'src-1', 'ws-a']);
+    expect(disconnectArgs).toEqual(['u1', 'src-1', 'ws-a', expect.objectContaining({ upstream_status: 'revoked' })]);
     expect(events).toHaveLength(0);
   });
 
   it('DELETE /sources/:id → no workspace scope still requires a receipt and no mirror', async () => {
     const events: EventCall[] = [];
     const dal = {
-      getUserSource: async () => ({ id: 'src-1', provider: 'google' }),
+      getUserSource: async () => ({ id: 'src-1', provider: 'google_drive', provider_user_id: 'eacc-1' }),
+      listUserSources: async () => [{ id: 'src-1', provider: 'google_drive', provider_user_id: 'eacc-1' }],
       disconnectUserSource: async () => ({
         disconnected: { id: 'src-1', provider: 'google' },
         source_disconnect_receipt_id: 'source-disconnect:src-1:audit-source-disconnect',

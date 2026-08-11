@@ -10,7 +10,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Controllable OAuth adapter: 'ok' returns a token snapshot; 'fail' throws a coded error.
-const oauthState: { mode: 'ok' | 'fail'; failCode?: string; scopes: string[] } = { mode: 'ok', scopes: ['repo'] };
+const oauthState: { mode: 'ok' | 'fail'; failCode?: string; scopes: string[]; revokeMode: 'ok' | 'fail' } = {
+  mode: 'ok', scopes: ['repo'], revokeMode: 'ok',
+};
 const translatorState: { translator: null | ((input: any) => Promise<any>); lastInput: any | null } = { translator: null, lastInput: null };
 vi.mock('../dal/clerk-oauth-adapter', () => ({
   makeClerkOAuthAdapter: () => ({
@@ -21,6 +23,18 @@ vi.mock('../dal/clerk-oauth-adapter', () => ({
         throw e;
       }
       return { external_account_id: 'eacc_1', label: 'octocat', scopes: oauthState.scopes, token: 't_x' };
+    },
+    revokeLinkOnlyGrant: async (_userId: string, provider: string, externalAccountId: string) => {
+      if (oauthState.revokeMode === 'fail') {
+        const e = new Error('upstream revocation unavailable') as Error & { code?: string };
+        e.code = 'OAUTH_CLERK_API_ERROR';
+        throw e;
+      }
+      return {
+        authority: 'clerk_external_account', authority_mode: 'clerk_link_only', provider,
+        external_account_id: externalAccountId, status: 'revoked', identity_preserved: true,
+        verified_at: '2026-08-11T08:00:00.000Z',
+      };
     },
   }),
 }));
@@ -38,7 +52,10 @@ vi.mock('../sources/translators', () => ({
 import { Hono } from 'hono';
 import { sourcesRoute } from '../routes/sources';
 
-const ENV = { CLERK_SECRET_KEY: 'sk_test_x', DATABASE_URL: 'postgres://test' };
+const ENV = {
+  CLERK_SECRET_KEY: 'sk_test_x', DATABASE_URL: 'postgres://test',
+  CONNECTOR_OAUTH_REVOCATION_MODE: 'clerk_link_only',
+};
 const UNLOCKED = {
   workspace_id: 'org_acme', unlocked: true, operator_approved: true, consent_acked: true,
   allowed_modes: [], allowed_apps: [], consent: null,
@@ -46,7 +63,8 @@ const UNLOCKED = {
 const sourceRow = (overrides: Record<string, unknown> = {}) => ({
   id: 'src_1', workspace_id: 'org_acme', provider: 'github', provider_username: 'octocat', scopes: ['repo'],
   status: 'connected', contract: 'metadata_only', read_policy: 'metadata_only', connected_at: '2026-01-01T00:00:00Z',
-  user_id: 'u1', last_sync_at: null, last_sync_error: null, created_at: '2026-01-01T00:00:00Z', updated_at: '2026-01-01T00:00:00Z',
+  user_id: 'u1', provider_user_id: 'eacc_1', last_sync_at: null, last_sync_error: null,
+  created_at: '2026-01-01T00:00:00Z', updated_at: '2026-01-01T00:00:00Z',
   ...overrides,
 });
 const connectReceipt = (source: Record<string, unknown>) => ({
@@ -78,6 +96,7 @@ beforeEach(() => {
   oauthState.mode = 'ok';
   oauthState.failCode = undefined;
   oauthState.scopes = ['repo'];
+  oauthState.revokeMode = 'ok';
   translatorState.translator = null;
   translatorState.lastInput = null;
 });
@@ -299,7 +318,7 @@ describe('POST /sources/:id/sync', () => {
 });
 
 describe('DELETE /sources/:id · audited disconnect', () => {
-  it('200 + returns a source disconnect receipt before the UI may remove local state', async () => {
+  it('200 only after upstream revocation is verified and included in audit authority', async () => {
     const disconnectUserSource = vi.fn(async () => ({
       disconnected: { id: 'src_1', provider: 'github' },
       source_disconnect_receipt_id: 'source-disconnect:src_1:audit_source_disconnect',
@@ -314,7 +333,53 @@ describe('DELETE /sources/:id · audited disconnect', () => {
     const json = (await res.json()) as Record<string, any>;
     expect(json.source_disconnect_receipt_id).toBe('source-disconnect:src_1:audit_source_disconnect');
     expect(json.audit_event_id).toBe('audit_source_disconnect');
-    expect(disconnectUserSource).toHaveBeenCalledWith('u1', 'src_1', 'org_acme');
+    expect(json.upstream_revocation).toMatchObject({ status: 'revoked', identity_preserved: true });
+    expect(disconnectUserSource).toHaveBeenCalledWith('u1', 'src_1', 'org_acme', expect.objectContaining({
+      authority: 'clerk_external_account', upstream_status: 'revoked', identity_preserved: true,
+    }));
+  });
+
+  it('409 + leaves the source active when identity and connector OAuth are not proven separate', async () => {
+    const disconnectUserSource = vi.fn();
+    const app = appFor(
+      { user_id: 'u1', workspace_id: 'org_acme' },
+      { getUserSource: async () => sourceRow(), disconnectUserSource },
+    );
+    const res = await app.request('/api/v1/sources/src_1', { method: 'DELETE' }, {
+      CLERK_SECRET_KEY: 'sk_test_x', DATABASE_URL: 'postgres://test',
+    } as never);
+    expect(res.status).toBe(409);
+    expect(await res.json()).toMatchObject({ code: 'SOURCE_IDENTITY_CONNECTOR_SEPARATION_REQUIRED' });
+    expect(disconnectUserSource).not.toHaveBeenCalled();
+  });
+
+  it('409 + leaves every row active when another source shares the upstream account grant', async () => {
+    const disconnectUserSource = vi.fn();
+    const app = appFor(
+      { user_id: 'u1', workspace_id: 'org_acme' },
+      {
+        getUserSource: async () => sourceRow({ provider: 'google_drive' }),
+        listUserSources: async () => [sourceRow({ id: 'src_1', provider: 'google_drive' }), sourceRow({ id: 'src_gmail', provider: 'gmail' })],
+        disconnectUserSource,
+      },
+    );
+    const res = await app.request('/api/v1/sources/src_1', { method: 'DELETE' }, ENV as never);
+    expect(res.status).toBe(409);
+    expect(await res.json()).toMatchObject({ code: 'SOURCE_SHARED_UPSTREAM_GRANT' });
+    expect(disconnectUserSource).not.toHaveBeenCalled();
+  });
+
+  it('502 + leaves the source active when Clerk revocation cannot be verified', async () => {
+    oauthState.revokeMode = 'fail';
+    const disconnectUserSource = vi.fn();
+    const app = appFor(
+      { user_id: 'u1', workspace_id: 'org_acme' },
+      { getUserSource: async () => sourceRow(), disconnectUserSource },
+    );
+    const res = await app.request('/api/v1/sources/src_1', { method: 'DELETE' }, ENV as never);
+    expect(res.status).toBe(502);
+    expect(await res.json()).toMatchObject({ code: 'OAUTH_CLERK_API_ERROR' });
+    expect(disconnectUserSource).not.toHaveBeenCalled();
   });
 
   it('500 when the DAL cannot provide an audit receipt', async () => {
