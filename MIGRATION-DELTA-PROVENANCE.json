@@ -7313,6 +7313,52 @@
           "reason": "Rectify staging artifact authority and require exact SHA-bound pilot-shadow deploy health ratification"
         }
       ]
+    },
+    {
+      "delta_id": "clerk-token-contract-reconcile-20260811",
+      "generated_at": "2026-08-11T05:13:00.365Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "9b0f064868073942ae10cec2090618fcc937d6bd",
+      "target_base_commit": "9b0f064868073942ae10cec2090618fcc937d6bd",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "docs/contracts/api-contract.v1.json",
+          "target_blob": "cf4223c8f3d68f60ce50da08bafb3ec4079c269a",
+          "reason": "normalize Clerk SDK token verification and least-privilege staging auth contract"
+        },
+        {
+          "path": "package.json",
+          "target_blob": "16af94cb9e08fe03f1faff3fe4bffae81df195c3",
+          "reason": "normalize Clerk SDK token verification and least-privilege staging auth contract"
+        },
+        {
+          "path": "src/workers/routes/session.ts",
+          "target_blob": "08ee54c7c781281f5cd51bb7028b8346345f552a",
+          "reason": "normalize Clerk SDK token verification and least-privilege staging auth contract"
+        },
+        {
+          "path": "scripts/emit-routes-manifest.mjs",
+          "target_blob": "97003f9e113c9c80fe82b5a4fdecbbeef46e79d4",
+          "reason": "normalize Clerk SDK token verification and least-privilege staging auth contract"
+        },
+        {
+          "path": "src/workers/middleware/auth.ts",
+          "target_blob": "d82b538ebec021e10bb53aa6f7708edfd1a8dbcd",
+          "reason": "normalize Clerk SDK token verification and least-privilege staging auth contract"
+        },
+        {
+          "path": "src/workers/routes/diagnose.ts",
+          "target_blob": "97f5ad497e76f813695be499a419da7146372c01",
+          "reason": "normalize Clerk SDK token verification and least-privilege staging auth contract"
+        },
+        {
+          "path": "src/workers/routes/mbp-projection.ts",
+          "target_blob": "2b7a9a9c743aa88f9637ffbf4e99bbfec6bbaaf7",
+          "reason": "normalize Clerk SDK token verification and least-privilege staging auth contract"
+        }
+      ]
     }
   ]
 }
