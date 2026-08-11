@@ -20,7 +20,6 @@
 //   }
 
 import { Hono } from 'hono';
-import { verifyToken } from '@clerk/backend';
 import { envFlagTrue } from '../lib/env-flag';
 import { errorEnvelope } from '../middleware/error';
 import { clerkRoleToWorkspaceRole, visibilityForRole as _vis } from '../dal/visibility';
@@ -34,6 +33,7 @@ import { clerkAuthorizedParties, type AuthEnv } from '../middleware/auth';
 import type { DalAdapter } from '../dal/DalAdapter';
 import { neonClient } from '../db/client';
 import { modelLineagePolicy } from '../lib/model-execution-lineage';
+import { verifyClerkSessionToken } from '../services/clerk-token-verifier';
 
 export interface SessionEnv extends AuthEnv {
   DATABASE_URL: string;
@@ -92,10 +92,11 @@ sessionRoute.get('/session', async (ctx) => {
   // ---- 2. Verify JWT (401 on failure) ----
   let payload: Record<string, unknown>;
   try {
-    payload = await verifyToken(token, {
-      secretKey: ctx.env.CLERK_SECRET_KEY,
-      authorizedParties: clerkAuthorizedParties(ctx.env.CLERK_AUTHORIZED_PARTIES),
-    }) as unknown as Record<string, unknown>;
+    payload = await verifyClerkSessionToken(
+      token,
+      ctx.env,
+      clerkAuthorizedParties(ctx.env.CLERK_AUTHORIZED_PARTIES),
+    );
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Token verification failed';
     ctx.status(401);

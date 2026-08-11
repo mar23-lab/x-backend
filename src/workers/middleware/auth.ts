@@ -16,15 +16,16 @@
 
 import { Context, MiddlewareHandler } from 'hono';
 import { envFlagTrue } from '../lib/env-flag';
-import { verifyToken } from '@clerk/backend';
 import { clerkRoleToWorkspaceRole } from '../dal/visibility';
 import type { AuthContext } from '../dal/types';
 import { neonClient } from '../db/client';
 import { getCustomerTokenByHashRow, touchCustomerTokenRow } from '../dal/customer-token-store';
 import { requiredCustomerScope } from '../lib/customer-connector-scopes';
+import { verifyClerkSessionToken } from '../services/clerk-token-verifier';
 
 export interface AuthEnv {
   CLERK_SECRET_KEY: string;
+  CLERK_JWT_KEY?: string;
   CLERK_PUBLISHABLE_KEY?: string;
   CLERK_JWKS_URL?: string;
   CLERK_JWKS_CACHE_TTL_SECONDS?: string;
@@ -126,10 +127,11 @@ export function clerkAuth(opts: ClerkAuthOptions = {}): MiddlewareHandler<{
     }
 
     try {
-      const payload = await verifyToken(token, {
-        secretKey: ctx.env.CLERK_SECRET_KEY,
-        authorizedParties: clerkAuthorizedParties(ctx.env.CLERK_AUTHORIZED_PARTIES),
-      });
+      const payload = await verifyClerkSessionToken(
+        token,
+        ctx.env,
+        clerkAuthorizedParties(ctx.env.CLERK_AUTHORIZED_PARTIES),
+      );
 
       const userId = (payload as any).sub as string | undefined;
       const orgId = (payload as any).org_id as string | undefined;

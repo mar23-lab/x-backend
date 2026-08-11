@@ -17,10 +17,10 @@
 // retired. Until then, it's the fastest path to triage stuck sign-ins.
 
 import { Hono } from 'hono';
-import { verifyToken } from '@clerk/backend';
 import { errorEnvelope } from '../middleware/error';
 import { clerkAuthorizedParties, type AuthEnv } from '../middleware/auth';
 import type { DalAdapter } from '../dal/DalAdapter';
+import { verifyClerkSessionToken } from '../services/clerk-token-verifier';
 
 export interface DiagnoseEnv extends AuthEnv {
   DATABASE_URL: string;
@@ -54,10 +54,11 @@ async function requireOperator(ctx: {
     return ctx.json({ error: 'missing bearer token', code: 'UNAUTHORIZED', request_id: requestId });
   }
   try {
-    const payload = await verifyToken(token, {
-      secretKey: ctx.env.CLERK_SECRET_KEY,
-      authorizedParties: clerkAuthorizedParties(ctx.env.CLERK_AUTHORIZED_PARTIES),
-    });
+    const payload = await verifyClerkSessionToken(
+      token,
+      ctx.env,
+      clerkAuthorizedParties(ctx.env.CLERK_AUTHORIZED_PARTIES),
+    );
     if (String(payload?.sub || '') !== ownerUserId) {
       ctx.status(403);
       return ctx.json({ error: 'this endpoint is restricted to the platform operator', code: 'FORBIDDEN', request_id: requestId });

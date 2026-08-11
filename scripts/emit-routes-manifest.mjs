@@ -101,8 +101,8 @@ const DIRECT_AUTH = Object.freeze({
   },
   sessionRoute: {
     policy: 'clerk_jwt_session_state',
-    source: 'src/workers/routes/session.ts: verifyToken',
-    guard: { kind: 'route_handler_call', helper: 'verifyToken' },
+    source: 'src/workers/routes/session.ts: verifyClerkSessionToken',
+    guard: { kind: 'route_handler_call', helper: 'verifyClerkSessionToken' },
   },
   mbpProjectionRoute: {
     policy: 'route_local_mixed',

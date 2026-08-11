@@ -20,7 +20,6 @@
 // On any auth failure → 4xx with structured envelope (no fall-through).
 
 import { Hono } from 'hono';
-import { verifyToken } from '@clerk/backend';
 import { errorEnvelope } from '../middleware/error';
 import { clerkAuthorizedParties, type AuthEnv } from '../middleware/auth';
 
@@ -56,6 +55,7 @@ import {
   type ProjectionRailEnvelope,
 } from '../lib/mbp-projection-live-rail';
 import { envFlagTrue } from '../lib/env-flag';
+import { verifyClerkSessionToken } from '../services/clerk-token-verifier';
 
 export interface MbpProjectionEnv extends AuthEnv {
   MBP_OWNER_USER_ID?: string; // Clerk user_id of the operator (e.g. user_3EI...)
@@ -107,10 +107,11 @@ async function verifyMbpOwner(ctx: any): Promise<string> {
   }
 
   try {
-    const payload = await verifyToken(token, {
-      secretKey: env.CLERK_SECRET_KEY,
-      authorizedParties: clerkAuthorizedParties(env.CLERK_AUTHORIZED_PARTIES),
-    });
+    const payload = await verifyClerkSessionToken(
+      token,
+      env,
+      clerkAuthorizedParties(env.CLERK_AUTHORIZED_PARTIES),
+    );
     const requesterUserId = String(payload?.sub || '');
     if (!requesterUserId) {
       throw new HttpError('jwt missing sub claim', 'UNAUTHORIZED', 401);

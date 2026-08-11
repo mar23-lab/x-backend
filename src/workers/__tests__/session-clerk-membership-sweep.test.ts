@@ -278,12 +278,12 @@ describe('session route · Clerk membership SWEEP (A5 Option B backstop)', () =>
     expect(r.materializeCalls).toHaveLength(0);
   });
 
-  it('6b · CLERK_SECRET_KEY unbound -> no sweep, session still 200', async () => {
+  it('6b · private Clerk API key unbound with public JWT key -> no sweep, session still 200', async () => {
     const r = await callSession({
       claims: NO_ORG_CLAIMS,
       entitlements: [OWNS_OTHER_WORKSPACE],
       clerkMemberships: () => ({ data: [membership(ORG_A, 'org:member')] }),
-      env: { CLERK_SECRET_KEY: '' },
+      env: { CLERK_SECRET_KEY: '', CLERK_JWT_KEY: 'public-test-key' },
     });
     expect(r.status).toBe(200);
     expect(r.listCalls).toBe(0);
