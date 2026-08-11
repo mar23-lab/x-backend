@@ -209,7 +209,8 @@ authority requires scoped canary evidence. Before claiming live parity, configur
 - `XLOOOP_PARITY_PACKET_ID` with a `pkt-canary-*` packet
 - `XLOOOP_CANARY_API_TOKEN` or `XLOOOP_CANARY_API_TOKEN_FILE`
 - `XLOOOP_CANARY_LIFECYCLE_API_TOKEN` or `XLOOOP_CANARY_LIFECYCLE_API_TOKEN_FILE`
-- `XLOOOP_API_BASE` when validating a non-default API endpoint
+- an explicit `--target=production` or `--target=pilot-shadow`
+- `--api-base=...` only when it exactly matches the declared target
 
 Internal controlled validation command:
 
@@ -225,11 +226,12 @@ XLOOOP_REQUIRE_API_MCP_LIVE_CANARY=1 \
 XLOOOP_PARITY_PACKET_ID=pkt-canary-... \
 XLOOOP_CANARY_API_TOKEN_FILE=/path/to/read-token.txt \
 XLOOOP_CANARY_LIFECYCLE_API_TOKEN_FILE=/path/to/lifecycle-token.txt \
-npm run verify:api-mcp-live-canary-hard-stop
+npm run verify:api-mcp-live-canary-hard-stop -- --strict-live --target=production
 ```
 
 Strict mode fails closed unless the maintained API/MCP lifecycle parity verifier
-passes with real scoped canary credentials.
+passes with real scoped canary credentials. It refuses to execute the live
+child verifier when the declared target and API base disagree.
 
 ## Hosted CI Runner Health
 

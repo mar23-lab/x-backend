@@ -89,6 +89,7 @@
     "verify:hosted-deployment-evidence": "node scripts/verify-hosted-deployment-evidence.mjs",
     "verify:live-authority-inputs": "node scripts/verify-live-authority-inputs.mjs",
     "verify:api-mcp-live-canary-hard-stop": "node scripts/verify-api-mcp-live-canary-hard-stop.mjs",
+    "verify:api-mcp-live-canary-hard-stop:self-test": "node scripts/verify-api-mcp-live-canary-hard-stop.mjs --self-test",
     "verify:feedback-annotations": "node scripts/verify-feedback-runtime-contract.mjs --check=annotations",
     "verify:customer-feedback-tools-hardening": "node scripts/verify-feedback-runtime-contract.mjs --check=hardening",
     "verify:customer-api-access-guidance": "node scripts/verify-customer-api-access-guidance.mjs",

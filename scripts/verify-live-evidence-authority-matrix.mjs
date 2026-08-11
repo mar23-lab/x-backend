@@ -98,7 +98,7 @@ run('external_capability_default_hard_stop', 'npm', ['run', '--silent', 'verify:
   message: 'External capabilities must remain explicit non-default/canary-only for public onboarding unless strict default-promotion evidence is present.',
 });
 
-run('api_mcp_live_canary_hard_stop', 'npm', ['run', '--silent', 'verify:api-mcp-live-canary-hard-stop', '--', '--strict-live'], {
+run('api_mcp_live_canary_hard_stop', 'npm', ['run', '--silent', 'verify:api-mcp-live-canary-hard-stop', '--', '--strict-live', '--target=production'], {
   required: true,
   authorityField: 'api_mcp_live_canary_authority',
   envRequirements: [

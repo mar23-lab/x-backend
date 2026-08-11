@@ -161,7 +161,7 @@ export XLOOOP_PARITY_PACKET_ID=pkt-canary-...
 export XLOOOP_CANARY_API_TOKEN_FILE=/path/to/read-token.txt
 export XLOOOP_CANARY_LIFECYCLE_API_TOKEN_FILE=/path/to/lifecycle-token.txt
 npm run verify:api-mcp-lifecycle-parity -- --format=json
-npm run verify:api-mcp-live-canary-hard-stop -- --strict-live
+npm run verify:api-mcp-live-canary-hard-stop -- --strict-live --target=production
 ```
 
 External customer onboarding resumes only when the public go/no-go command
