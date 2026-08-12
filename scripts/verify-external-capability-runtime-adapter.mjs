@@ -49,6 +49,18 @@ requireCheck('private_adapter_not_public', (
   && capabilityConfig.includes('preview_urls = false')
   && !/(^|\n)routes\s*=|\[\[routes\]\]/m.test(capabilityConfig)
 ), null);
+requireCheck('container_resource_profile_explicit', (
+  !capabilityConfig.includes('instance_type = "lite"')
+  && capabilityConfig.includes('[containers.instance_type]')
+  && /\bvcpu\s*=\s*1\b/.test(capabilityConfig)
+  && /\bmemory_mib\s*=\s*3072\b/.test(capabilityConfig)
+  && /\bdisk_mb\s*=\s*4000\b/.test(capabilityConfig)
+), {
+  minimum_vcpu: 1,
+  minimum_memory_mib: 3072,
+  minimum_disk_mb: 4000,
+  reason: 'The pinned capability image cannot unpack on the implicit 2 GB lite disk.',
+});
 requireCheck('sandbox_no_egress', worker.includes('enableInternet = false'), null);
 requireCheck('sandbox_request_isolation', (
   worker.includes('crypto.randomUUID()') && worker.includes('await sandbox.destroy()')
