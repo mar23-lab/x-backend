@@ -33,10 +33,14 @@ import { clerkAuthorizedParties, type AuthEnv } from '../middleware/auth';
 import type { DalAdapter } from '../dal/DalAdapter';
 import { neonClient } from '../db/client';
 import { modelLineagePolicy } from '../lib/model-execution-lineage';
-import { verifyClerkSessionToken } from '../services/clerk-token-verifier';
+import {
+  clerkVerificationFailureCode,
+  verifyClerkSessionToken,
+} from '../services/clerk-token-verifier';
 
 export interface SessionEnv extends AuthEnv {
   DATABASE_URL: string;
+  ENVIRONMENT?: string;
   CONTEXT_PACKET_PERSISTENCE_ENABLED?: string;
   ROLE_SKILL_CATALOG_ENABLED?: string;
   RESOLUTION_RECEIPT_SIGNING_SECRET?: string;
@@ -98,11 +102,18 @@ sessionRoute.get('/session', async (ctx) => {
       clerkAuthorizedParties(ctx.env.CLERK_AUTHORIZED_PARTIES),
     );
   } catch (err) {
-    const msg = err instanceof Error ? err.message : 'Token verification failed';
+    const failureCode = clerkVerificationFailureCode(err);
+    console.warn(JSON.stringify({
+      event: 'clerk_token_verification_failed',
+      failure_code: failureCode,
+      request_id: requestId,
+      environment: ctx.env.ENVIRONMENT ?? 'unknown',
+    }));
     ctx.status(401);
     return ctx.json({
-      error: `Token verification failed: ${msg}`,
+      error: 'The signed-in session could not be verified.',
       code: 'UNAUTHORIZED',
+      reason_code: failureCode,
       request_id: requestId,
     });
   }

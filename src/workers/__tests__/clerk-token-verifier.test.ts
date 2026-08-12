@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { unwrapClerkVerificationResult } from '../services/clerk-token-verifier';
+import {
+  clerkVerificationFailureCode,
+  unwrapClerkVerificationResult,
+} from '../services/clerk-token-verifier';
 
 describe('Clerk token verification result contract', () => {
   it('unwraps the installed SDK success shape', () => {
@@ -22,5 +25,20 @@ describe('Clerk token verification result contract', () => {
 
   it('rejects empty or ambiguous results', () => {
     expect(() => unwrapClerkVerificationResult({})).toThrow('no claims');
+  });
+});
+
+describe('Clerk token verification diagnostics', () => {
+  it.each([
+    [{ reason: 'token-expired' }, 'token_expired'],
+    [{ reason: 'jwk-kid-mismatch' }, 'signing_key_mismatch'],
+    [new Error('Token is not active yet'), 'token_not_active'],
+    [new Error('Authorized party mismatch'), 'authorized_party_mismatch'],
+    [new Error('Unable to resolve verification key'), 'verification_key_unavailable'],
+    [new Error('Invalid signature'), 'signature_invalid'],
+    [new Error('JWT decode failed'), 'token_malformed'],
+    [new Error('unexpected failure'), 'verification_failed'],
+  ])('maps %p to %s without returning raw text', (error, expected) => {
+    expect(clerkVerificationFailureCode(error)).toBe(expected);
   });
 });
