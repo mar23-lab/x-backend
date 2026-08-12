@@ -22,7 +22,7 @@ vi.mock('../lib/spine-authority', async (importOriginal) => ({
   }),
 }));
 
-const SECRET = 'test-oauth-signing-key-0123456789abcdef';
+const SECRET = 'test-oauth-signing-key-0123456789abcdef'; // fixture only
 const VERIFIER = 'dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk';
 const CHALLENGE = 'E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM';
 

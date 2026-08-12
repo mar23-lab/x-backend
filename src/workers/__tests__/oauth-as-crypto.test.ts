@@ -7,7 +7,7 @@ import {
   redirectUriRegistrable, redirectUriMatches, AUTH_CODE_TTL_SECONDS, type OAuthGrant,
 } from '../lib/oauth-as-crypto';
 
-const SECRET = 'test-oauth-signing-key-0123456789abcdef';
+const SECRET = 'test-oauth-signing-key-0123456789abcdef'; // fixture only
 const NOW = 1_800_000_000_000;
 
 const grant = (over: Partial<OAuthGrant> = {}): OAuthGrant => ({
