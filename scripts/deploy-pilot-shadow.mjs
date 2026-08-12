@@ -11,9 +11,9 @@ import {
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const CONFIG = 'wrangler.pilot-shadow.toml';
-const API_BASE = 'https://xlooop-api-pilot-shadow.xlooop23.workers.dev';
+const API_BASE = 'https://api-test.xlooop.com';
 const WORKER = 'xlooop-api-pilot-shadow';
-const EXPECTED_SELF_TEST_CHECKS = 4;
+const EXPECTED_SELF_TEST_CHECKS = 5;
 const REQUIRED_SECRETS = [
   'DATABASE_URL',
   'MODEL_RUNTIME_ACTIVE_KEY_ID',
@@ -96,6 +96,7 @@ function selfTest() {
     ['stale build fails', assessPilotShadowHealth({ ...valid, build: 'c'.repeat(40) }, expected).includes('build')],
     ['production authority fails', assessPilotShadowHealth({ ...valid, authority: 'production' }, expected).includes('authority')],
     ['missing keyring fails', assessPilotShadowHealth({ ...valid, bindings: {} }, expected).includes('model_runtime_keyring')],
+    ['durable pilot API domain is the deploy and health authority', API_BASE === 'https://api-test.xlooop.com'],
   ];
   if (checks.length !== EXPECTED_SELF_TEST_CHECKS) {
     fail(`self-test registered ${checks.length} checks; expected ${EXPECTED_SELF_TEST_CHECKS}`);
