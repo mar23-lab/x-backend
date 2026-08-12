@@ -1,6 +1,6 @@
 {
   "schema_version": "xcp.capability_consumer_manifest.v1",
-  "consumer_repo": "Xlooop-XCP-demo",
+  "consumer_repo": "x-backend",
   "consumed_contract_pack_path": "data/xcp-ecosystem-leverage-contract-pack.v1.json",
   "consumed_contract_pack_sha256": "cedbfe632294a3d41adde808a2f80892612e175c90b6d9b6871edb900b4767d4",
   "governance_authority": "MB-P",

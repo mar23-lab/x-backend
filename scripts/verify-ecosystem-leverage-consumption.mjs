@@ -14,7 +14,7 @@ const packFileSha = sha256(packBytes);
 const mbpRegistry = loadMbpRegistry();
 
 check(manifest.schema_version === 'xcp.capability_consumer_manifest.v1', 'manifest_schema', 'manifest schema must be xcp.capability_consumer_manifest.v1');
-check(manifest.consumer_repo === 'Xlooop-XCP-demo', 'consumer_repo', 'consumer_repo must be Xlooop-XCP-demo');
+check(manifest.consumer_repo === 'x-backend', 'consumer_repo', 'consumer_repo must be x-backend');
 check(manifest.governance_authority === 'MB-P', 'governance_authority', 'MB-P must remain governance authority');
 check(pack.schema_version === 'xcp.ecosystem_leverage_contract_pack.v1', 'pack_schema', 'vendored pack must use xcp.ecosystem_leverage_contract_pack.v1');
 check(pack.authority === 'xcp-platform', 'pack_authority', 'XCP must publish the product-neutral pack');

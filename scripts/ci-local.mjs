@@ -74,6 +74,8 @@ const gates = [
   ['Terraform source authority', 'npm', ['run', 'verify:terraform-source-authority']],
   ['rollback target authority controls', 'npm', ['run', 'verify:rollback-target-authority:self-test']],
   ['deployed surface registry', 'npm', ['run', 'verify:deployed-surfaces']],
+  ['active repository dependency controls', 'npm', ['run', 'verify:active-repository-dependencies:self-test']],
+  ['active repository dependency closure', 'npm', ['run', 'verify:active-repository-dependencies']],
   // Until 260729 this line ran `verify:app-security-headers`, which was DEFINED as the script's own
   // `--self-test`. ci-local's only security-header gate was therefore the comparator's controls; the
   // real manifest/artifact check had no caller anywhere, and neither did the live check. Now the

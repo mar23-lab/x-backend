@@ -12,8 +12,8 @@ const toolRoot = process.env.MBP_EXPORT_TOOL_ROOT || mbpRoot;
 const python = process.env.PYTHON || '/usr/bin/python3';
 const exportScript = path.join(toolRoot, '_sys/scripts/export_operations_live_stream.py');
 const receiptExportScript = path.join(toolRoot, '_sys/scripts/export_gateway_receipts.py');
-const exportedSnapshot = path.join(mbpRoot, '_sys/xcp-system/cross_repo_drafts/Xlooop-XCP-demo/data/operations-live-stream.json');
-const exportedReceipts = path.join(mbpRoot, '_sys/xcp-system/cross_repo_drafts/Xlooop-XCP-demo/data/mbp-gateway-receipts.json');
+const exportedSnapshot = path.join(mbpRoot, '_sys/xcp-system/cross_repo_drafts/x-backend/data/operations-live-stream.json');
+const exportedReceipts = path.join(mbpRoot, '_sys/xcp-system/cross_repo_drafts/x-backend/data/mbp-gateway-receipts.json');
 const outPath = path.join(repoRoot, 'data/operations-live-stream.json');
 const receiptOutPath = path.join(repoRoot, 'data/mbp-gateway-receipts.json');
 const consumerBindingScript = path.join(repoRoot, 'scripts/generate-operations-live-stream.mjs');
@@ -39,7 +39,7 @@ function isAuthoritySnapshot(payload) {
     && payload?.contract_version === 'v1.0.0'
     && payload?.authority_model === 'mbp_owned_read_model_snapshot'
     && payload?.source_repo === 'MB-P'
-    && payload?.consumer_repo === 'Xlooop-XCP-demo'
+    && payload?.consumer_repo === 'x-backend'
     && payload?.source_mode === 'staged_snapshot'
     && payload?.fallback_fixture_used === false
     && payload?.direct_mbp_repo_write_allowed === false
