@@ -6,7 +6,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   assessFrontendReleaseArtifact,
-  parseReactRuntimeManifest,
+  parseFrontendRuntimeManifest,
   parseFrontendReleaseHtml,
   posturesEqual,
 } from './lib/app-pages-release-contract.mjs';
@@ -86,7 +86,7 @@ try {
   ]);
   const html = indexBytes.toString('utf8');
   const config = reactArtifact
-    ? parseReactRuntimeManifest(runtimeIdentity)
+    ? parseFrontendRuntimeManifest(runtimeIdentity)
     : parseFrontendReleaseHtml(html);
   const artifact = assessFrontendReleaseArtifact(config, {
     frontend_sha: manifest.frontend_sha,

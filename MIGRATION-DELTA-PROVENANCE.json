@@ -7871,6 +7871,27 @@
           "reason": "Re-seal nested frontend manifest after Pages shell identity transformation"
         }
       ]
+    },
+    {
+      "delta_id": "rich-ui-release-authority-20260813",
+      "generated_at": "2026-08-13T00:45:00.000+10:00",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "afa4edea0cb052e37ff9e771467e9447d184c0cc",
+      "target_base_commit": "bd28772714e5435e33902ce109ba46e808a7ebf0",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "scripts/lib/app-pages-release-contract.mjs",
+          "target_blob": "54b21a75535a2d552353e8bc06155aeffec36f80",
+          "reason": "Extend the paired release contract to accept the governed rich_ui_v3 artifact without weakening exact hash, manifest, or rollback authority."
+        },
+        {
+          "path": "scripts/verify-rollback-target-authority.mjs",
+          "target_blob": "79e6577780031e2d3d57d341b6765678154691fe",
+          "reason": "Extend rollback verification to the governed rich UI artifact while preserving exact Worker and Pages target checks."
+        }
+      ]
     }
   ]
 }

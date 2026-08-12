@@ -4,7 +4,7 @@ import { spawnSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { parseFrontendReleaseHtml, parseReactRuntimeManifest } from './lib/app-pages-release-contract.mjs';
+import { parseFrontendReleaseHtml, parseFrontendRuntimeManifest } from './lib/app-pages-release-contract.mjs';
 import {
   assessRollbackAuthorityEvidence,
   rollbackAuthorityValues,
@@ -79,7 +79,7 @@ async function readFrontendIdentity(base) {
   // Treat only an actual JSON media type as a runtime manifest; malformed JSON
   // with that media type still fails closed instead of silently falling back.
   if (manifestResponse.ok && isJsonContentType(manifestResponse.headers.get('content-type'))) {
-    return parseReactRuntimeManifest(await manifestResponse.json());
+    return parseFrontendRuntimeManifest(await manifestResponse.json());
   }
   const response = await fetch(`${base}/?rollback_probe=${Date.now()}`, {
     cache: 'no-store',
