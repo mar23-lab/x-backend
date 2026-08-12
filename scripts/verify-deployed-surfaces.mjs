@@ -39,6 +39,8 @@ for (const alias of ['deploy:api', 'deploy:app:prod', 'deploy:paired:prod']) {
 const appDeploy = readFileSync(path.join(root, 'scripts/deploy-app-prod.mjs'), 'utf8');
 const pairedDeploy = readFileSync(path.join(root, 'scripts/deploy-paired-prod.mjs'), 'utf8');
 const appPrepare = readFileSync(path.join(root, 'scripts/prepare-app-pages-release.mjs'), 'utf8');
+const rollbackExecutor = readFileSync(path.join(root, 'scripts/execute-declared-rollback.mjs'), 'utf8');
+const liveVerifier = readFileSync(path.join(root, 'scripts/verify-app-pages-live.mjs'), 'utf8');
 const apiAuthorization = readFileSync(
   path.join(root, 'scripts/consume-api-deployment-authorization.mjs'),
   'utf8',
@@ -91,6 +93,18 @@ for (const marker of [
   'Pages Functions bundle normalization failed',
 ]) {
   if (!appPrepare.includes(marker)) problems.push(`prepare_contract:${marker}`);
+}
+for (const marker of [
+  '/pages/projects/xlooop-app/deployments/${targetId}/rollback',
+  "'auth', 'token', '--json'",
+]) {
+  if (!rollbackExecutor.includes(marker)) problems.push(`rollback_contract:${marker}`);
+}
+if (rollbackExecutor.includes("'pages', 'deployment', 'promote'")) {
+  problems.push('rollback_contract:removed_wrangler_pages_promote_command');
+}
+for (const marker of ['normalizeAuthorizedHtml', '/sentry-bootstrap.js?release=${manifest.frontend_sha}']) {
+  if (!liveVerifier.includes(marker)) problems.push(`live_verifier_contract:${marker}`);
 }
 for (const file of [
   'functions/_middleware.js',

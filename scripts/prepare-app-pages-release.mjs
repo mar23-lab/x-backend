@@ -86,6 +86,22 @@ rmSync(outputDir, { recursive: true, force: true });
 mkdirSync(outputDir, { recursive: true });
 cpSync(artifactDir, outputDir, { recursive: true });
 
+// Pages middleware needs an immutable artifact identity before it can initialize
+// observability. React artifacts keep that identity in runtime-manifest.json, but
+// middleware cannot fetch a sibling asset while transforming the response. Carry
+// the same value in a non-executable meta tag so Sentry and release verification
+// resolve one source instead of a mutable Pages environment variable.
+const indexPath = path.join(outputDir, 'index.html');
+const indexHtml = readFileSync(indexPath, 'utf8');
+const frontendIdentity = `<meta name="xlooop-frontend-sha" content="${config.frontend_sha}" />`;
+const identifiedHtml = indexHtml.includes('name="xlooop-frontend-sha"')
+  ? indexHtml.replace(
+    /<meta\s+name=["']xlooop-frontend-sha["'][^>]*>/i,
+    frontendIdentity,
+  )
+  : indexHtml.replace(/<head([^>]*)>/i, `<head$1>\n    ${frontendIdentity}`);
+writeFileSync(indexPath, identifiedHtml);
+
 // The backend manifest is the sole deployment authority for app-plane headers.
 // Always replace any donor file so a frontend build can never smuggle or retain
 // an independent production header policy.

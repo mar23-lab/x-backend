@@ -20,6 +20,35 @@ function sha256(bytes) {
   return createHash('sha256').update(bytes).digest('hex');
 }
 
+export function normalizeAuthorizedHtml(html) {
+  return String(html).replace(
+    /<script\s+data-xlooop-sentry-bootstrap\s+defer\s+src="\/sentry-bootstrap\.js\?release=[0-9a-f]{40}"><\/script>/i,
+    '',
+  );
+}
+
+if (process.argv.includes('--self-test')) {
+  const sha = 'a'.repeat(40);
+  const artifact = '<html><head>\n<meta charset="utf-8"></head><body></body></html>';
+  const authorized = artifact.replace(
+    '<head>',
+    `<head><script data-xlooop-sentry-bootstrap defer src="/sentry-bootstrap.js?release=${sha}"></script>`,
+  );
+  const stale = artifact.replace(
+    '<head>',
+    '<head><script data-xlooop-sentry-bootstrap defer src="/sentry-bootstrap.js?release=stale"></script>',
+  );
+  const checks = [
+    ['authorized bootstrap normalizes to artifact bytes', normalizeAuthorizedHtml(authorized) === artifact],
+    ['plain artifact remains unchanged', normalizeAuthorizedHtml(artifact) === artifact],
+    ['malformed or stale bootstrap is not hidden', normalizeAuthorizedHtml(stale) !== artifact],
+  ];
+  for (const [name, ok] of checks) console.log(`  ${ok ? 'PASS' : 'FAIL'} ${name}`);
+  if (checks.some(([, ok]) => !ok)) process.exit(1);
+  console.log(`verify-app-pages-live self-test PASS · ${checks.length}/${checks.length}`);
+  process.exit(0);
+}
+
 async function fetchRequired(url) {
   const response = await fetch(url, { redirect: 'error', cache: 'no-store' });
   if (!response.ok) throw new Error(`${url} returned ${response.status}`);
@@ -73,7 +102,7 @@ try {
     if (JSON.stringify(runtimeIdentity) !== JSON.stringify(localRuntime)) failures.push('live_runtime_manifest');
   } else if (!runtimeIdentity.includes(manifest.contract_hash)) failures.push('live_contract_meta');
   if (html.includes('data-xlooop-sentry-bootstrap')) {
-    if (!html.includes(`window.SENTRY_RELEASE="${manifest.frontend_sha}"`)) {
+    if (!html.includes(`/sentry-bootstrap.js?release=${manifest.frontend_sha}`)) {
       failures.push('live_sentry_release');
     }
   } else if (requireSentry) {
@@ -98,7 +127,9 @@ try {
   }
   if (health?.bindings?.model_runtime_keyring !== true) failures.push('health_model_runtime_keyring');
 
-  if (sha256(indexBytes) !== manifest.files['index.html']) failures.push('live_asset_hash:index.html');
+  if (sha256(Buffer.from(normalizeAuthorizedHtml(html))) !== manifest.files['index.html']) {
+    failures.push('live_asset_hash:index.html');
+  }
 
   const publicAssets = Object.entries(manifest.files).filter(([relative]) => ![
     '_headers',

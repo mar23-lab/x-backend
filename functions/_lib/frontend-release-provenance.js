@@ -1,8 +1,10 @@
 const FRONTEND_SHA_DECLARATION = 'window.__XLOOP_FRONTEND_SHA';
 const EXACT_FRONTEND_SHA = /window\.__XLOOP_FRONTEND_SHA\s*=\s*["']([0-9a-f]{40})["']/i;
+const EXACT_FRONTEND_META = /<meta\s+name=["']xlooop-frontend-sha["']\s+content=["']([0-9a-f]{40})["']\s*\/?>/i;
 
 export function extractFrontendSha(html) {
-  const match = String(html || '').match(EXACT_FRONTEND_SHA);
+  const source = String(html || '');
+  const match = source.match(EXACT_FRONTEND_META) || source.match(EXACT_FRONTEND_SHA);
   return match ? match[1].toLowerCase() : null;
 }
 

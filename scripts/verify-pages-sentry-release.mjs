@@ -41,6 +41,7 @@ function executeBootstrapTwice(source) {
 const exactSha = 'a'.repeat(40);
 const legacyRelease = 'legacy-configured-release';
 const exactHtml = `<script>window.__XLOOP_FRONTEND_SHA="${exactSha}";</script>`;
+const exactMetaHtml = `<meta name="xlooop-frontend-sha" content="${exactSha}" />`;
 const invalidHtml = '<script>window.__XLOOP_FRONTEND_SHA="deadbee";</script>';
 const legacyHtml = '<html><head></head><body></body></html>';
 const env = {
@@ -53,10 +54,12 @@ const env = {
 const tag = sentryBootstrap(env, exactHtml);
 const source = sentryBootstrapSource(env, exactSha);
 const execution = executeBootstrapTwice(source);
-const EXPECTED_CHECK_COUNT = 19;
+const EXPECTED_CHECK_COUNT = 21;
 
 const checks = [
   ['extract exact artifact SHA', extractFrontendSha(exactHtml) === exactSha],
+  ['extract exact React artifact meta SHA', extractFrontendSha(exactMetaHtml) === exactSha],
+  ['React artifact meta overrides mutable release', resolveSentryRelease(exactMetaHtml, legacyRelease) === exactSha],
   ['artifact SHA overrides mutable release', resolveSentryRelease(exactHtml, legacyRelease) === exactSha],
   ['legacy artifact uses configured release', resolveSentryRelease(legacyHtml, legacyRelease) === legacyRelease],
   ['malformed declared SHA fails closed', resolveSentryRelease(invalidHtml, legacyRelease) === ''],

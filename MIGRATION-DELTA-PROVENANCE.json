@@ -7824,6 +7824,37 @@
           "reason": "Converge reviewed restricted adapter with hashed tenant activation and honest normalized-output provenance"
         }
       ]
+    },
+    {
+      "delta_id": "pages-ratification-rollback-repair-20260812",
+      "generated_at": "2026-08-12T09:38:55.762Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "8877a4b2f45c7f025f6064011aa3456b0493a268",
+      "target_base_commit": "8877a4b2f45c7f025f6064011aa3456b0493a268",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "package.json",
+          "target_blob": "e2cd9e8e4c21503a9f90f2f69dfacc5303e7421a",
+          "reason": "Root-cause repair for Pages middleware artifact identity, live ratification, and Cloudflare rollback API compatibility"
+        },
+        {
+          "path": "functions/_lib/frontend-release-provenance.js",
+          "target_blob": "3c3e2358d7e0d19e228e235a05114304e9cba180",
+          "reason": "Root-cause repair for Pages middleware artifact identity, live ratification, and Cloudflare rollback API compatibility"
+        },
+        {
+          "path": "scripts/prepare-app-pages-release.mjs",
+          "target_blob": "53aa7fff9d74697a2e9404cca7e0de6ed1245cae",
+          "reason": "Root-cause repair for Pages middleware artifact identity, live ratification, and Cloudflare rollback API compatibility"
+        },
+        {
+          "path": "scripts/verify-pages-sentry-release.mjs",
+          "target_blob": "f6f72bcd463c13d1a3a1fb5965e3f4c0d2efdb0f",
+          "reason": "Root-cause repair for Pages middleware artifact identity, live ratification, and Cloudflare rollback API compatibility"
+        }
+      ]
     }
   ]
 }
