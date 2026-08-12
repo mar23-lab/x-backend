@@ -92,6 +92,37 @@ function run(cmd, args, dryRun) {
   return execFileSync(cmd, args, { cwd: ROOT, env, encoding: 'utf8', stdio: ['ignore', 'pipe', 'inherit'] });
 }
 
+function wranglerCredentials() {
+  const json = run(process.execPath, [
+    path.join(ROOT, 'node_modules', 'wrangler', 'bin', 'wrangler.js'),
+    'auth', 'token', '--json',
+  ], false);
+  let parsed;
+  try { parsed = JSON.parse(json); } catch { refuse('Wrangler did not return usable Cloudflare credentials'); }
+  const token = parsed?.token || parsed?.api_token || parsed?.credentials?.token;
+  if (!token) refuse('Wrangler authentication token is unavailable for Pages rollback');
+  return token;
+}
+
+async function rollbackPagesDeployment(targetId, dryRun) {
+  const accountId = process.env.CLOUDFLARE_ACCOUNT_ID || '725b9700a78047bee164431a5a432d13';
+  const endpoint = `https://api.cloudflare.com/client/v4/accounts/${accountId}/pages/projects/xlooop-app/deployments/${targetId}/rollback`;
+  if (dryRun) {
+    console.log(`  DRY-RUN would POST ${endpoint}`);
+    return;
+  }
+  const response = await fetch(endpoint, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${wranglerCredentials()}` },
+    signal: AbortSignal.timeout(30_000),
+  });
+  const body = await response.json().catch(() => null);
+  if (!response.ok || body?.success !== true) {
+    refuse(`Cloudflare Pages rollback API returned ${response.status}`,
+      JSON.stringify(body?.errors || body || 'unreadable response'));
+  }
+}
+
 async function pollUntilBuild(apiBase, targetSha, timeoutSeconds) {
   const deadline = Date.now() + timeoutSeconds * 1000;
   let last = null;
@@ -165,10 +196,7 @@ async function main() {
       'versions', 'deploy', targetId, '--config', 'wrangler.toml', '--yes',
     ], DRY_RUN);
   } else {
-    run(process.execPath, [
-      path.join(ROOT, 'node_modules', 'wrangler', 'bin', 'wrangler.js'),
-      'pages', 'deployment', 'promote', targetId, '--project-name', 'xlooop-app',
-    ], DRY_RUN);
+    await rollbackPagesDeployment(targetId, DRY_RUN);
   }
 
   if (DRY_RUN) { console.log('DRY-RUN complete — nothing was changed.'); return; }
