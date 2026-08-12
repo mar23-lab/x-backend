@@ -7681,6 +7681,27 @@
           "reason": "Prevent regression in non-sensitive Clerk verification failure classification"
         }
       ]
+    },
+    {
+      "delta_id": "pilot-clerk-authorized-parties-20260812",
+      "generated_at": "2026-08-12T02:26:13Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "f6fafea41a964de682451fbb4fe646ebe16380c3",
+      "target_base_commit": "f6fafea41a964de682451fbb4fe646ebe16380c3",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "wrangler.pilot-shadow.toml",
+          "target_blob": "f781e4ba203701303f88ad55b66e23f0c90ce259",
+          "reason": "Bind the pilot Clerk token authorized party explicitly to test.xlooop.com instead of inheriting production defaults"
+        },
+        {
+          "path": "scripts/verify-pilot-shadow-config.mjs",
+          "target_blob": "b96ac994f43f2e1f503e3b0dccb8ae3880e8e68f",
+          "reason": "Prevent pilot deployments from omitting the staging Clerk party or accepting production frontend origins"
+        }
+      ]
     }
   ]
 }

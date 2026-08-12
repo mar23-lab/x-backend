@@ -30,6 +30,7 @@ ENVIRONMENT = "pilot-shadow"
 XLOOOP_AUTHORITY_MODE = "shadow"
 XLOOOP_SCHEMA_HEAD = "101"
 ALLOWED_ORIGIN_PATTERN = "https://test.xlooop.com,https://*.xlooop-test.pages.dev"
+CLERK_AUTHORIZED_PARTIES = "https://test.xlooop.com"
 LOG_LEVEL = "info"
 
 # Commercial candidate paths are active only inside this isolated environment.
