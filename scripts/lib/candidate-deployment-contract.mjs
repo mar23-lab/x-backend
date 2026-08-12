@@ -19,7 +19,7 @@ const DEPLOYMENT_CONFIGS = Object.freeze({
   'wrangler.pilot-shadow.toml': Object.freeze({
     environment: 'pilot-shadow',
     authority: 'shadow',
-    api_base: 'https://xlooop-api-pilot-shadow.xlooop23.workers.dev',
+    api_base: 'https://api-test.xlooop.com',
   }),
 });
 

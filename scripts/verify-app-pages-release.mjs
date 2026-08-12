@@ -117,7 +117,7 @@ function runSelfTest() {
     contract_hash: contractHash,
     feature_posture: { ...posture, current_work_projection: true },
   });
-  const pilotApiBase = 'https://xlooop-api-pilot-shadow.xlooop23.workers.dev';
+  const pilotApiBase = 'https://api-test.xlooop.com';
   const pilotReact = {
     ...reactParsed,
     build_mode: 'staging',
@@ -256,7 +256,8 @@ function runSelfTest() {
     ['pilot-shadow deployment contract is explicitly allowlisted',
       pilotShadowDeployment.worker_name === 'xlooop-api-pilot-shadow'
         && pilotShadowDeployment.environment === 'pilot-shadow'
-        && pilotShadowDeployment.authority === 'shadow'],
+        && pilotShadowDeployment.authority === 'shadow'
+        && pilotShadowDeployment.api_base === 'https://api-test.xlooop.com'],
     ['unknown deployment config is rejected', unknownDeploymentConfigRejected],
   ];
   rmSync(testRoot, { recursive: true, force: true });
