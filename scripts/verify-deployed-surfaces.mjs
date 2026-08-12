@@ -12,17 +12,30 @@ const problems = [];
 
 for (const marker of [
   'schema_id: xlooop.deployed_surfaces.v1',
-  "last_reviewed: '2026-08-10'",
+  "last_reviewed: '2026-08-13'",
   'id: app',
   'url: https://app.xlooop.com',
   'source_repo: x-ai-front',
   'serving_source: app',
   'serving_artifact: app/dist',
   'artifact_contract: react_vite_v2',
+  'target_serving_source: wired',
+  'target_serving_artifact: wired/dist-production',
+  'target_artifact_contract: rich_ui_v3',
   'pages_functions_repo: x-backend',
   'pages_functions_source: functions',
   'release_manifest: dist-app-pages-release/release-manifest.json',
   'deploy_script: deploy:paired:prod',
+  'id: www',
+  'url: https://www.xlooop.com',
+  'serving_source: x-web/dist',
+  'artifact_contract: legacy_public_site_v1',
+  'target_source_repo: x-ai-front',
+  'target_serving_source: site',
+  'target_serving_artifact: site/dist',
+  'target_artifact_contract: public_site_v1',
+  'pages_project: xlooop-site',
+  'deploy_script: deploy:site:prod',
   'id: api',
   'url: https://api.xlooop.com',
 ]) {
@@ -35,6 +48,19 @@ if (registry.includes('src/widgets/XcpScreenRouter/XcpScreenRouter.jsx')) {
 const pairedCommand = 'node scripts/deploy-paired-prod.mjs';
 for (const alias of ['deploy:api', 'deploy:app:prod', 'deploy:paired:prod']) {
   if (pkg.scripts?.[alias] !== pairedCommand) problems.push(`package:${alias}`);
+}
+if (pkg.scripts?.['deploy:site:prod'] !== 'node scripts/deploy-public-site-prod.mjs') {
+  problems.push('package:deploy:site:prod');
+}
+const siteDeploy = readFileSync(path.join(root, 'scripts/deploy-public-site-prod.mjs'), 'utf8');
+for (const marker of [
+  'xlooop.public_site_runtime_manifest.v1',
+  'xlooop.public_site_deploy_approval.v1',
+  'rollback_deployment_id',
+  '--project-name=xlooop-site',
+  '--commit-dirty=false',
+]) {
+  if (!siteDeploy.includes(marker)) problems.push(`site_deploy_contract:${marker}`);
 }
 const appDeploy = readFileSync(path.join(root, 'scripts/deploy-app-prod.mjs'), 'utf8');
 const pairedDeploy = readFileSync(path.join(root, 'scripts/deploy-paired-prod.mjs'), 'utf8');
@@ -119,6 +145,7 @@ for (const file of [
   'scripts/lib/deployment-authorization-store.mjs',
   'scripts/verify-deployment-authorization-store.mjs',
   'scripts/verify-rollback-target-authority.mjs',
+  'scripts/deploy-public-site-prod.mjs',
 ]) {
   if (!existsSync(path.join(root, file))) problems.push(`missing:${file}`);
 }
@@ -127,4 +154,4 @@ if (problems.length) {
   console.error(`verify-deployed-surfaces · FAIL-CLOSED · ${problems.join(',')}`);
   process.exit(1);
 }
-console.log('verify-deployed-surfaces · PASS · React app and API converge on one paired, rollback-bound production path');
+console.log('verify-deployed-surfaces · PASS · app, public site and API resolve to x-ai-front/x-backend authorities with rollback-bound deploy paths');

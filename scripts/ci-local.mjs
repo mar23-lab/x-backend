@@ -69,6 +69,9 @@ const gates = [
   ['Pages release artifact contract', 'npm', ['run', 'verify:app-pages-release:self-test']],
   ['Pages deployment decision contract', 'npm', ['run', 'verify:app-pages-decision:self-test']],
   ['paired production cutover transaction controls', 'npm', ['run', 'deploy:paired:prod:self-test']],
+  ['public-site production deployment controls', 'npm', ['run', 'deploy:site:prod:self-test']],
+  ['Terraform source authority controls', 'npm', ['run', 'verify:terraform-source-authority:self-test']],
+  ['Terraform source authority', 'npm', ['run', 'verify:terraform-source-authority']],
   ['rollback target authority controls', 'npm', ['run', 'verify:rollback-target-authority:self-test']],
   ['deployed surface registry', 'npm', ['run', 'verify:deployed-surfaces']],
   // Until 260729 this line ran `verify:app-security-headers`, which was DEFINED as the script's own

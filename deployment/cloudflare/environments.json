@@ -1,11 +1,13 @@
 {
   "schema_version": "xlooop.cloudflare_deployment.v1",
-  "last_updated": "2026-05-17",
+  "last_updated": "2026-08-13",
   "canonical_product_name": "Xlooop",
-  "technical_repo_name": "Xlooop-XCP-demo",
-  "stage": "development_and_customer_feedback",
-  "deployment_model": "cloudflare_pages_static_app_plus_access",
-  "github_repository": "xlooop/Xlooop-XCP-demo",
+  "technical_repo_name": "x-backend",
+  "frontend_repo_name": "x-ai-front",
+  "stage": "controlled_internal_customer_zero",
+  "deployment_model": "cloudflare_workers_api_plus_pages_artifacts",
+  "github_repository": "mar23-lab/x-backend",
+  "frontend_github_repository": "x-ude/x-ai-front",
   "required_github_secrets": [
     "CLOUDFLARE_API_TOKEN",
     "CLOUDFLARE_ACCOUNT_ID"
