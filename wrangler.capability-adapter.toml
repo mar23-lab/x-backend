@@ -8,8 +8,12 @@ preview_urls = false
 [[containers]]
 class_name = "CapabilitySandbox"
 image = "./Dockerfile.capabilities"
-instance_type = "lite"
 max_instances = 3
+
+  [containers.instance_type]
+  vcpu = 1
+  memory_mib = 3072
+  disk_mb = 4000
 
 [[durable_objects.bindings]]
 class_name = "CapabilitySandbox"
