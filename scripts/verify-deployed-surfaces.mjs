@@ -91,6 +91,7 @@ for (const marker of [
 for (const marker of [
   'normalizePagesFunctionsBundle',
   'Pages Functions bundle normalization failed',
+  "runtimeManifest.files['index.html'] = createHash('sha256').update(identifiedHtml).digest('hex')",
 ]) {
   if (!appPrepare.includes(marker)) problems.push(`prepare_contract:${marker}`);
 }
