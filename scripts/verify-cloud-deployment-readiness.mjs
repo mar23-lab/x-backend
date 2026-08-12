@@ -51,8 +51,8 @@ for (const marker of ['reserveAuthorizations', 'ratifyApi', 'ratifyPair', 'rollb
 const appDeploy = text('scripts/deploy-app-prod.mjs');
 check(appDeploy.includes('standalone Pages production deploy is disabled'), 'pages_fail_closed', 'Pages deploy must refuse a standalone production mutation.');
 const surfaces = text('docs/deployment/DEPLOYED_SURFACES.yml');
-check(surfaces.includes('artifact_contract: react_vite_v2') && surfaces.includes('serving_source: app'), 'react_ui_authority', 'React app must be the commercial UI authority.');
-check(!surfaces.includes('serving_source: wired'), 'wired_not_deployed', 'wired must not be a deployed serving source.');
+check(/^\s+artifact_contract: react_vite_v2$/m.test(surfaces) && /^\s+serving_source: app$/m.test(surfaces), 'react_ui_authority', 'Current deployed app artifact must remain explicit until cutover.');
+check(!/^\s+serving_source: wired$/m.test(surfaces), 'wired_not_deployed', 'Raw wired source must not be declared as the deployed serving source.');
 
 const report = {
   schema_id: 'xlooop.cloud_deployment_readiness.verifier.v2',

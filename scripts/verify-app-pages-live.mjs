@@ -44,8 +44,9 @@ if (process.argv.includes('--self-test')) {
     ['malformed or stale bootstrap is not hidden', normalizeAuthorizedHtml(stale) !== artifact],
   ];
   for (const [name, ok] of checks) console.log(`  ${ok ? 'PASS' : 'FAIL'} ${name}`);
-  if (checks.some(([, ok]) => !ok)) process.exit(1);
-  console.log(`verify-app-pages-live self-test PASS · ${checks.length}/${checks.length}`);
+  const passed = checks.filter(([, ok]) => ok).length;
+  if (passed !== checks.length) process.exit(1);
+  console.log(`verify-app-pages-live self-test PASS · ${passed}/${checks.length}`);
   process.exit(0);
 }
 

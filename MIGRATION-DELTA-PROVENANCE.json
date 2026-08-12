@@ -7892,6 +7892,122 @@
           "reason": "Extend rollback verification to the governed rich UI artifact while preserving exact Worker and Pages target checks."
         }
       ]
+    },
+    {
+      "delta_id": "three-repository-authority-convergence-20260813",
+      "generated_at": "2026-08-13T21:30:00.000+10:00",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "fbb1549d9e715c715dec72c598fe433e44f706f0",
+      "target_base_commit": "fbb1549d9e715c715dec72c598fe433e44f706f0",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": ".gitignore",
+          "target_blob": "fec351ca5fc91e17a9e77d32ef7ea00b22940339",
+          "reason": "Protect Terraform state, plans, local variable files, and generated working directories from source control."
+        },
+        {
+          "path": "deployment/cloudflare/environments.json",
+          "target_blob": "e3de2d70663b2cbda49f330bfd203a8947043c19",
+          "reason": "Replace retired donor repository names with x-backend deployment authority and x-ai-front artifact authority."
+        },
+        {
+          "path": "docs/deployment/DEPLOYED_SURFACES.yml",
+          "target_blob": "6c0d954a43477846308a10305e526b978909bd40",
+          "reason": "Record current live donor artifacts separately from the governed three-repository cutover targets."
+        },
+        {
+          "path": "infrastructure/terraform/README.md",
+          "target_blob": "520364b2f271d91a2fe219db8585e3db5262b4ad",
+          "reason": "Declare x-backend as the sole infrastructure source authority and prohibit tracked runtime state."
+        },
+        {
+          "path": "infrastructure/terraform/bootstrap/.terraform.lock.hcl",
+          "target_blob": "1350ee5bf3205ae3153c02845817beacfb5ec73c",
+          "reason": "Preserve the reviewed bootstrap provider lock from the retired platform starter."
+        },
+        {
+          "path": "infrastructure/terraform/bootstrap/main.tf",
+          "target_blob": "ebdd6baf38f091a78a60dbbf98a4c4ea41de9f4d",
+          "reason": "Migrate bootstrap infrastructure source from the retired platform starter into x-backend."
+        },
+        {
+          "path": "infrastructure/terraform/bootstrap/outputs.tf",
+          "target_blob": "e74b2f4cac03150fefffc6ce7695e5dc76b911e6",
+          "reason": "Migrate bootstrap output contracts into x-backend."
+        },
+        {
+          "path": "infrastructure/terraform/bootstrap/rbac.tf",
+          "target_blob": "7fe661bd261b129515380a568f39ffe0d7d5d65b",
+          "reason": "Migrate bootstrap RBAC source into x-backend."
+        },
+        {
+          "path": "infrastructure/terraform/bootstrap/variables.tf",
+          "target_blob": "c5dab5d27427f0b44f5db3c6ce57da592658c7c5",
+          "reason": "Migrate bootstrap input contracts into x-backend."
+        },
+        {
+          "path": "infrastructure/terraform/workloads/.terraform.lock.hcl",
+          "target_blob": "1350ee5bf3205ae3153c02845817beacfb5ec73c",
+          "reason": "Preserve the reviewed workload provider lock from the retired platform starter."
+        },
+        {
+          "path": "infrastructure/terraform/workloads/main.tf",
+          "target_blob": "caf3b1e78a18f2a5aa8239d76178d4f6e20951d0",
+          "reason": "Migrate workload infrastructure source from the retired platform starter into x-backend."
+        },
+        {
+          "path": "infrastructure/terraform/workloads/outputs.tf",
+          "target_blob": "78e1c9df54988f766db295bf6dc53585c607fc1c",
+          "reason": "Migrate workload output contracts into x-backend."
+        },
+        {
+          "path": "infrastructure/terraform/workloads/rbac.tf",
+          "target_blob": "ff4cbd042d3a8023617b4e14063bb680a4f783a9",
+          "reason": "Migrate workload RBAC source into x-backend."
+        },
+        {
+          "path": "infrastructure/terraform/workloads/variables.tf",
+          "target_blob": "4e0b9bba7aca9d4424de18fd680b308a07092306",
+          "reason": "Migrate workload input contracts into x-backend."
+        },
+        {
+          "path": "package.json",
+          "target_blob": "655b11f7959f16eba38dfaa49539b2eed9574535",
+          "reason": "Register public-site deployment and Terraform authority gates in the backend command contract."
+        },
+        {
+          "path": "scripts/ci-local.mjs",
+          "target_blob": "0ba8c655cfef1f5a459bbd63f296a71f4758fc91",
+          "reason": "Run public-site deployment and Terraform authority checks in the complete local release gate."
+        },
+        {
+          "path": "scripts/deploy-public-site-prod.mjs",
+          "target_blob": "946492a3b1d5f24111c9d3a987d8ee0c1050be30",
+          "reason": "Add exact-hash, approval-bound, rollback-aware deployment authority for the x-ai-front public-site artifact."
+        },
+        {
+          "path": "scripts/verify-cloud-deployment-readiness.mjs",
+          "target_blob": "6aa948fc6fb045f07bd5db719041ede2aac08d89",
+          "reason": "Keep readiness checks scoped to the current serving artifact while recording the separate target cutover."
+        },
+        {
+          "path": "scripts/verify-deployed-surfaces.mjs",
+          "target_blob": "9b80b002214e405cf2a807a6c5664136a6ae90fb",
+          "reason": "Verify explicit current and target deployment authority without claiming an undeployed cutover."
+        },
+        {
+          "path": "scripts/verify-app-pages-live.mjs",
+          "target_blob": "e1d7cb24c511e3a742c19ef654ff8ecf34d11d0e",
+          "reason": "Report an independently measured self-test pass count instead of a structurally self-referential ratio."
+        },
+        {
+          "path": "scripts/verify-terraform-source-authority.mjs",
+          "target_blob": "875efaf16d4c6c4633975c11de531be7bb3c6676",
+          "reason": "Enforce complete Terraform source migration and reject tracked state, plans, and populated local variables."
+        }
+      ]
     }
   ]
 }
