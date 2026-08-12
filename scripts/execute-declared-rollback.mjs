@@ -31,7 +31,7 @@ import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { parseFrontendReleaseHtml, parseReactRuntimeManifest } from './lib/app-pages-release-contract.mjs';
+import { parseFrontendReleaseHtml, parseFrontendRuntimeManifest } from './lib/app-pages-release-contract.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const argv = process.argv.slice(2);
@@ -153,7 +153,7 @@ async function pollUntilFrontend(appBase, targetFrontendSha, targetBackendSha, t
         cache: 'no-store', signal: AbortSignal.timeout(10_000),
       });
       if (manifestResponse.ok) {
-        try { identity = parseReactRuntimeManifest(await manifestResponse.json()); } catch { /* legacy SPA fallback */ }
+        try { identity = parseFrontendRuntimeManifest(await manifestResponse.json()); } catch { /* legacy SPA fallback */ }
       }
       if (!identity) {
         const response = await fetch(`${base}/?rb=${nonce}`, {

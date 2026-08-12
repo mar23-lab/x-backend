@@ -68,7 +68,6 @@ function runSelfTest() {
   const reactRoot = path.join(testRoot, 'react');
   mkdirSync(path.join(reactRoot, 'assets'), { recursive: true });
   writeFileSync(path.join(reactRoot, 'index.html'), '<div id="root"></div>');
-  writeFileSync(path.join(reactRoot, '_headers'), '/*\n  X-Robots-Tag: noindex\n');
   writeFileSync(path.join(reactRoot, 'assets/app.js'), '');
   const reactManifest = {
     schema_id: 'xlooop.frontend_runtime_manifest.v2',
@@ -86,6 +85,38 @@ function runSelfTest() {
     files: hashReleaseFiles(reactRoot, new Set(['runtime-manifest.json'])),
   };
   writeFileSync(path.join(reactRoot, 'runtime-manifest.json'), `${JSON.stringify(reactManifest)}\n`);
+
+  const richRoot = path.join(testRoot, 'rich');
+  mkdirSync(path.join(richRoot, 'vendor'), { recursive: true });
+  for (const [file, contents] of Object.entries({
+    'index.html': '<script src="./runtime-config.js"></script><script src="./app-logic.js" data-dc-script></script>',
+    'runtime-config.js': '',
+    'app-logic.js': '',
+    'clerk-boot.js': '',
+    'contract-meta.js': contractHash,
+    'live-data.js': '',
+    'authority-consent.js': '',
+    'runtime-ui.css': '',
+    'support.js': '',
+    'vendor/runtime.js': '',
+  })) writeFileSync(path.join(richRoot, file), contents);
+  const richManifest = {
+    schema_id: 'xlooop.frontend_runtime_manifest.v3',
+    artifact_contract: 'rich_ui_v3',
+    runtime_class: 'production',
+    production_cutover_approved: true,
+    require_contract_handshake: true,
+    api_base: 'https://api.xlooop.com',
+    frontend_sha: frontendSha,
+    expected_backend_sha: backendSha,
+    expected_contract_hash: contractHash,
+    expected_schema_head: 89,
+    expected_environment: 'production',
+    expected_authority: 'production',
+    expected_feature_posture: posture,
+    files: hashReleaseFiles(richRoot, new Set(['runtime-manifest.json'])),
+  };
+  writeFileSync(path.join(richRoot, 'runtime-manifest.json'), `${JSON.stringify(richManifest)}\n`);
 
   const parsed = parseFrontendReleaseArtifact(testRoot);
   const valid = assessFrontendReleaseArtifact(parsed, { frontend_sha: frontendSha, backend_sha: backendSha });
@@ -148,6 +179,15 @@ function runSelfTest() {
   writeFileSync(path.join(reactRoot, 'assets/app.js'), 'tampered-after-manifest');
   const tamperedReactProblems = verifyStaticArtifactFiles(reactRoot, contractHash);
   writeFileSync(path.join(reactRoot, 'assets/app.js'), '');
+  const richParsed = parseFrontendReleaseArtifact(richRoot);
+  const validRich = assessFrontendReleaseArtifact(richParsed, {
+    frontend_sha: frontendSha,
+    backend_sha: backendSha,
+    contract_hash: contractHash,
+  });
+  const richStaticProblems = verifyStaticArtifactFiles(richRoot, contractHash);
+  writeFileSync(path.join(richRoot, 'app-logic.js'), 'tampered-after-manifest');
+  const tamperedRichProblems = verifyStaticArtifactFiles(richRoot, contractHash);
   const hashes = hashReleaseFiles(testRoot);
   const manifest = {
     schema_id: 'xlooop.app_pages_release_manifest.v1',
@@ -240,6 +280,9 @@ function runSelfTest() {
       assembledReactProblems.length === 0],
     ['React/Vite v2 post-manifest asset mutation is rejected',
       tamperedReactProblems.includes('runtime_manifest_file_hashes')],
+    ['rich UI v3 artifact is valid', validRich.ok && richStaticProblems.length === 0],
+    ['rich UI v3 post-manifest logic mutation is rejected',
+      tamperedRichProblems.includes('runtime_manifest_file_hashes')],
     ['valid manifest', validManifest.ok],
     ['tampered file rejected', !tamperedManifest.ok && tamperedManifest.problems.includes('file_hashes')],
     ['tampered release digest rejected',

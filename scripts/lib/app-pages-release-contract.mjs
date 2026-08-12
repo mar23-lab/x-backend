@@ -49,15 +49,23 @@ export function parseFrontendReleaseHtml(html) {
   };
 }
 
-export function parseReactRuntimeManifest(manifest) {
+export function parseFrontendRuntimeManifest(manifest) {
   if (!manifest || typeof manifest !== 'object' || Array.isArray(manifest)) {
     throw new Error('frontend runtime manifest must be a JSON object');
   }
-  if (manifest.schema_id !== 'xlooop.frontend_runtime_manifest.v2') {
+  const artifactBySchema = {
+    'xlooop.frontend_runtime_manifest.v2': 'react_vite_v2',
+    'xlooop.frontend_runtime_manifest.v3': 'rich_ui_v3',
+  };
+  const artifactContract = artifactBySchema[manifest.schema_id];
+  if (!artifactContract) {
     throw new Error(`unsupported frontend runtime manifest: ${String(manifest.schema_id)}`);
   }
+  if (manifest.artifact_contract && manifest.artifact_contract !== artifactContract) {
+    throw new Error('frontend runtime manifest artifact contract does not match its schema');
+  }
   return {
-    artifact_contract: 'react_vite_v2',
+    artifact_contract: artifactContract,
     build_mode: manifest.runtime_class,
     production_cutover_approved: manifest.production_cutover_approved,
     require_contract_handshake: manifest.require_contract_handshake,
@@ -73,7 +81,7 @@ export function parseReactRuntimeManifest(manifest) {
   };
 }
 
-function parseReactRuntimeManifestFile(artifactDir) {
+function parseFrontendRuntimeManifestFile(artifactDir) {
   const manifestPath = path.join(artifactDir, 'runtime-manifest.json');
   if (!existsSync(manifestPath)) return null;
   let manifest;
@@ -82,12 +90,12 @@ function parseReactRuntimeManifestFile(artifactDir) {
   } catch {
     throw new Error(`frontend runtime manifest is not valid JSON: ${manifestPath}`);
   }
-  return parseReactRuntimeManifest(manifest);
+  return parseFrontendRuntimeManifest(manifest);
 }
 
 export function parseFrontendReleaseArtifact(artifactDir) {
-  const react = parseReactRuntimeManifestFile(artifactDir);
-  if (react) return react;
+  const release = parseFrontendRuntimeManifestFile(artifactDir);
+  if (release) return release;
   const indexPath = path.join(artifactDir, 'index.html');
   if (!existsSync(indexPath)) throw new Error(`frontend artifact missing ${indexPath}`);
   const contractMetaPath = path.join(artifactDir, 'contract-meta.js');
@@ -125,7 +133,7 @@ export function assessFrontendReleaseArtifact(config, expected) {
   const expectedEnvironment = expected?.environment || 'production';
   const expectedAuthority = expected?.authority || 'production';
   const expectedBuildMode = expectedEnvironment === 'production' ? 'production' : 'staging';
-  if (config.artifact_contract === 'react_vite_v2') {
+  if (['react_vite_v2', 'rich_ui_v3'].includes(config.artifact_contract)) {
     if (config.build_mode !== expectedBuildMode) problems.push('build_mode');
     const expectedCutoverApproval = expectedEnvironment === 'production';
     if (config.production_cutover_approved !== expectedCutoverApproval) {
@@ -181,17 +189,34 @@ export function releaseManifestDigest(manifest) {
 
 export function verifyStaticArtifactFiles(artifactDir, contractHash) {
   const problems = [];
-  const reactManifest = path.join(artifactDir, 'runtime-manifest.json');
-  const react = existsSync(reactManifest);
-  const required = react
-    // React owns application bytes. The backend release assembler owns and emits
-    // production _headers from data/security-headers.manifest.json.
-    ? ['index.html', 'runtime-manifest.json', 'assets']
-    : ['index.html', '_headers', 'clerk-boot.js', 'contract-meta.js', 'live-data.js', 'support.js', 'vendor'];
+  const runtimeManifestPath = path.join(artifactDir, 'runtime-manifest.json');
+  let artifactContract = 'legacy_wired_v1';
+  if (existsSync(runtimeManifestPath)) {
+    try {
+      artifactContract = parseFrontendRuntimeManifest(
+        JSON.parse(readFileSync(runtimeManifestPath, 'utf8')),
+      ).artifact_contract;
+    } catch {
+      problems.push('runtime_manifest_invalid');
+    }
+  }
+  const requiredByContract = {
+    react_vite_v2: ['index.html', 'runtime-manifest.json', 'assets'],
+    rich_ui_v3: [
+      'index.html', 'runtime-manifest.json', 'runtime-config.js', 'app-logic.js',
+      'clerk-boot.js', 'contract-meta.js', 'live-data.js', 'authority-consent.js',
+      'runtime-ui.css', 'support.js', 'vendor',
+    ],
+    legacy_wired_v1: ['index.html', '_headers', 'clerk-boot.js', 'contract-meta.js', 'live-data.js', 'support.js', 'vendor'],
+  };
+  const required = requiredByContract[artifactContract] || [];
   for (const entry of required) {
     if (!existsSync(path.join(artifactDir, entry))) problems.push(`missing:${entry}`);
   }
-  if (react) {
+  if (artifactContract !== 'legacy_wired_v1' && existsSync(path.join(artifactDir, '_headers'))) {
+    problems.push('frontend_header_authority_leak:_headers');
+  }
+  if (artifactContract === 'react_vite_v2') {
     const assetsDir = path.join(artifactDir, 'assets');
     if (existsSync(assetsDir)) {
       const assetFiles = readdirSync(assetsDir, { recursive: true, withFileTypes: false })
@@ -205,9 +230,9 @@ export function verifyStaticArtifactFiles(artifactDir, contractHash) {
   for (const forbidden of ['scripts', 'src', 'node_modules']) {
     if (existsSync(path.join(artifactDir, forbidden))) problems.push(`source_leak:${forbidden}`);
   }
-  if (react) {
+  if (artifactContract !== 'legacy_wired_v1' && existsSync(runtimeManifestPath)) {
     try {
-      const manifest = JSON.parse(readFileSync(reactManifest, 'utf8'));
+      const manifest = JSON.parse(readFileSync(runtimeManifestPath, 'utf8'));
       if (manifest.expected_contract_hash !== contractHash) problems.push('contract_hash_mismatch');
       const declared = manifest.files;
       if (!declared || typeof declared !== 'object' || Array.isArray(declared)) {
@@ -283,7 +308,7 @@ export function assessReleaseManifest(manifest, currentHashes = null, expected =
   const expectedAuthority = expected.authority || 'production';
   const expectedApiBase = expected.api_base || 'https://api.xlooop.com';
   if (manifest?.schema_id !== 'xlooop.app_pages_release_manifest.v1') problems.push('schema_id');
-  if (!['legacy_wired_v1', 'react_vite_v2'].includes(manifest?.artifact_contract)) {
+  if (!['legacy_wired_v1', 'react_vite_v2', 'rich_ui_v3'].includes(manifest?.artifact_contract)) {
     problems.push('artifact_contract');
   }
   if (!SHA_PATTERN.test(manifest?.frontend_sha || '')) problems.push('frontend_sha');
@@ -416,7 +441,7 @@ export function assessPagesDecisionPacket(packet, expected) {
   if (!rollback.evidence_reference) problems.push('rollback_evidence_reference');
   if (deployment.api_base !== 'https://api.xlooop.com') problems.push('expected_api_base');
   if (!HASH_PATTERN.test(deployment.artifact_digest || '')) problems.push('expected_artifact_digest');
-  if (!['legacy_wired_v1', 'react_vite_v2'].includes(deployment.artifact_contract)) {
+  if (!['legacy_wired_v1', 'react_vite_v2', 'rich_ui_v3'].includes(deployment.artifact_contract)) {
     problems.push('expected_artifact_contract');
   }
   if (!Number.isSafeInteger(deployment.schema_head) || deployment.schema_head < 1) {

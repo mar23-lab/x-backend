@@ -63,7 +63,7 @@ import {
   hashReleaseFiles,
   parseFrontendReleaseArtifact,
   parseFrontendReleaseHtml,
-  parseReactRuntimeManifest,
+  parseFrontendRuntimeManifest,
   releaseManifestDigest,
 } from './lib/app-pages-release-contract.mjs';
 
@@ -166,7 +166,7 @@ async function observeLiveFrontend(url) {
         headers: { 'cache-control': 'no-cache', pragma: 'no-cache' },
       });
       if (!runtimeResponse.ok) throw legacyError;
-      return parseReactRuntimeManifest(await runtimeResponse.json());
+      return parseFrontendRuntimeManifest(await runtimeResponse.json());
     }
   } catch (error) {
     if (controller.signal.aborted) throw new Error(`timed out after ${timeoutMs()}ms`);
@@ -409,6 +409,14 @@ function fixtureReactManifest({ backendSha, frontendSha = 'a'.repeat(40) }) {
   };
 }
 
+function fixtureRichManifest(input) {
+  return {
+    ...fixtureReactManifest(input),
+    schema_id: 'xlooop.frontend_runtime_manifest.v3',
+    artifact_contract: 'rich_ui_v3',
+  };
+}
+
 /**
  * Runs the gate as a real child process and resolves its REAL exit code.
  *
@@ -450,12 +458,17 @@ async function runSelfTest() {
         res.writeHead(200, { 'content-type': 'application/json' });
         return res.end(JSON.stringify(fixtureReactManifest({ backendSha: head })));
       }
+      if (requestUrl.searchParams.get('xlooop_pair_source') === '/rich-match') {
+        res.writeHead(200, { 'content-type': 'application/json' });
+        return res.end(JSON.stringify(fixtureRichManifest({ backendSha: head })));
+      }
       res.writeHead(404, { 'content-type': 'application/json' });
       return res.end('{}');
     }
     res.writeHead(route === '/notfound' ? 404 : 200, { 'content-type': 'text/html' });
     if (route === '/match') return res.end(fixtureHtml({ backendSha: head }));
     if (route === '/react-match') return res.end('<!doctype html><div id="root"></div>');
+    if (route === '/rich-match') return res.end('<!doctype html><xlooop-app></xlooop-app>');
     if (route === '/mismatch') return res.end(fixtureHtml({ backendSha: otherSha }));
     return res.end('<!doctype html><html><body>no xlooop markers here</body></html>');
   });
@@ -514,6 +527,8 @@ async function runSelfTest() {
       { XLOOOP_FRONTEND_PAIR_URL: `${base}/match` }, 'zero', /PASS · live app\.xlooop\.com already expects/],
     ['matching React runtime manifest passes',
       { XLOOOP_FRONTEND_PAIR_URL: `${base}/react-match` }, 'zero', /PASS · live app\.xlooop\.com already expects/],
+    ['matching rich UI runtime manifest passes',
+      { XLOOOP_FRONTEND_PAIR_URL: `${base}/rich-match` }, 'zero', /PASS · live app\.xlooop\.com already expects/],
     ['mismatched backend sha is REFUSED',
       { XLOOOP_FRONTEND_PAIR_URL: `${base}/mismatch` }, 'nonzero', /does not accept the sha you are about to deploy/],
     ['unreachable frontend is REFUSED',
