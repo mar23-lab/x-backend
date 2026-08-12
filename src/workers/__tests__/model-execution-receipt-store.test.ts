@@ -34,7 +34,7 @@ describe('model execution receipt store', () => {
     const { sql, statements } = sqlWith([[{ id: 'mer_1' }]]);
     const id = await startModelExecutionReceiptRow(sql, 'tenant_a', 'user_a', {
       resolution_id: 'rsr_1', context_packet_id: 'cpk_1', action: 'assistant:answer',
-      provider: 'workers_ai', model_key: '@cf/meta/llama-3.1-8b-instruct',
+      provider: 'workers_ai', model_key: '@cf/zai-org/glm-4.7-flash',
     });
     expect(id).toBe('mer_1');
     const insert = statements.find((statement) => statement.text.includes('INSERT INTO model_execution_receipts'))!;

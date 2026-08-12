@@ -24,9 +24,10 @@ import {
   type RuntimeResolutionSource,
   type LiveRuntimeProvider,
 } from './model-runtime-execution';
+import { PLATFORM_WORKERS_AI_MODEL } from './model-runtime-capabilities';
 
 /** The Workers-AI text model — same small instruct model the digest agent uses (free-tier friendly). */
-export const COCKPIT_CHAT_LLM_MODEL = '@cf/meta/llama-3.1-8b-instruct';
+export const COCKPIT_CHAT_LLM_MODEL = PLATFORM_WORKERS_AI_MODEL;
 
 /**
  * P6 · the premium tier. When `ANTHROPIC_API_KEY` is configured as a worker secret, the `deep-research`

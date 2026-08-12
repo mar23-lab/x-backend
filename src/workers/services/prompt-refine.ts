@@ -8,9 +8,10 @@
 
 import { type AiRunner } from './agent-digest';
 import type { ModelExecutionObserver } from '../lib/model-execution-lineage';
+import { PLATFORM_WORKERS_AI_MODEL } from './model-runtime-capabilities';
 
 /** Small instruct model (free-tier friendly) — same binding the cockpit chat + digest use. */
-export const PROMPT_REFINE_MODEL = '@cf/meta/llama-3.1-8b-instruct';
+export const PROMPT_REFINE_MODEL = PLATFORM_WORKERS_AI_MODEL;
 
 export interface PromptRefineResult {
   proposed: string;

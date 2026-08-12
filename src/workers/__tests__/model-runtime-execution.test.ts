@@ -9,6 +9,7 @@ import {
   type ResolvedRuntime,
 } from '../services/model-runtime-execution';
 import { encryptCredential } from '../lib/model-runtime-crypto';
+import { PLATFORM_WORKERS_AI_MODEL } from '../services/model-runtime-capabilities';
 
 const KEY = btoa(String.fromCharCode(...Array.from({ length: 32 }, (_, i) => (i * 11 + 5) & 0xff)));
 const TENANT_KEY = 'tenant-provider-key-not-real';
@@ -40,6 +41,19 @@ function facade(
 afterEach(() => vi.restoreAllMocks());
 
 describe('effective model-runtime resolution', () => {
+  it('uses the current governed Workers AI model for the managed platform default', async () => {
+    const plan = await resolveEffectiveRuntimePlan({
+      facade: facade([], null),
+      env: { AI: { run: async () => ({ response: 'A live managed response long enough for chat.' }) } },
+      userId: 'user_a', workspaceId: 'workspace_a',
+    });
+    expect(plan.primary).toMatchObject({
+      runtime_id: 'platform:workers_ai',
+      model: PLATFORM_WORKERS_AI_MODEL,
+    });
+    expect(PLATFORM_WORKERS_AI_MODEL).toBe('@cf/zai-org/glm-4.7-flash');
+  });
+
   it('honours user override before workspace default and keeps only live platform fallbacks', async () => {
     const sealed = await encryptCredential(KEY, JSON.stringify({ api_key: TENANT_KEY }));
     const userRuntime = row({ id: 'runtime_user', model: 'claude-user', is_default: false });

@@ -59,6 +59,7 @@ const gates = [
   ['untyped variadic SQL parameters', 'npm', ['run', 'verify:untyped-jsonb-params']],
   ['AI-binding disclosure controls', 'npm', ['run', 'verify:ai-binding-disclosure:self-test']],
   ['AI-binding disclosure', 'npm', ['run', 'verify:ai-binding-disclosure']],
+  ['Workers AI model authority', 'npm', ['run', 'verify:workers-ai-model-authority']],
   ['RLS connection single-source controls', 'npm', ['run', 'verify:rls-connection-single-source:self-test']],
   ['RLS connection single-source', 'npm', ['run', 'verify:rls-connection-single-source']],
   ['deploy provenance wiring', 'npm', ['run', 'verify:deploy-provenance']],

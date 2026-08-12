@@ -10,6 +10,7 @@
 import type { WorkspaceActivitySummary } from '../dal/workspace-activity-store';
 import { companyDescriptor, type CustomerContextProfile } from '../dal/customer-context-store';
 import type { ModelExecutionObserver } from '../lib/model-execution-lineage';
+import { PLATFORM_WORKERS_AI_MODEL } from './model-runtime-capabilities';
 
 export interface DigestProposal {
   summary: string;
@@ -55,7 +56,7 @@ export interface AiRunner {
 }
 
 /** The Workers-AI text model used for digest drafting (small instruct model; free-tier friendly). */
-export const DIGEST_LLM_MODEL = '@cf/meta/llama-3.1-8b-instruct';
+export const DIGEST_LLM_MODEL = PLATFORM_WORKERS_AI_MODEL;
 
 export interface DigestDraft extends DigestProposal {
   generated_by: 'llm' | 'deterministic';

@@ -13,12 +13,17 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const CONFIG = 'wrangler.pilot-shadow.toml';
 const API_BASE = 'https://api-test.xlooop.com';
 const WORKER = 'xlooop-api-pilot-shadow';
-const EXPECTED_SELF_TEST_CHECKS = 5;
+const EXPECTED_SELF_TEST_CHECKS = 7;
 const REQUIRED_SECRETS = [
   'DATABASE_URL',
   'MODEL_RUNTIME_ACTIVE_KEY_ID',
   'MODEL_RUNTIME_ENC_KEYS',
   'XLOOOP_RLS_APP_DATABASE_URL',
+];
+const PREFLIGHT_SCRIPTS = [
+  ['scripts/verify-pilot-shadow-config.mjs', 'pilot-shadow config verifier'],
+  ['scripts/verify-pilot-shadow-database-role-contract.mjs', 'pilot-shadow database role contract'],
+  ['scripts/verify-workers-ai-model-authority.mjs', 'Workers AI model authority'],
 ];
 
 function fail(message) {
@@ -97,6 +102,10 @@ function selfTest() {
     ['production authority fails', assessPilotShadowHealth({ ...valid, authority: 'production' }, expected).includes('authority')],
     ['missing keyring fails', assessPilotShadowHealth({ ...valid, bindings: {} }, expected).includes('model_runtime_keyring')],
     ['durable pilot API domain is the deploy and health authority', API_BASE === 'https://api-test.xlooop.com'],
+    ['pilot deploy verifies owner and RLS database roles before Wrangler',
+      PREFLIGHT_SCRIPTS.some(([script]) => script === 'scripts/verify-pilot-shadow-database-role-contract.mjs')],
+    ['pilot deploy verifies the Workers AI model authority before Wrangler',
+      PREFLIGHT_SCRIPTS.some(([script]) => script === 'scripts/verify-workers-ai-model-authority.mjs')],
   ];
   if (checks.length !== EXPECTED_SELF_TEST_CHECKS) {
     fail(`self-test registered ${checks.length} checks; expected ${EXPECTED_SELF_TEST_CHECKS}`);
@@ -128,7 +137,9 @@ async function main() {
     fail('candidate deployment contract is not the isolated pilot-shadow target');
   }
   const contract = JSON.parse(readFileSync(path.join(ROOT, 'docs/contracts/api-contract.v1.json'), 'utf8'));
-  run(process.execPath, ['scripts/verify-pilot-shadow-config.mjs'], { label: 'pilot-shadow config verifier' });
+  for (const [script, label] of PREFLIGHT_SCRIPTS) {
+    run(process.execPath, [script], { label });
+  }
 
   const wrangler = path.join(ROOT, 'node_modules', 'wrangler', 'bin', 'wrangler.js');
   const secretOutput = run(process.execPath, [wrangler, 'secret', 'list', '--config', CONFIG], {

@@ -1,7 +1,10 @@
 import type { ModelRuntimeProvider } from '../dal/model-runtime-store';
 import { CLOUD_EXECUTABLE_PROVIDERS } from './model-runtime-provider-adapters';
 
-export const PLATFORM_WORKERS_AI_MODEL = '@cf/meta/llama-3.1-8b-instruct';
+// Cloudflare deprecated the former Llama 3.1 default on 2026-05-30. Keep every
+// first-party Workers AI callsite on this single authority so model retirement
+// cannot strand chat while the Settings resolver still reports a valid runtime.
+export const PLATFORM_WORKERS_AI_MODEL = '@cf/zai-org/glm-4.7-flash';
 export const PLATFORM_ANTHROPIC_MODEL = 'claude-sonnet-4-6';
 
 const RELAY_REQUIRED_PROVIDERS = ['ollama', 'lm_studio', 'vllm', 'llama_cpp', 'custom'] as const;

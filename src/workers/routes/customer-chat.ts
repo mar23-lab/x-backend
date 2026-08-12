@@ -721,6 +721,15 @@ async function handleCustomerChat(ctx: CustomerChatContext) {
         workspace_id: workspaceId,
         stage: 'execution',
         attempts: err.attempts.length,
+        attempt_results: err.attempts.map((attempt) => ({
+          runtime_id: attempt.runtime_id,
+          provider: attempt.provider,
+          model: attempt.model,
+          status: attempt.status,
+          error_code: attempt.error_code,
+          latency_ms: attempt.latency_ms,
+          execution_receipt_id: attempt.execution_receipt_id,
+        })),
       });
       ctx.status(503);
       return ctx.json({

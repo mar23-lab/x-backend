@@ -384,7 +384,7 @@ describe('answerCockpitChat — LLM-richer + fail-safe + grounded provenance', (
     const r = await answerCockpitChat('summarize', FACTS(), ai, 'ask', undefined, 'llama', observer);
     expect(r.generated_by).toBe('llm');
     expect(calls).toEqual([
-      { start: { provider: 'workers_ai', model_key: '@cf/meta/llama-3.1-8b-instruct' } },
+      { start: { provider: 'workers_ai', model_key: '@cf/zai-org/glm-4.7-flash' } },
       { finish: expect.objectContaining({ status: 'completed', tokens_in: 12, tokens_out: 8, error_code: null }) },
     ]);
   });
@@ -516,7 +516,7 @@ describe('answerCockpitChat — Y-wave APPLY (personalization profile injection,
 describe('answerCockpitChat — P6 Claude premium tier (deep-research)', () => {
   const realFetch = globalThis.fetch;
   afterEach(() => { globalThis.fetch = realFetch; });
-  const LLAMA = '@cf/meta/llama-3.1-8b-instruct';
+  const LLAMA = '@cf/zai-org/glm-4.7-flash';
   const CLAUDE = 'claude-sonnet-4-6';
   const llamaAi: AiRunner = { run: async () => ({ response: 'A Llama answer that is comfortably long enough to clear the length floor for usable output.' }) };
 
