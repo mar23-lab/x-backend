@@ -42,6 +42,7 @@
     "verify:cloud-deployment-readiness",
     "verify:cloudflare-deployment-signal",
     "verify:deployed-surfaces",
+    "verify:active-repository-dependencies",
     "verify:deploy-provenance",
     "verify:deploy-schema-head",
     "verify:frontend-pair:self-test",

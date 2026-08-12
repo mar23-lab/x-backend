@@ -10,8 +10,8 @@ const args = new Map(process.argv.slice(2).map((arg) => {
 }));
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const repo = args.get('repo') || 'mar23-lab/Xlooop-XCP-demo';
-const workflow = args.get('workflow') || 'Cloudflare Pages Deploy - Xlooop';
+const repo = args.get('repo') || 'mar23-lab/x-backend';
+const workflow = args.get('workflow') || 'Xlooop backend authority';
 const runId = args.get('run-id') || '';
 
 if (!runId && actionsAreIntentionallyDisabled()) {

@@ -4,8 +4,8 @@
 // WHY THIS EXISTS
 // The MB-P side (export_mbp_to_xlooop_projection.py, cron-driven) regenerates a
 // metadata-safe / external-safe projection into
-//   <MBP_ROOT>/_sys/xcp-system/cross_repo_drafts/Xlooop-XCP-demo/data/
-// The consumer step — staging that file into Xlooop-XCP-demo/data/ — was MANUAL
+//   <MBP_ROOT>/_sys/xcp-system/cross_repo_drafts/x-backend/data/
+// The consumer step — staging that file into x-backend/data/ — was MANUAL
 // and had no automated trigger, so the projection silently expired (24h window)
 // and the commercial-demo-readiness gate went no_go on three "projection
 // freshness" blockers even though a FRESH external-safe export already existed
@@ -37,7 +37,8 @@ import { fileURLToPath } from 'node:url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..');
 const mbpRoot = process.env.MBP_ROOT || '/Users/maratbasyrov/WIP/MB-P';
-const srcDir = path.join(mbpRoot, '_sys/xcp-system/cross_repo_drafts/Xlooop-XCP-demo/data');
+const mbpProjectionRoot = process.env.MBP_PROJECTION_ROOT || mbpRoot;
+const srcDir = path.join(mbpProjectionRoot, '_sys/xcp-system/cross_repo_drafts/x-backend/data');
 const args = new Set(process.argv.slice(2));
 const checkOnly = args.has('--check');
 const readOnly = process.env.XCP_VERIFY_READONLY === '1';

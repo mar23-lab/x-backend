@@ -8008,6 +8008,94 @@
           "reason": "Enforce complete Terraform source migration and reject tracked state, plans, and populated local variables."
         }
       ]
+    },
+    {
+      "delta_id": "three-repository-runtime-reference-closure-20260813",
+      "generated_at": "2026-08-12T18:09:24.265Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "8a4bf3407034620b241132f72c0675e666208e70",
+      "target_base_commit": "8a4bf3407034620b241132f72c0675e666208e70",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "data/ecosystem-capability-consumer-manifest.json",
+          "target_blob": "c74417b0d2bfcc5867a44b7f60ea43dd5df0df36",
+          "reason": "Converge active runtime, projection, commercial-doc, CI, and deployment references onto x-backend, x-ai-front, and x-ai-docs"
+        },
+        {
+          "path": "scripts/ensure-mbp-projection-fresh.mjs",
+          "target_blob": "01256824d55321895ca4b13f82d9aacaabe14113",
+          "reason": "Complete projection-root isolation, cross-repository source freshness, and mutant-tested donor dependency enforcement"
+        },
+        {
+          "path": "scripts/generate-live-read-models.mjs",
+          "target_blob": "26173a5b3d01dc4247a91fbb1c87d3882c06f9db",
+          "reason": "Converge active runtime, projection, commercial-doc, CI, and deployment references onto x-backend, x-ai-front, and x-ai-docs"
+        },
+        {
+          "path": "scripts/generate-operations-live-stream.mjs",
+          "target_blob": "81a54f9f6830165cb9bbedd5af29052e15b781a6",
+          "reason": "Complete projection-root isolation, cross-repository source freshness, and mutant-tested donor dependency enforcement"
+        },
+        {
+          "path": "scripts/livestream-push-cron.sh",
+          "target_blob": "1ce0728a27cefd5cd6bf70bd821b7ef3bda8d1d7",
+          "reason": "Converge active runtime, projection, commercial-doc, CI, and deployment references onto x-backend, x-ai-front, and x-ai-docs"
+        },
+        {
+          "path": "scripts/poll-mbp-operations-live-stream.mjs",
+          "target_blob": "ead424b613fe616d4c3eedc5246222cb8d2fb582",
+          "reason": "Converge active runtime, projection, commercial-doc, CI, and deployment references onto x-backend, x-ai-front, and x-ai-docs"
+        },
+        {
+          "path": "scripts/verify-ecosystem-leverage-consumption.mjs",
+          "target_blob": "cc08ef6af11e08c6fbe7a4e792795080519e7ac7",
+          "reason": "Converge active runtime, projection, commercial-doc, CI, and deployment references onto x-backend, x-ai-front, and x-ai-docs"
+        },
+        {
+          "path": "scripts/verify-github-actions-runner-infra.mjs",
+          "target_blob": "e66237ffd948f5ec2426f777958d3df0ca27ac2a",
+          "reason": "Converge active runtime, projection, commercial-doc, CI, and deployment references onto x-backend, x-ai-front, and x-ai-docs"
+        },
+        {
+          "path": "scripts/verify-hosted-deployment-evidence.mjs",
+          "target_blob": "7eba4246c4c9b047f3d4f67de2c1e333e76562e4",
+          "reason": "Converge active runtime, projection, commercial-doc, CI, and deployment references onto x-backend, x-ai-front, and x-ai-docs"
+        },
+        {
+          "path": "package.json",
+          "target_blob": "1210d5e5719ed95eb01956a2ed5aa4ccff897c88",
+          "reason": "Complete projection-root isolation, cross-repository source freshness, and mutant-tested donor dependency enforcement"
+        },
+        {
+          "path": "scripts/verify-cloudflare-deployment-signal.mjs",
+          "target_blob": "d262028180b3993f5291a4ba6a29cef425ea2426",
+          "reason": "Register active repository dependency gate and point Cloudflare repository evidence at x-backend"
+        },
+        {
+          "path": "scripts/ci-local.mjs",
+          "target_blob": "fdfea4095868bb86cc22417709f885438dfa88b1",
+          "reason": "Complete projection-root isolation, cross-repository source freshness, and mutant-tested donor dependency enforcement"
+        },
+        {
+          "path": "data/cloud-deployment-readiness.json",
+          "target_blob": "5cea651de5343a1928f663a86b1ac9c28a669faa",
+          "reason": "Wire donor dependency closure into the complete release stack and readiness manifests"
+        },
+        {
+          "path": "data/cloudflare-deployment-signal.json",
+          "target_blob": "fa92b103e7b980733205a182fa09567e8a3fdbab",
+          "reason": "Wire donor dependency closure into the complete release stack and readiness manifests"
+        }
+      ],
+      "seed_exclusions": [
+        {
+          "path": "data/hosted-deployment-evidence.json",
+          "source_blob": "5f1c67b3286a7366e97e3e187de34c7b2b147fb7",
+          "reason": "Retire stale demo-era hosted deployment evidence after canonical DEPLOYED_SURFACES authority replacement"
+        }
+      ]
     }
   ]
 }

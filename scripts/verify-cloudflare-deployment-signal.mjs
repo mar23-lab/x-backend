@@ -50,7 +50,7 @@ process.exit(failures.length ? 1 : 0);
 function inspectRemote(checkName) {
   try {
     const head = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim();
-    const stdout = execFileSync('gh', ['api', `repos/mar23-lab/Xlooop-XCP-demo/commits/${head}/check-runs`, '--jq', '.check_runs[] | {name,status,conclusion,details_url}'], { encoding: 'utf8' });
+    const stdout = execFileSync('gh', ['api', `repos/mar23-lab/x-backend/commits/${head}/check-runs`, '--jq', '.check_runs[] | {name,status,conclusion,details_url}'], { encoding: 'utf8' });
     const runs = stdout.trim().split('\n').filter(Boolean).map((line) => JSON.parse(line));
     const found = runs.find((row) => row.name === checkName);
     if (found && found.conclusion !== 'success') warnings.push(`external_check_non_green:${found.conclusion}`);

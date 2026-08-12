@@ -23,9 +23,9 @@ set -euo pipefail
 NVM_NODE_BIN="$(ls -d "$HOME"/.nvm/versions/node/*/bin 2>/dev/null | sort -V | tail -1 || true)"
 export PATH="${NVM_NODE_BIN}:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin"
 
-# R55-S0-fix (260602): was Xlooop-XCP-demo-r50 (stale sibling); now canonical repo.
+# Canonical runtime source. Donor repositories must never be used as launchd roots.
 # Root cause of the 22.9h stale snapshot + 91x SLA violation caught in the 260602 audit.
-REPO="/Users/maratbasyrov/WIP/Xlooop/Xlooop-XCP-demo"
+REPO="${XLOOOP_BACKEND_ROOT:-/Users/maratbasyrov/WIP/Xlooop/x-backend}"
 LOG_DIR="$HOME/.mbp/logs"
 TOKEN_FILE="$HOME/.mbp/xlooop-ingest-token"
 

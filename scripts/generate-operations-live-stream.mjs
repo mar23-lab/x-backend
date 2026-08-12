@@ -16,16 +16,19 @@ const flagVal = (name) => {
   return hit ? hit.slice(name.length + 1) : null;
 };
 const mbpRoot = process.env.MBP_ROOT || '/Users/maratbasyrov/WIP/MB-P';
+const mbpProjectionRoot = process.env.MBP_PROJECTION_ROOT || mbpRoot;
 const inferredXlooopRoot = path.resolve(repoRoot, '..');
 const canonicalXlooopRoot = process.env.XLOOOP_WORKSPACE_ROOT || '/Users/maratbasyrov/WIP/Xlooop';
-const xBizRoot = resolveXBizRoot();
+const commercialDocsRoot = resolveCommercialDocsRoot();
 const requireLive = process.env.XLOOOP_REQUIRE_MBP_LIVE === '1';
 const defaultOutPath = path.join(repoRoot, 'data', 'operations-live-stream.json');
 const outPath = path.resolve(
   flagVal('--out') || process.env.XLOOOP_OPERATIONS_LIVE_STREAM_OUT || defaultOutPath,
 );
-const mbpOwnedStreamPath = path.join(mbpRoot, '_sys/xcp-system/cross_repo_drafts/Xlooop-XCP-demo/data/operations-live-stream.json');
-const XBIZ_INVESTOR_SOURCE_ADAPTER = 'x-biz-investor-readiness-source-adapter';
+const mbpOwnedStreamPath = path.join(mbpProjectionRoot, '_sys/xcp-system/cross_repo_drafts/x-backend/data/operations-live-stream.json');
+// Stable adapter/scope IDs are retained for stored-event compatibility; their
+// living documentation source is x-ai-docs, not the retired x-biz repository.
+const COMMERCIAL_READINESS_SOURCE_ADAPTER = 'x-biz-investor-readiness-source-adapter';
 const LATEST_EVIDENCE_LEDGER_ADAPTER = 'mbp-latest-committed-evidence-ledger';
 const REQUIRED_STREAM_TYPES = [
   'packet',
@@ -89,6 +92,15 @@ function tailJsonLines(absPath, limit = 20) {
 }
 
 const _gitTimeCache = new Map();
+function sourceGitRoot(absPath) {
+  const normalized = path.resolve(absPath);
+  if (normalized.startsWith(path.resolve(mbpRoot))) return path.resolve(mbpRoot);
+  if (normalized.startsWith(path.resolve(commercialDocsRoot))) {
+    return path.resolve(commercialDocsRoot, '..', '..');
+  }
+  return repoRoot;
+}
+
 function fileMtimeIso(absPath) {
   // F5: prefer the file's git COMMIT time (deterministic across rebuilds) over the
   // filesystem mtime - the build mutates mtimes (it regenerates sibling artifacts), so
@@ -98,7 +110,9 @@ function fileMtimeIso(absPath) {
   let result = null;
   try {
     const iso = execFileSync('git', ['log', '-1', '--format=%cI', '--', absPath], {
-      cwd: repoRoot, encoding: 'utf8',
+      cwd: sourceGitRoot(absPath),
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
     }).trim();
     if (iso) result = new Date(iso).toISOString();
   } catch (_) {
@@ -124,11 +138,11 @@ function exists(absPath) {
   }
 }
 
-function resolveXBizRoot() {
+function resolveCommercialDocsRoot() {
   const candidates = [
-    process.env.X_BIZ_ROOT,
-    path.join(inferredXlooopRoot, 'x-biz'),
-    path.join(canonicalXlooopRoot, 'x-biz'),
+    process.env.X_AI_DOCS_COMMERCIAL_ROOT,
+    path.join(inferredXlooopRoot, 'x-ai-docs', 'business', 'commercial-authority'),
+    path.join(canonicalXlooopRoot, 'x-ai-docs', 'business', 'commercial-authority'),
   ].filter(Boolean);
   return candidates.find((candidate) => exists(candidate)) || candidates[0];
 }
@@ -137,17 +151,20 @@ function relToMbp(absPath) {
   return path.relative(mbpRoot, absPath).replaceAll(path.sep, '/');
 }
 
-function relToXBiz(absPath) {
-  return path.relative(xBizRoot, absPath).replaceAll(path.sep, '/');
+function relToCommercialDocs(absPath) {
+  return path.relative(commercialDocsRoot, absPath).replaceAll(path.sep, '/');
 }
 
 function relSource(absPath) {
   const normalized = path.resolve(absPath);
-  if (normalized.startsWith(repoRoot)) {
-    return `Xlooop-XCP-demo/${path.relative(repoRoot, normalized).replaceAll(path.sep, '/')}`;
+  if (normalized.startsWith(path.resolve(mbpProjectionRoot))) {
+    return path.relative(mbpProjectionRoot, normalized).replaceAll(path.sep, '/');
   }
-  if (normalized.startsWith(xBizRoot)) {
-    return `xlooop-x-biz/${relToXBiz(normalized)}`;
+  if (normalized.startsWith(repoRoot)) {
+    return `x-backend/${path.relative(repoRoot, normalized).replaceAll(path.sep, '/')}`;
+  }
+  if (normalized.startsWith(commercialDocsRoot)) {
+    return `x-ai-docs/business/commercial-authority/${relToCommercialDocs(normalized)}`;
   }
   return relToMbp(normalized);
 }
@@ -160,10 +177,10 @@ function evidenceRef(absPath, label) {
   };
 }
 
-function xBizEvidenceRef(absPath, label) {
+function commercialEvidenceRef(absPath, label) {
   const sourcePath = relSource(absPath);
   return {
-    ref_id: `x-biz:${relToXBiz(absPath)}`,
+    ref_id: `x-ai-docs:business/commercial-authority/${relToCommercialDocs(absPath)}`,
     label,
     source_path: sourcePath,
   };
@@ -382,26 +399,25 @@ function countBy(rows, key) {
   return out;
 }
 
-function xBizSourcePath(relativePath) {
-  return path.join(xBizRoot, relativePath);
+function commercialSourcePath(relativePath) {
+  return path.join(commercialDocsRoot, relativePath);
 }
 
-function xBizSourceFiles() {
+function commercialSourceFiles() {
   return [
     'README.md',
-    'START_HERE.md',
-    'masters/INVESTOR_EVIDENCE_PACK.md',
-    'masters/EVIDENCE_GAP_TRACKER.md',
-    'masters/PITCH_DECK.md',
-    'masters/PILOT_COMMERCIAL_MODEL.md',
-    'investor/EXECUTIVE_SUMMARY.md',
-    'investor/TRACTION.md',
-    'investor/FINANCIAL_MODEL.md',
-    'docs/_archive/audits/sales-evidence/sales-claims-evidence-map.json',
-    'docs/_archive/audits/x-biz-evidence-gap-tracker.json',
-    'docs/_archive/audits/yc-readiness-scorecard-20260502.json',
+    'INVESTOR_EVIDENCE_PACK.md',
+    'EVIDENCE_GAP_TRACKER.md',
+    'PITCH_DECK.md',
+    'PILOT_COMMERCIAL_MODEL.md',
+    'EXECUTIVE_SUMMARY.md',
+    'TRACTION.md',
+    'FINANCIAL_MODEL.md',
+    'audits/sales-claims-evidence-map.json',
+    'audits/evidence-gap-tracker.json',
+    'audits/yc-readiness-scorecard-20260502.json',
   ]
-    .map(xBizSourcePath)
+    .map(commercialSourcePath)
     .filter(exists);
 }
 
@@ -455,26 +471,26 @@ function buildLatestEvidenceLedgerRows() {
   })];
 }
 
-function firstExistingXBizPath(relativePaths) {
-  return relativePaths.map(xBizSourcePath).find(exists) || null;
+function firstExistingCommercialPath(relativePaths) {
+  return relativePaths.map(commercialSourcePath).find(exists) || null;
 }
 
-function buildXBizInvestorReadinessRows() {
-  if (!exists(xBizRoot)) return [];
+function buildCommercialInvestorReadinessRows() {
+  if (!exists(commercialDocsRoot)) return [];
 
-  const trackerPath = firstExistingXBizPath([
-    'masters/EVIDENCE_GAP_TRACKER.md',
-    'docs/_archive/audits/x-biz-evidence-gap-tracker.json',
+  const trackerPath = firstExistingCommercialPath([
+    'EVIDENCE_GAP_TRACKER.md',
+    'audits/evidence-gap-tracker.json',
   ]);
-  const trackerJsonPath = firstExistingXBizPath(['docs/_archive/audits/x-biz-evidence-gap-tracker.json']);
-  const investorPackPath = firstExistingXBizPath(['masters/INVESTOR_EVIDENCE_PACK.md']);
-  const pilotModelPath = firstExistingXBizPath(['masters/PILOT_COMMERCIAL_MODEL.md']);
-  const pitchDeckPath = firstExistingXBizPath(['masters/PITCH_DECK.md']);
-  const executiveSummaryPath = firstExistingXBizPath(['investor/EXECUTIVE_SUMMARY.md']);
-  const tractionPath = firstExistingXBizPath(['investor/TRACTION.md']);
-  const financialModelPath = firstExistingXBizPath(['investor/FINANCIAL_MODEL.md']);
-  const salesClaimsPath = firstExistingXBizPath(['docs/_archive/audits/sales-evidence/sales-claims-evidence-map.json']);
-  const ycScorecardPath = firstExistingXBizPath(['docs/_archive/audits/yc-readiness-scorecard-20260502.json']);
+  const trackerJsonPath = firstExistingCommercialPath(['audits/evidence-gap-tracker.json']);
+  const investorPackPath = firstExistingCommercialPath(['INVESTOR_EVIDENCE_PACK.md']);
+  const pilotModelPath = firstExistingCommercialPath(['PILOT_COMMERCIAL_MODEL.md']);
+  const pitchDeckPath = firstExistingCommercialPath(['PITCH_DECK.md']);
+  const executiveSummaryPath = firstExistingCommercialPath(['EXECUTIVE_SUMMARY.md']);
+  const tractionPath = firstExistingCommercialPath(['TRACTION.md']);
+  const financialModelPath = firstExistingCommercialPath(['FINANCIAL_MODEL.md']);
+  const salesClaimsPath = firstExistingCommercialPath(['audits/sales-claims-evidence-map.json']);
+  const ycScorecardPath = firstExistingCommercialPath(['audits/yc-readiness-scorecard-20260502.json']);
 
   const trackerJson = trackerJsonPath ? readJson(trackerJsonPath, true) : null;
   const salesClaims = salesClaimsPath ? readJson(salesClaimsPath, true) : null;
@@ -491,10 +507,10 @@ function buildXBizInvestorReadinessRows() {
       workspace_id: 'x-biz',
       project_id: 'x-biz-investor-readiness',
       mode_jump: partial.mode_jump || 'evidence',
-      source_adapter: XBIZ_INVESTOR_SOURCE_ADAPTER,
+      source_adapter: COMMERCIAL_READINESS_SOURCE_ADAPTER,
       timestamp_iso: partial.timestamp_iso || fileMtimeIso(sourcePath) || buildTimestampIso(),
       evidence_refs: [
-        xBizEvidenceRef(sourcePath, partial.evidence_label || partial.title),
+        commercialEvidenceRef(sourcePath, partial.evidence_label || partial.title),
         ...(partial.evidence_refs || []),
       ],
       risk_lane: partial.risk_lane || 'low',
@@ -514,7 +530,7 @@ function buildXBizInvestorReadinessRows() {
     stream_type: 'readiness_signal',
     state: 'claim_safety_canonical_review_required',
     title: 'Claim-safety ledger',
-    summary: compactText(`Canonical x-biz evidence gate is bound. Status mix: ${Object.entries(trackerStatusCounts).map(([k, v]) => `${k}=${v}`).join(' · ') || 'markdown ledger available'}; external claims still require tracker status and owner review.`, 220),
+    summary: compactText(`Canonical x-ai-docs commercial evidence gate is bound. Status mix: ${Object.entries(trackerStatusCounts).map(([k, v]) => `${k}=${v}`).join(' · ') || 'markdown ledger available'}; external claims still require tracker status and owner review.`, 220),
     quick_actions: ['Review claim safety', 'Open evidence', 'Prepare owner sign-off'],
     evidence_label: 'Canonical evidence-gap tracker',
   });
@@ -523,7 +539,7 @@ function buildXBizInvestorReadinessRows() {
     stream_type: 'packet',
     state: 'investor_pack_review_required',
     title: 'Investor evidence pack',
-    summary: 'Category, demo proof, pilot model, defensibility, risks, missing proof, and next milestone are available from the x-biz master evidence pack.',
+    summary: 'Category, product proof, pilot model, defensibility, risks, missing proof, and next milestone are available from the governed commercial evidence pack.',
     quick_actions: ['Open evidence', 'Prepare investor pack', 'Mark evidence ready'],
     evidence_label: 'Investor evidence pack',
   });
@@ -541,7 +557,7 @@ function buildXBizInvestorReadinessRows() {
     stream_type: 'governance_event',
     state: 'deck_claims_require_tracker_alignment',
     title: 'Pitch deck posture',
-    summary: 'Pitch materials are bound to x-biz masters and must map factual claims through the evidence tracker before external use.',
+    summary: 'Pitch materials are bound to x-ai-docs commercial authority and must map factual claims through the evidence tracker before external use.',
     quick_actions: ['Review deck claims', 'Open evidence', 'Confirm owner review'],
     evidence_label: 'Pitch deck',
   });
@@ -597,12 +613,12 @@ function buildXBizInvestorReadinessRows() {
 }
 
 function mergeXBizInvestorRows(contract) {
-  const xbizRows = buildXBizInvestorReadinessRows();
+  const xbizRows = buildCommercialInvestorReadinessRows();
   const latestEvidenceLedgerRows = buildLatestEvidenceLedgerRows();
   if (!xbizRows.length && !latestEvidenceLedgerRows.length) return contract;
   const rows = [
     ...(contract.rows || []).filter((row) =>
-      row.source_adapter !== XBIZ_INVESTOR_SOURCE_ADAPTER
+      row.source_adapter !== COMMERCIAL_READINESS_SOURCE_ADAPTER
       && row.source_adapter !== LATEST_EVIDENCE_LEDGER_ADAPTER
       && !String(row.row_id || '').startsWith('xbiz-investor-readiness:')
       && !String(row.row_id || '').startsWith('latest-evidence-ledger:')),
@@ -615,7 +631,7 @@ function mergeXBizInvestorRows(contract) {
   const requiredSourceCoverage = sourceCoverage(rows);
   const sourceFiles = [
     ...(Array.isArray(contract.source_files) ? contract.source_files : []),
-    ...xBizSourceFiles().map(relSource),
+    ...commercialSourceFiles().map(relSource),
     ...latestEvidenceLedgerSourceFiles().map(relSource),
   ];
   const uniqueSourceFiles = [...new Set(sourceFiles)];
@@ -644,7 +660,7 @@ function isMbpOwnedOperationsLiveStream(contract) {
     && contract.contract_version === 'v1.0.0'
     && contract.authority_model === 'mbp_owned_read_model_snapshot'
     && contract.source_repo === 'MB-P'
-    && contract.consumer_repo === 'Xlooop-XCP-demo'
+    && contract.consumer_repo === 'x-backend'
     && contract.source_mode === 'staged_snapshot'
     && contract.fallback_fixture_used === false
     && contract.direct_mbp_repo_write_allowed === false
@@ -886,7 +902,7 @@ function buildRows(sources) {
     }
   }
 
-  rows.push(...buildXBizInvestorReadinessRows());
+  rows.push(...buildCommercialInvestorReadinessRows());
   rows.push(...buildLatestEvidenceLedgerRows());
 
   return rows
@@ -911,15 +927,15 @@ function buildContract() {
   }
 
   const projectionPaths = [
-    path.join(mbpRoot, '_sys/xcp-system/cross_repo_drafts/Xlooop-XCP-demo/data/mbp-operations-projection.json'),
+    path.join(mbpProjectionRoot, '_sys/xcp-system/cross_repo_drafts/x-backend/data/mbp-operations-projection.json'),
     path.join(repoRoot, 'data/mbp-operations-projection.json'),
   ];
   const operationsProjectionPath = projectionPaths.find(exists);
   if (!operationsProjectionPath) throw new Error('No MB-P operations projection found');
 
   const gatewayReceiptPaths = [
+    path.join(mbpProjectionRoot, '_sys/xcp-system/cross_repo_drafts/x-backend/data/mbp-gateway-receipts.json'),
     path.join(repoRoot, 'data/mbp-gateway-receipts.json'),
-    path.join(mbpRoot, '_sys/xcp-system/cross_repo_drafts/Xlooop-XCP-demo/data/mbp-gateway-receipts.json'),
   ];
   const gatewayReceiptsPath = gatewayReceiptPaths.find(exists);
   if (!gatewayReceiptsPath) throw new Error('No MB-P gateway receipt projection found');
@@ -979,7 +995,7 @@ function buildContract() {
     ...latestEvidenceLedgerSourceFiles(),
   ].filter(Boolean).map(relSource);
   sourceFiles.push(...(sources.gatewayReceipts?.source_files || []));
-  sourceFiles.push(...xBizSourceFiles().map(relSource));
+  sourceFiles.push(...commercialSourceFiles().map(relSource));
   const uniqueSourceFiles = [...new Set(sourceFiles)];
   return {
     schema_id: 'operations_live_stream_v1',
@@ -990,7 +1006,7 @@ function buildContract() {
     authority_source: 'MB-P operations live stream authority',
     authority_model: 'mbp_owned_read_model_snapshot',
     source_repo: 'MB-P',
-    consumer_repo: 'Xlooop-XCP-demo',
+    consumer_repo: 'x-backend',
     source_mode: 'staged_snapshot',
     claim_posture: claimPosture(),
     gateway_poll_sla: sources.gatewayReceipts?.poll_sla || {

@@ -40,6 +40,8 @@
     "verify:pages-sentry-release": "node scripts/verify-pages-sentry-release.mjs",
     "verify:rate-limit-binding-parity": "node scripts/verify-rate-limit-binding-parity.mjs",
     "verify:deployed-surfaces": "node scripts/verify-deployed-surfaces.mjs",
+    "verify:active-repository-dependencies": "node scripts/verify-active-repository-dependencies.mjs",
+    "verify:active-repository-dependencies:self-test": "node scripts/verify-active-repository-dependencies.mjs --self-test",
     "verify:deploy-provenance": "node scripts/verify-deploy-provenance-wiring.mjs",
     "verify:deploy-schema-head": "node scripts/verify-deploy-schema-head.mjs",
     "verify:deploy-schema-head:self-test": "node scripts/verify-deploy-schema-head.mjs --self-test",
