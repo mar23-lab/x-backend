@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { execFileSync, spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import {
   cpSync,
   mkdirSync,
@@ -101,6 +102,19 @@ const identifiedHtml = indexHtml.includes('name="xlooop-frontend-sha"')
   )
   : indexHtml.replace(/<head([^>]*)>/i, `<head$1>\n    ${frontendIdentity}`);
 writeFileSync(indexPath, identifiedHtml);
+
+// Assembly owns the Pages shell transformation above, while the frontend
+// runtime manifest owns the declared hashes of frontend-emitted files. Re-seal
+// only the transformed shell digest so both provenance layers describe the
+// bytes that will actually be deployed. The outer release manifest hashes this
+// updated runtime manifest and every deployed file below.
+const runtimeManifestPath = path.join(outputDir, 'runtime-manifest.json');
+const runtimeManifest = JSON.parse(readFileSync(runtimeManifestPath, 'utf8'));
+if (!runtimeManifest.files || typeof runtimeManifest.files !== 'object') {
+  fail('frontend runtime manifest does not declare file hashes');
+}
+runtimeManifest.files['index.html'] = createHash('sha256').update(identifiedHtml).digest('hex');
+writeFileSync(runtimeManifestPath, `${JSON.stringify(runtimeManifest, null, 2)}\n`);
 
 // The backend manifest is the sole deployment authority for app-plane headers.
 // Always replace any donor file so a frontend build can never smuggle or retain
