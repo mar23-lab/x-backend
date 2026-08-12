@@ -7655,6 +7655,32 @@
           "reason": "validated exact-target canary and two-company live-evidence closure"
         }
       ]
+    },
+    {
+      "delta_id": "clerk-verification-diagnostics-20260812",
+      "generated_at": "2026-08-12T02:00:32Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "8c6cb46d2c93c4ae2d807305f3365a84d1dd2276",
+      "target_base_commit": "8c6cb46d2c93c4ae2d807305f3365a84d1dd2276",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/services/clerk-token-verifier.ts",
+          "target_blob": "824fab0278adea17498d900dc42d8bc89de1295a",
+          "reason": "Classify Clerk SDK failures into non-sensitive operational reason codes at the single verifier boundary"
+        },
+        {
+          "path": "src/workers/routes/session.ts",
+          "target_blob": "8849b736df01624839ed31b60d2f37a21798b035",
+          "reason": "Expose safe session verification reason codes and structured pilot diagnostics without token or identity claims"
+        },
+        {
+          "path": "src/workers/__tests__/clerk-token-verifier.test.ts",
+          "target_blob": "272070280375d6aa49ebc59347fdd56ad9ba92dd",
+          "reason": "Prevent regression in non-sensitive Clerk verification failure classification"
+        }
+      ]
     }
   ]
 }
