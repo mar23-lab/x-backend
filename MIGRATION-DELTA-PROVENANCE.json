@@ -7758,6 +7758,72 @@
           "reason": "Make retired Workers AI model detection mandatory in local CI."
         }
       ]
+    },
+    {
+      "delta_id": "external-capability-tenant-canary-20260812",
+      "generated_at": "2026-08-12T06:37:24.729Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "56c968a30ccee1d381b204dc60b6e7999115ba61",
+      "target_base_commit": "56c968a30ccee1d381b204dc60b6e7999115ba61",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "docs/architecture/backend/EXTERNAL_CAPABILITY_ADOPTION_NATIVE_ADAPTERS.md",
+          "target_blob": "9ab2aa2a340433d7070e40e8f4edf1378a3a9bde",
+          "reason": "Converge reviewed restricted adapter with hashed tenant activation and honest normalized-output provenance"
+        },
+        {
+          "path": "docs/architecture/backend/EXTERNAL_CAPABILITY_REGISTRY.json",
+          "target_blob": "3433eb775f3c3da9f2dbf51529f856c1e8cbf808",
+          "reason": "Converge reviewed restricted adapter with hashed tenant activation and honest normalized-output provenance"
+        },
+        {
+          "path": "src/workers/routes/customer-chat.ts",
+          "target_blob": "3ec22712b76625d1a384731560dacb71906577a9",
+          "reason": "Converge reviewed restricted adapter with hashed tenant activation and honest normalized-output provenance"
+        },
+        {
+          "path": "src/workers/routes/documents.ts",
+          "target_blob": "9efc8df3d66b0cfcfa3416c2b4ba3cc12312786e",
+          "reason": "Converge reviewed restricted adapter with hashed tenant activation and honest normalized-output provenance"
+        },
+        {
+          "path": "src/workers/services/cockpit-chat.ts",
+          "target_blob": "47f92b2bb8ed3e9ec310bd6841adc9001709d713",
+          "reason": "Converge reviewed restricted adapter with hashed tenant activation and honest normalized-output provenance"
+        },
+        {
+          "path": "vitest.workers.config.ts",
+          "target_blob": "52a76d0aff7aafae1a72b7c31be07b22df0f3956",
+          "reason": "Converge reviewed restricted adapter with hashed tenant activation and honest normalized-output provenance"
+        },
+        {
+          "path": "wrangler.pilot-shadow.toml",
+          "target_blob": "fe36c6659245f6a8752cc224784bf240820b5fa1",
+          "reason": "Converge reviewed restricted adapter with hashed tenant activation and honest normalized-output provenance"
+        },
+        {
+          "path": "wrangler.toml",
+          "target_blob": "ed186a863f099745c39f135b0ff4426a75aa9311",
+          "reason": "Converge reviewed restricted adapter with hashed tenant activation and honest normalized-output provenance"
+        },
+        {
+          "path": "package.json",
+          "target_blob": "5513a68c0d475b367d9789a35d81b27b3471798c",
+          "reason": "Converge reviewed restricted adapter with hashed tenant activation and honest normalized-output provenance"
+        },
+        {
+          "path": "package-lock.json",
+          "target_blob": "78c683f5d3539ffc85e454356fd8c07c124656ab",
+          "reason": "Converge reviewed restricted adapter with hashed tenant activation and honest normalized-output provenance"
+        },
+        {
+          "path": "src/workers/__tests__/documents-route.test.ts",
+          "target_blob": "a7d703fde03481cfb73a1b11b678e9e8cc0b5b48",
+          "reason": "Converge reviewed restricted adapter with hashed tenant activation and honest normalized-output provenance"
+        }
+      ]
     }
   ]
 }

@@ -63,6 +63,12 @@
         "process_isolation_required": true,
         "raw_output_never_customer_authority": true
       },
+      "runtime_activation_policy": {
+        "global_kill_switch_required": true,
+        "hashed_tenant_allowlist_required": true,
+        "empty_allowlist_means_disabled": true,
+        "production_default_allowed": false
+      },
       "acceptance_gates": {
         "extraction_fidelity_pct_min": 95,
         "citation_source_span_coverage_pct_min": 95,
@@ -192,6 +198,12 @@
         "replay_from_original_required": true,
         "redaction_before_compression_required": true,
         "citation_check_after_decompression_required": true
+      },
+      "runtime_activation_policy": {
+        "global_kill_switch_required": true,
+        "hashed_tenant_allowlist_required": true,
+        "empty_allowlist_means_disabled": true,
+        "production_default_allowed": false
       },
       "acceptance_gates": {
         "semantic_case_count_min": 40,

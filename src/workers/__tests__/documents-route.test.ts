@@ -16,9 +16,18 @@ const mocks = vi.hoisted(() => ({
   insertDocumentWithAuthorityRow: vi.fn(),
   updateDocumentAdmissibilityWithAuthorityRow: vi.fn(),
   neonClient: vi.fn(() => ({})),
+  convertDocumentWithMarkitdown: vi.fn(),
 }));
 
 vi.mock('../db/client', () => ({ neonClient: mocks.neonClient }));
+
+vi.mock('../services/external-capability-adapter', () => ({
+  markitdownEnabled: vi.fn(async (env: Record<string, unknown>, workspaceId: string) =>
+    env.MARKITDOWN_ADAPTER_ENABLED === 'true'
+    && env.EXTERNAL_CAPABILITY_TENANT_REFS === workspaceId
+    && Boolean(env.EXTERNAL_CAPABILITY_ADAPTER)),
+  convertDocumentWithMarkitdown: mocks.convertDocumentWithMarkitdown,
+}));
 
 vi.mock('../dal/document-store', () => ({
   insertDocumentWithAuthorityRow: mocks.insertDocumentWithAuthorityRow,
@@ -75,6 +84,15 @@ beforeEach(() => {
   mocks.insertDocumentWithAuthorityRow.mockReset();
   mocks.updateDocumentAdmissibilityWithAuthorityRow.mockReset();
   mocks.neonClient.mockClear();
+  mocks.convertDocumentWithMarkitdown.mockReset();
+  mocks.convertDocumentWithMarkitdown.mockResolvedValue({
+    extracted_text: 'Converted Office document',
+    source_spans: [{ start: 0, end: 25, source_ref: `sha256:${'a'.repeat(64)}` }],
+    receipt: {
+      capability: 'markitdown', tool_version: '0.1.7', source_hash: 'a'.repeat(64),
+      output_hash: 'b'.repeat(64), latency_ms: 12, replayable: true,
+    },
+  });
   mocks.insertDocumentWithAuthorityRow.mockImplementation(async (_sql: unknown, doc: any) => {
     const meta = {
       id: doc.id, workspace_id: doc.workspace_id, project_id: doc.project_id, filename: doc.filename,
@@ -158,6 +176,55 @@ describe('POST/GET /documents · tenant isolation + validation', () => {
   it('415 unsupported content type', async () => {
     const res = await appFor('ws-A').request(uploadReq('x', 'e.exe', 'application/x-msdownload'), undefined, ENV);
     expect(res.status).toBe(415);
+  });
+
+  it('keeps Office types unavailable while the private adapter flag is off', async () => {
+    const res = await appFor('ws-A').request(
+      uploadReq('docx bytes', 'brief.docx', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'),
+      undefined,
+      ENV,
+    );
+    expect(res.status).toBe(415);
+    expect(mocks.convertDocumentWithMarkitdown).not.toHaveBeenCalled();
+  });
+
+  it('ingests Office types only through the private adapter and returns its replay receipt', async () => {
+    const adapterEnv = {
+      ...ENV,
+      MARKITDOWN_ADAPTER_ENABLED: 'true',
+      EXTERNAL_CAPABILITY_TENANT_REFS: 'ws-A',
+      EXTERNAL_CAPABILITY_ADAPTER: { fetch: vi.fn() },
+    } as never;
+    const res = await appFor('ws-A').request(
+      uploadReq('docx bytes', 'brief.docx', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'),
+      undefined,
+      adapterEnv,
+    );
+    expect(res.status).toBe(201);
+    const body = await res.json() as any;
+    expect(body.document.extracted_text).toBe('Converted Office document');
+    expect(body.conversion).toMatchObject({ capability: 'markitdown', replayable: true });
+    expect(mocks.convertDocumentWithMarkitdown).toHaveBeenCalledWith(expect.objectContaining({
+      workspace_id: 'ws-A',
+      filename: 'brief.docx',
+      source_hash: 'a'.repeat(64),
+    }));
+  });
+
+  it('does not let the MarkItDown flag take over the native PDF lane', async () => {
+    const adapterEnv = {
+      ...ENV,
+      MARKITDOWN_ADAPTER_ENABLED: 'true',
+      EXTERNAL_CAPABILITY_TENANT_REFS: 'ws-A',
+      EXTERNAL_CAPABILITY_ADAPTER: { fetch: vi.fn() },
+    } as never;
+    const res = await appFor('ws-A').request(
+      uploadReq('not a real pdf', 'brief.pdf', 'application/pdf'),
+      undefined,
+      adapterEnv,
+    );
+    expect(res.status).toBe(201);
+    expect(mocks.convertDocumentWithMarkitdown).not.toHaveBeenCalled();
   });
 
   it('413 over the 5 MB cap', async () => {

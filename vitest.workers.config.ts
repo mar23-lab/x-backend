@@ -9,18 +9,25 @@
 import { cloudflareTest } from '@cloudflare/vitest-pool-workers';
 import { defineConfig } from 'vitest/config';
 import { readFileSync, writeFileSync } from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-// Tests that exercise LLM paths inject an AI mock per request, so the pool uses a derived config
-// without the production [ai] binding. The current pool embeds a runtime newer than the configured
-// compatibility date; the derived file is regenerated on every run to prevent config drift.
-const TEST_WRANGLER_PATH = path.resolve(__dirname, 'wrangler.test.generated.toml');
+// Tests inject AI and private service mocks per request. Keep the derived config outside the
+// worktree so a read-only test run cannot dirty tracked files.
+const TEST_WRANGLER_PATH = path.join(os.tmpdir(), `xlooop-wrangler-test-${process.pid}.toml`);
+const productionConfig = readFileSync(path.resolve(__dirname, 'wrangler.toml'), 'utf8');
 writeFileSync(
   TEST_WRANGLER_PATH,
-  readFileSync(path.resolve(__dirname, 'wrangler.toml'), 'utf8').replace('[ai]\nbinding = "AI"\n', ''),
+  productionConfig
+    .replace('main = "src/workers/index.ts"', `main = "${path.resolve(__dirname, 'src/workers/index.ts')}"`)
+    .replace('[ai]\nbinding = "AI"\n', '')
+    .replace(
+      '[[services]]\nbinding = "EXTERNAL_CAPABILITY_ADAPTER"\nservice = "xlooop-capability-adapter"\n',
+      '',
+    ),
 );
 
 const liveRlsBindings =

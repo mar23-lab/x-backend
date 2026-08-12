@@ -1,0 +1,12 @@
+FROM docker.io/cloudflare/sandbox:0.12.5-python
+
+RUN python3 -m pip install --no-cache-dir \
+    "markitdown[docx,pptx,xlsx]==0.1.7" \
+    "headroom-ai==0.34.0"
+
+RUN mkdir -p /opt/xlooop/tiktoken-cache \
+    && TIKTOKEN_CACHE_DIR=/opt/xlooop/tiktoken-cache \
+       python3 -c "import tiktoken; tiktoken.encoding_for_model('gpt-4o')"
+
+COPY src/capability-worker/external-capability-runner.py /opt/xlooop/external-capability-runner.py
+RUN chmod 0555 /opt/xlooop/external-capability-runner.py

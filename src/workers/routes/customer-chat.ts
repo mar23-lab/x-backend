@@ -57,8 +57,13 @@ import {
   type ProjectSourceGroundingFact,
   type SourceGroundingFact,
 } from '../services/cockpit-chat';
+import {
+  compressPromptWithHeadroom,
+  headroomEnabled,
+  type ExternalCapabilityAdapterEnv,
+} from '../services/external-capability-adapter';
 
-export interface CustomerChatEnv extends AuthEnv {
+export interface CustomerChatEnv extends AuthEnv, ExternalCapabilityAdapterEnv {
   DATABASE_URL: string;
   AI?: AiRunner;
   ANTHROPIC_API_KEY?: string;
@@ -714,6 +719,15 @@ async function handleCustomerChat(ctx: CustomerChatContext) {
         mode,
         executionObserver,
         liveRuntimePlan,
+        await headroomEnabled(ctx.env, workspaceId)
+          ? ({ system, user }) => compressPromptWithHeadroom({
+              env: ctx.env,
+              workspace_id: workspaceId,
+              request_id: ctx.get('request_id') || null,
+              system,
+              user,
+            })
+          : undefined,
       );
     } catch (err) {
       if (!(err instanceof ProviderUnavailableError)) throw err;
@@ -897,6 +911,7 @@ async function handleCustomerChat(ctx: CustomerChatContext) {
         provider_config_version_id: result.execution.provider_config_version_id,
         latency_ms: result.execution.latency_ms,
         attempts: result.execution.attempts,
+        compression: result.execution.compression ?? null,
         usage: result.usage ?? null,
       } : null,
     }, customerSafeSerializerEnabled((ctx.env as { CUSTOMER_SAFE_SERIALIZER_ENABLED?: string }).CUSTOMER_SAFE_SERIALIZER_ENABLED)); // P3 (260714): DEFAULT-SAFE — a missing/malformed flag serializes; only an explicit 'false' (internal testing) yields raw. Was envFlagTrue = fail-open when the wrangler var vanished.
