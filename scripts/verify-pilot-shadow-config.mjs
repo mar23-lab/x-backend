@@ -25,6 +25,7 @@ if (!Number.isInteger(migrationHead) || configuredSchemaHead !== migrationHead) 
 }
 // Reuse the existing Access-protected test surface so x-ai-front remains the only product frontend.
 requireMatch(/^ALLOWED_ORIGIN_PATTERN\s*=\s*"https:\/\/test\.xlooop\.com,https:\/\/\*\.xlooop-test\.pages\.dev"$/m, 'pilot frontend CORS must be scoped to test.xlooop.com plus xlooop-test Pages previews');
+requireMatch(/^CLERK_AUTHORIZED_PARTIES\s*=\s*"https:\/\/test\.xlooop\.com"$/m, 'pilot Clerk authorized parties must be exactly test.xlooop.com');
 requireMatch(/queue\s*=\s*"xlooop-tenant-projection-pilot-shadow"/m, 'isolated projection queue is required');
 requireMatch(/^SINGLE_INTAKE_ENABLED\s*=\s*"true"$/m, 'single intake must be enabled');
 requireMatch(/^ROLE_SKILL_CATALOG_ENABLED\s*=\s*"true"$/m, 'role/skill catalog must be enabled');
@@ -37,6 +38,10 @@ requireMatch(/^PURGE_DELETED_ENABLED\s*=\s*"false"$/m, 'irreversible purge must 
 
 if (/\[\[routes\]\]|(?:^|[^-])api\.xlooop\.com|XLOOOP_AUTHORITY_MODE\s*=\s*"production"/.test(activeSource)) {
   errors.push('pilot-shadow config must not contain a production route or production authority');
+}
+const authorizedParties = /^CLERK_AUTHORIZED_PARTIES\s*=\s*"([^"]+)"$/m.exec(activeSource)?.[1] ?? '';
+if (authorizedParties.includes('app.xlooop.com') || authorizedParties.includes('www.xlooop.com')) {
+  errors.push('pilot Clerk authorized parties must not inherit production frontend origins');
 }
 if (/DIGEST_SWEEP_ENABLED\s*=\s*"true"|RECLASSIFY_CRON_ENABLED\s*=\s*"true"/.test(activeSource)) {
   errors.push('autonomous production loops must remain disabled');
