@@ -22,8 +22,10 @@ const mocks = vi.hoisted(() => ({
 vi.mock('../db/client', () => ({ neonClient: mocks.neonClient }));
 
 vi.mock('../services/external-capability-adapter', () => ({
-  markitdownEnabled: vi.fn((env: Record<string, unknown>) =>
-    env.MARKITDOWN_ADAPTER_ENABLED === 'true' && Boolean(env.EXTERNAL_CAPABILITY_ADAPTER)),
+  markitdownEnabled: vi.fn(async (env: Record<string, unknown>, workspaceId: string) =>
+    env.MARKITDOWN_ADAPTER_ENABLED === 'true'
+    && env.EXTERNAL_CAPABILITY_TENANT_REFS === workspaceId
+    && Boolean(env.EXTERNAL_CAPABILITY_ADAPTER)),
   convertDocumentWithMarkitdown: mocks.convertDocumentWithMarkitdown,
 }));
 
@@ -190,6 +192,7 @@ describe('POST/GET /documents · tenant isolation + validation', () => {
     const adapterEnv = {
       ...ENV,
       MARKITDOWN_ADAPTER_ENABLED: 'true',
+      EXTERNAL_CAPABILITY_TENANT_REFS: 'ws-A',
       EXTERNAL_CAPABILITY_ADAPTER: { fetch: vi.fn() },
     } as never;
     const res = await appFor('ws-A').request(
@@ -212,6 +215,7 @@ describe('POST/GET /documents · tenant isolation + validation', () => {
     const adapterEnv = {
       ...ENV,
       MARKITDOWN_ADAPTER_ENABLED: 'true',
+      EXTERNAL_CAPABILITY_TENANT_REFS: 'ws-A',
       EXTERNAL_CAPABILITY_ADAPTER: { fetch: vi.fn() },
     } as never;
     const res = await appFor('ws-A').request(

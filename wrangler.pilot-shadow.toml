@@ -38,6 +38,7 @@ CLERK_AUTHORIZED_PARTIES = "https://test.xlooop.com"
 LOG_LEVEL = "info"
 MARKITDOWN_ADAPTER_ENABLED = "false"
 HEADROOM_COMPRESSION_ENABLED = "false"
+EXTERNAL_CAPABILITY_TENANT_REFS = ""
 
 # Commercial candidate paths are active only inside this isolated environment.
 SINGLE_INTAKE_ENABLED = "true"

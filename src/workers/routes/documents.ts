@@ -77,7 +77,7 @@ documentsRoute.post('/documents', async (ctx) => {
     const projectId = (typeof projectRaw === 'string' && projectRaw.length > 0) ? projectRaw : null;
 
     const contentType = file.type || 'application/octet-stream';
-    const markitdownAvailable = markitdownEnabled(ctx.env);
+    const markitdownAvailable = await markitdownEnabled(ctx.env, auth.workspace_id);
     if (!CORE_CONTENT_TYPES.has(contentType) && !(markitdownAvailable && MARKITDOWN_CONTENT_TYPES.has(contentType))) {
       return errorEnvelope(ctx, { status: 415, code: 'UNSUPPORTED_TYPE', message: `unsupported file type: ${contentType}` });
     }

@@ -12,17 +12,18 @@ Third-party tools may enter only through the External Capability Registry. They 
 
 - `external_benchmark`: evaluate outside runtime; no customer influence.
 - `canary_only`: advisory detector/probe for controlled validation; no runtime authority.
-- `restricted_adapter`: run behind a sandboxed backend adapter and tenant feature flag.
+- `restricted_adapter`: run behind a sandboxed backend adapter, a global kill switch, and an exact
+  allowlist of hashed tenant references.
 - `native_rebuild`: harvest useful patterns, then reimplement in Xlooop-native schemas and controls.
 - `default_runtime`: allowed only after production evidence and owner approval.
 
 ## MarkItDown
 
-MarkItDown is the strongest near-term conversion candidate. It should start as a sandboxed restricted adapter for file conversion only.
+MarkItDown is the strongest near-term conversion candidate. It starts as a sandboxed restricted adapter for file conversion only.
 
 Allowed lane: tenant-scoped file conversion into source-span-wrapped, redaction-safe normalized text.
 
-Required controls: no network by default, plugins disabled by default, file allowlists, size limits, timeouts, process isolation, redaction, source-span citation, ACL checks, delete/export linkage, and replay from the original artifact.
+Required controls: no network by default, plugins disabled by default, file allowlists, size limits, timeouts, process isolation, redaction, provenance, ACL checks, delete/export linkage, and replay from the original artifact. The current receipt binds the complete normalized output to the original source hash; it does not claim original-file character offsets. Fine-grained source spans remain a separate native parser requirement before source-span-authoritative use.
 
 ## Hyper-Extract
 
@@ -52,7 +53,7 @@ implementation of the restricted-adapter lane, not approval to make either capab
 
 ```text
 tenant API Worker
-  -> disabled-by-default tenant capability flag
+  -> disabled-by-default global kill switch + hashed tenant allowlist
   -> private Cloudflare service binding
   -> non-public Capability Worker
   -> one-request, no-egress Cloudflare Sandbox
@@ -87,9 +88,11 @@ receipt, semantic-guard failure, lower reduction, or adapter failure sends the u
 in-memory prompt through the same live-provider plan. Compression never creates an assistant answer
 and never becomes context or graph authority.
 
-Both production and pilot-shadow flags remain `false`. Deployment order is capability Worker first,
-then the API binding. A staging enablement additionally requires an exact owner-approved deployment
-tuple and receipt-backed tenant canary. The 2026-08-12 local Wrangler dry run built the exact
+Both production and pilot-shadow flags remain `false`, and their tenant allowlists remain empty.
+Deployment order is capability Worker first, then the API binding. A staging enablement additionally
+requires an exact owner-approved deployment tuple, the hashed tenant reference in
+`EXTERNAL_CAPABILITY_TENANT_REFS`, and a receipt-backed tenant canary. A true global flag with an
+empty or non-matching tenant allowlist remains disabled. The 2026-08-12 local Wrangler dry run built the exact
 container image successfully. Direct `--network none` execution converted the governed DOCX with
 valid source/output hashes and replay status, and compressed a representative governed packet by
 `55.2%` while preserving its decision, tenant, citation, owner, due date, and replay hash. The

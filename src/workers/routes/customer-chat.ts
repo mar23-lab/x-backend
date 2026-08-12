@@ -719,7 +719,7 @@ async function handleCustomerChat(ctx: CustomerChatContext) {
         mode,
         executionObserver,
         liveRuntimePlan,
-        headroomEnabled(ctx.env)
+        await headroomEnabled(ctx.env, workspaceId)
           ? ({ system, user }) => compressPromptWithHeadroom({
               env: ctx.env,
               workspace_id: workspaceId,

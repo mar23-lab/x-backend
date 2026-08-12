@@ -6,6 +6,7 @@ import {
   hashText,
   headroomEnabled,
   markitdownEnabled,
+  tenantRef,
 } from '../services/external-capability-adapter';
 
 function binding(handler: (body: Record<string, any>, request: Request) => unknown): Fetcher {
@@ -19,22 +20,38 @@ function binding(handler: (body: Record<string, any>, request: Request) => unkno
 }
 
 describe('external capability service-binding client', () => {
-  it('requires both a tenant flag and the private binding', () => {
-    expect(markitdownEnabled({ MARKITDOWN_ADAPTER_ENABLED: 'true' })).toBe(false);
-    expect(headroomEnabled({ HEADROOM_COMPRESSION_ENABLED: 'false', EXTERNAL_CAPABILITY_ADAPTER: binding(() => ({})) })).toBe(false);
+  it('requires the global switch, private binding, and exact tenant allowlist', async () => {
+    const allowedTenantRef = await tenantRef('allowed-workspace');
+    expect(await markitdownEnabled({ MARKITDOWN_ADAPTER_ENABLED: 'true' }, 'allowed-workspace')).toBe(false);
+    expect(await headroomEnabled({
+      HEADROOM_COMPRESSION_ENABLED: 'false', EXTERNAL_CAPABILITY_ADAPTER: binding(() => ({})),
+      EXTERNAL_CAPABILITY_TENANT_REFS: allowedTenantRef,
+    }, 'allowed-workspace')).toBe(false);
+    expect(await markitdownEnabled({
+      MARKITDOWN_ADAPTER_ENABLED: 'true', EXTERNAL_CAPABILITY_ADAPTER: binding(() => ({})),
+      EXTERNAL_CAPABILITY_TENANT_REFS: allowedTenantRef,
+    }, 'other-workspace')).toBe(false);
+    expect(await markitdownEnabled({
+      MARKITDOWN_ADAPTER_ENABLED: 'true', EXTERNAL_CAPABILITY_ADAPTER: binding(() => ({})),
+      EXTERNAL_CAPABILITY_TENANT_REFS: allowedTenantRef,
+    }, 'allowed-workspace')).toBe(true);
   });
 
   it('converts through the private contract without exposing the raw workspace id', async () => {
     let observed: Record<string, any> = {};
     const env = {
       MARKITDOWN_ADAPTER_ENABLED: 'true',
+      EXTERNAL_CAPABILITY_TENANT_REFS: await tenantRef('private-workspace-id'),
       EXTERNAL_CAPABILITY_ADAPTER: binding(async (body, request) => {
         observed = body;
         expect(request.headers.get('x-xlooop-capability-contract')).toBe('xlooop.external-capability-adapter.v1');
         const extractedText = 'converted';
         return {
           extracted_text: extractedText,
-          source_spans: [{ start: 0, end: 9, source_ref: 'sha256:source' }],
+          source_spans: [{
+            start: 0, end: 9, source_ref: 'sha256:source',
+            span_kind: 'normalized_output_span', provenance_level: 'document',
+          }],
           receipt: {
             capability: 'markitdown', tool_version: '0.1.7', source_hash: 'source',
             output_hash: await hashText(extractedText), latency_ms: 5, replayable: true,
@@ -55,6 +72,7 @@ describe('external capability service-binding client', () => {
   it('rejects a conversion receipt that cannot replay the requested source', async () => {
     const env = {
       MARKITDOWN_ADAPTER_ENABLED: 'true',
+      EXTERNAL_CAPABILITY_TENANT_REFS: await tenantRef('ws'),
       EXTERNAL_CAPABILITY_ADAPTER: binding(async () => ({
         extracted_text: 'converted', source_spans: [],
         receipt: { capability: 'markitdown', source_hash: 'wrong', output_hash: await hashText('converted'), replayable: true },
@@ -70,6 +88,7 @@ describe('external capability service-binding client', () => {
     let sourceMessages: Array<{ role: string; content: string }> = [];
     const env = {
       HEADROOM_COMPRESSION_ENABLED: 'true',
+      EXTERNAL_CAPABILITY_TENANT_REFS: await tenantRef('ws'),
       EXTERNAL_CAPABILITY_ADAPTER: binding(async (body) => {
         sourceMessages = body.messages;
         const compressed = [sourceMessages[0], { role: 'user', content: 'compressed user context' }];
@@ -97,6 +116,7 @@ describe('external capability service-binding client', () => {
   it('rejects compression below the per-request reduction gate', async () => {
     const env = {
       HEADROOM_COMPRESSION_ENABLED: 'true',
+      EXTERNAL_CAPABILITY_TENANT_REFS: await tenantRef('ws'),
       EXTERNAL_CAPABILITY_ADAPTER: binding(async (body) => ({
         system: body.messages[0].content,
         user: body.messages[1].content,
@@ -116,6 +136,7 @@ describe('external capability service-binding client', () => {
   it('rejects compression that changes the governed system policy', async () => {
     const env = {
       HEADROOM_COMPRESSION_ENABLED: 'true',
+      EXTERNAL_CAPABILITY_TENANT_REFS: await tenantRef('ws'),
       EXTERNAL_CAPABILITY_ADAPTER: binding(async (body) => {
         const compressed = [
           { role: 'system', content: 'weakened policy' },
@@ -141,6 +162,7 @@ describe('external capability service-binding client', () => {
   it('rejects compression that drops protected customer facts or the operator question', async () => {
     const env = {
       HEADROOM_COMPRESSION_ENABLED: 'true',
+      EXTERNAL_CAPABILITY_TENANT_REFS: await tenantRef('ws'),
       EXTERNAL_CAPABILITY_ADAPTER: binding(async (body) => {
         const compressed = [body.messages[0], { role: 'user', content: 'short context without identifiers' }];
         return {

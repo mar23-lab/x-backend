@@ -8,6 +8,7 @@ export interface ExternalCapabilityAdapterEnv {
   EXTERNAL_CAPABILITY_ADAPTER?: Fetcher;
   MARKITDOWN_ADAPTER_ENABLED?: string;
   HEADROOM_COMPRESSION_ENABLED?: string;
+  EXTERNAL_CAPABILITY_TENANT_REFS?: string;
 }
 
 export interface CapabilityReceipt {
@@ -21,7 +22,13 @@ export interface CapabilityReceipt {
 
 export interface DocumentConversionResult {
   extracted_text: string;
-  source_spans: Array<{ start: number; end: number; source_ref: string }>;
+  source_spans: Array<{
+    start: number;
+    end: number;
+    source_ref: string;
+    span_kind: 'normalized_output_span';
+    provenance_level: 'document';
+  }>;
   receipt: CapabilityReceipt;
 }
 
@@ -48,12 +55,28 @@ export class ExternalCapabilityUnavailableError extends Error {
   }
 }
 
-export function markitdownEnabled(env: ExternalCapabilityAdapterEnv): boolean {
-  return envFlagTrue(env.MARKITDOWN_ADAPTER_ENABLED) && Boolean(env.EXTERNAL_CAPABILITY_ADAPTER);
+function configuredTenantRefs(env: ExternalCapabilityAdapterEnv): Set<string> {
+  return new Set((env.EXTERNAL_CAPABILITY_TENANT_REFS || '')
+    .split(',')
+    .map((value) => value.trim().toLowerCase())
+    .filter((value) => /^[a-f0-9]{32}$/.test(value)));
 }
 
-export function headroomEnabled(env: ExternalCapabilityAdapterEnv): boolean {
-  return envFlagTrue(env.HEADROOM_COMPRESSION_ENABLED) && Boolean(env.EXTERNAL_CAPABILITY_ADAPTER);
+async function tenantCapabilityEnabled(
+  env: ExternalCapabilityAdapterEnv,
+  workspaceId: string,
+  flag: string | undefined,
+): Promise<boolean> {
+  if (!envFlagTrue(flag) || !env.EXTERNAL_CAPABILITY_ADAPTER || !workspaceId) return false;
+  return configuredTenantRefs(env).has(await tenantRef(workspaceId));
+}
+
+export async function markitdownEnabled(env: ExternalCapabilityAdapterEnv, workspaceId: string): Promise<boolean> {
+  return tenantCapabilityEnabled(env, workspaceId, env.MARKITDOWN_ADAPTER_ENABLED);
+}
+
+export async function headroomEnabled(env: ExternalCapabilityAdapterEnv, workspaceId: string): Promise<boolean> {
+  return tenantCapabilityEnabled(env, workspaceId, env.HEADROOM_COMPRESSION_ENABLED);
 }
 
 export async function hashText(value: string): Promise<string> {
@@ -108,7 +131,7 @@ export async function convertDocumentWithMarkitdown(input: {
   content_base64: string;
   source_hash: string;
 }): Promise<DocumentConversionResult> {
-  if (!markitdownEnabled(input.env)) {
+  if (!await markitdownEnabled(input.env, input.workspace_id)) {
     throw new ExternalCapabilityUnavailableError('MarkItDown adapter is disabled');
   }
   const result = await callAdapter<DocumentConversionResult>(input.env, '/v1/convert/markitdown', {
@@ -123,6 +146,7 @@ export async function convertDocumentWithMarkitdown(input: {
   const sourceRef = `sha256:${input.source_hash}`;
   const sourceSpanValid = result.source_spans?.some((span) => (
     span.start === 0 && span.end === result.extracted_text.length && span.source_ref === sourceRef
+    && span.span_kind === 'normalized_output_span' && span.provenance_level === 'document'
   ));
   if (!result.extracted_text || result.receipt?.capability !== 'markitdown'
     || result.receipt.source_hash !== input.source_hash || result.receipt.output_hash !== outputHash
@@ -165,7 +189,7 @@ export async function compressPromptWithHeadroom(input: {
   system: string;
   user: string;
 }): Promise<PromptCompressionResult> {
-  if (!headroomEnabled(input.env)) {
+  if (!await headroomEnabled(input.env, input.workspace_id)) {
     throw new ExternalCapabilityUnavailableError('Headroom adapter is disabled');
   }
   const system = redactForCompression(input.system);

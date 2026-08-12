@@ -74,8 +74,15 @@ for (const [id, config] of [['production', production], ['pilot', pilot]]) {
   requireCheck(`${id}_defaults_disabled`, (
     config.includes('MARKITDOWN_ADAPTER_ENABLED = "false"')
     && config.includes('HEADROOM_COMPRESSION_ENABLED = "false"')
+    && config.includes('EXTERNAL_CAPABILITY_TENANT_REFS = ""')
   ), null);
 }
+
+requireCheck('tenant_allowlist_required', (
+  client.includes('EXTERNAL_CAPABILITY_TENANT_REFS')
+  && client.includes('configuredTenantRefs')
+  && client.includes('tenantCapabilityEnabled')
+), null);
 
 requireCheck('tenant_identifier_minimized', (
   client.includes('tenantRef(input.workspace_id)')
@@ -85,6 +92,12 @@ requireCheck('api_revalidates_receipt_hashes', (
   client.includes('result.receipt.output_hash !== outputHash')
   && client.includes('result.receipt.source_hash !== input.source_hash')
   && client.includes('result.receipt.source_hash !== originalHash')
+), null);
+requireCheck('markitdown_provenance_granularity_honest', (
+  client.includes("span_kind: 'normalized_output_span'")
+  && client.includes("provenance_level: 'document'")
+  && runner.includes('"span_kind": "normalized_output_span"')
+  && runner.includes('"provenance_level": "document"')
 ), null);
 requireCheck('headroom_per_request_reduction_gate', (
   client.includes('MIN_HEADROOM_REDUCTION_PCT = 25')

@@ -150,6 +150,7 @@ service = "xlooop-capability-adapter"
 ENVIRONMENT = "production"
 MARKITDOWN_ADAPTER_ENABLED = "false"
 HEADROOM_COMPRESSION_ENABLED = "false"
+EXTERNAL_CAPABILITY_TENANT_REFS = ""
 # W9-H1 (260722, operator-ratified): declare the authority this worker has de-facto held since
 # the ~260719 cutover. XLOOOP_AUTHORITY_MODE has exactly ONE runtime consumer (routes/health.ts,
 # reporting only — no behavioral branch), so this is a truthful-attestation change, not a

@@ -37,7 +37,13 @@ def convert_markitdown(payload, workdir):
     output_hash = sha256_text(text)
     return {
         "extracted_text": text,
-        "source_spans": [{"start": 0, "end": len(text), "source_ref": f"sha256:{source_hash}"}],
+        "source_spans": [{
+            "start": 0,
+            "end": len(text),
+            "source_ref": f"sha256:{source_hash}",
+            "span_kind": "normalized_output_span",
+            "provenance_level": "document",
+        }],
         "receipt": {
             "capability": "markitdown",
             "tool_version": version("markitdown"),
