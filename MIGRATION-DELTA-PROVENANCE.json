@@ -7702,6 +7702,62 @@
           "reason": "Prevent pilot deployments from omitting the staging Clerk party or accepting production frontend origins"
         }
       ]
+    },
+    {
+      "delta_id": "codex-workers-ai-model-refresh-20260812",
+      "generated_at": "2026-08-12T04:11:40.611Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "b26f000e6dc8c41305f31ee7ed4ff36e9e8728dd",
+      "target_base_commit": "b26f000e6dc8c41305f31ee7ed4ff36e9e8728dd",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/services/cockpit-chat.ts",
+          "target_blob": "d50776372fb16549e4b2fc4ece1183454bdbdf8f",
+          "reason": "Replace Cloudflare model retired 2026-05-30 with the governed supported platform default; add runtime and DSN prevention gates."
+        },
+        {
+          "path": "src/workers/services/prompt-refine.ts",
+          "target_blob": "14a0d6345fd79dfaa8837fa9cfc66931d519cbf0",
+          "reason": "Replace Cloudflare model retired 2026-05-30 with the governed supported platform default; add runtime and DSN prevention gates."
+        },
+        {
+          "path": "src/workers/services/packet-enrichment.ts",
+          "target_blob": "e58eda7b712a2fd84c90cf290e4465c73a6d21d6",
+          "reason": "Replace Cloudflare model retired 2026-05-30 with the governed supported platform default; add runtime and DSN prevention gates."
+        },
+        {
+          "path": "src/workers/services/agent-digest.ts",
+          "target_blob": "503b7f4eef1116bdf8b18d33ad0ec2918653139e",
+          "reason": "Replace Cloudflare model retired 2026-05-30 with the governed supported platform default; add runtime and DSN prevention gates."
+        },
+        {
+          "path": "src/workers/routes/customer-chat.ts",
+          "target_blob": "3057b6aac1957c9c673649a5fae59ca0d9dd7963",
+          "reason": "Replace Cloudflare model retired 2026-05-30 with the governed supported platform default; add runtime and DSN prevention gates."
+        },
+        {
+          "path": "src/workers/__tests__/cockpit-chat.test.ts",
+          "target_blob": "7db8233fe7b58f50449d686600272f7aee0bafde",
+          "reason": "Replace Cloudflare model retired 2026-05-30 with the governed supported platform default; add runtime and DSN prevention gates."
+        },
+        {
+          "path": "package.json",
+          "target_blob": "3a99e757449f9baa699855ef6f772aa8b4dba4f9",
+          "reason": "Replace Cloudflare model retired 2026-05-30 with the governed supported platform default; add runtime and DSN prevention gates."
+        },
+        {
+          "path": "src/workers/__tests__/model-execution-receipt-store.test.ts",
+          "target_blob": "3d370167df42353aff7fc3d45b8ca4040bca97fc",
+          "reason": "Replace stale model key in execution-receipt test."
+        },
+        {
+          "path": "scripts/ci-local.mjs",
+          "target_blob": "5bbf680792f908fdcb7ed18d8b9e08535f385912",
+          "reason": "Make retired Workers AI model detection mandatory in local CI."
+        }
+      ]
     }
   ]
 }

@@ -12,8 +12,9 @@
 
 import type { AiRunner } from './agent-digest';
 import type { ModelExecutionObserver } from '../lib/model-execution-lineage';
+import { PLATFORM_WORKERS_AI_MODEL } from './model-runtime-capabilities';
 
-export const ENRICHMENT_LLM_MODEL = '@cf/meta/llama-3.1-8b-instruct';
+export const ENRICHMENT_LLM_MODEL = PLATFORM_WORKERS_AI_MODEL;
 export const ENRICHMENT_CLAUDE_MODEL = 'claude-sonnet-4-6';
 
 export interface EnrichmentObject {
