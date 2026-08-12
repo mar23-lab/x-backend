@@ -7855,6 +7855,22 @@
           "reason": "Root-cause repair for Pages middleware artifact identity, live ratification, and Cloudflare rollback API compatibility"
         }
       ]
+    },
+    {
+      "delta_id": "pages-runtime-manifest-reseal-20260812",
+      "generated_at": "2026-08-12T09:56:11.603Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "8176abddedcead73a00709cb3efbbdeedbb9ba2b",
+      "target_base_commit": "8176abddedcead73a00709cb3efbbdeedbb9ba2b",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "scripts/prepare-app-pages-release.mjs",
+          "target_blob": "840a0b8882778b0952ff465ed3a83060576b66d6",
+          "reason": "Re-seal nested frontend manifest after Pages shell identity transformation"
+        }
+      ]
     }
   ]
 }
