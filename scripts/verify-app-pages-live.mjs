@@ -15,7 +15,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const releaseDir = path.resolve(process.env.XLOOOP_APP_PAGES_RELEASE_DIR || path.join(root, 'dist-app-pages-release'));
 const appUrl = String(process.env.XLOOOP_APP_URL || 'https://app.xlooop.com').replace(/\/+$/, '');
 const requireSentry = process.env.XLOOOP_REQUIRE_SENTRY === '1';
-const liveWaitSeconds = Number(process.env.XLOOOP_APP_LIVE_WAIT_SECONDS || '120');
+const liveWaitSeconds = Number(process.env.XLOOOP_APP_LIVE_WAIT_SECONDS || '300');
 
 function sha256(bytes) {
   return createHash('sha256').update(bytes).digest('hex');

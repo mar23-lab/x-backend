@@ -8289,6 +8289,22 @@
           "reason": "Classify rich_ui_v3 as runtime-manifest based so strict CSP external configuration is ratified through its authoritative JSON contract rather than nonexistent inline HTML globals."
         }
       ]
+    },
+    {
+      "delta_id": "pages-custom-domain-propagation-bound-20260813",
+      "generated_at": "2026-08-13T13:30:48Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "0a0d6043259be64dab4a8a17cbbe4f5755549034",
+      "target_base_commit": "0a0d6043259be64dab4a8a17cbbe4f5755549034",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "scripts/verify-app-pages-live.mjs",
+          "target_blob": "474bac0ad53a050f382de5d0835d642a29f9bd78",
+          "reason": "Raise the bounded custom-domain convergence default to the existing five-minute maximum after production evidence showed release-manifest routing converged before root HTML and exceeded 120 seconds."
+        }
+      ]
     }
   ]
 }
