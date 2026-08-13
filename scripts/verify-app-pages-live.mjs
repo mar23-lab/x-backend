@@ -34,6 +34,10 @@ export function matchesDeploymentIdentity(actual, expected) {
     && actual?.artifact_digest === expected?.artifact_digest;
 }
 
+export function usesRuntimeManifest(artifactContract) {
+  return artifactContract === 'react_vite_v2' || artifactContract === 'rich_ui_v3';
+}
+
 if (process.argv.includes('--self-test')) {
   const sha = 'a'.repeat(40);
   const artifact = '<html><head>\n<meta charset="utf-8"></head><body></body></html>';
@@ -67,6 +71,9 @@ if (process.argv.includes('--self-test')) {
       backend_sha: 'b'.repeat(40),
       artifact_digest: 'c'.repeat(64),
     })],
+    ['React release uses its runtime manifest', usesRuntimeManifest('react_vite_v2')],
+    ['rich commercial release uses its runtime manifest', usesRuntimeManifest('rich_ui_v3')],
+    ['legacy wired release keeps inline marker parsing', !usesRuntimeManifest('legacy_wired_v1')],
   ];
   for (const [name, ok] of checks) console.log(`  ${ok ? 'PASS' : 'FAIL'} ${name}`);
   const passed = checks.filter(([, ok]) => ok).length;
@@ -100,23 +107,23 @@ function validateLiveWaitSeconds() {
 async function assessLiveRelease(manifest) {
   const failures = [];
   const nonce = `xlooop-release-${Date.now()}`;
-  const reactArtifact = manifest.artifact_contract === 'react_vite_v2';
+  const runtimeManifestArtifact = usesRuntimeManifest(manifest.artifact_contract);
   const [indexResponse, manifestResponse, runtimeIdentityResponse, healthResponse] = await Promise.all([
     fetchRequired(`${appUrl}/?release_probe=${nonce}`),
     fetchRequired(`${appUrl}/release-manifest.json?release_probe=${nonce}`),
-    fetchRequired(`${appUrl}/${reactArtifact ? 'runtime-manifest.json' : 'contract-meta.js'}?release_probe=${nonce}`),
+    fetchRequired(`${appUrl}/${runtimeManifestArtifact ? 'runtime-manifest.json' : 'contract-meta.js'}?release_probe=${nonce}`),
     fetchRequired(`${manifest.api_base}/api/v1/health?release_probe=${nonce}`),
   ]);
   const [indexBytes, liveManifest, runtimeIdentity, health] = await Promise.all([
     indexResponse.arrayBuffer().then((value) => Buffer.from(value)),
     parseJsonResponse(manifestResponse, 'live release manifest'),
-    reactArtifact
+    runtimeManifestArtifact
       ? parseJsonResponse(runtimeIdentityResponse, 'live runtime manifest')
       : runtimeIdentityResponse.text(),
     parseJsonResponse(healthResponse, 'backend health response'),
   ]);
   const html = indexBytes.toString('utf8');
-  const config = reactArtifact
+  const config = runtimeManifestArtifact
     ? parseFrontendRuntimeManifest(runtimeIdentity)
     : parseFrontendReleaseHtml(html);
   const artifact = assessFrontendReleaseArtifact(config, {
@@ -128,7 +135,7 @@ async function assessLiveRelease(manifest) {
   });
   failures.push(...artifact.problems);
   if (JSON.stringify(liveManifest) !== JSON.stringify(manifest)) failures.push('live_release_manifest');
-  if (reactArtifact) {
+  if (runtimeManifestArtifact) {
     const localRuntime = JSON.parse(readFileSync(path.join(releaseDir, 'runtime-manifest.json'), 'utf8'));
     if (JSON.stringify(runtimeIdentity) !== JSON.stringify(localRuntime)) failures.push('live_runtime_manifest');
   } else if (!runtimeIdentity.includes(manifest.contract_hash)) failures.push('live_contract_meta');
