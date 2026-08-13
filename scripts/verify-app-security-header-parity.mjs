@@ -41,7 +41,12 @@ function staticParityFailures(manifestObject, emitted, label) {
     if (!emitted.includes(`${name}: ${value}`)) out.push(`${label} missing "${name}: ${value}"`);
   }
   for (const o of manifestObject.path_overrides || []) {
-    if (!emitted.includes(o.match)) out.push(`${label} missing path "${o.match}"`);
+    const rendered = [String(o.match)];
+    for (const [name, value] of Object.entries(o.headers || {})) {
+      rendered.push(`  ${name}: ${value}`);
+    }
+    const block = rendered.join('\n');
+    if (!emitted.includes(block)) out.push(`${label} missing exact override block "${block}"`);
   }
   return out;
 }
@@ -55,6 +60,22 @@ const REQUIRED = [
   "Permissions-Policy",
   "Reporting-Endpoints",
 ];
+const REQUIRED_MUTABLE_RUNTIME_PATHS = [
+  '/',
+  '/index.html',
+  '/runtime-manifest.json',
+  '/release-manifest.json',
+  '/runtime-config.js',
+  '/app-logic.js',
+  '/clerk-boot.js',
+  '/contract-meta.js',
+  '/live-data.js',
+  '/authority-consent.js',
+  '/support.js',
+  '/runtime-ui.css',
+  '/sentry-bootstrap.js',
+  '/vendor/*',
+];
 
 // (1) Manifest sanity
 if (!manifest.global_headers || Object.keys(manifest.global_headers).length === 0) {
@@ -62,6 +83,16 @@ if (!manifest.global_headers || Object.keys(manifest.global_headers).length === 
 }
 for (const req of REQUIRED) {
   if (!manifest.global_headers?.[req]) failures.push(`manifest missing required header ${req}`);
+}
+for (const runtimePath of REQUIRED_MUTABLE_RUNTIME_PATHS) {
+  const matches = (manifest.path_overrides || []).filter((entry) => entry.match === runtimePath);
+  if (matches.length !== 1) {
+    failures.push(`manifest must declare exactly one cache override for mutable runtime path ${runtimePath}`);
+    continue;
+  }
+  if (matches[0].headers?.['Cache-Control'] !== 'no-store') {
+    failures.push(`mutable runtime path ${runtimePath} must be Cache-Control: no-store`);
+  }
 }
 
 // (2) Static parity against the artifact that is ACTUALLY deployed.
@@ -213,11 +244,7 @@ if (liveUrl) {
 
 if (selfTest) {
   // Control: prove the comparator FAILS on drift. A gate that cannot fail is not a gate.
-  const good = "/*\n"
-    + Object.entries(manifest.global_headers).map(([hk, hv]) => `  ${hk}: ${hv}`).join("\n")
-    + "\n"
-    + (manifest.path_overrides || []).map((o) => o.match).join("\n")
-    + "\n";
+  const good = renderPagesHeaders(manifest);
   const controls = [];
   const stagingOrigin = 'https://xlooop-api-pilot-shadow.example.workers.dev';
   const stagingManifest = resolvePagesSecurityHeaderManifest(manifest, `${stagingOrigin}/api/v1`);
@@ -251,6 +278,14 @@ if (selfTest) {
   const driftedFixture = good.replace(firstValue, "TAMPERED");
   if (staticParityFailures(manifest, driftedFixture, "fixture").length === 0) {
     controls.push(`comparator did NOT flag a DRIFTED ${firstHeader}`);
+  }
+  const runtimeConfigBlock = '/runtime-config.js\n  Cache-Control: no-store';
+  const cacheDriftFixture = good.replace(
+    runtimeConfigBlock,
+    '/runtime-config.js\n  Cache-Control: public, max-age=14400',
+  );
+  if (staticParityFailures(manifest, cacheDriftFixture, 'fixture').length === 0) {
+    controls.push('comparator did NOT flag a cacheable mutable runtime-config.js fixture');
   }
   if (controls.length) {
     console.error("verify-app-security-header-parity --self-test FAIL");

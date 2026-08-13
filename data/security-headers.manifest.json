@@ -24,6 +24,50 @@
       "headers": { "Cache-Control": "no-store" }
     },
     {
+      "match": "/release-manifest.json",
+      "headers": { "Cache-Control": "no-store" }
+    },
+    {
+      "match": "/runtime-config.js",
+      "headers": { "Cache-Control": "no-store" }
+    },
+    {
+      "match": "/app-logic.js",
+      "headers": { "Cache-Control": "no-store" }
+    },
+    {
+      "match": "/clerk-boot.js",
+      "headers": { "Cache-Control": "no-store" }
+    },
+    {
+      "match": "/contract-meta.js",
+      "headers": { "Cache-Control": "no-store" }
+    },
+    {
+      "match": "/live-data.js",
+      "headers": { "Cache-Control": "no-store" }
+    },
+    {
+      "match": "/authority-consent.js",
+      "headers": { "Cache-Control": "no-store" }
+    },
+    {
+      "match": "/support.js",
+      "headers": { "Cache-Control": "no-store" }
+    },
+    {
+      "match": "/runtime-ui.css",
+      "headers": { "Cache-Control": "no-store" }
+    },
+    {
+      "match": "/sentry-bootstrap.js",
+      "headers": { "Cache-Control": "no-store" }
+    },
+    {
+      "match": "/vendor/*",
+      "headers": { "Cache-Control": "no-store" }
+    },
+    {
       "match": "/assets/*",
       "headers": { "Cache-Control": "public, max-age=31536000, immutable" }
     }
