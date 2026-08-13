@@ -268,7 +268,7 @@ describe('compileChatFacts — data_freshness (P0.1: never imply "all clear" ove
     expect(g.data_freshness.staleness_minutes).toBeLessThanOrEqual(1);
   });
 
-  it('rejects stale current-state claims from a live provider and retries a safe live fallback', async () => {
+  it('scopes stale current-state claims from a live provider without fabricating a fallback', async () => {
     const runtime = (id: string, response: string): ResolvedRuntime => ({
       runtime_id: id, provider: 'workers_ai', model: '@cf/test', source: 'platform_default',
       provider_config_version_id: null, base_url: null, credential: null,
@@ -281,9 +281,10 @@ describe('compileChatFacts — data_freshness (P0.1: never imply "all clear" ove
     };
 
     const result = await answerLiveCockpitChat('what is blocked?', FACTS(), 'ask', undefined, plan);
-    expect(result.execution.runtime_id).toBe('safe');
-    expect(result.execution.attempts.map((attempt) => attempt.status)).toEqual(['failed', 'completed']);
-    expect(result.answer).toMatch(/stale snapshot/i);
+    expect(result.execution.runtime_id).toBe('unsafe');
+    expect(result.execution.attempts.map((attempt) => attempt.status)).toEqual(['completed']);
+    expect(result.answer).toMatch(/snapshot, not live status/i);
+    expect(result.answer).toMatch(/recorded snapshot/i);
     expect(result.answer).not.toMatch(/right now|you are clear/i);
   });
 
@@ -301,6 +302,22 @@ describe('compileChatFacts — data_freshness (P0.1: never imply "all clear" ove
     expect(result.answer).toMatch(/newest recorded activity is \d+ minutes old/i);
     expect(result.answer).toMatch(/snapshot, not live status/i);
     expect(result.answer).toContain('The exact project name is Xlooop commercial proof');
+  });
+
+  it('scopes provider present-tense shorthand to the stale recorded snapshot', async () => {
+    const runtime: ResolvedRuntime = {
+      runtime_id: 'live', provider: 'workers_ai', model: '@cf/test', source: 'platform_default',
+      provider_config_version_id: null, base_url: null, credential: null,
+      ai: { run: async () => ({ response: 'Currently there are no blockers, so you are clear to proceed right now.' }) },
+    };
+    const result = await answerLiveCockpitChat('what is the status?', FACTS(), 'ask', undefined, {
+      primary: runtime, fallbacks: [], resolution_attempts: [],
+    });
+
+    expect(result.generated_by).toBe('llm');
+    expect(result.answer).toMatch(/snapshot, not live status/i);
+    expect(result.answer).toMatch(/recorded snapshot/i);
+    expect(result.answer).not.toMatch(/\bright now\b|\bcurrently\b|\byou are clear\b/i);
   });
 });
 
