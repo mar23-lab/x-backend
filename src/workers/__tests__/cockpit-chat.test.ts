@@ -286,6 +286,22 @@ describe('compileChatFacts — data_freshness (P0.1: never imply "all clear" ove
     expect(result.answer).toMatch(/stale snapshot/i);
     expect(result.answer).not.toMatch(/right now|you are clear/i);
   });
+
+  it('adds a backend-authoritative freshness disclosure to otherwise valid live text', async () => {
+    const runtime: ResolvedRuntime = {
+      runtime_id: 'live', provider: 'workers_ai', model: '@cf/test', source: 'platform_default',
+      provider_config_version_id: null, base_url: null, credential: null,
+      ai: { run: async () => ({ response: 'The exact project name is Xlooop commercial proof; verify the pending authority decision next.' }) },
+    };
+    const result = await answerLiveCockpitChat('name this project and give the next action', FACTS(), 'ask', undefined, {
+      primary: runtime, fallbacks: [], resolution_attempts: [],
+    });
+
+    expect(result.generated_by).toBe('llm');
+    expect(result.answer).toMatch(/newest recorded activity is \d+ minutes old/i);
+    expect(result.answer).toMatch(/snapshot, not live status/i);
+    expect(result.answer).toContain('The exact project name is Xlooop commercial proof');
+  });
 });
 
 describe('compileChatFacts — agents resolution (P0.4: name which governed agent acted)', () => {
