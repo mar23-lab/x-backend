@@ -33,6 +33,7 @@
     "verify:app-pages-release:self-test": "node scripts/verify-app-pages-release.mjs --self-test",
     "verify:app-pages-live": "node scripts/verify-app-pages-live.mjs",
     "verify:app-pages-live:self-test": "node scripts/verify-app-pages-live.mjs --self-test",
+    "verify:pages-production-promotion": "node scripts/verify-pages-production-promotion.mjs",
     "verify:app-pages-decision": "node scripts/verify-app-pages-decision-packet.mjs",
     "verify:app-pages-decision:self-test": "node scripts/verify-app-pages-decision-packet.mjs --self-test",
     "verify:rollback-target-authority": "node scripts/verify-rollback-target-authority.mjs",
