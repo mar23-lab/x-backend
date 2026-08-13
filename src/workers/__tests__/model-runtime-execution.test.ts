@@ -256,6 +256,39 @@ describe('live provider dispatch', () => {
     ]);
   });
 
+  it('accepts a valid concise live response instead of reporting a provider outage', async () => {
+    const runtime: ResolvedRuntime = {
+      runtime_id: 'platform:workers_ai', provider: 'workers_ai', model: '@cf/test', source: 'platform_default',
+      provider_config_version_id: null, base_url: null, credential: null,
+      ai: { run: async () => ({ response: 'Honest & Young.' }) },
+    };
+    const result = await executeEffectiveRuntimePlan({
+      plan: { primary: runtime, fallbacks: [], resolution_attempts: [] },
+      system: 'Answer from the supplied facts.', user: 'What is the workspace name?', maxTokens: 32,
+      validateText: () => null,
+    });
+
+    expect(result.text).toBe('Honest & Young.');
+    expect(result.attempts).toEqual([
+      expect.objectContaining({ status: 'completed', error_code: null }),
+    ]);
+  });
+
+  it('still rejects an empty live provider response', async () => {
+    const runtime: ResolvedRuntime = {
+      runtime_id: 'platform:workers_ai', provider: 'workers_ai', model: '@cf/test', source: 'platform_default',
+      provider_config_version_id: null, base_url: null, credential: null,
+      ai: { run: async () => ({ response: '   ' }) },
+    };
+    await expect(executeEffectiveRuntimePlan({
+      plan: { primary: runtime, fallbacks: [], resolution_attempts: [] },
+      system: 'Answer.', user: 'Question.', maxTokens: 32,
+    })).rejects.toMatchObject({
+      code: 'PROVIDER_UNAVAILABLE',
+      attempts: [expect.objectContaining({ status: 'failed', error_code: 'EMPTY_RESPONSE' })],
+    });
+  });
+
   it('returns typed provider-unavailable when every live provider fails', async () => {
     const runtime: ResolvedRuntime = {
       runtime_id: 'platform:workers_ai', provider: 'workers_ai', model: '@cf/test', source: 'platform_default',
