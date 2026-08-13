@@ -8112,6 +8112,27 @@
           "reason": "backend-owned post-assembly Pages headers remain accepted while frontend-emitted header policy stays rejected"
         }
       ]
+    },
+    {
+      "delta_id": "pages-mutable-runtime-cache-closure-20260813",
+      "generated_at": "2026-08-13T08:28:15Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "0b5d9778526476e742b30061c55ae1b31805426a",
+      "target_base_commit": "0b5d9778526476e742b30061c55ae1b31805426a",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "data/security-headers.manifest.json",
+          "target_blob": "58e2fc9c80b6ad1ff5a489c9311b17be19342a3f",
+          "reason": "Make backend-owned Pages authority no-store every mutable rich UI boot asset so a new shell cannot pair with stale contract expectations"
+        },
+        {
+          "path": "scripts/verify-app-security-header-parity.mjs",
+          "target_blob": "69099656b5ad0c3d564d2e024a77bb51adc35c91",
+          "reason": "Require exact cache override values and mutation-test runtime-config cache drift"
+        }
+      ]
     }
   ]
 }
