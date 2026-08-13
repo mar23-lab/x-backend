@@ -85,13 +85,5 @@ docs/deployment/evidence/latest-*-deploy-receipt.json
 _sys/xcp-system/derivative/
 wrangler.test.generated.toml
 
-# Terraform source is governed here; local state, plans and variable values are never source.
-**/.terraform/
-*.tfstate
-*.tfstate.*
-*.tfplan
-*.auto.tfvars
-infrastructure/terraform/env/*/*.tfvars
-
 # born-WARN gate calibration accrual (local, not a tracked artifact)
 .gate-calibration/

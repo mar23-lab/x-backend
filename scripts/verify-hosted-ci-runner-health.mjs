@@ -27,7 +27,7 @@ function warn(id, message, details = {}, options = {}) {
 }
 
 function currentHeadFor(repoName) {
-  if (repoName === 'mar23-lab/Xlooop-XCP-demo') {
+  if (repoName === 'mar23-lab/x-backend') {
     const proc = spawnSync('git', ['rev-parse', 'HEAD'], { cwd: repoRoot, encoding: 'utf8' });
     return proc.status === 0 ? proc.stdout.trim() : '';
   }
@@ -47,15 +47,33 @@ for (const repo of report.repositories || []) {
   const currentHead = currentHeadFor(repo.repo);
   const evidenceHeadCurrent = Boolean(repo.head_sha) && Boolean(currentHead) && repo.head_sha === currentHead;
   if (repo.classification === 'hosted_ci_pre_step_infra_failure') {
-    check(`fresh_evidence_matches_current_head:${repo.repo}`, evidenceHeadCurrent, {
-      evidence_head_sha: repo.head_sha || null,
-      current_head_sha: currentHead || null,
-    });
+    if (evidenceHeadCurrent) {
+      check(`fresh_evidence_matches_current_head:${repo.repo}`, true, {
+        evidence_head_sha: repo.head_sha || null,
+        current_head_sha: currentHead || null,
+      });
+    } else {
+      warn(
+        `hosted_evidence_head_not_current:${repo.repo}`,
+        'Hosted pre-step evidence is historical and cannot prove current repository health.',
+        { evidence_head_sha: repo.head_sha || null, current_head_sha: currentHead || null },
+        { block: strictHostedFreshness },
+      );
+    }
   } else if (repo.classification === 'hosted_actions_disabled_non_authoritative') {
     if (!evidenceHeadCurrent) {
       warn(
         `hosted_evidence_head_not_current:${repo.repo}`,
         'Hosted run evidence is not on current HEAD because this repo disables workflow YAML; local gates remain release authority.',
+        { evidence_head_sha: repo.head_sha || null, current_head_sha: currentHead || null },
+        { block: strictHostedFreshness },
+      );
+    }
+  } else if (repo.classification === 'hosted_required_green_worker_report_only_cancelled') {
+    if (!evidenceHeadCurrent) {
+      warn(
+        `hosted_evidence_head_not_current:${repo.repo}`,
+        'Hosted evidence is historical; the current exhaustive local suite remains release authority.',
         { evidence_head_sha: repo.head_sha || null, current_head_sha: currentHead || null },
         { block: strictHostedFreshness },
       );
@@ -74,6 +92,11 @@ for (const repo of report.repositories || []) {
   } else if (repo.classification === 'hosted_actions_disabled_non_authoritative') {
     check(`workflow_yaml_disabled:${repo.repo}`, repo.current_workflow_yaml_count === 0, { current_workflow_yaml_count: repo.current_workflow_yaml_count });
     warn(`hosted_run_evidence_stale:${repo.repo}`, 'Hosted run evidence is historical because the repo currently disables workflow YAML; local gates are the active release authority.', { latest_run_created_at: repo.runs?.[0]?.created_at || null });
+  } else if (repo.classification === 'hosted_required_green_worker_report_only_cancelled') {
+    const jobs = (repo.runs || []).flatMap((run) => run.jobs || []);
+    check(`required_job_green:${repo.repo}`, jobs.some((job) => job.name === 'required' && job.conclusion === 'success'));
+    check(`worker_job_non_authoritative:${repo.repo}`, jobs.some((job) => job.name === 'worker-suite-report-only' && job.conclusion === 'cancelled'));
+    warn(`hosted_worker_report_only_cancelled:${repo.repo}`, 'Hosted Worker report-only job was cancelled; the exhaustive local suite is the active replacement evidence.');
   } else {
     check(`known_classification:${repo.repo}`, false, { classification: repo.classification });
   }

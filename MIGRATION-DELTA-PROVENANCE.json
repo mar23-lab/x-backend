@@ -8358,6 +8358,102 @@
           "reason": "Cloudflare consumes exact email_off control comments after honoring opt-out; normalize allowlisted transport markers while preserving protected content hashes"
         }
       ]
+    },
+    {
+      "delta_id": "restore-repository-boundaries-20260814",
+      "generated_at": "2026-08-14T00:00:00+10:00",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "0fcc758b674fd79055b11e8ff7fcb5acac0431c2",
+      "target_base_commit": "0fcc758b674fd79055b11e8ff7fcb5acac0431c2",
+      "authority": "source_authority_no_automatic_deploy",
+      "supersedes_delta_ids": [
+        "three-repository-authority-convergence-20260813",
+        "three-repository-runtime-reference-closure-20260813"
+      ],
+      "restored_authorities": {
+        "x-web": "independent_public_site_source_and_deployment_authority",
+        "x-front": "protected_separate_repository",
+        "x-docs": "protected_separate_repository",
+        "x-biz": "protected_separate_repository"
+      },
+      "removed_imported_paths": [
+        "infrastructure/terraform",
+        "scripts/deploy-public-site-prod.mjs",
+        "scripts/verify-terraform-source-authority.mjs",
+        "scripts/verify-investor-safe-pack-manifest.mjs",
+        "data/investor-data-room-authority.json",
+        "data/investor-safe-pack-manifest.example.json"
+      ],
+      "seed_exclusions": [
+        { "path": "data/investor-data-room-authority.json", "source_blob": "b739519b49bf446a9bec7e2a6ccbe1b567488c2c", "reason": "Retire x-biz-backed investor authority from x-backend; protected repositories cannot be backend content dependencies." },
+        { "path": "data/investor-safe-pack-manifest.example.json", "source_blob": "fd17c02085630dcd108e2755b7be66c59c249da6", "reason": "Retire x-biz-backed investor pack from x-backend; customer-safe packs require a native approved source." },
+        { "path": "infrastructure/terraform/README.md", "source_blob": "520364b2f271d91a2fe219db8585e3db5262b4ad", "reason": "Retire copied platform-starter Terraform documentation from x-backend." },
+        { "path": "infrastructure/terraform/bootstrap/.terraform.lock.hcl", "source_blob": "1350ee5bf3205ae3153c02845817beacfb5ec73c", "reason": "Retire copied platform-starter bootstrap lockfile from x-backend." },
+        { "path": "infrastructure/terraform/bootstrap/main.tf", "source_blob": "ebdd6baf38f091a78a60dbbf98a4c4ea41de9f4d", "reason": "Retire copied platform-starter bootstrap Terraform from x-backend." },
+        { "path": "infrastructure/terraform/bootstrap/outputs.tf", "source_blob": "e74b2f4cac03150fefffc6ce7695e5dc76b911e6", "reason": "Retire copied platform-starter bootstrap outputs from x-backend." },
+        { "path": "infrastructure/terraform/bootstrap/rbac.tf", "source_blob": "7fe661bd261b129515380a568f39ffe0d7d5d65b", "reason": "Retire copied platform-starter bootstrap RBAC from x-backend." },
+        { "path": "infrastructure/terraform/bootstrap/variables.tf", "source_blob": "c5dab5d27427f0b44f5db3c6ce57da592658c7c5", "reason": "Retire copied platform-starter bootstrap variables from x-backend." },
+        { "path": "infrastructure/terraform/workloads/.terraform.lock.hcl", "source_blob": "1350ee5bf3205ae3153c02845817beacfb5ec73c", "reason": "Retire copied platform-starter workload lockfile from x-backend." },
+        { "path": "infrastructure/terraform/workloads/main.tf", "source_blob": "caf3b1e78a18f2a5aa8239d76178d4f6e20951d0", "reason": "Retire copied platform-starter workload Terraform from x-backend." },
+        { "path": "infrastructure/terraform/workloads/outputs.tf", "source_blob": "78e1c9df54988f766db295bf6dc53585c607fc1c", "reason": "Retire copied platform-starter workload outputs from x-backend." },
+        { "path": "infrastructure/terraform/workloads/rbac.tf", "source_blob": "ff4cbd042d3a8023617b4e14063bb680a4f783a9", "reason": "Retire copied platform-starter workload RBAC from x-backend." },
+        { "path": "infrastructure/terraform/workloads/variables.tf", "source_blob": "4e0b9bba7aca9d4424de18fd680b308a07092306", "reason": "Retire copied platform-starter workload variables from x-backend." },
+        { "path": "scripts/deploy-public-site-prod.mjs", "source_blob": "946492a3b1d5f24111c9d3a987d8ee0c1050be30", "reason": "Retire public-site deployment authority from x-backend; x-web owns deployment." },
+        { "path": "scripts/verify-investor-safe-pack-manifest.mjs", "source_blob": "620d4ffb344769b8fd1f303eca176174efc2a323", "reason": "Retire verifier that read the protected x-biz checkout from x-backend." },
+        { "path": "scripts/verify-terraform-source-authority.mjs", "source_blob": "875efaf16d4c6c4633975c11de531be7bb3c6676", "reason": "Retire copied Terraform authority verifier from x-backend." }
+      ],
+      "transformed_files": [
+        {
+          "path": ".gitignore",
+          "target_blob": "189008d22174222e1ade3a5d81f92800a0db4c87",
+          "reason": "Remove ignore rules for the retired copied Terraform surface."
+        },
+        {
+          "path": "AGENTS.md",
+          "target_blob": "8f5ff8eaec3fd996258d42658cf5b0e3f9495f43",
+          "reason": "Record x-web as an independent authority and protected repositories as forbidden imports."
+        },
+        {
+          "path": "package.json",
+          "target_blob": "00beb30364013e64d94a0124c51917fb41415371",
+          "reason": "Remove retired public-site and Terraform authority commands."
+        },
+        {
+          "path": "scripts/ci-local.mjs",
+          "target_blob": "7c74dc76c62290867867041f905157f9ac978a4f",
+          "reason": "Remove retired public-site and Terraform gates from the backend authority stack."
+        },
+        {
+          "path": "docs/deployment/DEPLOYED_SURFACES.yml",
+          "target_blob": "73be25f9a2cd9875902d670d4ab3a669842e6f0b",
+          "reason": "Restore x-web as the independent xlooop.com authority while retaining backend observability of the external surface."
+        },
+        {
+          "path": "scripts/verify-deployed-surfaces.mjs",
+          "target_blob": "dc67d4d484cd9a0c4b52674949872695507ab3f1",
+          "reason": "Fail if the backend regains a public-site deployer or if x-web authority drifts."
+        },
+        {
+          "path": "scripts/verify-active-repository-dependencies.mjs",
+          "target_blob": "7b5b1ab27795958a3d52336825ed249b90cd7f31",
+          "reason": "Scan every active backend source file and reject protected-repository filesystem, build, verifier, or control dependencies."
+        },
+        {
+          "path": "src/workers/__tests__/github-webhook-split.test.ts",
+          "target_blob": "887bc8ff9a4f196e13dde0032ab0f97968af97d9",
+          "reason": "Use x-backend as the repository-neutral webhook fixture instead of the retired demo repository."
+        },
+        {
+          "path": "data/hosted-ci-runner-health.json",
+          "target_blob": "f50ed4d3aadc5529d65c57afea95e1e224139ca5",
+          "reason": "Replace retired-demo CI evidence with repository-native x-backend hosted metadata and current exhaustive local replacement evidence."
+        },
+        {
+          "path": "scripts/verify-hosted-ci-runner-health.mjs",
+          "target_blob": "5af9be80286c88aea9e079cbb3475ef19f2bef4e",
+          "reason": "Verify x-backend hosted CI classification without reading or probing the retired demo checkout."
+        }
+      ]
     }
   ]
 }

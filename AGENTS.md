@@ -42,8 +42,10 @@ donor-only and must not receive new backend authority.
 5. **Never commit filled seed / onboarding files or deploy receipts.** `.seed-customer-*.sql`,
    onboarding outputs, and deploy receipts sit in the working tree looking like ordinary artifacts; an
    agent doing `git add -A` commits real customer data or secrets.
-6. **NO frontend implementation here, and no import from `x-ai-front` or legacy frontend roots.** A
-   cross-repo source import collapses the repo boundary.
+6. **NO frontend implementation here, and no import from `x-ai-front`, `x-web`, or protected
+   frontend roots.** `x-web` independently owns the public site at `xlooop.com`; this backend may
+   register that external surface and serve API contracts, but may not build or deploy its source.
+   A cross-repo source import collapses the repo boundary.
 7. **Keep MB-P as governance SSOT, never as a runtime filesystem dependency.** Update the API contract
    whenever a mounted route or envelope changes.
 8. **Use an isolated `codex/*` or `claude/*` worktree and a reviewed PR.** Do not direct-push agent
