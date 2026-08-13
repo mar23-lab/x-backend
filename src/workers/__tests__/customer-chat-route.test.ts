@@ -354,7 +354,13 @@ describe('POST /api/v1/customer-chat', () => {
       interaction_id: string;
       scope: Record<string, unknown>;
       requested_facts: { required: string[]; satisfied: string[]; unavailable: string[] };
-      conversation: { thread_id: string; user_message_id: string; assistant_message_id: string };
+      conversation: {
+        thread_id: string;
+        user_message_id: string;
+        assistant_message_id: string;
+        user_created_at: string;
+        assistant_created_at: string;
+      };
     };
     expect(body.answer).toContain('Project: Commercial launch (project_1)');
     expect(body.answer).toContain('Launch safely');
@@ -373,6 +379,8 @@ describe('POST /api/v1/customer-chat', () => {
       thread_id: 'thr_u1__orghy|project1|',
       user_message_id: '101',
       assistant_message_id: '102',
+      user_created_at: '2026-07-27T00:00:00Z',
+      assistant_created_at: '2026-07-27T00:00:01Z',
     });
     expect(calls).toEqual([
       { method: 'getProject', workspaceId: 'org_hy', projectId: 'project_1' },

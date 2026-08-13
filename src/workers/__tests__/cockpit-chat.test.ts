@@ -319,6 +319,21 @@ describe('compileChatFacts — data_freshness (P0.1: never imply "all clear" ove
     expect(result.answer).toMatch(/recorded snapshot/i);
     expect(result.answer).not.toMatch(/\bright now\b|\bcurrently\b|\byou are clear\b/i);
   });
+
+  it('keeps temporal scoping grammatical when provider prose says currently recorded', async () => {
+    const runtime: ResolvedRuntime = {
+      runtime_id: 'live', provider: 'workers_ai', model: '@cf/test', source: 'platform_default',
+      provider_config_version_id: null, base_url: null, credential: null,
+      ai: { run: async () => ({ response: 'The project has five currently recorded events and no verified present-state claim.' }) },
+    };
+    const result = await answerLiveCockpitChat('summarize the recorded project events', FACTS(), 'ask', undefined, {
+      primary: runtime, fallbacks: [], resolution_attempts: [],
+    });
+
+    expect(result.generated_by).toBe('llm');
+    expect(result.answer).toContain('five recorded events');
+    expect(result.answer).not.toMatch(/recorded snapshot\s+recorded/i);
+  });
 });
 
 describe('compileChatFacts — agents resolution (P0.4: name which governed agent acted)', () => {
