@@ -8257,6 +8257,22 @@
           "reason": "wait for exact Pages deployment identity before final live ratification"
         }
       ]
+    },
+    {
+      "delta_id": "pages-full-release-propagation-ratification-20260813",
+      "generated_at": "2026-08-13T12:54:15Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "9acbdb9c6a2b03557f1e5786255804efa31cec55",
+      "target_base_commit": "9acbdb9c6a2b03557f1e5786255804efa31cec55",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "scripts/verify-app-pages-live.mjs",
+          "target_blob": "715b78796b853c4f4f292bbcb828d510b9e5e5e8",
+          "reason": "Retry the complete Pages artifact, headers, manifests, and backend identity until all independently propagated cache keys converge."
+        }
+      ]
     }
   ]
 }
