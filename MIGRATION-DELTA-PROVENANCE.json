@@ -8273,6 +8273,22 @@
           "reason": "Retry the complete Pages artifact, headers, manifests, and backend identity until all independently propagated cache keys converge."
         }
       ]
+    },
+    {
+      "delta_id": "rich-ui-live-runtime-manifest-ratification-20260813",
+      "generated_at": "2026-08-13T13:13:11Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "190cfa21342670dc0d71e7a4092e38e2946d7622",
+      "target_base_commit": "190cfa21342670dc0d71e7a4092e38e2946d7622",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "scripts/verify-app-pages-live.mjs",
+          "target_blob": "5a69a61a7446fcbeb3038b501c05342152279dc6",
+          "reason": "Classify rich_ui_v3 as runtime-manifest based so strict CSP external configuration is ratified through its authoritative JSON contract rather than nonexistent inline HTML globals."
+        }
+      ]
     }
   ]
 }
