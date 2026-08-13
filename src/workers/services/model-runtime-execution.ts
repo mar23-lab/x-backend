@@ -17,6 +17,7 @@ import {
   type CloudAdapterRuntime,
   type CloudRuntimeProvider,
 } from './model-runtime-provider-adapters';
+import { normalizeWorkersAiText } from './workers-ai-response';
 
 export {
   commercialLiveChatRequired,
@@ -392,11 +393,9 @@ async function executeRuntime(runtime: ResolvedRuntime, system: string, user: st
       messages: [{ role: 'system', content: system }, { role: 'user', content: user }],
       max_tokens: maxTokens,
     }) as Record<string, unknown>;
-    const usage = out.usage as { prompt_tokens?: number; completion_tokens?: number } | undefined;
-    return {
-      text: String(out.response ?? '').trim(),
-      usage: { tokens_in: usage?.prompt_tokens ?? null, tokens_out: usage?.completion_tokens ?? null },
-    };
+    // Current chat-completions models (including GLM-4.7) return OpenAI-style
+    // choices, while older Workers AI text-generation models return response.
+    return normalizeWorkersAiText(out);
   }
 
   if (!runtime.credential?.api_key) throw new Error('STORED_CREDENTIAL_UNAVAILABLE');
