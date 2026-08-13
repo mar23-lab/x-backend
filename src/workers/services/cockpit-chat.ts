@@ -1350,6 +1350,16 @@ function validateLiveGrounding(text: string, grounded: CockpitChatResult['ground
   return null;
 }
 
+function annotateLiveFreshness(text: string, grounded: CockpitChatResult['grounded_on']): string {
+  if (!grounded.data_freshness.is_stale) return text;
+  const normalized = text.toLowerCase();
+  const alreadyDisclosed = normalized.includes(String(grounded.data_freshness.staleness_minutes))
+    || /\b(?:stale|snapshot|as of|not current|unverified)\b/.test(normalized);
+  if (alreadyDisclosed) return text;
+  return `Source note: the newest recorded activity is ${grounded.data_freshness.staleness_minutes}`
+    + ` minutes old; this is a snapshot, not live status.\n\n${text}`;
+}
+
 export async function answerCockpitChat(
   message: string,
   facts: CockpitChatFacts,
@@ -1547,11 +1557,11 @@ export async function answerCockpitChat(
       system: executionSystem,
       user: executionUser,
       maxTokens: mode === 'deep-research' ? 900 : 700,
-      validateText: (text) => validateLiveGrounding(text, grounded),
+      validateText: (text) => validateLiveGrounding(annotateLiveFreshness(text, grounded), grounded),
       observer: executionObserver,
     });
     return {
-      answer: live.text,
+      answer: annotateLiveFreshness(live.text, grounded),
       generated_by: 'llm',
       grounded_on: grounded,
       model: live.runtime.model,

@@ -8160,6 +8160,28 @@
         }
       ],
       "seed_exclusions": []
+    },
+    {
+      "delta_id": "live-answer-freshness-annotation-20260813",
+      "generated_at": "2026-08-13T10:53:49Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "6eafe24790beb3419f13bcad14bbdaa9bcdae92e",
+      "target_base_commit": "6eafe24790beb3419f13bcad14bbdaa9bcdae92e",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/services/cockpit-chat.ts",
+          "target_blob": "b4bd79843d14cb0bc3396650b146a9534a796516",
+          "reason": "Guarantee an exact backend-authored source-age annotation on otherwise valid live model answers while preserving rejection of contradictory current-state claims."
+        },
+        {
+          "path": "src/workers/__tests__/cockpit-chat.test.ts",
+          "target_blob": "81532d78d2f51cf614df5dbeb2dcd2f44c58927a",
+          "reason": "Prove stale live answers retain model content and gain the mandatory age and snapshot disclosure before customer presentation."
+        }
+      ],
+      "seed_exclusions": []
     }
   ]
 }
