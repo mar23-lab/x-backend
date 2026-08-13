@@ -15,6 +15,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const releaseDir = path.resolve(process.env.XLOOOP_APP_PAGES_RELEASE_DIR || path.join(root, 'dist-app-pages-release'));
 const appUrl = String(process.env.XLOOOP_APP_URL || 'https://app.xlooop.com').replace(/\/+$/, '');
 const requireSentry = process.env.XLOOOP_REQUIRE_SENTRY === '1';
+const liveWaitSeconds = Number(process.env.XLOOOP_APP_LIVE_WAIT_SECONDS || '120');
 
 function sha256(bytes) {
   return createHash('sha256').update(bytes).digest('hex');
@@ -25,6 +26,12 @@ export function normalizeAuthorizedHtml(html) {
     /<script\s+data-xlooop-sentry-bootstrap\s+defer\s+src="\/sentry-bootstrap\.js\?release=[0-9a-f]{40}"><\/script>/i,
     '',
   );
+}
+
+export function matchesDeploymentIdentity(actual, expected) {
+  return actual?.frontend_sha === expected?.frontend_sha
+    && actual?.backend_sha === expected?.backend_sha
+    && actual?.artifact_digest === expected?.artifact_digest;
 }
 
 if (process.argv.includes('--self-test')) {
@@ -42,6 +49,24 @@ if (process.argv.includes('--self-test')) {
     ['authorized bootstrap normalizes to artifact bytes', normalizeAuthorizedHtml(authorized) === artifact],
     ['plain artifact remains unchanged', normalizeAuthorizedHtml(artifact) === artifact],
     ['malformed or stale bootstrap is not hidden', normalizeAuthorizedHtml(stale) !== artifact],
+    ['exact deployment identity matches', matchesDeploymentIdentity({
+      frontend_sha: sha,
+      backend_sha: 'b'.repeat(40),
+      artifact_digest: 'c'.repeat(64),
+    }, {
+      frontend_sha: sha,
+      backend_sha: 'b'.repeat(40),
+      artifact_digest: 'c'.repeat(64),
+    })],
+    ['stale frontend deployment does not match', !matchesDeploymentIdentity({
+      frontend_sha: 'd'.repeat(40),
+      backend_sha: 'b'.repeat(40),
+      artifact_digest: 'c'.repeat(64),
+    }, {
+      frontend_sha: sha,
+      backend_sha: 'b'.repeat(40),
+      artifact_digest: 'c'.repeat(64),
+    })],
   ];
   for (const [name, ok] of checks) console.log(`  ${ok ? 'PASS' : 'FAIL'} ${name}`);
   const passed = checks.filter(([, ok]) => ok).length;
@@ -66,9 +91,32 @@ async function parseJsonResponse(response, label) {
   }
 }
 
+async function waitForDeploymentIdentity(expected) {
+  if (!Number.isFinite(liveWaitSeconds) || liveWaitSeconds < 0 || liveWaitSeconds > 300) {
+    throw new Error('XLOOOP_APP_LIVE_WAIT_SECONDS must be between 0 and 300');
+  }
+  const deadline = Date.now() + liveWaitSeconds * 1000;
+  let lastObserved = 'no readable release manifest';
+  do {
+    try {
+      const nonce = `xlooop-release-identity-${Date.now()}`;
+      const response = await fetchRequired(`${appUrl}/release-manifest.json?release_probe=${nonce}`);
+      const observed = await parseJsonResponse(response, 'live release manifest');
+      if (matchesDeploymentIdentity(observed, expected)) return;
+      lastObserved = `frontend=${observed?.frontend_sha || 'missing'} backend=${observed?.backend_sha || 'missing'}`;
+    } catch (error) {
+      lastObserved = error instanceof Error ? error.message : String(error);
+    }
+    if (Date.now() >= deadline) break;
+    await new Promise((resolve) => setTimeout(resolve, 3_000));
+  } while (true);
+  throw new Error(`live deployment identity did not converge within ${liveWaitSeconds}s (${lastObserved})`);
+}
+
 const failures = [];
 try {
   const manifest = JSON.parse(readFileSync(path.join(releaseDir, 'release-manifest.json'), 'utf8'));
+  await waitForDeploymentIdentity(manifest);
   const nonce = `xlooop-release-${Date.now()}`;
   const reactArtifact = manifest.artifact_contract === 'react_vite_v2';
   const [indexResponse, manifestResponse, runtimeIdentityResponse, healthResponse] = await Promise.all([
