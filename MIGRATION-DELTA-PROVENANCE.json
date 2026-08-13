@@ -8342,6 +8342,22 @@
           "reason": "Retain exact asset and identity ratification while allowing the measured custom-domain root HTML convergence of roughly 325 seconds inside a bounded ten-minute window."
         }
       ]
+    },
+    {
+      "delta_id": "pages-email-marker-normalization-20260814",
+      "generated_at": "2026-08-13T15:24:26.235Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "088f80f36e8f47af11fc1cb8b24fd9eb969c0a77",
+      "target_base_commit": "088f80f36e8f47af11fc1cb8b24fd9eb969c0a77",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "scripts/verify-app-pages-live.mjs",
+          "target_blob": "d0dd92e621f66a3eff4ab460ba495a7dbd5313e9",
+          "reason": "Cloudflare consumes exact email_off control comments after honoring opt-out; normalize allowlisted transport markers while preserving protected content hashes"
+        }
+      ]
     }
   ]
 }

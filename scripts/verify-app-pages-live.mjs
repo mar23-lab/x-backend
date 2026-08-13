@@ -22,10 +22,21 @@ function sha256(bytes) {
 }
 
 export function normalizeAuthorizedHtml(html) {
-  return String(html).replace(
-    /<script\s+data-xlooop-sentry-bootstrap\s+defer\s+src="\/sentry-bootstrap\.js\?release=[0-9a-f]{40}"><\/script>/i,
-    '',
-  );
+  return String(html)
+    .replace(
+      /<script\s+data-xlooop-sentry-bootstrap\s+defer\s+src="\/sentry-bootstrap\.js\?release=[0-9a-f]{40}"><\/script>/i,
+      '',
+    )
+    // Cloudflare consumes these exact control comments after applying Email
+    // Address Obfuscation opt-out. Their absence is authorized transport
+    // normalization; the protected mailto content remains hash-covered.
+    .replaceAll('<!--email_off-->', '')
+    .replaceAll('<!--/email_off-->', '');
+}
+
+export function authorizedHtmlMatchesArtifact(actual, artifact) {
+  return sha256(Buffer.from(normalizeAuthorizedHtml(actual)))
+    === sha256(Buffer.from(normalizeAuthorizedHtml(artifact)));
 }
 
 export function matchesDeploymentIdentity(actual, expected) {
@@ -49,8 +60,18 @@ if (process.argv.includes('--self-test')) {
     '<head>',
     '<head><script data-xlooop-sentry-bootstrap defer src="/sentry-bootstrap.js?release=stale"></script>',
   );
+  const emailProtected = artifact.replace(
+    '<body>',
+    '<body><!--email_off-->',
+  ).replace('</body>', '<!--/email_off--></body>');
+  const emailContentDrift = emailProtected.replace('<body>', '<body>changed');
   const checks = [
     ['authorized bootstrap normalizes to artifact bytes', normalizeAuthorizedHtml(authorized) === artifact],
+    ['authorized email opt-out markers normalize to artifact bytes', normalizeAuthorizedHtml(emailProtected) === artifact],
+    ['content inside email opt-out markers remains hash-covered', normalizeAuthorizedHtml(emailContentDrift) !== artifact],
+    ['authorized transport transforms match the source artifact', authorizedHtmlMatchesArtifact(authorized, artifact)],
+    ['stripped email markers match their protected source artifact', authorizedHtmlMatchesArtifact(artifact, emailProtected)],
+    ['email content drift does not match its source artifact', !authorizedHtmlMatchesArtifact(emailContentDrift, emailProtected)],
     ['plain artifact remains unchanged', normalizeAuthorizedHtml(artifact) === artifact],
     ['malformed or stale bootstrap is not hidden', normalizeAuthorizedHtml(stale) !== artifact],
     ['exact deployment identity matches', matchesDeploymentIdentity({
@@ -171,7 +192,8 @@ async function assessLiveRelease(manifest) {
   }
   if (health?.bindings?.model_runtime_keyring !== true) failures.push('health_model_runtime_keyring');
 
-  if (sha256(Buffer.from(normalizeAuthorizedHtml(html))) !== manifest.files['index.html']) {
+  const releaseHtml = readFileSync(path.join(releaseDir, 'index.html'), 'utf8');
+  if (!authorizedHtmlMatchesArtifact(html, releaseHtml)) {
     failures.push('live_asset_hash:index.html');
   }
 
