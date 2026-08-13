@@ -187,7 +187,7 @@ export function releaseManifestDigest(manifest) {
   return createHash('sha256').update(JSON.stringify(stable)).digest('hex');
 }
 
-export function verifyStaticArtifactFiles(artifactDir, contractHash) {
+export function verifyStaticArtifactFiles(artifactDir, contractHash, options = {}) {
   const problems = [];
   const runtimeManifestPath = path.join(artifactDir, 'runtime-manifest.json');
   let artifactContract = 'legacy_wired_v1';
@@ -213,7 +213,11 @@ export function verifyStaticArtifactFiles(artifactDir, contractHash) {
   for (const entry of required) {
     if (!existsSync(path.join(artifactDir, entry))) problems.push(`missing:${entry}`);
   }
-  if (artifactContract !== 'legacy_wired_v1' && existsSync(path.join(artifactDir, '_headers'))) {
+  if (
+    artifactContract !== 'legacy_wired_v1'
+    && options.backendOwnedAssembly !== true
+    && existsSync(path.join(artifactDir, '_headers'))
+  ) {
     problems.push('frontend_header_authority_leak:_headers');
   }
   if (artifactContract === 'react_vite_v2') {

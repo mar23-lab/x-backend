@@ -175,7 +175,11 @@ function runSelfTest() {
   writeFileSync(path.join(reactRoot, '_worker.js', 'index.js'), 'export default {};');
   writeFileSync(path.join(reactRoot, '_routes.json'), '{}');
   writeFileSync(path.join(reactRoot, 'release-manifest.json'), '{}');
-  const assembledReactProblems = verifyStaticArtifactFiles(reactRoot, contractHash);
+  writeFileSync(path.join(reactRoot, '_headers'), '/*\n  X-Robots-Tag: noindex\n');
+  const assembledReactProblems = verifyStaticArtifactFiles(reactRoot, contractHash, {
+    backendOwnedAssembly: true,
+  });
+  const untrustedReactHeaderProblems = verifyStaticArtifactFiles(reactRoot, contractHash);
   writeFileSync(path.join(reactRoot, 'assets/app.js'), 'tampered-after-manifest');
   const tamperedReactProblems = verifyStaticArtifactFiles(reactRoot, contractHash);
   writeFileSync(path.join(reactRoot, 'assets/app.js'), '');
@@ -278,6 +282,8 @@ function runSelfTest() {
     ['React/Vite v2 static files are valid', reactStaticProblems.length === 0],
     ['React/Vite v2 frontend hashes remain valid after backend-owned release assembly',
       assembledReactProblems.length === 0],
+    ['React/Vite v2 frontend-emitted headers remain rejected before backend assembly',
+      untrustedReactHeaderProblems.includes('frontend_header_authority_leak:_headers')],
     ['React/Vite v2 post-manifest asset mutation is rejected',
       tamperedReactProblems.includes('runtime_manifest_file_hashes')],
     ['rich UI v3 artifact is valid', validRich.ok && richStaticProblems.length === 0],
@@ -345,7 +351,12 @@ try {
     feature_posture: candidateDeployment.feature_posture,
   });
   problems.push(...artifact.problems);
-  problems.push(...verifyStaticArtifactFiles(releaseDir, contract.contract_hash));
+  // The release directory is post-assembly: prepare-app-pages-release.mjs has removed any
+  // frontend-emitted policy and injected the backend-manifest-owned _headers file. Only this
+  // explicit phase may accept _headers for modern artifacts; pre-assembly callers still reject it.
+  problems.push(...verifyStaticArtifactFiles(releaseDir, contract.contract_hash, {
+    backendOwnedAssembly: true,
+  }));
   const workerBundlePath = path.join(releaseDir, '_worker.js', 'index.js');
   if (!existsSync(workerBundlePath)) {
     problems.push('missing:_worker.js/index.js');
