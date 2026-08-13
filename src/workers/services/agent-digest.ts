@@ -51,7 +51,12 @@ export function buildWorkspaceDigest(s: WorkspaceActivitySummary): DigestProposa
 export interface AiRunner {
   run(
     model: string,
-    options: { messages: Array<{ role: string; content: string }>; max_tokens?: number },
+    options: {
+      messages: Array<{ role: string; content: string }>;
+      max_tokens?: number;
+      max_completion_tokens?: number;
+      chat_template_kwargs?: { enable_thinking?: boolean; clear_thinking?: boolean };
+    },
   ): Promise<unknown>;
 }
 

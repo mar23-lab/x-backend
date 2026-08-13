@@ -188,13 +188,14 @@ describe('effective model-runtime resolution', () => {
 
 describe('live provider dispatch', () => {
   it('accepts the OpenAI-compatible response shape returned by current Workers AI chat models', async () => {
+    const run = vi.fn(async () => ({
+      choices: [{ message: { role: 'assistant', content: 'A live GLM answer from the current Workers AI contract.' } }],
+      usage: { prompt_tokens: 11, completion_tokens: 9, total_tokens: 20 },
+    }));
     const runtime: ResolvedRuntime = {
       runtime_id: 'platform:workers_ai', provider: 'workers_ai', model: PLATFORM_WORKERS_AI_MODEL,
       source: 'platform_default', provider_config_version_id: null, base_url: null, credential: null,
-      ai: { run: async () => ({
-        choices: [{ message: { role: 'assistant', content: 'A live GLM answer from the current Workers AI contract.' } }],
-        usage: { prompt_tokens: 11, completion_tokens: 9, total_tokens: 20 },
-      }) },
+      ai: { run },
     };
 
     const result = await executeEffectiveRuntimePlan({
@@ -205,6 +206,11 @@ describe('live provider dispatch', () => {
     expect(result.text).toBe('A live GLM answer from the current Workers AI contract.');
     expect(result.usage).toEqual({ tokens_in: 11, tokens_out: 9 });
     expect(result.attempts).toEqual([expect.objectContaining({ status: 'completed', error_code: null })]);
+    expect(run).toHaveBeenCalledWith(PLATFORM_WORKERS_AI_MODEL, expect.objectContaining({
+      max_completion_tokens: 100,
+      chat_template_kwargs: { enable_thinking: false },
+    }));
+    expect(run.mock.calls[0]?.[1]).not.toHaveProperty('max_tokens');
   });
 
   it('dispatches the effective Anthropic runtime and returns usage plus provenance', async () => {
