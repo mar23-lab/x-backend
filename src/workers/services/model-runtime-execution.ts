@@ -391,7 +391,8 @@ async function executeRuntime(runtime: ResolvedRuntime, system: string, user: st
     if (!runtime.ai) throw new Error('WORKERS_AI_BINDING_UNAVAILABLE');
     const out = await runtime.ai.run(runtime.model, {
       messages: [{ role: 'system', content: system }, { role: 'user', content: user }],
-      max_tokens: maxTokens,
+      max_completion_tokens: maxTokens,
+      chat_template_kwargs: { enable_thinking: false },
     }) as Record<string, unknown>;
     // Current chat-completions models (including GLM-4.7) return OpenAI-style
     // choices, while older Workers AI text-generation models return response.
