@@ -806,6 +806,8 @@ async function handleCustomerChat(ctx: CustomerChatContext) {
       thread_id: string;
       user_message_id: string;
       assistant_message_id: string;
+      user_created_at: string;
+      assistant_created_at: string;
       assistant_receipt_id: string | null;
       audit_event_id: string | null;
     } | null = null;
@@ -844,6 +846,8 @@ async function handleCustomerChat(ctx: CustomerChatContext) {
           thread_id: persisted.thread_id,
           user_message_id: userMessage.id,
           assistant_message_id: assistantMessage.id,
+          user_created_at: userMessage.created_at,
+          assistant_created_at: assistantMessage.created_at,
           assistant_receipt_id: assistantMessage.receipt_uid ?? null,
           audit_event_id: assistantMessage.audit_event_id ?? null,
         };
@@ -874,6 +878,8 @@ async function handleCustomerChat(ctx: CustomerChatContext) {
           thread_id: conversation.thread_id,
           user_message_id: conversation.user_message_id,
           assistant_message_id: conversation.assistant_message_id,
+          user_created_at: conversation.user_created_at,
+          assistant_created_at: conversation.assistant_created_at,
         }
       : conversation;
     const response = customerSafeChat({

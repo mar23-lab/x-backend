@@ -8204,6 +8204,43 @@
         }
       ],
       "seed_exclusions": []
+    },
+    {
+      "delta_id": "live-chat-language-quality-closure-20260813",
+      "generated_at": "2026-08-13T11:46:30Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "d92e5802acbceb7fc9f44c28f9a9c8bf64a17bb8",
+      "target_base_commit": "d92e5802acbceb7fc9f44c28f9a9c8bf64a17bb8",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/services/cockpit-chat.ts",
+          "target_blob": "35bf21ceb8165918e55952683f3cdae1787b0089",
+          "reason": "Keep stale-time scoping grammatical when a live provider describes currently recorded evidence, without weakening the mandatory freshness boundary."
+        },
+        {
+          "path": "src/workers/__tests__/cockpit-chat.test.ts",
+          "target_blob": "560620a3dcf05564acb1d99e901fef8d69bd07da",
+          "reason": "Prevent recurrence of duplicated recorded-snapshot wording in customer-visible live answers."
+        },
+        {
+          "path": "src/workers/routes/customer-chat.ts",
+          "target_blob": "a0a0485592b16072c764d55db440414e99bb1dcd",
+          "reason": "Return the two canonical persisted message timestamps with the existing commercial conversation receipt."
+        },
+        {
+          "path": "src/workers/lib/customer-safe-decision.ts",
+          "target_blob": "2bbc4841f315a6a4b0a9fbea30acd7ab034d0a46",
+          "reason": "Preserve durable chat timestamps through the customer-safe response projection without exposing internal message rows."
+        },
+        {
+          "path": "src/workers/__tests__/customer-chat-route.test.ts",
+          "target_blob": "f748ea3e49271b593b59dc804fedf6c5b804898b",
+          "reason": "Lock the commercial response contract to backend-owned user and assistant timestamps."
+        }
+      ],
+      "seed_exclusions": []
     }
   ]
 }

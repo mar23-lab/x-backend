@@ -91,6 +91,8 @@ export interface CustomerSafeChat {
     thread_id: string;
     user_message_id: string;
     assistant_message_id: string;
+    user_created_at: string;
+    assistant_created_at: string;
   } | null;
   execution: {
     receipt_id: string | null;
@@ -189,6 +191,8 @@ export function customerSafeChat<T extends ChatDecisionLike>(payload: T, enabled
       thread_id: String(conversation.thread_id ?? ''),
       user_message_id: String(conversation.user_message_id ?? ''),
       assistant_message_id: String(conversation.assistant_message_id ?? ''),
+      user_created_at: String(conversation.user_created_at ?? ''),
+      assistant_created_at: String(conversation.assistant_created_at ?? ''),
     } : null,
     execution: execution ? {
       receipt_id: execution.receipt_id == null ? null : String(execution.receipt_id),

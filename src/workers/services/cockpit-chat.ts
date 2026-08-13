@@ -1357,11 +1357,13 @@ function annotateLiveFreshness(text: string, grounded: CockpitChatResult['ground
   // temporal shorthand that falsely upgrades it to present-state authority.
   // Preserve the substantive answer and downgrade only those time claims.
   const temporallyScoped = text
+    .replace(/\bcurrently\s+recorded\b/gi, 'recorded')
     .replace(/\bright now\b/gi, 'in the recorded snapshot')
     .replace(/\bcurrently\b/gi, 'in the recorded snapshot')
     .replace(/\breal[- ]?time\b/gi, 'recorded')
     .replace(/\byou are clear\b/gi, 'the recorded snapshot shows no listed blocker')
-    .replace(/\ball clear\b/gi, 'no listed blocker in the recorded snapshot');
+    .replace(/\ball clear\b/gi, 'no listed blocker in the recorded snapshot')
+    .replace(/\bin the recorded snapshot\s+recorded\b/gi, 'in the recorded snapshot');
   const alreadyDisclosed = originalNormalized.includes(String(grounded.data_freshness.staleness_minutes))
     || /\b(?:stale|snapshot|as of|not current|unverified)\b/.test(originalNormalized);
   if (alreadyDisclosed) return temporallyScoped;
