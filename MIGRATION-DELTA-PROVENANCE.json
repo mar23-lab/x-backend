@@ -8182,6 +8182,28 @@
         }
       ],
       "seed_exclusions": []
+    },
+    {
+      "delta_id": "stale-temporal-language-safety-20260813",
+      "generated_at": "2026-08-13T11:14:13Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "324251b849f40ef0497a4fe7a569b5c2dd290d4a",
+      "target_base_commit": "324251b849f40ef0497a4fe7a569b5c2dd290d4a",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/services/cockpit-chat.ts",
+          "target_blob": "562be42426e824c8c76f9859d7f68e282adba0f5",
+          "reason": "Scope only contradictory provider time shorthand to the recorded snapshot, retain backend source-age disclosure, and keep substantive live model content intact."
+        },
+        {
+          "path": "src/workers/__tests__/cockpit-chat.test.ts",
+          "target_blob": "58c70e9257f9147c5693271082bed8287e108126",
+          "reason": "Prove stale present-tense provider text is safely scoped without deterministic substitution or an unnecessary provider fallback."
+        }
+      ],
+      "seed_exclusions": []
     }
   ]
 }

@@ -1352,12 +1352,21 @@ function validateLiveGrounding(text: string, grounded: CockpitChatResult['ground
 
 function annotateLiveFreshness(text: string, grounded: CockpitChatResult['grounded_on']): string {
   if (!grounded.data_freshness.is_stale) return text;
-  const normalized = text.toLowerCase();
-  const alreadyDisclosed = normalized.includes(String(grounded.data_freshness.staleness_minutes))
-    || /\b(?:stale|snapshot|as of|not current|unverified)\b/.test(normalized);
-  if (alreadyDisclosed) return text;
+  const originalNormalized = text.toLowerCase();
+  // Provider prose may accurately summarize the supplied snapshot while using
+  // temporal shorthand that falsely upgrades it to present-state authority.
+  // Preserve the substantive answer and downgrade only those time claims.
+  const temporallyScoped = text
+    .replace(/\bright now\b/gi, 'in the recorded snapshot')
+    .replace(/\bcurrently\b/gi, 'in the recorded snapshot')
+    .replace(/\breal[- ]?time\b/gi, 'recorded')
+    .replace(/\byou are clear\b/gi, 'the recorded snapshot shows no listed blocker')
+    .replace(/\ball clear\b/gi, 'no listed blocker in the recorded snapshot');
+  const alreadyDisclosed = originalNormalized.includes(String(grounded.data_freshness.staleness_minutes))
+    || /\b(?:stale|snapshot|as of|not current|unverified)\b/.test(originalNormalized);
+  if (alreadyDisclosed) return temporallyScoped;
   return `Source note: the newest recorded activity is ${grounded.data_freshness.staleness_minutes}`
-    + ` minutes old; this is a snapshot, not live status.\n\n${text}`;
+    + ` minutes old; this is a snapshot, not live status.\n\n${temporallyScoped}`;
 }
 
 export async function answerCockpitChat(
