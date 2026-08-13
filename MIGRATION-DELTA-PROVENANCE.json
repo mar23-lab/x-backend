@@ -8305,6 +8305,27 @@
           "reason": "Raise the bounded custom-domain convergence default to the existing five-minute maximum after production evidence showed release-manifest routing converged before root HTML and exceeded 120 seconds."
         }
       ]
+    },
+    {
+      "delta_id": "pages-explicit-canonical-promotion-20260813",
+      "generated_at": "2026-08-13T13:58:29.199Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "390091b7731e33052c7b0b8b7491b5ecae39801f",
+      "target_base_commit": "390091b7731e33052c7b0b8b7491b5ecae39801f",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "package.json",
+          "target_blob": "5aba7ecec893b8f10579f5e37efca958ed9b5499",
+          "reason": "record explicit Cloudflare Pages canonical deployment promotion verifier wiring"
+        },
+        {
+          "path": "scripts/ci-local.mjs",
+          "target_blob": "0c58dac2c5d1f52fe55a918a7e806cbfa9852b70",
+          "reason": "record explicit Cloudflare Pages canonical deployment promotion verifier wiring"
+        }
+      ]
     }
   ]
 }

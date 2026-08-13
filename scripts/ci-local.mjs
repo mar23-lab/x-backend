@@ -68,6 +68,7 @@ const gates = [
   ['rate-limit buckets bound to real limiters', 'npm', ['run', 'verify:rate-limit-binding-parity']],
   ['Pages release artifact contract', 'npm', ['run', 'verify:app-pages-release:self-test']],
   ['Pages deployment decision contract', 'npm', ['run', 'verify:app-pages-decision:self-test']],
+  ['Pages explicit production promotion contract', 'npm', ['run', 'verify:pages-production-promotion']],
   ['paired production cutover transaction controls', 'npm', ['run', 'deploy:paired:prod:self-test']],
   ['public-site production deployment controls', 'npm', ['run', 'deploy:site:prod:self-test']],
   ['Terraform source authority controls', 'npm', ['run', 'verify:terraform-source-authority:self-test']],

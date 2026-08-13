@@ -10,6 +10,7 @@ import { assessPagesDecisionPacket } from './lib/app-pages-release-contract.mjs'
 import {
   isDeploymentAuthorizationConsumed,
 } from './lib/deployment-authorization-store.mjs';
+import { promoteExactPagesDeployment } from './lib/pages-production-promotion.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const releaseDir = path.resolve(process.env.XLOOOP_APP_PAGES_RELEASE_DIR || path.join(root, 'dist-app-pages-release'));
@@ -88,9 +89,30 @@ const deploy = spawnSync(
     '--commit-message',
     `xlooop-app frontend ${manifest.frontend_sha} backend ${manifest.backend_sha}`,
   ],
-  { cwd: root, stdio: 'inherit' },
+  { cwd: root, encoding: 'utf8' },
 );
+if (deploy.stdout) process.stdout.write(deploy.stdout);
+if (deploy.stderr) process.stderr.write(deploy.stderr);
 if (deploy.status !== 0) fail(`wrangler pages deploy exited ${String(deploy.status)}`);
+
+// Direct Upload can finish while Cloudflare still keeps a prior deployment as the project's
+// canonical production authority. The immutable deployment URL is only evidence that upload
+// succeeded; it does not prove app.xlooop.com points at it. Promote the exact uploaded deployment
+// through Cloudflare's production rollback/promote endpoint and verify canonical id + source SHA
+// before the paired orchestrator starts byte-for-byte live ratification.
+try {
+  const promotion = await promoteExactPagesDeployment({
+    root,
+    deploymentOutput: `${deploy.stdout || ''}\n${deploy.stderr || ''}`,
+    expectedFrontendSha: manifest.frontend_sha,
+  });
+  console.log(
+    `deploy-app-prod · CANONICAL · deployment=${promotion.deployment_id}`
+      + ` frontend=${manifest.frontend_sha}`,
+  );
+} catch (error) {
+  fail(`canonical Pages promotion failed: ${error instanceof Error ? error.message : String(error)}`);
+}
 
 // F2 · LIVE header parity — "the live check is the teeth" (that gate's own header). Reported, not
 // fail-closed: the upload has already happened, so exiting non-zero here would only hide the deploy
