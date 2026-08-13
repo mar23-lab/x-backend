@@ -8096,6 +8096,22 @@
           "reason": "Retire stale demo-era hosted deployment evidence after canonical DEPLOYED_SURFACES authority replacement"
         }
       ]
+    },
+    {
+      "delta_id": "pages-assembly-header-authority-20260813",
+      "generated_at": "2026-08-13T02:01:39.924Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "e116507be0b7974b4ce1fde54e7c7518aec8e99e",
+      "target_base_commit": "e116507be0b7974b4ce1fde54e7c7518aec8e99e",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "scripts/lib/app-pages-release-contract.mjs",
+          "target_blob": "dc1191daf629126a29b0697b2b96ee117b816df3",
+          "reason": "backend-owned post-assembly Pages headers remain accepted while frontend-emitted header policy stays rejected"
+        }
+      ]
     }
   ]
 }
