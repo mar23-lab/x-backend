@@ -15,7 +15,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const releaseDir = path.resolve(process.env.XLOOOP_APP_PAGES_RELEASE_DIR || path.join(root, 'dist-app-pages-release'));
 const appUrl = String(process.env.XLOOOP_APP_URL || 'https://app.xlooop.com').replace(/\/+$/, '');
 const requireSentry = process.env.XLOOOP_REQUIRE_SENTRY === '1';
-const liveWaitSeconds = Number(process.env.XLOOOP_APP_LIVE_WAIT_SECONDS || '300');
+const liveWaitSeconds = Number(process.env.XLOOOP_APP_LIVE_WAIT_SECONDS || '600');
 
 function sha256(bytes) {
   return createHash('sha256').update(bytes).digest('hex');
@@ -74,6 +74,12 @@ if (process.argv.includes('--self-test')) {
     ['React release uses its runtime manifest', usesRuntimeManifest('react_vite_v2')],
     ['rich commercial release uses its runtime manifest', usesRuntimeManifest('rich_ui_v3')],
     ['legacy wired release keeps inline marker parsing', !usesRuntimeManifest('legacy_wired_v1')],
+    ['600-second custom-domain convergence bound is accepted', (() => {
+      try { validateLiveWaitSeconds(600); return true; } catch { return false; }
+    })()],
+    ['an unbounded custom-domain wait is refused', (() => {
+      try { validateLiveWaitSeconds(601); return false; } catch { return true; }
+    })()],
   ];
   for (const [name, ok] of checks) console.log(`  ${ok ? 'PASS' : 'FAIL'} ${name}`);
   const passed = checks.filter(([, ok]) => ok).length;
@@ -98,9 +104,9 @@ async function parseJsonResponse(response, label) {
   }
 }
 
-function validateLiveWaitSeconds() {
-  if (!Number.isFinite(liveWaitSeconds) || liveWaitSeconds < 0 || liveWaitSeconds > 300) {
-    throw new Error('XLOOOP_APP_LIVE_WAIT_SECONDS must be between 0 and 300');
+export function validateLiveWaitSeconds(value) {
+  if (!Number.isFinite(value) || value < 0 || value > 600) {
+    throw new Error('XLOOOP_APP_LIVE_WAIT_SECONDS must be between 0 and 600');
   }
 }
 
@@ -182,7 +188,7 @@ async function assessLiveRelease(manifest) {
   return failures;
 }
 
-validateLiveWaitSeconds();
+validateLiveWaitSeconds(liveWaitSeconds);
 const manifest = JSON.parse(readFileSync(path.join(releaseDir, 'release-manifest.json'), 'utf8'));
 const deadline = Date.now() + liveWaitSeconds * 1000;
 let failures = ['release_not_yet_checked'];
