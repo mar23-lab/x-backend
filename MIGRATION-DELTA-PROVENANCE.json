@@ -8241,6 +8241,22 @@
         }
       ],
       "seed_exclusions": []
+    },
+    {
+      "delta_id": "pages-live-ratification-propagation-retry-20260813",
+      "generated_at": "2026-08-13T12:34:38.650Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "5199e9937bed13605629a2512eaaf8a58d3e8d75",
+      "target_base_commit": "5199e9937bed13605629a2512eaaf8a58d3e8d75",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "scripts/verify-app-pages-live.mjs",
+          "target_blob": "67fa8583dae9c1fe7706557a25e91a7765a1f085",
+          "reason": "wait for exact Pages deployment identity before final live ratification"
+        }
+      ]
     }
   ]
 }
