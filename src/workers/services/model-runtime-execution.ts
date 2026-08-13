@@ -435,7 +435,7 @@ export async function executeEffectiveRuntimePlan(input: {
     const execution = await input.observer?.start({ provider: runtime.provider, model_key: runtime.model });
     try {
       const result = await executeRuntime(runtime, input.system, input.user, input.maxTokens);
-      if (result.text.length < (input.minTextLength ?? 40)) throw new Error('SHORT_RESPONSE');
+      if (result.text.length < (input.minTextLength ?? 1)) throw new Error('EMPTY_RESPONSE');
       const validationError = input.validateText?.(result.text); if (validationError) throw new Error(validationError);
       const latency = Date.now() - startedAt;
       await execution?.complete({
