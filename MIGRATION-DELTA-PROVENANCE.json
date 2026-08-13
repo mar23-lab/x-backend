@@ -8326,6 +8326,22 @@
           "reason": "record explicit Cloudflare Pages canonical deployment promotion verifier wiring"
         }
       ]
+    },
+    {
+      "delta_id": "pages-custom-domain-convergence-600s-20260814",
+      "generated_at": "2026-08-13T14:33:00Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "2841bac7a291b9efa978a397b44a7351955eae27",
+      "target_base_commit": "2841bac7a291b9efa978a397b44a7351955eae27",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "scripts/verify-app-pages-live.mjs",
+          "target_blob": "9ae48019a2e1509c132e772008345b1ebed168fd",
+          "reason": "Retain exact asset and identity ratification while allowing the measured custom-domain root HTML convergence of roughly 325 seconds inside a bounded ten-minute window."
+        }
+      ]
     }
   ]
 }
