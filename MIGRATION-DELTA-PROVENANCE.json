@@ -8133,6 +8133,33 @@
           "reason": "Require exact cache override values and mutation-test runtime-config cache drift"
         }
       ]
+    },
+    {
+      "delta_id": "workers-ai-glm-completion-budget-20260813",
+      "generated_at": "2026-08-13T10:35:06Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "4df403496968762d9cbae944b0469f1933c02778",
+      "target_base_commit": "62965dd0f0ef3fade8bebbd62b666507983694ac",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/services/agent-digest.ts",
+          "target_blob": "756fea5f81a7d3e0d5fac8c2471e6e34f62353c6",
+          "reason": "Extend the shared Workers AI binding type for the current GLM completion-budget and thinking controls."
+        },
+        {
+          "path": "src/workers/services/model-runtime-execution.ts",
+          "target_blob": "e0f145659327f27319a464875976d180d0e4ee98",
+          "reason": "Use max_completion_tokens and disable thinking for concise commercial chat so answer content retains an explicit budget."
+        },
+        {
+          "path": "src/workers/__tests__/model-runtime-execution.test.ts",
+          "target_blob": "8c274c6d99c6c98d7ea4c9cd38e7608a0863fcd0",
+          "reason": "Prevent regression to deprecated max_tokens or implicit reasoning in the managed Workers AI chat request."
+        }
+      ],
+      "seed_exclusions": []
     }
   ]
 }
