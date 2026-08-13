@@ -187,6 +187,26 @@ describe('effective model-runtime resolution', () => {
 });
 
 describe('live provider dispatch', () => {
+  it('accepts the OpenAI-compatible response shape returned by current Workers AI chat models', async () => {
+    const runtime: ResolvedRuntime = {
+      runtime_id: 'platform:workers_ai', provider: 'workers_ai', model: PLATFORM_WORKERS_AI_MODEL,
+      source: 'platform_default', provider_config_version_id: null, base_url: null, credential: null,
+      ai: { run: async () => ({
+        choices: [{ message: { role: 'assistant', content: 'A live GLM answer from the current Workers AI contract.' } }],
+        usage: { prompt_tokens: 11, completion_tokens: 9, total_tokens: 20 },
+      }) },
+    };
+
+    const result = await executeEffectiveRuntimePlan({
+      plan: { primary: runtime, fallbacks: [], resolution_attempts: [] },
+      system: 'Grounded only.', user: 'Summarise.', maxTokens: 100,
+    });
+
+    expect(result.text).toBe('A live GLM answer from the current Workers AI contract.');
+    expect(result.usage).toEqual({ tokens_in: 11, tokens_out: 9 });
+    expect(result.attempts).toEqual([expect.objectContaining({ status: 'completed', error_code: null })]);
+  });
+
   it('dispatches the effective Anthropic runtime and returns usage plus provenance', async () => {
     const fetchSpy = vi.fn(async () => new Response(JSON.stringify({
       content: [{ type: 'text', text: 'A live Anthropic answer grounded in the supplied Xlooop context.' }],
