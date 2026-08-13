@@ -91,32 +91,14 @@ async function parseJsonResponse(response, label) {
   }
 }
 
-async function waitForDeploymentIdentity(expected) {
+function validateLiveWaitSeconds() {
   if (!Number.isFinite(liveWaitSeconds) || liveWaitSeconds < 0 || liveWaitSeconds > 300) {
     throw new Error('XLOOOP_APP_LIVE_WAIT_SECONDS must be between 0 and 300');
   }
-  const deadline = Date.now() + liveWaitSeconds * 1000;
-  let lastObserved = 'no readable release manifest';
-  do {
-    try {
-      const nonce = `xlooop-release-identity-${Date.now()}`;
-      const response = await fetchRequired(`${appUrl}/release-manifest.json?release_probe=${nonce}`);
-      const observed = await parseJsonResponse(response, 'live release manifest');
-      if (matchesDeploymentIdentity(observed, expected)) return;
-      lastObserved = `frontend=${observed?.frontend_sha || 'missing'} backend=${observed?.backend_sha || 'missing'}`;
-    } catch (error) {
-      lastObserved = error instanceof Error ? error.message : String(error);
-    }
-    if (Date.now() >= deadline) break;
-    await new Promise((resolve) => setTimeout(resolve, 3_000));
-  } while (true);
-  throw new Error(`live deployment identity did not converge within ${liveWaitSeconds}s (${lastObserved})`);
 }
 
-const failures = [];
-try {
-  const manifest = JSON.parse(readFileSync(path.join(releaseDir, 'release-manifest.json'), 'utf8'));
-  await waitForDeploymentIdentity(manifest);
+async function assessLiveRelease(manifest) {
+  const failures = [];
   const nonce = `xlooop-release-${Date.now()}`;
   const reactArtifact = manifest.artifact_contract === 'react_vite_v2';
   const [indexResponse, manifestResponse, runtimeIdentityResponse, healthResponse] = await Promise.all([
@@ -190,12 +172,29 @@ try {
     const actualHash = sha256(Buffer.from(await response.arrayBuffer()));
     if (actualHash !== expectedHash) failures.push(`live_asset_hash:${relative}`);
   }
-} catch (error) {
-  failures.push(error instanceof Error ? error.message : String(error));
+  return failures;
 }
 
+validateLiveWaitSeconds();
+const manifest = JSON.parse(readFileSync(path.join(releaseDir, 'release-manifest.json'), 'utf8'));
+const deadline = Date.now() + liveWaitSeconds * 1000;
+let failures = ['release_not_yet_checked'];
+do {
+  try {
+    failures = await assessLiveRelease(manifest);
+  } catch (error) {
+    failures = [error instanceof Error ? error.message : String(error)];
+  }
+  if (!failures.length) break;
+  if (Date.now() >= deadline) break;
+  await new Promise((resolve) => setTimeout(resolve, 3_000));
+} while (true);
+
 if (failures.length) {
-  console.error(`verify-app-pages-live · FAIL-CLOSED · ${[...new Set(failures)].join(',')}`);
+  console.error(
+    `verify-app-pages-live · FAIL-CLOSED · full release did not converge within ${liveWaitSeconds}s · `
+      + `${[...new Set(failures)].join(',')}`,
+  );
   process.exit(1);
 }
 console.log(`verify-app-pages-live · PASS · ${appUrl} exactly matches the assembled frontend/backend release`);
