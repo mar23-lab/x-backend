@@ -32,7 +32,7 @@ const requirements = [
   {
     lock: rootLock,
     path: 'node_modules/postcss/node_modules/nanoid',
-    minimum: '3.3.17',
+    minimum: '3.3.18',
     advisories: ['GHSA-2v37-7h3g-55p8'],
   },
   {
@@ -163,8 +163,8 @@ for (const [dependency, expected] of Object.entries(requiredRootDevDependencies)
 if (rootPackage.overrides?.postcss?.['.'] !== '8.5.23') {
   failures.push('root postcss override must be pinned to 8.5.23');
 }
-if (rootPackage.overrides?.postcss?.nanoid !== '3.3.17') {
-  failures.push('root postcss nanoid override must be pinned to 3.3.17');
+if (rootPackage.overrides?.postcss?.nanoid !== '3.3.18') {
+  failures.push('root postcss nanoid override must be pinned to 3.3.18');
 }
 
 if (failures.length) {

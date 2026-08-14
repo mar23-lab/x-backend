@@ -12,16 +12,19 @@ const problems = [];
 
 for (const marker of [
   'schema_id: xlooop.deployed_surfaces.v1',
-  "last_reviewed: '2026-08-13'",
+  "last_reviewed: '2026-08-14'",
   'id: app',
   'url: https://app.xlooop.com',
   'source_repo: x-ai-front',
-  'serving_source: app',
-  'serving_artifact: app/dist',
-  'artifact_contract: react_vite_v2',
-  'target_serving_source: wired',
-  'target_serving_artifact: wired/dist-production',
-  'target_artifact_contract: rich_ui_v3',
+  'state: live_rich_ui_v3_paired',
+  'source_spec: project/App.dc.html',
+  'source_spec_class: demo_derived_ux_spec',
+  'production_deploy_allowed_from_spec: false',
+  'production_source: wired/src',
+  'build_producer: wired/scripts/build-mode.mjs',
+  'release_input_artifact: wired/dist-production',
+  'serving_artifact: x-backend/dist-app-pages-release',
+  'artifact_contract: rich_ui_v3',
   'pages_functions_repo: x-backend',
   'pages_functions_source: functions',
   'release_manifest: dist-app-pages-release/release-manifest.json',
@@ -45,6 +48,18 @@ for (const marker of [
 
 if (registry.includes('src/widgets/XcpScreenRouter/XcpScreenRouter.jsx')) {
   problems.push('stale_app_router');
+}
+for (const staleMarker of [
+  'live_legacy_artifact_pending_rich_cutover',
+  'serving_source: app',
+  'serving_artifact: app/dist',
+  'artifact_contract: react_vite_v2',
+  'target_serving_source:',
+  'target_serving_artifact:',
+  'target_artifact_contract:',
+  'serving_source: wired/src',
+]) {
+  if (registry.includes(staleMarker)) problems.push(`stale_app_authority:${staleMarker}`);
 }
 const pairedCommand = 'node scripts/deploy-paired-prod.mjs';
 for (const alias of ['deploy:api', 'deploy:app:prod', 'deploy:paired:prod']) {

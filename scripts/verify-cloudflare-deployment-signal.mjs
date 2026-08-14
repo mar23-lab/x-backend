@@ -14,7 +14,7 @@ const warnings = [];
 let checkCount = 0;
 
 check(signal.schema_version === 'xlooop.cloudflare_deployment_signal.v2', 'schema');
-check(signal.canonical_deploy_surface === 'paired_workers_api_and_react_pages', 'paired_surface');
+check(signal.canonical_deploy_surface === 'paired_workers_api_and_rich_pages', 'paired_surface');
 check(signal.canonical_deploy_script === 'deploy:paired:prod', 'paired_script');
 check(signal.remote_ci_status === 'not_release_authority', 'remote_not_authority');
 check(signal.public_claim_status === 'hold_pending_live_evidence', 'public_claim_hold');
