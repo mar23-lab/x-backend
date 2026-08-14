@@ -58,21 +58,21 @@ hosts:
         component: window.InvestorAdminShelled
         requires_auth: clerk_jwt + admin_role
 
-  - id: www
-    url: https://www.xlooop.com
+  - id: public-site
+    url: https://xlooop.com
+    aliases: [https://www.xlooop.com]
+    alias_policy: permanent_redirect_to_apex
     purpose: public marketing site (software-development vertical + regulated-SMB path)
-    state: live_donor_artifact_pending_x_ai_front_cutover
+    state: live_independent_repository
     source_repo: x-web
     serving_source: x-web/dist
     serving_artifact: x-web/dist
-    artifact_contract: legacy_public_site_v1
-    target_source_repo: x-ai-front
-    target_serving_source: site
-    target_serving_artifact: site/dist
-    target_artifact_contract: public_site_v1
+    artifact_contract: x_web_public_site
     pages_project: xlooop-site
-    deploy_script: deploy:site:prod
-    notes: x-web remains the live deployed provenance until route ratification; new source is x-ai-front/site and deploy requires an immutable manifest, exact approval and rollback deployment id
+    deploy_authority_repo: x-web
+    deploy_script: deploy:cf
+    backend_role: external_surface_registry_and_api_contract_only
+    notes: x-web is the independent public-site source and deployment authority; x-backend records the surface and serves its API contracts but never imports or builds public-site source
 
   - id: api
     url: https://api.xlooop.com

@@ -17,7 +17,7 @@ import { githubWebhookRoute } from '../routes/github-webhook';
 
 const SECRET = 'whsec_test_going_forward';
 const WS = 'org_3EG82VEzc8t3t65XSZ0YDlcaDMI';
-const REPO = 'mar23-lab/Xlooop-XCP-demo';
+const REPO = 'mar23-lab/x-backend';
 
 async function sign(secret: string, body: string): Promise<string> {
   const key = await crypto.subtle.importKey(

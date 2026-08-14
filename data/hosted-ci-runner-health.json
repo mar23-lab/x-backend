@@ -67,52 +67,54 @@
       ]
     },
     {
-      "repo": "mar23-lab/Xlooop-XCP-demo",
-      "evidence_class": "stale_historical_hosted_run_plus_current_disabled_workflow_policy",
-      "observed_at": "2026-06-22T06:05:00Z",
-      "head_branch": "main",
-      "head_sha": "261011cc588deaef0f33608146d153e8fb4ca207",
-      "classification": "hosted_actions_disabled_non_authoritative",
+      "repo": "mar23-lab/x-backend",
+      "evidence_class": "repository_native_hosted_run_plus_exhaustive_local_replacement",
+      "observed_at": "2026-08-14T09:26:00+10:00",
+      "head_branch": "claude/ci-bootstrap-260717",
+      "head_sha": "53f83d40c28e9b8f564fad9d3b56864e749cdb9a",
+      "classification": "hosted_required_green_worker_report_only_cancelled",
       "active_as_release_gate": false,
       "local_replacement_required": true,
-      "current_workflow_yaml_count": 0,
       "runs": [
         {
-          "run_id": 26005431734,
-          "workflow_name": "smoke",
-          "event": "push",
-          "conclusion": "failure",
-          "created_at": "2026-05-17T23:09:06Z",
-          "updated_at": "2026-05-17T23:09:10Z",
-          "url": "https://github.com/mar23-lab/Xlooop-XCP-demo/actions/runs/26005431734",
+          "run_id": 29578153044,
+          "workflow_name": "verify",
+          "event": "pull_request",
+          "conclusion": "cancelled",
+          "created_at": "2026-07-17T11:49:52Z",
+          "updated_at": "2026-07-17T11:53:44Z",
+          "url": "https://github.com/mar23-lab/x-backend/actions/runs/29578153044",
           "jobs": [
             {
-              "job_id": 76435982536,
-              "name": "smoke",
-              "conclusion": "failure",
-              "started_at": "2026-05-17T23:09:07Z",
-              "completed_at": "2026-05-17T23:09:09Z",
-              "steps": [],
-              "duration_seconds": 2
+              "job_id": 87877268935,
+              "name": "required",
+              "conclusion": "success",
+              "started_at": "2026-07-17T11:49:55Z",
+              "completed_at": "2026-07-17T11:50:15Z"
             },
             {
-              "job_id": 76435984964,
-              "name": "e2e",
-              "conclusion": "skipped",
-              "started_at": "2026-05-17T23:09:09Z",
-              "completed_at": "2026-05-17T23:09:09Z",
-              "steps": [],
-              "duration_seconds": 0
+              "job_id": 87877268912,
+              "name": "worker-suite-report-only",
+              "conclusion": "cancelled",
+              "started_at": "2026-07-17T11:49:55Z",
+              "completed_at": "2026-07-17T11:53:44Z"
             }
           ]
         }
       ],
+      "local_replacement_evidence": {
+        "observed_at": "2026-08-14T09:26:00+10:00",
+        "command": "npm run typecheck && npm run test",
+        "configured_file_runs": 230,
+        "configured_file_runs_passed": 230,
+        "worker_batches": 56
+      },
       "verifier_evidence": [
-        "gh run list --repo mar23-lab/Xlooop-XCP-demo --limit 5 --json databaseId,status,conclusion,workflowName,createdAt,updatedAt,headBranch,headSha,event,url",
-        "gh run view 26005431734 --repo mar23-lab/Xlooop-XCP-demo --json jobs,conclusion,status,createdAt,updatedAt,url,workflowName",
-        "find .github -maxdepth 3 -type f -print"
+        "gh run list --repo mar23-lab/x-backend --limit 5 --json databaseId,status,conclusion,workflowName,createdAt,updatedAt,headBranch,headSha,event,url",
+        "gh run view 29578153044 --repo mar23-lab/x-backend --json jobs,conclusion,status,createdAt,updatedAt,url,workflowName",
+        "npm run typecheck && npm run test"
       ]
     }
   ],
-  "conclusion": "Hosted failures are not product test failures when every failed job has steps: [] and <=3s duration, or when the repo currently disables workflow YAML by policy. Local gates and Cloudflare direct-upload receipts remain release authority."
+  "conclusion": "Hosted CI is non-authoritative. MB-P evidence remains classified separately; x-backend's required hosted job passed, its report-only Worker job was cancelled, and the current exhaustive local replacement passed 230/230 configured file runs."
 }
