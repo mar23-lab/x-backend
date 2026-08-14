@@ -6,10 +6,12 @@ Status: production surfaces exist; public self-serve remains blocked until live 
 
 | Surface | Domain | Runtime | Source authority | Production mutation |
 |---|---|---|---|---|
-| Customer app | `https://app.xlooop.com` | Cloudflare Pages | `x-ai-front/app` React/Vite artifact | `deploy:paired:prod` |
+| Customer app | `https://app.xlooop.com` | Cloudflare Pages | `x-ai-front/wired/dist-production` rich UI v3 artifact | `deploy:paired:prod` |
 | Customer API | `https://api.xlooop.com` | Cloudflare Worker | `x-backend` | `deploy:paired:prod` |
 
-`x-ai-front/wired` is a test/reference donor and is not deployable commercial authority.
+`x-ai-front/project/App.dc.html` is a demo-derived UX/control specification and is never a deployable
+artifact. `x-ai-front/wired/src` is the executable commercial source; its governed production compiler
+emits `wired/dist-production`, the only frontend artifact accepted by the paired release.
 The Worker and Pages surfaces form one versioned product pair. A successful deploy is not by itself
 public-self-serve authority.
 
@@ -37,11 +39,19 @@ release manifest must agree on:
 
 ## Required Sequence
 
-1. Build the React/Vite production artifact from a clean, committed `x-ai-front` checkout.
+1. Build the rich UI v3 production artifact from a clean, committed `x-ai-front` checkout:
+
+   ```bash
+   npm --prefix wired run build:production
+   npm --prefix wired run verify:commercial-build
+   ```
+
+   The strict release compiler must remove demo-local conversational success paths. Production chat
+   is live-provider-backed or returns a typed unavailable state.
 2. Assemble the immutable Pages release in the exact clean backend checkout:
 
    ```bash
-   XLOOOP_FRONTEND_ARTIFACT_DIR=/absolute/path/to/x-ai-front/app/dist \
+   XLOOOP_FRONTEND_ARTIFACT_DIR=/absolute/path/to/x-ai-front/wired/dist-production \
      npm run prepare:app:prod
    npm run verify:app-pages-release
    ```

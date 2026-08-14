@@ -14,7 +14,12 @@ check(readiness.schema_version === 'xlooop.cloud_deployment_readiness.v2', 'sche
 check(readiness.canonical_public_domains?.app === 'https://app.xlooop.com', 'app_domain', 'Canonical app domain must be explicit.');
 check(readiness.canonical_public_domains?.api === 'https://api.xlooop.com', 'api_domain', 'Canonical API domain must be explicit.');
 check(readiness.public_self_serve?.status === 'hold_pending_live_evidence', 'public_claim_hold', 'Deployment readiness must not imply public self-serve authority.');
-check(readiness.deployment_topology?.kind === 'paired_worker_api_and_react_pages', 'paired_topology', 'Topology must be Worker API plus React Pages.');
+check(readiness.deployment_topology?.kind === 'paired_worker_api_and_rich_pages', 'paired_topology', 'Topology must be Worker API plus rich UI Pages.');
+check(readiness.deployment_topology?.frontend_artifact_contract === 'rich_ui_v3', 'rich_ui_contract', 'The commercial frontend contract must be rich_ui_v3.');
+check(readiness.deployment_topology?.frontend_source_spec_class === 'demo_derived_ux_spec', 'demo_spec_classified', 'App.dc.html must remain a non-authoritative UX specification.');
+check(readiness.deployment_topology?.production_deploy_allowed_from_spec === false, 'demo_spec_not_deployable', 'The demo-derived UX specification must not be deployable.');
+check(readiness.deployment_topology?.frontend_production_source === 'wired/src', 'rich_ui_source', 'wired/src must be the executable commercial source.');
+check(readiness.deployment_topology?.frontend_build_output === 'wired/dist-production', 'rich_ui_build_output', 'Only the strict production build may cross the release boundary.');
 check(readiness.deployment_topology?.single_mutation_command === 'deploy:paired:prod', 'single_mutation_command', 'One paired production mutation command is required.');
 check(readiness.deployment_topology?.standalone_api_or_pages_production_deploy_allowed === false, 'no_standalone_production_deploy', 'Standalone production mutation must be forbidden.');
 check(readiness.deployment_topology?.compensating_rollback_required === true, 'compensating_rollback', 'Failed pair ratification must roll back.');
@@ -51,8 +56,12 @@ for (const marker of ['reserveAuthorizations', 'ratifyApi', 'ratifyPair', 'rollb
 const appDeploy = text('scripts/deploy-app-prod.mjs');
 check(appDeploy.includes('standalone Pages production deploy is disabled'), 'pages_fail_closed', 'Pages deploy must refuse a standalone production mutation.');
 const surfaces = text('docs/deployment/DEPLOYED_SURFACES.yml');
-check(/^\s+artifact_contract: react_vite_v2$/m.test(surfaces) && /^\s+serving_source: app$/m.test(surfaces), 'react_ui_authority', 'Current deployed app artifact must remain explicit until cutover.');
-check(!/^\s+serving_source: wired$/m.test(surfaces), 'wired_not_deployed', 'Raw wired source must not be declared as the deployed serving source.');
+check(/^\s+artifact_contract: rich_ui_v3$/m.test(surfaces) && /^\s+release_input_artifact: wired\/dist-production$/m.test(surfaces), 'rich_ui_authority', 'The deployed app registry must name the strict rich UI v3 release input.');
+check(/^\s+serving_artifact: x-backend\/dist-app-pages-release$/m.test(surfaces), 'assembled_serving_artifact', 'The deployed app must be the backend-assembled immutable Pages release.');
+check(/^\s+source_spec: project\/App\.dc\.html$/m.test(surfaces) && /^\s+production_deploy_allowed_from_spec: false$/m.test(surfaces), 'demo_spec_not_authority', 'The demo-derived spec must be registered and nondeployable.');
+for (const staleMarker of ['react_vite_v2', 'live_legacy_artifact_pending_rich_cutover', 'target_serving_source:', 'serving_artifact: app/dist']) {
+  check(!surfaces.includes(staleMarker), `stale_surface_${staleMarker}`, `Stale frontend authority marker must be absent: ${staleMarker}`);
+}
 
 const report = {
   schema_id: 'xlooop.cloud_deployment_readiness.verifier.v2',

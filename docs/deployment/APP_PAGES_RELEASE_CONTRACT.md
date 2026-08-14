@@ -6,15 +6,16 @@ This is one deployed frontend with a cross-repository release boundary, not a se
 
 ## Required sequence
 
-1. Build `x-ai-front/app/dist` with the governed `build:production` producer from a clean committed
-   frontend SHA. `wired/` is a nondeployable test/reference donor and is rejected in the React lane. Set:
+1. Build `x-ai-front/wired/dist-production` with the governed `wired/scripts/build-mode.mjs`
+   `build:production` producer from a clean committed frontend SHA. `project/App.dc.html` is a
+   demo-derived UX/control specification, not executable production source and not a deployable artifact. Set:
    - `XLOOOP_FRONTEND_SHA=<exact 40-character frontend commit>`
    - `XLOOOP_EXPECTED_BACKEND_SHA=<exact x-backend commit>`
    - the production API, schema, authority, environment, and feature-posture values.
 2. In the exact backend checkout, assemble the release:
 
    ```sh
-   XLOOOP_FRONTEND_ARTIFACT_DIR=/absolute/path/to/app/dist \
+   XLOOOP_FRONTEND_ARTIFACT_DIR=/absolute/path/to/wired/dist-production \
      npm run prepare:app:prod
    npm run verify:app-pages-release
    ```
@@ -58,18 +59,19 @@ This is one deployed frontend with a cross-repository release boundary, not a se
 
 ## Enforced invariants
 
-- `runtime-manifest.json` uses `xlooop.frontend_runtime_manifest.v2`, names the exact frontend SHA,
+- `runtime-manifest.json` uses `xlooop.frontend_runtime_manifest.v3`, names the exact frontend SHA,
   backend SHA, contract hash, schema, posture and authority, and is carried into the immutable release.
-- The versioned runtime manifest is the React artifact and live-pairing authority; the compiled
-  bundle carries the same runtime pins and fails closed against backend health.
+- The versioned runtime manifest is the rich UI v3 artifact and live-pairing authority; the compiled
+  artifact carries the same runtime pins and fails closed against backend health.
 - The backend verifies the runtime manifest's per-file hashes before assigning the frontend SHA,
   and live ratification verifies the served HTML shell, manifest bytes, and every public release file.
 - The API packet, Pages packet, and assembled manifest carry one immutable artifact digest and exact
   schema/contract/feature-posture tuple. Any cross-surface mismatch is refused before authorization
   consumption.
-- The React artifact includes Vite assets and no deployment-header authority. Backend assembly
-  always emits production `_headers` from `data/security-headers.manifest.json`, and excludes legacy
-  `clerk-boot.js`, `live-data.js`, `support.js`, and `vendor/` runtime authority.
+- The rich UI v3 artifact contains only compiler-approved static runtime files and has no
+  deployment-header authority. Backend assembly always emits production `_headers` from
+  `data/security-headers.manifest.json`; raw `project/App.dc.html`, `wired/src`, and demo-local
+  conversational success paths cannot enter the assembled release.
 - The frontend's expected backend SHA equals the backend checkout `HEAD`.
 - Frontend build and backend assembly/deploy checkouts are clean; dirty code cannot inherit a committed SHA.
 - The embedded contract hash equals `x-backend/docs/contracts/api-contract.v1.json`.

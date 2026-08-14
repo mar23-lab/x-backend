@@ -1,7 +1,7 @@
 {
   "schema_version": "xlooop.cloudflare_deployment_signal.v2",
-  "last_updated": "2026-08-11",
-  "canonical_deploy_surface": "paired_workers_api_and_react_pages",
+  "last_updated": "2026-08-14",
+  "canonical_deploy_surface": "paired_workers_api_and_rich_pages",
   "canonical_deploy_script": "deploy:paired:prod",
   "public_claim_status": "hold_pending_live_evidence",
   "remote_ci_status": "not_release_authority",

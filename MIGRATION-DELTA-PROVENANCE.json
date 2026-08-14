@@ -8385,22 +8385,86 @@
         "data/investor-safe-pack-manifest.example.json"
       ],
       "seed_exclusions": [
-        { "path": "data/investor-data-room-authority.json", "source_blob": "b739519b49bf446a9bec7e2a6ccbe1b567488c2c", "reason": "Retire x-biz-backed investor authority from x-backend; protected repositories cannot be backend content dependencies." },
-        { "path": "data/investor-safe-pack-manifest.example.json", "source_blob": "fd17c02085630dcd108e2755b7be66c59c249da6", "reason": "Retire x-biz-backed investor pack from x-backend; customer-safe packs require a native approved source." },
-        { "path": "infrastructure/terraform/README.md", "source_blob": "520364b2f271d91a2fe219db8585e3db5262b4ad", "reason": "Retire copied platform-starter Terraform documentation from x-backend." },
-        { "path": "infrastructure/terraform/bootstrap/.terraform.lock.hcl", "source_blob": "1350ee5bf3205ae3153c02845817beacfb5ec73c", "reason": "Retire copied platform-starter bootstrap lockfile from x-backend." },
-        { "path": "infrastructure/terraform/bootstrap/main.tf", "source_blob": "ebdd6baf38f091a78a60dbbf98a4c4ea41de9f4d", "reason": "Retire copied platform-starter bootstrap Terraform from x-backend." },
-        { "path": "infrastructure/terraform/bootstrap/outputs.tf", "source_blob": "e74b2f4cac03150fefffc6ce7695e5dc76b911e6", "reason": "Retire copied platform-starter bootstrap outputs from x-backend." },
-        { "path": "infrastructure/terraform/bootstrap/rbac.tf", "source_blob": "7fe661bd261b129515380a568f39ffe0d7d5d65b", "reason": "Retire copied platform-starter bootstrap RBAC from x-backend." },
-        { "path": "infrastructure/terraform/bootstrap/variables.tf", "source_blob": "c5dab5d27427f0b44f5db3c6ce57da592658c7c5", "reason": "Retire copied platform-starter bootstrap variables from x-backend." },
-        { "path": "infrastructure/terraform/workloads/.terraform.lock.hcl", "source_blob": "1350ee5bf3205ae3153c02845817beacfb5ec73c", "reason": "Retire copied platform-starter workload lockfile from x-backend." },
-        { "path": "infrastructure/terraform/workloads/main.tf", "source_blob": "caf3b1e78a18f2a5aa8239d76178d4f6e20951d0", "reason": "Retire copied platform-starter workload Terraform from x-backend." },
-        { "path": "infrastructure/terraform/workloads/outputs.tf", "source_blob": "78e1c9df54988f766db295bf6dc53585c607fc1c", "reason": "Retire copied platform-starter workload outputs from x-backend." },
-        { "path": "infrastructure/terraform/workloads/rbac.tf", "source_blob": "ff4cbd042d3a8023617b4e14063bb680a4f783a9", "reason": "Retire copied platform-starter workload RBAC from x-backend." },
-        { "path": "infrastructure/terraform/workloads/variables.tf", "source_blob": "4e0b9bba7aca9d4424de18fd680b308a07092306", "reason": "Retire copied platform-starter workload variables from x-backend." },
-        { "path": "scripts/deploy-public-site-prod.mjs", "source_blob": "946492a3b1d5f24111c9d3a987d8ee0c1050be30", "reason": "Retire public-site deployment authority from x-backend; x-web owns deployment." },
-        { "path": "scripts/verify-investor-safe-pack-manifest.mjs", "source_blob": "620d4ffb344769b8fd1f303eca176174efc2a323", "reason": "Retire verifier that read the protected x-biz checkout from x-backend." },
-        { "path": "scripts/verify-terraform-source-authority.mjs", "source_blob": "875efaf16d4c6c4633975c11de531be7bb3c6676", "reason": "Retire copied Terraform authority verifier from x-backend." }
+        {
+          "path": "data/investor-data-room-authority.json",
+          "source_blob": "b739519b49bf446a9bec7e2a6ccbe1b567488c2c",
+          "reason": "Retire x-biz-backed investor authority from x-backend; protected repositories cannot be backend content dependencies."
+        },
+        {
+          "path": "data/investor-safe-pack-manifest.example.json",
+          "source_blob": "fd17c02085630dcd108e2755b7be66c59c249da6",
+          "reason": "Retire x-biz-backed investor pack from x-backend; customer-safe packs require a native approved source."
+        },
+        {
+          "path": "infrastructure/terraform/README.md",
+          "source_blob": "520364b2f271d91a2fe219db8585e3db5262b4ad",
+          "reason": "Retire copied platform-starter Terraform documentation from x-backend."
+        },
+        {
+          "path": "infrastructure/terraform/bootstrap/.terraform.lock.hcl",
+          "source_blob": "1350ee5bf3205ae3153c02845817beacfb5ec73c",
+          "reason": "Retire copied platform-starter bootstrap lockfile from x-backend."
+        },
+        {
+          "path": "infrastructure/terraform/bootstrap/main.tf",
+          "source_blob": "ebdd6baf38f091a78a60dbbf98a4c4ea41de9f4d",
+          "reason": "Retire copied platform-starter bootstrap Terraform from x-backend."
+        },
+        {
+          "path": "infrastructure/terraform/bootstrap/outputs.tf",
+          "source_blob": "e74b2f4cac03150fefffc6ce7695e5dc76b911e6",
+          "reason": "Retire copied platform-starter bootstrap outputs from x-backend."
+        },
+        {
+          "path": "infrastructure/terraform/bootstrap/rbac.tf",
+          "source_blob": "7fe661bd261b129515380a568f39ffe0d7d5d65b",
+          "reason": "Retire copied platform-starter bootstrap RBAC from x-backend."
+        },
+        {
+          "path": "infrastructure/terraform/bootstrap/variables.tf",
+          "source_blob": "c5dab5d27427f0b44f5db3c6ce57da592658c7c5",
+          "reason": "Retire copied platform-starter bootstrap variables from x-backend."
+        },
+        {
+          "path": "infrastructure/terraform/workloads/.terraform.lock.hcl",
+          "source_blob": "1350ee5bf3205ae3153c02845817beacfb5ec73c",
+          "reason": "Retire copied platform-starter workload lockfile from x-backend."
+        },
+        {
+          "path": "infrastructure/terraform/workloads/main.tf",
+          "source_blob": "caf3b1e78a18f2a5aa8239d76178d4f6e20951d0",
+          "reason": "Retire copied platform-starter workload Terraform from x-backend."
+        },
+        {
+          "path": "infrastructure/terraform/workloads/outputs.tf",
+          "source_blob": "78e1c9df54988f766db295bf6dc53585c607fc1c",
+          "reason": "Retire copied platform-starter workload outputs from x-backend."
+        },
+        {
+          "path": "infrastructure/terraform/workloads/rbac.tf",
+          "source_blob": "ff4cbd042d3a8023617b4e14063bb680a4f783a9",
+          "reason": "Retire copied platform-starter workload RBAC from x-backend."
+        },
+        {
+          "path": "infrastructure/terraform/workloads/variables.tf",
+          "source_blob": "4e0b9bba7aca9d4424de18fd680b308a07092306",
+          "reason": "Retire copied platform-starter workload variables from x-backend."
+        },
+        {
+          "path": "scripts/deploy-public-site-prod.mjs",
+          "source_blob": "946492a3b1d5f24111c9d3a987d8ee0c1050be30",
+          "reason": "Retire public-site deployment authority from x-backend; x-web owns deployment."
+        },
+        {
+          "path": "scripts/verify-investor-safe-pack-manifest.mjs",
+          "source_blob": "620d4ffb344769b8fd1f303eca176174efc2a323",
+          "reason": "Retire verifier that read the protected x-biz checkout from x-backend."
+        },
+        {
+          "path": "scripts/verify-terraform-source-authority.mjs",
+          "source_blob": "875efaf16d4c6c4633975c11de531be7bb3c6676",
+          "reason": "Retire copied Terraform authority verifier from x-backend."
+        }
       ],
       "transformed_files": [
         {
@@ -8452,6 +8516,67 @@
           "path": "scripts/verify-hosted-ci-runner-health.mjs",
           "target_blob": "5af9be80286c88aea9e079cbb3475ef19f2bef4e",
           "reason": "Verify x-backend hosted CI classification without reading or probing the retired demo checkout."
+        }
+      ]
+    },
+    {
+      "delta_id": "commercial-rich-ui-authority-20260814",
+      "generated_at": "2026-08-14T11:41:50.526Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "76162eca35563224ea22bb91f81698590683f6e0",
+      "target_base_commit": "76162eca35563224ea22bb91f81698590683f6e0",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "package.json",
+          "target_blob": "b7c6a8b5f16f8ece72114373c6778cd7c536e77d",
+          "reason": "Align transformed-file provenance with rich_ui_v3 deployment authority and patched dependency advisory floor"
+        },
+        {
+          "path": "package-lock.json",
+          "target_blob": "eba732300f58094b77ab6159d6ab440f38251799",
+          "reason": "Align transformed-file provenance with rich_ui_v3 deployment authority and patched dependency advisory floor"
+        },
+        {
+          "path": "docs/deployment/DEPLOYED_SURFACES.yml",
+          "target_blob": "8bbca160065ba7db5d802b4debf54c83bbb75ce5",
+          "reason": "Align transformed-file provenance with rich_ui_v3 deployment authority and patched dependency advisory floor"
+        },
+        {
+          "path": "docs/deployment/APP_PAGES_RELEASE_CONTRACT.md",
+          "target_blob": "e772cabaae94769924fcaf34ae7e56b7c4eda433",
+          "reason": "Align transformed-file provenance with rich_ui_v3 deployment authority and patched dependency advisory floor"
+        },
+        {
+          "path": "data/cloud-deployment-readiness.json",
+          "target_blob": "e7059dbc669c046fdd7e3f9e2430c55bbb930dbb",
+          "reason": "Align transformed-file provenance with rich_ui_v3 deployment authority and patched dependency advisory floor"
+        },
+        {
+          "path": "data/cloudflare-deployment-signal.json",
+          "target_blob": "ca7f5d3d3a64f94673285f14fe4fdc40ba654b8b",
+          "reason": "Align transformed-file provenance with rich_ui_v3 deployment authority and patched dependency advisory floor"
+        },
+        {
+          "path": "docs/deployment/CLOUDFLARE_DEPLOYMENT_PLAN.md",
+          "target_blob": "52a79c27c21cb8125f2240452d0e58432bc145de",
+          "reason": "Align transformed-file provenance with rich_ui_v3 deployment authority and patched dependency advisory floor"
+        },
+        {
+          "path": "scripts/verify-cloud-deployment-readiness.mjs",
+          "target_blob": "a5662b0b2cb4cfa32d1501561dac4875887e6e8f",
+          "reason": "Align transformed-file provenance with rich_ui_v3 deployment authority and patched dependency advisory floor"
+        },
+        {
+          "path": "scripts/verify-cloudflare-deployment-signal.mjs",
+          "target_blob": "c33ddb48c90aca7388efd45f68fe4a5f0cdc4345",
+          "reason": "Align transformed-file provenance with rich_ui_v3 deployment authority and patched dependency advisory floor"
+        },
+        {
+          "path": "scripts/verify-deployed-surfaces.mjs",
+          "target_blob": "2d32ed7567ef12a1338303a4f9d4a7f00cbb3d34",
+          "reason": "Align transformed-file provenance with rich_ui_v3 deployment authority and patched dependency advisory floor"
         }
       ]
     }
