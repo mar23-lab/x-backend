@@ -39,6 +39,7 @@ import {
   validateRuntime,
 } from '../services/model-runtime-execution';
 import type { AiRunner } from '../services/agent-digest';
+import { runtimePolicyEnforcement } from '../services/runtime-policy-enforcement';
 
 export interface ModelRuntimesEnv extends AuthEnv {
   MODEL_RUNTIME_ENC_KEY?: string; // legacy decrypt-only AES-256 key during migration
@@ -184,6 +185,7 @@ modelRuntimesRoute.get('/model-runtimes/effective', async (ctx) => {
       },
       fallback_count: plan.fallbacks.length,
       resolution_attempts: plan.resolution_attempts,
+      policy_enforcement: runtimePolicyEnforcement(),
     });
   } catch (err) {
     return errorEnvelope(ctx, err);

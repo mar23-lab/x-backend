@@ -8579,6 +8579,84 @@
           "reason": "Align transformed-file provenance with rich_ui_v3 deployment authority and patched dependency advisory floor"
         }
       ]
+    },
+    {
+      "delta_id": "production-grade-settings-authority-20260815",
+      "generated_at": "2026-08-14T14:42:45.667Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "39cceb2204e8317023307577f8eeae386137ee8a",
+      "target_base_commit": "39cceb2204e8317023307577f8eeae386137ee8a",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/__tests__/developer-access-route.test.ts",
+          "target_blob": "4b6e023ff7dbbd91ace571eef047b19fac1e512e",
+          "reason": "publish environment-bound gateway discovery and immutable live runtime policy evidence"
+        },
+        {
+          "path": "src/workers/__tests__/model-runtimes-route.test.ts",
+          "target_blob": "64b555a90801dbe0892e189c9f21f2406081bf85",
+          "reason": "publish environment-bound gateway discovery and immutable live runtime policy evidence"
+        },
+        {
+          "path": "src/workers/routes/developer-access.ts",
+          "target_blob": "38fe19e8d6a28b5f1afd7b08a2421b81290ddaa4",
+          "reason": "publish environment-bound gateway discovery and immutable live runtime policy evidence"
+        },
+        {
+          "path": "src/workers/routes/mcp-gateway.ts",
+          "target_blob": "4b217def5f5cd4b80380248b56f4addecb546c3f",
+          "reason": "publish environment-bound gateway discovery and immutable live runtime policy evidence"
+        },
+        {
+          "path": "src/workers/routes/model-runtimes.ts",
+          "target_blob": "64af35e2750a12ddce3af6282232f9f37898ff17",
+          "reason": "publish environment-bound gateway discovery and immutable live runtime policy evidence"
+        }
+      ]
+    },
+    {
+      "delta_id": "commercial-chat-citation-contract-20260815",
+      "generated_at": "2026-08-14T16:41:51Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "8973018ccfde5458acffc63a50a266d22595ce31",
+      "target_base_commit": "8973018ccfde5458acffc63a50a266d22595ce31",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/routes/customer-chat.ts",
+          "target_blob": "7201c741028906df865363506d22db21df41070d",
+          "reason": "Expose customer-safe workspace, selected-project, and plan-entity citations alongside event and document citations so every grounded commercial chat answer carries machine-readable source lineage."
+        },
+        {
+          "path": "src/workers/__tests__/chat-turn-facade.test.ts",
+          "target_blob": "f48335f4e282a7e2a6dcb15c20922e871b6fe2a2",
+          "reason": "Prove the commercial chat facade returns the tenant workspace as the first safe citation when no narrower event or document source is required."
+        }
+      ]
+    },
+    {
+      "delta_id": "commercial-chat-semantic-grounding-20260815",
+      "generated_at": "2026-08-14T18:00:09.475Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "157b19e6c41f2e9e001013aa7d6d1a1b7ac98b09",
+      "target_base_commit": "157b19e6c41f2e9e001013aa7d6d1a1b7ac98b09",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/services/cockpit-chat.ts",
+          "target_blob": "22087032a8241cbdccaa089da8ea3f3396db7077",
+          "reason": "Reject live answers that contradict tenant-authoritative structured facts, retry a live fallback, and fail typed-unavailable when no semantically valid live answer exists."
+        },
+        {
+          "path": "src/workers/__tests__/cockpit-chat.test.ts",
+          "target_blob": "06a1dc921c1a27ff5b8a375174c87d9288989c7f",
+          "reason": "Reject live answers that contradict tenant-authoritative structured facts, retry a live fallback, and fail typed-unavailable when no semantically valid live answer exists."
+        }
+      ]
     }
   ]
 }

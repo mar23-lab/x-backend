@@ -49,10 +49,22 @@ const mint = (app: Hono, body: Record<string, unknown>, env: never) =>
 
 describe('GET /developer-access/status · canonical MCP discovery', () => {
   it('advertises one xcp-gateway customer intake and no legacy identity tool or peer gateway', async () => {
-    const res = await appFor(VIEWER, dalStub()).request('/api/v1/developer-access/status', {}, OFF);
+    const res = await appFor(VIEWER, dalStub()).request(
+      'https://api-test.xlooop.com/api/v1/developer-access/status',
+      {},
+      OFF,
+    );
     expect(res.status).toBe(200);
     const body = await res.json() as Record<string, any>;
-    expect(body).toMatchObject({ connector_namespace: 'xcp-gateway', profile: 'customer' });
+    expect(body).toMatchObject({
+      connector_namespace: 'xcp-gateway',
+      profile: 'customer',
+      connect: {
+        endpoint: 'https://api-test.xlooop.com/api/v1/mcp/rpc',
+        transport: 'streamable_http',
+        session_start_endpoint: 'https://api-test.xlooop.com/api/v1/mcp/session-start',
+      },
+    });
     expect(body.allowed_tools.filter((tool: { name: string }) => tool.name === 'xcp_session_start')).toHaveLength(1);
     expect(JSON.stringify(body)).not.toContain('xlooop.whoami');
     expect(JSON.stringify(body)).not.toContain('xlooop-customer-gateway');

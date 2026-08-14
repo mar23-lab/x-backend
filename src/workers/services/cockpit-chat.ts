@@ -1338,7 +1338,137 @@ function buildStructuredFactBlock(facts: CockpitChatFacts, grounded: CockpitChat
 /** User-selectable chat LLM. 'llama' = free Workers-AI default; 'claude' = premium (needs ANTHROPIC_API_KEY). */
 export type CockpitChatLLM = 'llama' | 'claude';
 
-function validateLiveGrounding(text: string, grounded: CockpitChatResult['grounded_on']): string | null {
+function normalizedFactText(value: unknown): string {
+  return String(value ?? '').toLowerCase().replace(/\s+/g, ' ').trim();
+}
+
+function mentionedFactCounts(text: string, singular: string): number[] {
+  const escaped = singular.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const patterns = [
+    new RegExp(`\\b(\\d+)\\s+${escaped}s?\\b`, 'gi'),
+    new RegExp(`\\b${escaped}s?\\s+(?:count\\s*(?:is|of)?\\s*)?(\\d+)\\b`, 'gi'),
+    new RegExp(`(?<!\\d\\s)\\b${escaped}s?\\s*[:=(]\\s*(\\d+)\\s*\\)?`, 'gi'),
+    new RegExp(`\\b${escaped}s?\\b[^\\n]{0,60}\\((\\d+)\\)\\s*:`, 'gi'),
+  ];
+  const counts: number[] = [];
+  for (const pattern of patterns) {
+    for (const match of text.matchAll(pattern)) counts.push(Number(match[1]));
+  }
+  return [...new Set(counts.filter(Number.isFinite))];
+}
+
+function validateExactCount(text: string, singular: string, expected: number): string | null {
+  const mentioned = mentionedFactCounts(text, singular);
+  if (mentioned.some((value) => value !== expected)) return `GROUNDING_${singular.toUpperCase()}_COUNT_MISMATCH`;
+  if (!mentioned.includes(expected)) return `GROUNDING_${singular.toUpperCase()}_COUNT_MISSING`;
+  return null;
+}
+
+function requestsEntityInventory(question: string, singular: 'goal' | 'milestone' | 'todo'): boolean {
+  const normalized = normalizedFactText(question);
+  const noun = singular === 'todo' ? '(?:to-?dos?|tasks?)' : `${singular}s?`;
+  const patterns = [
+    new RegExp(`\\b(?:list|show|name|summari[sz]e|give(?: me)? all)\\s+(?:(?:the|all|every|each|project|current)\\s+){0,3}${noun}\\b`, 'i'),
+    new RegExp(`\\b(?:every|each|current|recorded)\\s+${noun}\\b`, 'i'),
+    new RegExp(`\\b${noun}\\s+(?:are\\s+recorded|inventory)\\b`, 'i'),
+    new RegExp(`\\bdo\\s+(?:we|i)\\s+have\\s+(?:(?:a|any)\\s+)?${noun}\\b`, 'i'),
+    new RegExp(`\\bare\\s+there\\s+any\\s+${noun}\\b`, 'i'),
+  ];
+  return patterns.some((pattern) => pattern.test(normalized));
+}
+
+function validateRequestedFactGrounding(
+  text: string,
+  grounded: CockpitChatResult['grounded_on'],
+  question: string,
+): string | null {
+  const normalized = normalizedFactText(text);
+  const required = new Set(grounded.requested_facts.required);
+  const unavailable = new Set(grounded.requested_facts.unavailable);
+
+  for (const fact of unavailable) {
+    const label = fact.replace(/_/g, ' ');
+    if (!normalized.includes('unavailable') && !normalized.includes(`could not verify ${label}`)) {
+      return `GROUNDING_${fact.toUpperCase()}_UNAVAILABLE_NOT_DISCLOSED`;
+    }
+  }
+
+  if (required.has('workspace_name') && !unavailable.has('workspace_name')) {
+    const workspaceName = normalizedFactText(grounded.workspace.name);
+    if (!workspaceName || !normalized.includes(workspaceName)) return 'GROUNDING_WORKSPACE_NAME_MISSING';
+  }
+
+  if (required.has('project_inventory') && !unavailable.has('project_inventory')) {
+    for (const project of grounded.projects.items) {
+      if (!normalized.includes(normalizedFactText(project.name))) return 'GROUNDING_PROJECT_INVENTORY_INCOMPLETE';
+    }
+    if (/\b(?:count|counts|how many|number of|total)\b/i.test(question)) {
+      const countError = validateExactCount(text, 'project', grounded.projects.total);
+      if (countError) return countError;
+    }
+  }
+
+  if (required.has('project_name') && !unavailable.has('project_name')) {
+    const projectName = normalizedFactText(grounded.plan.project_name);
+    if (!projectName || !normalized.includes(projectName)) return 'GROUNDING_PROJECT_NAME_MISSING';
+  }
+
+  const planKinds = [
+    ['goals', 'goal'],
+    ['milestones', 'milestone'],
+    ['todos', 'todo'],
+  ] as const;
+  for (const [fact, kind] of planKinds) {
+    if (!required.has(fact) || unavailable.has(fact)) continue;
+    const entities = grounded.plan.entities.filter((entity) => entity.kind === kind);
+    if (requestsEntityInventory(question, kind)) {
+      for (const entity of entities) {
+        if (!normalized.includes(normalizedFactText(entity.title))) {
+          return `GROUNDING_${kind.toUpperCase()}_INVENTORY_INCOMPLETE`;
+        }
+      }
+    }
+    const countError = validateExactCount(text, kind, entities.length);
+    if (countError) return countError;
+  }
+
+  if (required.has('counts') && !unavailable.has('counts')) {
+    for (const [kind, expected] of Object.entries(grounded.plan.counts)) {
+      const countError = validateExactCount(text, kind.replace(/s$/, ''), expected);
+      if (countError) return countError;
+    }
+  }
+
+  if (required.has('project_sources') && !unavailable.has('project_sources')) {
+    if (required.has('counts') || /\b(?:source|binding|connector)s?.{0,40}(?:count|how many|number of|total)\b/i.test(question)) {
+      const totalError = validateExactCount(text, 'source binding', grounded.project_sources.total);
+      if (totalError) return totalError;
+      if (!new RegExp(`\\b${grounded.project_sources.connected}\\s+connected\\b`, 'i').test(text)) {
+        return 'GROUNDING_CONNECTED_SOURCE_COUNT_MISSING';
+      }
+    } else if (!/\b(?:project sources?|source bindings?|connected sources?)\b/i.test(text)) {
+      return 'GROUNDING_PROJECT_SOURCES_MISSING';
+    }
+  }
+
+  if (required.has('freshness') && !unavailable.has('freshness')) {
+    const freshness = grounded.plan.updated_at ?? grounded.projects.updated_at;
+    const date = freshness?.slice(0, 10);
+    if (!freshness || (!normalized.includes(normalizedFactText(freshness)) && (!date || !normalized.includes(date)))) {
+      return 'GROUNDING_REQUESTED_FRESHNESS_MISSING';
+    }
+  }
+
+  return null;
+}
+
+function validateLiveGrounding(
+  text: string,
+  grounded: CockpitChatResult['grounded_on'],
+  question: string,
+): string | null {
+  const factError = validateRequestedFactGrounding(text, grounded, question);
+  if (factError) return factError;
   if (!grounded.data_freshness.is_stale) return null;
   const normalized = text.toLowerCase();
   const acknowledgesAge = normalized.includes(String(grounded.data_freshness.staleness_minutes))
@@ -1568,7 +1698,7 @@ export async function answerCockpitChat(
       system: executionSystem,
       user: executionUser,
       maxTokens: mode === 'deep-research' ? 900 : 700,
-      validateText: (text) => validateLiveGrounding(annotateLiveFreshness(text, grounded), grounded),
+      validateText: (text) => validateLiveGrounding(annotateLiveFreshness(text, grounded), grounded, message),
       observer: executionObserver,
     });
     return {

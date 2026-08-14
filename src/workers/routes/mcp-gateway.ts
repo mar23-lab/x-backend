@@ -46,6 +46,8 @@ mcpGatewayRoute.use('*', idempotencyMiddleware());
 export const XCP_GATEWAY_NAME = 'xcp-gateway';
 export const XCP_GATEWAY_PROFILE = 'customer';
 export const CUSTOMER_MCP_CONNECTOR_NAMESPACE = XCP_GATEWAY_NAME;
+export const XCP_GATEWAY_RPC_PATH = '/api/v1/mcp/rpc';
+export const XCP_GATEWAY_SESSION_START_PATH = '/api/v1/mcp/session-start';
 
 export const SAFE_TOOLS = [
   { name: 'xcp_session_start', action: 'session_start', method: 'GET', path: '/api/v1/mcp/session-start' },

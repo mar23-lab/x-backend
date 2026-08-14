@@ -292,16 +292,57 @@ describe('compileChatFacts — data_freshness (P0.1: never imply "all clear" ove
     const runtime: ResolvedRuntime = {
       runtime_id: 'live', provider: 'workers_ai', model: '@cf/test', source: 'platform_default',
       provider_config_version_id: null, base_url: null, credential: null,
-      ai: { run: async () => ({ response: 'The exact project name is Xlooop commercial proof; verify the pending authority decision next.' }) },
+      ai: { run: async () => ({ response: 'The exact project name is Cockpit & Workspace UX; verify the pending authority decision next.' }) },
     };
-    const result = await answerLiveCockpitChat('name this project and give the next action', FACTS(), 'ask', undefined, {
+    const result = await answerLiveCockpitChat('name this project and give the next action', FACTS({ plan: SEMANTIC_PLAN }), 'ask', undefined, {
       primary: runtime, fallbacks: [], resolution_attempts: [],
     });
 
     expect(result.generated_by).toBe('llm');
     expect(result.answer).toMatch(/newest recorded activity is \d+ minutes old/i);
     expect(result.answer).toMatch(/snapshot, not live status/i);
-    expect(result.answer).toContain('The exact project name is Xlooop commercial proof');
+    expect(result.answer).toContain('The exact project name is Cockpit & Workspace UX');
+  });
+
+  it('rejects a live provider that contradicts canonical plan counts and retries a live fallback', async () => {
+    const runtime = (id: string, response: string): ResolvedRuntime => ({
+      runtime_id: id, provider: 'workers_ai', model: '@cf/test', source: 'platform_default',
+      provider_config_version_id: null, base_url: null, credential: null,
+      ai: { run: async () => ({ response }) },
+    });
+    const prompt = 'Name the current project and report the exact goal, milestone, todo, and intent counts with freshness.';
+    const result = await answerLiveCockpitChat(prompt, FACTS({ plan: SEMANTIC_PLAN }), 'ask', undefined, {
+      primary: runtime('wrong-counts', 'Cockpit & Workspace UX has 0 goals, 0 milestones, 0 todos, and 0 intents as of 2026-07-30.'),
+      fallbacks: [runtime(
+        'exact-counts',
+        'Cockpit & Workspace UX has 2 goals, 1 milestone, 2 todos, and 1 intent as of 2026-07-30.',
+      )],
+      resolution_attempts: [],
+    });
+
+    expect(result.execution.runtime_id).toBe('exact-counts');
+    expect(result.execution.attempts).toEqual([
+      expect.objectContaining({ runtime_id: 'wrong-counts', status: 'failed', error_code: 'GROUNDING_GOAL_COUNT_MISMATCH' }),
+      expect.objectContaining({ runtime_id: 'exact-counts', status: 'completed' }),
+    ]);
+    expect(result.answer).toContain('2 goals');
+    expect(result.answer).not.toContain('0 goals');
+  });
+
+  it('rejects a live provider that omits a requested canonical plan entity', async () => {
+    const runtime: ResolvedRuntime = {
+      runtime_id: 'incomplete', provider: 'workers_ai', model: '@cf/test', source: 'platform_default',
+      provider_config_version_id: null, base_url: null, credential: null,
+      ai: { run: async () => ({ response: 'Cockpit & Workspace UX has Goals (2): Make every pilot write durable. As of 2026-07-30.' }) },
+    };
+
+    await expect(answerLiveCockpitChat(
+      'Name the current project and list every goal with freshness.',
+      FACTS({ plan: SEMANTIC_PLAN }),
+      'ask',
+      undefined,
+      { primary: runtime, fallbacks: [], resolution_attempts: [] },
+    )).rejects.toMatchObject({ name: 'ProviderUnavailableError' });
   });
 
   it('scopes provider present-tense shorthand to the stale recorded snapshot', async () => {
