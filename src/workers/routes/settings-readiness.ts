@@ -21,6 +21,7 @@ import {
   isGoogleConnectorOAuthConfigured,
   type ConnectorOAuthProviderEnv,
 } from '../services/connector-oauth-provider';
+import { runtimePolicyEnforcement } from '../services/runtime-policy-enforcement';
 
 type ReadinessStatus = 'ready' | 'attention' | 'unavailable';
 
@@ -125,6 +126,7 @@ settingsReadinessRoute.get('/settings/readiness', async (ctx) => {
         provider: plan.primary.provider,
         model: plan.primary.model,
         source: plan.primary.source,
+        policy_enforcement: runtimePolicyEnforcement(),
       },
     }));
   } catch (err) {

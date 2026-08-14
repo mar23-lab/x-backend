@@ -129,6 +129,12 @@ describe('effective runtime + live provider operations', () => {
     expect(await res.json()).toMatchObject({
       effective: { runtime_id: 'platform:workers_ai', provider: 'workers_ai', source: 'platform_default' },
       fallback_count: 0,
+      policy_enforcement: {
+        status: 'enforced',
+        authority: 'xlooop_backend',
+        policy_version: 'commercial_live_v1',
+        mutable: false,
+      },
     });
   });
 

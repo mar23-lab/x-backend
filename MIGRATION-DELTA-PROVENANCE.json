@@ -8579,6 +8579,42 @@
           "reason": "Align transformed-file provenance with rich_ui_v3 deployment authority and patched dependency advisory floor"
         }
       ]
+    },
+    {
+      "delta_id": "production-grade-settings-authority-20260815",
+      "generated_at": "2026-08-14T14:42:45.667Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "39cceb2204e8317023307577f8eeae386137ee8a",
+      "target_base_commit": "39cceb2204e8317023307577f8eeae386137ee8a",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/__tests__/developer-access-route.test.ts",
+          "target_blob": "4b6e023ff7dbbd91ace571eef047b19fac1e512e",
+          "reason": "publish environment-bound gateway discovery and immutable live runtime policy evidence"
+        },
+        {
+          "path": "src/workers/__tests__/model-runtimes-route.test.ts",
+          "target_blob": "64b555a90801dbe0892e189c9f21f2406081bf85",
+          "reason": "publish environment-bound gateway discovery and immutable live runtime policy evidence"
+        },
+        {
+          "path": "src/workers/routes/developer-access.ts",
+          "target_blob": "38fe19e8d6a28b5f1afd7b08a2421b81290ddaa4",
+          "reason": "publish environment-bound gateway discovery and immutable live runtime policy evidence"
+        },
+        {
+          "path": "src/workers/routes/mcp-gateway.ts",
+          "target_blob": "4b217def5f5cd4b80380248b56f4addecb546c3f",
+          "reason": "publish environment-bound gateway discovery and immutable live runtime policy evidence"
+        },
+        {
+          "path": "src/workers/routes/model-runtimes.ts",
+          "target_blob": "64af35e2750a12ddce3af6282232f9f37898ff17",
+          "reason": "publish environment-bound gateway discovery and immutable live runtime policy evidence"
+        }
+      ]
     }
   ]
 }

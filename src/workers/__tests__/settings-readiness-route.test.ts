@@ -64,6 +64,16 @@ describe('GET /api/v1/settings/readiness', () => {
     expect(body.checks.find((item: any) => item.id === 'database_schema_rls')).toMatchObject({
       status: 'ready', details: { schema_head: 93, rls_binding: 'app' },
     });
+    expect(body.checks.find((item: any) => item.id === 'effective_runtime')).toMatchObject({
+      status: 'ready',
+      details: {
+        policy_enforcement: {
+          status: 'enforced',
+          authority: 'xlooop_backend',
+          mutable: false,
+        },
+      },
+    });
     expect(body.checks.find((item: any) => item.id === 'delete_export').status).toBe('attention');
     expect(body.checks.find((item: any) => item.id === 'connector_revocation')).toMatchObject({
       status: 'ready', details: {

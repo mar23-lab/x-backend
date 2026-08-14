@@ -21,6 +21,8 @@ import {
   FORBIDDEN_SURFACES as MCP_FORBIDDEN_SURFACES,
   SAFE_TOOLS,
   XCP_GATEWAY_PROFILE,
+  XCP_GATEWAY_RPC_PATH,
+  XCP_GATEWAY_SESSION_START_PATH,
 } from './mcp-gateway';
 import { whoamiEnvelope } from './template-policy-registry';
 import { hashToken } from '../dal/customer-token-store';
@@ -67,7 +69,7 @@ developerAccessRoute.get('/developer-access/status', async (ctx) => {
     const workspaceName = entitlement.state === 'approved_workspace'
       ? entitlement.workspace?.name || humanizeTenant(auth.workspace_id)
       : humanizeTenant(auth.workspace_id);
-    return ctx.json(buildStatus(auth, workspaceName));
+    return ctx.json(buildStatus(auth, workspaceName, new URL(ctx.req.url).origin));
   } catch (err) {
     return errorEnvelope(ctx, err);
   }
@@ -80,7 +82,7 @@ developerAccessRoute.post('/developer-access/test', async (ctx) => {
     const workspaceName = entitlement.state === 'approved_workspace'
       ? entitlement.workspace?.name || humanizeTenant(auth.workspace_id)
       : humanizeTenant(auth.workspace_id);
-    const status = buildStatus(auth, workspaceName);
+    const status = buildStatus(auth, workspaceName, new URL(ctx.req.url).origin);
     const whoami = whoamiEnvelope(auth);
     const now = new Date().toISOString();
     return ctx.json({
@@ -110,7 +112,7 @@ developerAccessRoute.post('/developer-access/test', async (ctx) => {
   }
 });
 
-function buildStatus(auth: AuthContext, workspaceName: string) {
+function buildStatus(auth: AuthContext, workspaceName: string, apiOrigin: string) {
   return {
     schema_id: 'xlooop.developer_access_status.v1',
     readiness_state: 'read_only_validation',
@@ -118,6 +120,12 @@ function buildStatus(auth: AuthContext, workspaceName: string) {
     full_api_blocked: true,
     connector_namespace: CUSTOMER_MCP_CONNECTOR_NAMESPACE,
     profile: XCP_GATEWAY_PROFILE,
+    connect: {
+      endpoint: `${apiOrigin}${XCP_GATEWAY_RPC_PATH}`,
+      transport: 'streamable_http',
+      session_start_endpoint: `${apiOrigin}${XCP_GATEWAY_SESSION_START_PATH}`,
+      authorization: 'oauth_or_bearer_connector_token',
+    },
     workspace_label: workspaceName,
     user_label: labelUser(auth),
     supported_clients: SUPPORTED_CLIENTS,
