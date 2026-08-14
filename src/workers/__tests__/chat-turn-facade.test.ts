@@ -109,7 +109,10 @@ describe('POST /api/v1/chat/turns', () => {
       role_skill_catalog_hash: 'c'.repeat(64),
       selected_skill_versions: [{ key: 'customer-answer', version: '1' }],
     });
-    expect(body.citations).toEqual([]);
+    expect(body.citations).toEqual([{
+      kind: 'workspace',
+      ref: 'workspace_a',
+    }]);
     expect(body.streaming).toMatchObject({
       status: 'enabled', mode: 'atomic_post_completion', provider_native: false, receipt_before_stream: true,
     });

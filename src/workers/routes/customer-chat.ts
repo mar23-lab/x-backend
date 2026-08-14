@@ -953,6 +953,26 @@ async function handleCustomerChat(ctx: CustomerChatContext) {
         source_freshness: result.grounded_on.data_freshness,
       },
       citations: [
+        ...(result.grounded_on.workspace.id
+          ? [{
+            kind: 'workspace',
+            ref: result.grounded_on.workspace.id,
+            label: result.grounded_on.workspace.name ?? undefined,
+          }]
+          : []),
+        ...(result.grounded_on.plan.project_id
+          ? [{
+            kind: 'project',
+            ref: result.grounded_on.plan.project_id,
+            label: result.grounded_on.plan.project_name ?? undefined,
+          }]
+          : []),
+        ...result.grounded_on.plan.entities.map((entity) => ({
+          kind: 'plan_entity',
+          ref: entity.id,
+          label: entity.title,
+          entity_kind: entity.kind,
+        })),
         ...(result.grounded_on.event_ids ?? []).map((ref) => ({ kind: 'event', ref })),
         ...result.grounded_on.documents.names.map((label) => ({ kind: 'document', label })),
       ],

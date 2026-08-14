@@ -8615,6 +8615,27 @@
           "reason": "publish environment-bound gateway discovery and immutable live runtime policy evidence"
         }
       ]
+    },
+    {
+      "delta_id": "commercial-chat-citation-contract-20260815",
+      "generated_at": "2026-08-14T16:41:51Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "8973018ccfde5458acffc63a50a266d22595ce31",
+      "target_base_commit": "8973018ccfde5458acffc63a50a266d22595ce31",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/routes/customer-chat.ts",
+          "target_blob": "7201c741028906df865363506d22db21df41070d",
+          "reason": "Expose customer-safe workspace, selected-project, and plan-entity citations alongside event and document citations so every grounded commercial chat answer carries machine-readable source lineage."
+        },
+        {
+          "path": "src/workers/__tests__/chat-turn-facade.test.ts",
+          "target_blob": "f48335f4e282a7e2a6dcb15c20922e871b6fe2a2",
+          "reason": "Prove the commercial chat facade returns the tenant workspace as the first safe citation when no narrower event or document source is required."
+        }
+      ]
     }
   ]
 }
