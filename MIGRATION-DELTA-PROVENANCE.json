@@ -8636,6 +8636,27 @@
           "reason": "Prove the commercial chat facade returns the tenant workspace as the first safe citation when no narrower event or document source is required."
         }
       ]
+    },
+    {
+      "delta_id": "commercial-chat-semantic-grounding-20260815",
+      "generated_at": "2026-08-14T18:00:09.475Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "157b19e6c41f2e9e001013aa7d6d1a1b7ac98b09",
+      "target_base_commit": "157b19e6c41f2e9e001013aa7d6d1a1b7ac98b09",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/services/cockpit-chat.ts",
+          "target_blob": "22087032a8241cbdccaa089da8ea3f3396db7077",
+          "reason": "Reject live answers that contradict tenant-authoritative structured facts, retry a live fallback, and fail typed-unavailable when no semantically valid live answer exists."
+        },
+        {
+          "path": "src/workers/__tests__/cockpit-chat.test.ts",
+          "target_blob": "06a1dc921c1a27ff5b8a375174c87d9288989c7f",
+          "reason": "Reject live answers that contradict tenant-authoritative structured facts, retry a live fallback, and fail typed-unavailable when no semantically valid live answer exists."
+        }
+      ]
     }
   ]
 }
