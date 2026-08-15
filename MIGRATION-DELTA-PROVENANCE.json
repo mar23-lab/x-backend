@@ -8657,6 +8657,27 @@
           "reason": "Reject live answers that contradict tenant-authoritative structured facts, retry a live fallback, and fail typed-unavailable when no semantically valid live answer exists."
         }
       ]
+    },
+    {
+      "delta_id": "commercial-api-readiness-consistency-20260815",
+      "generated_at": "2026-08-15T00:10:25Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "41dbae448a9affcd80b0959d01a85122e7cf7d2d",
+      "target_base_commit": "41dbae448a9affcd80b0959d01a85122e7cf7d2d",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/routes/developer-access.ts",
+          "target_blob": "0cc0a2f3cbc4285f01189edfff8c216fb190edf3",
+          "reason": "Carry the environment-bound canonical gateway discovery contract into the live developer-access test receipt consumed by Settings."
+        },
+        {
+          "path": "src/workers/__tests__/developer-access-route.test.ts",
+          "target_blob": "a78cfab7a4c76d561b948bb1922c0f941eb9ed68",
+          "reason": "Prove the live developer-access test receipt publishes the same canonical endpoint, transport, and session-start endpoint as the readiness surface."
+        }
+      ]
     }
   ]
 }

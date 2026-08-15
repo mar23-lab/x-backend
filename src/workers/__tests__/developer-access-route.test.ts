@@ -69,6 +69,24 @@ describe('GET /developer-access/status · canonical MCP discovery', () => {
     expect(JSON.stringify(body)).not.toContain('xlooop.whoami');
     expect(JSON.stringify(body)).not.toContain('xlooop-customer-gateway');
   });
+
+  it('returns the same canonical gateway contract in the live session-test receipt', async () => {
+    const res = await appFor(VIEWER, dalStub()).request(
+      'https://api-test.xlooop.com/api/v1/developer-access/test',
+      { method: 'POST' },
+      OFF,
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json() as Record<string, any>;
+    expect(body).toMatchObject({
+      status: 'pass',
+      connect: {
+        endpoint: 'https://api-test.xlooop.com/api/v1/mcp/rpc',
+        transport: 'streamable_http',
+        session_start_endpoint: 'https://api-test.xlooop.com/api/v1/mcp/session-start',
+      },
+    });
+  });
 });
 
 describe('POST /developer-access/tokens · the controlled minter', () => {
