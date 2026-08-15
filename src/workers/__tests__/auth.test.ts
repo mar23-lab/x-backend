@@ -35,13 +35,20 @@ async function getBody(res: Response): Promise<Record<string, unknown>> {
 
 describe('Clerk JWT auth middleware', () => {
   it('returns 401 UNAUTHORIZED when Authorization header is missing (GET /api/v1/session)', async () => {
-    const req = new Request('http://localhost/api/v1/session');
+    const req = new Request('http://localhost/api/v1/session', {
+      headers: {
+        Origin: 'https://app.xlooop.com',
+        'X-Request-Id': 'client-correlation-123',
+      },
+    });
     const res = await app.fetch(req, stubEnv());
     expect(res.status).toBe(401);
     const body = await getBody(res);
     expect(body.code).toBe('UNAUTHORIZED');
     expect(typeof body.error).toBe('string');
-    expect(typeof body.request_id).toBe('string');
+    expect(body.request_id).toBe('client-correlation-123');
+    expect(res.headers.get('X-Request-Id')).toBe(body.request_id);
+    expect(res.headers.get('Access-Control-Expose-Headers')).toContain('X-Request-Id');
   });
 
   it('returns 401 when Bearer token is empty', async () => {

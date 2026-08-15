@@ -34,6 +34,22 @@ describe('CORS preflight — allowed methods', () => {
     expect(hdrs).toContain('Idempotency-Key'); // governed writes (live-data.js) send this; missing here => all writes fail CORS preflight ("Failed to fetch")
   });
 
+  it('exposes response correlation to allowed browser origins', async () => {
+    const responseApp = new Hono();
+    responseApp.use('*', corsMiddleware());
+    responseApp.all('/x', (ctx) => {
+      ctx.header('X-Request-Id', 'request-visible-to-browser');
+      return ctx.json({ request_id: 'request-visible-to-browser' });
+    });
+
+    const res = await responseApp.request('/x', {
+      headers: { origin: 'https://app.xlooop.com' },
+    }, ENV);
+
+    expect(res.headers.get('Access-Control-Expose-Headers')).toContain('X-Request-Id');
+    expect(res.headers.get('X-Request-Id')).toBe('request-visible-to-browser');
+  });
+
   it('a non-xlooop origin is not granted Access-Control-Allow-Origin', async () => {
     const res = await app().request('/x', { method: 'OPTIONS', headers: { origin: 'https://evil.example.com' } }, ENV);
     expect(res.headers.get('Access-Control-Allow-Origin')).toBeNull();

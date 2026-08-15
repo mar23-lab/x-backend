@@ -8678,6 +8678,37 @@
           "reason": "Prove the live developer-access test receipt publishes the same canonical endpoint, transport, and session-start endpoint as the readiness surface."
         }
       ]
+    },
+    {
+      "delta_id": "browser-request-correlation-contract-20260815",
+      "generated_at": "2026-08-15T00:58:35Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "22ae24807300dbdd2363cfd4d19fddee36832a28",
+      "target_base_commit": "22ae24807300dbdd2363cfd4d19fddee36832a28",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/index.ts",
+          "target_blob": "275ef5fb50ad2972697e2f2ad0ee37742d030390",
+          "reason": "Publish the canonical request correlation identifier as an HTTP response header on every completed API response without changing authorization decisions."
+        },
+        {
+          "path": "src/workers/middleware/cors.ts",
+          "target_blob": "f9a9bf2e094c4d9e4dfbe790b50780cd8294f024",
+          "reason": "Allow governed browser origins to read X-Request-Id for customer support and receipt correlation."
+        },
+        {
+          "path": "src/workers/__tests__/auth.test.ts",
+          "target_blob": "ee15805a85f22d5010d3672390ac647bf500b9b6",
+          "reason": "Prove pre-auth failures preserve status and authority while returning one matching request identifier in body and response headers."
+        },
+        {
+          "path": "src/workers/__tests__/cors-methods.test.ts",
+          "target_blob": "ad53e2f130be3833f238870cae3dcf1d40de3f68",
+          "reason": "Prove allowed browser origins can read response correlation without widening origin or method policy."
+        }
+      ]
     }
   ]
 }
