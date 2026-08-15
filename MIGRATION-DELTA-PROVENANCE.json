@@ -8709,6 +8709,27 @@
           "reason": "Prove allowed browser origins can read response correlation without widening origin or method policy."
         }
       ]
+    },
+    {
+      "delta_id": "session-start-endpoint-alias-20260815",
+      "generated_at": "2026-08-15T12:06:53.333Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "6ada1b4d6ac803b9b6a409464f23a4ccfd7229d3",
+      "target_base_commit": "6ada1b4d6ac803b9b6a409464f23a4ccfd7229d3",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/routes/developer-access.ts",
+          "target_blob": "c8912f9649131fbcc1a8e4bd234d171191d257f0",
+          "reason": "Publish and verify the environment-bound xcp-gateway endpoint compatibility alias"
+        },
+        {
+          "path": "src/workers/__tests__/developer-access-route.test.ts",
+          "target_blob": "0d9de42ee984ebbf2df334cace8e62a5cf01f4ed",
+          "reason": "Publish and verify the environment-bound xcp-gateway endpoint compatibility alias"
+        }
+      ]
     }
   ]
 }
