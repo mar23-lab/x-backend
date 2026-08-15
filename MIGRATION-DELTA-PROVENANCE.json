@@ -8730,6 +8730,27 @@
           "reason": "Publish and verify the environment-bound xcp-gateway endpoint compatibility alias"
         }
       ]
+    },
+    {
+      "delta_id": "pilot-shadow-read-token-proof-20260816",
+      "generated_at": "2026-08-15T14:45:11.045Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "7d79c026468f75e190c1f9e0243194ca6bc2d2f7",
+      "target_base_commit": "7d79c026468f75e190c1f9e0243194ca6bc2d2f7",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "scripts/verify-pilot-shadow-config.mjs",
+          "target_blob": "b8233a8f7d0c9c28e351ee63cf25eddce72abcdb",
+          "reason": "Enable isolated read-only connector token lifecycle proof while operational issuance remains disabled"
+        },
+        {
+          "path": "wrangler.pilot-shadow.toml",
+          "target_blob": "7b713cb511a336395730f8fd08f9445e61f380c1",
+          "reason": "Enable isolated read-only connector token lifecycle proof while operational issuance remains disabled"
+        }
+      ]
     }
   ]
 }

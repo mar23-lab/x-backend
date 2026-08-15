@@ -48,6 +48,11 @@ CONTEXT_PACKET_PERSISTENCE_ENABLED = "true"
 CHAT_HISTORY_PERSISTENCE_REQUIRED = "true"
 IDEMPOTENCY_ENABLED = "true"
 SOURCE_SCOPE_ENFORCEMENT_ENABLED = "true"
+# Read-only customer connector tokens are enabled in this isolated environment so the
+# Settings API-access journey can prove mint -> session start -> revocation. Operational
+# tokens remain explicitly off until their separate write-authority proof is approved.
+CUSTOMER_API_TOKENS_ENABLED = "true"
+CUSTOMER_OPERATIONAL_TOKENS_ENABLED = "false"
 # Stays disabled until migration 101, the dedicated keyring, Google OAuth app,
 # and test.xlooop.com callback are all live-proven in this isolated environment.
 CONNECTOR_OAUTH_AUTHORITY_MODE = "disabled"
