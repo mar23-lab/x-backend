@@ -80,12 +80,14 @@ describe('GET /developer-access/status · canonical MCP discovery', () => {
     const body = await res.json() as Record<string, any>;
     expect(body).toMatchObject({
       status: 'pass',
+      endpoint: 'https://api-test.xlooop.com/api/v1/mcp/rpc',
       connect: {
         endpoint: 'https://api-test.xlooop.com/api/v1/mcp/rpc',
         transport: 'streamable_http',
         session_start_endpoint: 'https://api-test.xlooop.com/api/v1/mcp/session-start',
       },
     });
+    expect(body.endpoint).toBe(body.connect.endpoint);
   });
 });
 
