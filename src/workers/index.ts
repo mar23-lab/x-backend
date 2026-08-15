@@ -167,7 +167,6 @@ app.use('*', async (ctx, next) => {
     ctx.req.header('x-request-id') ||
     cryptoRandomId();
   ctx.set('request_id', requestId);
-
   // DAL is bound per-request because @neondatabase/serverless requires
   // a connection URL (env-derived) and we don't want a module-level singleton
   // sharing connections across isolates in unexpected ways.
@@ -181,6 +180,7 @@ app.use('*', async (ctx, next) => {
   }
 
   await next();
+  ctx.res.headers.set('X-Request-Id', requestId);
 });
 
 // Wave ι · global API rate limit (260803) — the mount rate-limit.ts asked for; 216/219 were uncapped.

@@ -20,6 +20,7 @@ const ALLOWED_METHODS = 'GET, POST, PUT, PATCH, DELETE, OPTIONS';
 // request once an org is active. app->api is cross-origin, so the header MUST be preflight-allowlisted
 // or the browser blocks the actual request — breaking exactly the org-scoped customers the fix unblocks.
 const ALLOWED_HEADERS = 'Authorization, Content-Type, X-Request-Id, X-Xlooop-Workspace-Assert, Idempotency-Key';
+const EXPOSED_HEADERS = 'X-Request-Id';
 const MAX_AGE_SECONDS = '86400';
 
 export function corsMiddleware(): MiddlewareHandler<{ Bindings: CorsEnv }> {
@@ -47,6 +48,7 @@ export function corsMiddleware(): MiddlewareHandler<{ Bindings: CorsEnv }> {
     // Attach CORS headers to all responses (mutate ctx.res)
     if (allowed && origin) {
       ctx.res.headers.set('Access-Control-Allow-Origin', origin);
+      ctx.res.headers.set('Access-Control-Expose-Headers', EXPOSED_HEADERS);
       ctx.res.headers.set('Vary', 'Origin');
     }
     return; // explicit return for noImplicitReturns
