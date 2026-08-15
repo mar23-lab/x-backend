@@ -92,6 +92,7 @@ developerAccessRoute.post('/developer-access/test', async (ctx) => {
       receipt_id: `dev-access-${ctx.get('request_id') || now}`,
       readiness_state: status.readiness_state,
       connect: status.connect,
+      endpoint: status.connect.endpoint,
       identity: {
         workspace_label: status.workspace_label,
         user_label: status.user_label,
