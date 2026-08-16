@@ -7,6 +7,7 @@
 import { assertWorkspaceScope } from './DalAdapter';
 import { makeError, randomNanoid } from './shared-helpers';
 import { withWorkspaceRlsContext } from './operational-spine-store';
+import { foldSignalsIntoProfile, type LearningSignalForFold } from '../lib/personalization-fold';
 import type { Sql } from '../db/client';
 import type {
   EffectiveTemplateEnvelope,
@@ -26,6 +27,7 @@ import type {
 
 const DEFAULT_LIMIT = 50;
 const MAX_LIMIT = 200;
+const MAX_EFFECTIVE_PROFILE_SIGNALS = 2000;
 const INHERITANCE_ORDER = [
   'global platform default',
   'vertical pack',
@@ -69,11 +71,18 @@ type TemplateProjectionRow = {
 };
 
 type UserPersonalizationProfileRow = {
+  role_key: string;
   preference_json: Record<string, unknown> | null;
   personal_rules_json: Record<string, unknown> | null;
   personal_skills_json: Record<string, unknown> | null;
   learned_defaults_json: Record<string, unknown> | null;
   source_signal_ids: string[] | null;
+};
+
+type ActiveLearningSignalIdRow = { id: string };
+
+type ActiveLearningSignalRow = LearningSignalForFold & {
+  signal_json: Record<string, unknown> | null;
 };
 
 type TenantLearningProfileRow = {
@@ -92,6 +101,19 @@ function jsonObject(value: unknown): Record<string, unknown> {
   return value && typeof value === 'object' && !Array.isArray(value)
     ? { ...(value as Record<string, unknown>) }
     : {};
+}
+
+function sameStringSet(left: string[], right: string[]): boolean {
+  if (left.length !== right.length) return false;
+  const expected = new Set(left);
+  return right.every((value) => expected.has(value));
+}
+
+export function personalizationProfileNeedsReadThrough(
+  activeSignalIds: string[],
+  materializedSignalIds: string[],
+): boolean {
+  return activeSignalIds.length > 0 && !sameStringSet(activeSignalIds, materializedSignalIds);
 }
 
 function scopeRank(scope: TemplateBindingScope): number {
@@ -434,7 +456,11 @@ export async function getEffectivePersonalizationProfileRow(
 ): Promise<EffectivePersonalizationProfile> {
   assertWorkspaceScope(workspaceId);
   const normalizedRole = roleKey.trim() || 'member';
-  const [tenantRows, userRows] = await withWorkspaceRlsContext<[TenantLearningProfileRow[], UserPersonalizationProfileRow[]]>(
+  const [tenantRows, userRows, activeSignalIdRows] = await withWorkspaceRlsContext<[
+    TenantLearningProfileRow[],
+    UserPersonalizationProfileRow[],
+    ActiveLearningSignalIdRow[],
+  ]>(
     sql,
     workspaceId,
     (tx) => [
@@ -448,15 +474,24 @@ export async function getEffectivePersonalizationProfileRow(
         ORDER BY updated_at ASC
       `,
       tx/*sql*/`
-        SELECT preference_json, personal_rules_json, personal_skills_json,
+        SELECT role_key, preference_json, personal_rules_json, personal_skills_json,
           learned_defaults_json, source_signal_ids
         FROM user_personalization_profiles
         WHERE workspace_id = ${workspaceId}
           AND user_id = ${actorUserId}
-          AND role_key = ${normalizedRole}
+          AND role_key IN (${normalizedRole}, 'member')
           AND lifecycle_state = 'active'
-        ORDER BY updated_at DESC
+        ORDER BY CASE WHEN role_key = ${normalizedRole} THEN 0 ELSE 1 END, updated_at DESC
         LIMIT 1
+      `,
+      tx/*sql*/`
+        SELECT id
+        FROM user_learning_signals
+        WHERE workspace_id = ${workspaceId}
+          AND user_id = ${actorUserId}
+          AND promotion_state NOT IN ('rejected', 'archived')
+        ORDER BY created_at, id
+        LIMIT ${MAX_EFFECTIVE_PROFILE_SIGNALS + 1}
       `,
     ],
     { readOnly: true },
@@ -473,7 +508,52 @@ export async function getEffectivePersonalizationProfileRow(
     if (row.approval_ref) approvalRefs.push(row.approval_ref);
   }
 
-  const user = userRows[0];
+  if (activeSignalIdRows.length > MAX_EFFECTIVE_PROFILE_SIGNALS) {
+    throw makeError(
+      'CAPACITY_EXCEEDED',
+      `effective profile exceeds ${MAX_EFFECTIVE_PROFILE_SIGNALS} active learning signals; compact or archive signals before retrying`,
+      503,
+    );
+  }
+
+  let user = userRows[0];
+  const activeSignalIds = activeSignalIdRows.map((row) => String(row.id));
+  const materializedSignalIds = Array.isArray(user?.source_signal_ids)
+    ? user.source_signal_ids.map(String)
+    : [];
+  const profileIsStale = personalizationProfileNeedsReadThrough(activeSignalIds, materializedSignalIds);
+
+  if (profileIsStale) {
+    const [activeSignals] = await withWorkspaceRlsContext<[ActiveLearningSignalRow[]]>(
+      sql,
+      workspaceId,
+      (tx) => [tx/*sql*/`
+        SELECT id, signal_kind, signal_json, created_at
+        FROM user_learning_signals
+        WHERE workspace_id = ${workspaceId}
+          AND user_id = ${actorUserId}
+          AND promotion_state NOT IN ('rejected', 'archived')
+        ORDER BY created_at, id
+        LIMIT ${MAX_EFFECTIVE_PROFILE_SIGNALS + 1}
+      `],
+      { readOnly: true },
+    );
+    if (activeSignals.length > MAX_EFFECTIVE_PROFILE_SIGNALS) {
+      throw makeError('CAPACITY_EXCEEDED', 'effective profile signal read exceeded its safety bound', 503);
+    }
+    const folded = foldSignalsIntoProfile(activeSignals.map((signal) => ({
+      id: String(signal.id),
+      signal_kind: String(signal.signal_kind),
+      signal_json: jsonObject(signal.signal_json),
+      created_at: typeof signal.created_at === 'string'
+        ? signal.created_at
+        : new Date(signal.created_at).toISOString(),
+    })));
+    user = {
+      role_key: normalizedRole,
+      ...folded,
+    };
+  }
   const userPreferences = jsonObject(user?.preference_json);
   const personalRules = jsonObject(user?.personal_rules_json);
   const personalSkills = jsonObject(user?.personal_skills_json);
@@ -524,8 +604,15 @@ export async function createUserLearningSignalRow(
   }
   const signalJson = requireAllowedLearningPayload('signal_json', input.signal_json);
   const signalJsonText = JSON.stringify(signalJson);
+  const foldedPatch = foldSignalsIntoProfile([{
+    id,
+    signal_kind: input.signal_kind,
+    signal_json: signalJson,
+    created_at: '1970-01-01T00:00:00.000Z',
+  }]);
+  const profileId = `upp_${workspaceId}:${actorUserId}:member`.slice(0, 200);
 
-  const [rows] = await withWorkspaceRlsContext<[UserLearningSignal[]]>(sql, workspaceId, (tx) => [
+  const [rows] = await withWorkspaceRlsContext<[UserLearningSignal[], unknown[]]>(sql, workspaceId, (tx) => [
     tx/*sql*/`
       INSERT INTO user_learning_signals (
         id, workspace_id, user_id, signal_kind, source_kind, signal_json,
@@ -537,6 +624,32 @@ export async function createUserLearningSignalRow(
       )
       RETURNING id, workspace_id, user_id, signal_kind, source_kind, signal_json,
         classification, promotion_state, consent_ref, evidence_ref_id, created_at, updated_at
+    `,
+    tx/*sql*/`
+      INSERT INTO user_personalization_profiles (
+        id, workspace_id, user_id, role_key, preference_json, personal_rules_json,
+        personal_skills_json, learned_defaults_json, source_signal_ids, lifecycle_state, updated_at
+      ) VALUES (
+        ${profileId}, ${workspaceId}, ${actorUserId}, 'member',
+        ${JSON.stringify(foldedPatch.preference_json)}::jsonb,
+        ${JSON.stringify(foldedPatch.personal_rules_json)}::jsonb,
+        ${JSON.stringify(foldedPatch.personal_skills_json)}::jsonb,
+        ${JSON.stringify(foldedPatch.learned_defaults_json)}::jsonb,
+        ${foldedPatch.source_signal_ids}, 'active', now()
+      )
+      ON CONFLICT (workspace_id, user_id, role_key) DO UPDATE SET
+        preference_json = user_personalization_profiles.preference_json || EXCLUDED.preference_json,
+        personal_rules_json = user_personalization_profiles.personal_rules_json || EXCLUDED.personal_rules_json,
+        personal_skills_json = user_personalization_profiles.personal_skills_json || EXCLUDED.personal_skills_json,
+        learned_defaults_json = user_personalization_profiles.learned_defaults_json || EXCLUDED.learned_defaults_json,
+        source_signal_ids = CASE
+          WHEN ${id} = ANY(user_personalization_profiles.source_signal_ids)
+            THEN user_personalization_profiles.source_signal_ids
+          ELSE user_personalization_profiles.source_signal_ids || ARRAY[${id}]::text[]
+        END,
+        lifecycle_state = 'active',
+        updated_at = now()
+      RETURNING id
     `,
   ]);
 
