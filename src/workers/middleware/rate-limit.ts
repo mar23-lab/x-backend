@@ -66,6 +66,7 @@ interface BucketConfig {
 // Top-level config — accepted by rateLimit().
 export interface RateLimitConfig {
   readonly ip?: BucketConfig;
+  readonly authenticatedIp?: BucketConfig;
   readonly user?: BucketConfig;
   readonly tenant?: BucketConfig;
   readonly routeBucket?: BucketConfig;
@@ -76,9 +77,10 @@ export interface RateLimitConfig {
 }
 
 const DEFAULT_CONFIG: Required<Omit<RateLimitConfig, 'skipRoutes' | 'getEnv' | 'routeBucket'>> & { skipRoutes: readonly string[]; routeBucket?: BucketConfig } = {
-  ip:     { limit: 100,  periodSeconds: 60, bindingName: 'RATE_LIMITER_IP' },
-  user:   { limit: 1000, periodSeconds: 60, bindingName: 'RATE_LIMITER_USER' },
-  tenant: { limit: 5000, periodSeconds: 60, bindingName: 'RATE_LIMITER_TENANT' },
+  ip:              { limit: 100,  periodSeconds: 60, bindingName: 'RATE_LIMITER_IP' },
+  authenticatedIp: { limit: 1000, periodSeconds: 60, bindingName: 'RATE_LIMITER_AUTH_IP' },
+  user:            { limit: 1000, periodSeconds: 60, bindingName: 'RATE_LIMITER_USER' },
+  tenant:          { limit: 5000, periodSeconds: 60, bindingName: 'RATE_LIMITER_TENANT' },
   skipRoutes: ['/api/v1/health'],
 };
 
@@ -166,6 +168,7 @@ export function rateLimit(userConfig: RateLimitConfig = {}): MiddlewareHandler {
     ...DEFAULT_CONFIG,
     ...userConfig,
     ip: { ...DEFAULT_CONFIG.ip, ...(userConfig.ip ?? {}) },
+    authenticatedIp: { ...DEFAULT_CONFIG.authenticatedIp, ...(userConfig.authenticatedIp ?? {}) },
     user: { ...DEFAULT_CONFIG.user, ...(userConfig.user ?? {}) },
     tenant: { ...DEFAULT_CONFIG.tenant, ...(userConfig.tenant ?? {}) },
     skipRoutes: userConfig.skipRoutes ?? DEFAULT_CONFIG.skipRoutes,
@@ -219,9 +222,12 @@ export function rateLimit(userConfig: RateLimitConfig = {}): MiddlewareHandler {
     // Anonymous traffic is UNCHANGED at config.ip. Authenticated identity is still separately capped
     // per user and per tenant below, once clerkAuth has run and those buckets are reachable.
     const claimsIdentity = /^Bearer\s+\S/i.test(ctx.req.header('authorization') || '');
-    const ipBucket = claimsIdentity
-      ? { ...config.ip, limit: config.user.limit }
-      : config.ip;
+    // A Cloudflare ratelimit binding enforces the limit declared in wrangler.toml; changing only the
+    // JavaScript `limit` field affects response metadata and the local fallback, not the production
+    // token bucket. Bearer traffic therefore needs its own native binding instead of a numeric clone
+    // of RATE_LIMITER_IP. This remains an IP ceiling before Clerk auth, so a forged bearer token is
+    // bounded while a real signed-in workspace is not trapped in the anonymous 100/min bucket.
+    const ipBucket = claimsIdentity ? config.authenticatedIp : config.ip;
     const ipResult = await checkBucket(ctx, ipBucket, `ip:${ip}`, getEnv);
     if (!ipResult.allowed) {
       return rateLimitResponse(ctx, 'ip', ipBucket);
