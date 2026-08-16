@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { TEMPLATE_POLICY_FORBIDDEN_OVERRIDE_KEYS } from '../dal/template-policy-store';
+import {
+  personalizationProfileNeedsReadThrough,
+  TEMPLATE_POLICY_FORBIDDEN_OVERRIDE_KEYS,
+} from '../dal/template-policy-store';
 import {
   foldSignalsIntoProfile,
   PERSONALIZATION_FORBIDDEN_KEYS,
@@ -63,5 +66,23 @@ describe('foldSignalsIntoProfile — Y-wave MATERIALIZE (ADR-XB-012)', () => {
     for (const k of PERSONALIZATION_FORBIDDEN_KEYS) {
       expect(TEMPLATE_POLICY_FORBIDDEN_OVERRIDE_KEYS).toContain(k); // every fold-side key exists on the store side
     }
+  });
+});
+
+describe('effective profile read-through freshness', () => {
+  it('repairs a missing materialized profile after the first accepted signal', () => {
+    expect(personalizationProfileNeedsReadThrough(['uls_new'], [])).toBe(true);
+  });
+
+  it('repairs a materialized profile when a later signal is missing from lineage', () => {
+    expect(personalizationProfileNeedsReadThrough(['uls_1', 'uls_2'], ['uls_1'])).toBe(true);
+  });
+
+  it('does not rebuild when active and materialized lineage are equivalent', () => {
+    expect(personalizationProfileNeedsReadThrough(['uls_1', 'uls_2'], ['uls_2', 'uls_1'])).toBe(false);
+  });
+
+  it('keeps an intentionally empty profile inert', () => {
+    expect(personalizationProfileNeedsReadThrough([], [])).toBe(false);
   });
 });
