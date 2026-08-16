@@ -51,7 +51,14 @@ const orchestratedCutoverId = process.env.XLOOOP_PAIRED_CUTOVER_INTERNAL;
 if (!orchestratedCutoverId || orchestratedCutoverId !== packet.cutover_id) {
   fail('standalone Pages production deploy is disabled; use npm run deploy:paired:prod');
 }
-const backendSha = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim();
+const orchestratorHead = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim();
+const pagesOnlyBackendSha = process.env.XLOOOP_CUTOVER_MODE === 'pages_only'
+  ? process.env.XLOOOP_PAGES_ONLY_BACKEND_SHA
+  : null;
+if (pagesOnlyBackendSha && !/^[0-9a-f]{40}$/i.test(pagesOnlyBackendSha)) {
+  fail('XLOOOP_PAGES_ONLY_BACKEND_SHA must be an exact 40-character SHA');
+}
+const backendSha = pagesOnlyBackendSha || orchestratorHead;
 const backendDirty = execFileSync('git', ['status', '--porcelain=v1'], {
   cwd: root,
   encoding: 'utf8',

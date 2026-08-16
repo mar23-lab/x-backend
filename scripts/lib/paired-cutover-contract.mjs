@@ -114,3 +114,35 @@ export async function executeCompensatingCutover(steps) {
     throw failure;
   }
 }
+
+export async function executePagesOnlyCutover(steps) {
+  let pagesMutationAttempted = false;
+  try {
+    await steps.preflight();
+    await steps.verifyExistingApi();
+    await steps.reserveAuthorization();
+    pagesMutationAttempted = true;
+    await steps.deployPages();
+    await steps.ratifyPair();
+    return { status: 'ratified', rollback: [] };
+  } catch (error) {
+    const rollback = [];
+    if (pagesMutationAttempted) {
+      try {
+        await steps.rollbackPages();
+        rollback.push({ surface: 'pages', status: 'restored' });
+      } catch (rollbackError) {
+        rollback.push({ surface: 'pages', status: 'failed', error: String(rollbackError) });
+      }
+    }
+    const failedRollback = rollback.filter((item) => item.status !== 'restored');
+    const failure = new Error(
+      failedRollback.length
+        ? `Pages-only cutover failed and rollback was incomplete: ${String(error)}`
+        : `Pages-only cutover failed and the prior Pages deployment was restored: ${String(error)}`,
+    );
+    failure.cause = error;
+    failure.rollback = rollback;
+    throw failure;
+  }
+}

@@ -8,11 +8,13 @@ import {
   assessPagesDecisionPacket,
   assessReleaseManifest,
   hashReleaseFiles,
+  posturesEqual,
   releaseManifestDigest,
 } from './lib/app-pages-release-contract.mjs';
 import {
   assessPairedCutoverContract,
   executeCompensatingCutover,
+  executePagesOnlyCutover,
 } from './lib/paired-cutover-contract.mjs';
 import { assessAuthorityPacket } from './verify-authority-decision-packet.mjs';
 import {
@@ -22,6 +24,7 @@ import {
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SELF_TEST = process.argv.includes('--self-test');
+const PAGES_ONLY = process.argv.includes('--pages-only');
 
 function fail(message) {
   throw new Error(message);
@@ -62,6 +65,23 @@ function runWrangler(args, extraEnv = {}) {
     stdio: 'inherit',
   });
   if (result.status !== 0) fail(`wrangler ${args.slice(0, 2).join(' ')} exited ${String(result.status)}`);
+}
+
+async function verifyExistingApi(manifest) {
+  const url = `${manifest.api_base.replace(/\/$/, '')}/api/v1/health?pages_only_cutover=${Date.now()}`;
+  const response = await fetch(url, { cache: 'no-store', signal: AbortSignal.timeout(15_000) });
+  if (!response.ok) fail(`existing API health returned HTTP ${response.status}`);
+  const health = await response.json();
+  const problems = [];
+  if (health.status !== 'ok') problems.push('status');
+  if (health.build !== manifest.backend_sha) problems.push('backend_sha');
+  if (health.contract_hash !== manifest.contract_hash) problems.push('contract_hash');
+  if (health.schema_head !== manifest.schema_head) problems.push('schema_head');
+  if (health.environment !== manifest.environment) problems.push('environment');
+  if (health.authority !== manifest.authority) problems.push('authority');
+  if (!posturesEqual(health.feature_posture, manifest.feature_posture)) problems.push('feature_posture');
+  if (problems.length) fail(`existing API does not satisfy Pages-only release: ${problems.join(',')}`);
+  console.log(`pages-only API precondition PASS · backend=${health.build}`);
 }
 
 function pairedFixture() {
@@ -141,6 +161,7 @@ async function selfTest() {
     if (!String(error.message).includes('prior pair was restored')) throw error;
   });
   const apiRatifyEvents = [];
+  const pagesOnlyEvents = [];
   await executeCompensatingCutover({
     preflight: async () => apiRatifyEvents.push('preflight'),
     reserveAuthorizations: async () => apiRatifyEvents.push('reserve'),
@@ -152,6 +173,16 @@ async function selfTest() {
     rollbackApi: async () => apiRatifyEvents.push('rollback-api'),
   }).then(() => fail('injected API ratification failure unexpectedly passed')).catch((error) => {
     if (!String(error.message).includes('prior pair was restored')) throw error;
+  });
+  await executePagesOnlyCutover({
+    preflight: async () => pagesOnlyEvents.push('preflight'),
+    verifyExistingApi: async () => pagesOnlyEvents.push('verify-api'),
+    reserveAuthorization: async () => pagesOnlyEvents.push('reserve-pages'),
+    deployPages: async () => { pagesOnlyEvents.push('deploy-pages'); throw new Error('injected Pages failure'); },
+    ratifyPair: async () => pagesOnlyEvents.push('ratify-pair'),
+    rollbackPages: async () => pagesOnlyEvents.push('rollback-pages'),
+  }).then(() => fail('injected Pages-only failure unexpectedly passed')).catch((error) => {
+    if (!String(error.message).includes('prior Pages deployment was restored')) throw error;
   });
   const checks = [
     ['exact paired contract passes', valid.ok],
@@ -166,6 +197,8 @@ async function selfTest() {
     ['API ratification failure restores only the API surface',
       apiRatifyEvents.slice(-1)[0] === 'rollback-api' && !apiRatifyEvents.includes('rollback-pages')
       && !apiRatifyEvents.includes('deploy-pages')],
+    ['Pages-only failure restores Pages without any API mutation',
+      pagesOnlyEvents.join(',') === 'preflight,verify-api,reserve-pages,deploy-pages,rollback-pages'],
   ];
   const failed = checks.filter(([, ok]) => !ok);
   for (const [name, ok] of checks) console.log(`  ${ok ? 'PASS' : 'FAIL'} ${name}`);
@@ -173,8 +206,94 @@ async function selfTest() {
   console.log(`deploy-paired-prod self-test PASS · ${checks.length - failed.length}/${checks.length}`);
 }
 
+async function pagesOnlyMain() {
+  const pagesPath = process.env.XLOOOP_APP_PAGES_DECISION_PACKET;
+  const releaseDir = path.resolve(
+    process.env.XLOOOP_APP_PAGES_RELEASE_DIR || path.join(ROOT, 'dist-app-pages-release'),
+  );
+  const manifest = readJson(path.join(releaseDir, 'release-manifest.json'), 'release manifest');
+  const pages = readJson(pagesPath, 'XLOOOP_APP_PAGES_DECISION_PACKET');
+  const dirty = execFileSync('git', ['status', '--porcelain=v1'], {
+    cwd: ROOT, env: cleanGitEnv(), encoding: 'utf8',
+  }).trim();
+  if (dirty) fail('Pages-only production cutover requires a clean orchestrator worktree');
+  if (!manifest.backend_sha || pages?.candidate?.backend_sha !== manifest.backend_sha) {
+    fail('Pages-only candidate backend does not match the assembled release');
+  }
+  const manifestAssessment = assessReleaseManifest(manifest, hashReleaseFiles(releaseDir));
+  if (!manifestAssessment.ok) fail(`release manifest failed: ${manifestAssessment.problems.join(',')}`);
+  const pagesAssessment = assessPagesDecisionPacket(pages, {
+    cutover_id: pages.cutover_id,
+    frontend_sha: manifest.frontend_sha,
+    backend_sha: manifest.backend_sha,
+    contract_hash: manifest.contract_hash,
+    artifact_digest: manifest.artifact_digest,
+    schema_head: manifest.schema_head,
+    feature_posture: manifest.feature_posture,
+    now: new Date().toISOString(),
+  });
+  if (!pagesAssessment.ok) fail(`Pages authority failed: ${pagesAssessment.problems.join(',')}`);
+  if (isDeploymentAuthorizationConsumed(ROOT, 'pages', pages.decision.authorization_id)) {
+    fail('Pages deployment authorization has already been consumed');
+  }
+
+  const receiptDir = path.resolve(process.env.XLOOOP_PAIRED_CUTOVER_RECEIPT_DIR
+    || path.join('/private/tmp', `xlooop-cutover-${pages.cutover_id}`));
+  mkdirSync(receiptDir, { recursive: true, mode: 0o700 });
+  const finalReceiptPath = path.join(receiptDir, 'paired-cutover-receipt.json');
+  const sharedEnv = {
+    XLOOOP_APP_PAGES_DECISION_PACKET: path.resolve(pagesPath),
+    XLOOOP_APP_PAGES_RELEASE_DIR: releaseDir,
+    XLOOOP_PAIRED_CUTOVER_INTERNAL: pages.cutover_id,
+    XLOOOP_CUTOVER_MODE: 'pages_only',
+    XLOOOP_PAGES_ONLY_BACKEND_SHA: manifest.backend_sha,
+  };
+
+  const result = await executePagesOnlyCutover({
+    preflight: async () => {
+      runNode('verify-app-pages-release.mjs', [], sharedEnv);
+      runNode('verify-app-security-header-parity.mjs', ['--require-artifact'], sharedEnv);
+    },
+    verifyExistingApi: async () => verifyExistingApi(manifest),
+    reserveAuthorization: async () => consumeDeploymentAuthorization(ROOT, 'pages', pages.decision.authorization_id, {
+      schema_id: 'xlooop.paired_deployment_authorization_receipt.v1',
+      cutover_id: pages.cutover_id,
+      surface: 'pages', authorization_id: pages.decision.authorization_id,
+      approval_reference: pages.decision.approval_reference, state: 'reserved_before_pages_only',
+      candidate_sha: manifest.frontend_sha, artifact_digest: manifest.artifact_digest,
+      reserved_at: new Date().toISOString(),
+    }),
+    deployPages: async () => runNode('deploy-app-prod.mjs', [], sharedEnv),
+    ratifyPair: async () => {
+      runNode('verify-app-pages-live.mjs', [], sharedEnv);
+      runNode('verify-app-security-header-parity.mjs', ['--live', 'https://app.xlooop.com'], sharedEnv);
+    },
+    rollbackPages: async () => runNode('execute-declared-rollback.mjs', [
+      '--packet', path.resolve(pagesPath), '--timeout-seconds', '180',
+    ], sharedEnv),
+  });
+
+  const receipt = {
+    schema_id: 'xlooop.paired_production_cutover_receipt.v1',
+    cutover_id: pages.cutover_id,
+    cutover_mode: 'pages_only',
+    status: result.status,
+    ratified_at: new Date().toISOString(),
+    backend_sha: manifest.backend_sha,
+    backend_mutated: false,
+    frontend_sha: manifest.frontend_sha,
+    artifact_digest: manifest.artifact_digest,
+    contract_hash: manifest.contract_hash,
+    schema_head: manifest.schema_head,
+    feature_posture: manifest.feature_posture,
+  };
+  writeFileSync(finalReceiptPath, `${JSON.stringify(receipt, null, 2)}\n`, { mode: 0o600 });
+  console.log(`deploy-paired-prod · PAGES-ONLY RATIFIED · ${finalReceiptPath}`);
+}
+
 async function main() {
   if (SELF_TEST) return selfTest();
+  if (PAGES_ONLY) return pagesOnlyMain();
   const apiPath = process.env.XLOOOP_AUTHORITY_DECISION_PACKET;
   const pagesPath = process.env.XLOOOP_APP_PAGES_DECISION_PACKET;
   const releaseDir = path.resolve(
