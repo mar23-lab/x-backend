@@ -41,6 +41,36 @@ describe('rateLimit middleware (in-memory fallback)', () => {
     expect((await hit(app, '10.0.0.2')).status).toBe(200); // different IP, own bucket
     expect((await hit(app, '10.0.0.1')).status).toBe(429); // first IP over limit
   });
+
+  it('uses the authenticated-IP Cloudflare binding for bearer traffic', async () => {
+    const app = new Hono();
+    app.use('/x', rateLimit());
+    app.get('/x', (c) => c.text('ok'));
+    const calls = { anonymous: [] as string[], authenticated: [] as string[] };
+    const env = {
+      RATE_LIMITER_IP: {
+        limit: async ({ key }: { key: string }) => { calls.anonymous.push(key); return { success: true }; },
+      },
+      RATE_LIMITER_AUTH_IP: {
+        limit: async ({ key }: { key: string }) => { calls.authenticated.push(key); return { success: true }; },
+      },
+    };
+
+    const anonymous = await app.fetch(new Request('http://localhost/x', {
+      headers: { 'cf-connecting-ip': '203.0.113.10' },
+    }), env as never);
+    const authenticated = await app.fetch(new Request('http://localhost/x', {
+      headers: {
+        authorization: 'Bearer signed-session-token',
+        'cf-connecting-ip': '203.0.113.10',
+      },
+    }), env as never);
+
+    expect(anonymous.status).toBe(200);
+    expect(authenticated.status).toBe(200);
+    expect(calls.anonymous).toEqual(['ip:203.0.113.10']);
+    expect(calls.authenticated).toEqual(['ip:203.0.113.10']);
+  });
 });
 
 describe('rateLimitWhenFlag (SF-2 · flag-gated safety cap)', () => {

@@ -8803,6 +8803,32 @@
           "reason": "Accepted private learning updates the effective profile atomically and stale lineage is repaired by bounded read-through"
         }
       ]
+    },
+    {
+      "delta_id": "authenticated-rate-limit-binding-20260817",
+      "generated_at": "2026-08-16T19:21:29.835Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "e1d32ca7408cf4bf1c48bfa60d45030a80d6d626",
+      "target_base_commit": "e1d32ca7408cf4bf1c48bfa60d45030a80d6d626",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/__tests__/rate-limit.test.ts",
+          "target_blob": "b78f3df91f3aece2f119d9c7069a779cc4e16f13",
+          "reason": "Separate authenticated bearer traffic from anonymous Cloudflare native IP rate-limit authority and prove binding selection"
+        },
+        {
+          "path": "src/workers/middleware/rate-limit.ts",
+          "target_blob": "2aeadd7a280902abfdd7e7e59aeadd511508d6e1",
+          "reason": "Separate authenticated bearer traffic from anonymous Cloudflare native IP rate-limit authority and prove binding selection"
+        },
+        {
+          "path": "wrangler.toml",
+          "target_blob": "dff00d7561cfe1eb465adb0a99b4bb550640ce49",
+          "reason": "Separate authenticated bearer traffic from anonymous Cloudflare native IP rate-limit authority and prove binding selection"
+        }
+      ]
     }
   ]
 }
