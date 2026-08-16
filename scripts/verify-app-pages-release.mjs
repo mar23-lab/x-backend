@@ -327,7 +327,14 @@ if (selfTest) {
 try {
   if (!existsSync(manifestPath)) throw new Error(`missing ${manifestPath}`);
   const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
-  const backendSha = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim();
+  const orchestratorHead = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim();
+  const pagesOnlyBackendSha = process.env.XLOOOP_CUTOVER_MODE === 'pages_only'
+    ? process.env.XLOOOP_PAGES_ONLY_BACKEND_SHA
+    : null;
+  if (pagesOnlyBackendSha && !/^[0-9a-f]{40}$/i.test(pagesOnlyBackendSha)) {
+    problems.push('pages_only_backend_sha_invalid');
+  }
+  const backendSha = pagesOnlyBackendSha || orchestratorHead;
   const contract = JSON.parse(readFileSync(path.join(root, 'docs/contracts/api-contract.v1.json'), 'utf8'));
   const config = parseFrontendReleaseArtifact(releaseDir);
   const deploymentConfigByEnvironment = {
