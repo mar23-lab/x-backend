@@ -81,6 +81,9 @@ export interface RuntimeExecutionResult {
   attempts: RuntimeExecutionAttempt[];
 }
 
+export type ValidationRepairInput = { text: string; error_code: string; system: string; user: string; repair_attempt: number };
+export type ValidationRepairPrompt = { system: string; user: string };
+
 export class ProviderUnavailableError extends Error {
   readonly code = 'PROVIDER_UNAVAILABLE';
   readonly status = 503;
@@ -420,6 +423,12 @@ function errorCode(err: unknown): string {
   return raw.replace(/[^A-Za-z0-9_]/g, '_').toUpperCase().slice(0, 80) || 'PROVIDER_ERROR';
 }
 
+function runtimeAttempt(runtime: ResolvedRuntime, status: RuntimeExecutionAttempt['status'], error_code: string | null,
+  latency_ms: number, execution_receipt_id: string | null): RuntimeExecutionAttempt {
+  return { runtime_id: runtime.runtime_id, provider: runtime.provider, model: runtime.model, source: runtime.source,
+    status, error_code, latency_ms, execution_receipt_id };
+}
+
 export async function executeEffectiveRuntimePlan(input: {
   plan: EffectiveRuntimePlan;
   system: string;
@@ -427,67 +436,56 @@ export async function executeEffectiveRuntimePlan(input: {
   maxTokens: number;
   minTextLength?: number;
   validateText?: (text: string) => string | null;
+  maxValidationRepairs?: number;
+  buildValidationRepair?: (input: ValidationRepairInput) => ValidationRepairPrompt | null;
   observer?: ModelExecutionObserver;
 }): Promise<RuntimeExecutionResult> {
   const attempts: RuntimeExecutionAttempt[] = [];
+  const maxValidationRepairs = Math.max(0, Math.min(2, input.maxValidationRepairs ?? 0));
   for (const runtime of [input.plan.primary, ...input.plan.fallbacks]) {
-    const startedAt = Date.now();
-    const execution = await input.observer?.start({ provider: runtime.provider, model_key: runtime.model });
-    try {
-      const result = await executeRuntime(runtime, input.system, input.user, input.maxTokens);
-      if (result.text.length < (input.minTextLength ?? 1)) throw new Error('EMPTY_RESPONSE');
-      const validationError = input.validateText?.(result.text); if (validationError) throw new Error(validationError);
-      const latency = Date.now() - startedAt;
-      await execution?.complete({
-        status: 'completed',
-        tokens_in: result.usage.tokens_in,
-        tokens_out: result.usage.tokens_out,
-        latency_ms: latency,
-        error_code: null,
-      });
-      attempts.push({
-        runtime_id: runtime.runtime_id,
-        provider: runtime.provider,
-        model: runtime.model,
-        source: runtime.source,
-        status: 'completed',
-        error_code: null,
-        latency_ms: latency,
-        execution_receipt_id: execution?.receipt_id ?? null,
-      });
-      return {
-        text: result.text,
-        runtime: publicRuntime(runtime),
-        usage: result.usage,
-        latency_ms: latency,
-        execution_receipt_id: execution?.receipt_id ?? null,
-        attempts,
-      };
-    } catch (err) {
-      const latency = Date.now() - startedAt;
-      const code = errorCode(err);
-      await execution?.complete({
-        status: 'failed', tokens_in: null, tokens_out: null, latency_ms: latency, error_code: code,
-      });
-      attempts.push({
-        runtime_id: runtime.runtime_id,
-        provider: runtime.provider,
-        model: runtime.model,
-        source: runtime.source,
-        status: 'failed',
-        error_code: code,
-        latency_ms: latency,
-        execution_receipt_id: execution?.receipt_id ?? null,
-      });
+    let executionSystem = input.system;
+    let executionUser = input.user;
+    for (let repairAttempt = 0; repairAttempt <= maxValidationRepairs; repairAttempt += 1) {
+      const startedAt = Date.now();
+      const execution = await input.observer?.start({ provider: runtime.provider, model_key: runtime.model });
+      let result: Awaited<ReturnType<typeof executeRuntime>> | null = null;
+      let validationError: string | null = null;
+      try {
+        result = await executeRuntime(runtime, executionSystem, executionUser, input.maxTokens);
+        if (result.text.length < (input.minTextLength ?? 1)) throw new Error('EMPTY_RESPONSE');
+        validationError = input.validateText?.(result.text) ?? null;
+        if (validationError) throw new Error(validationError);
+        const latency = Date.now() - startedAt;
+        await execution?.complete({
+          status: 'completed', tokens_in: result.usage.tokens_in, tokens_out: result.usage.tokens_out,
+          latency_ms: latency, error_code: null,
+        });
+        attempts.push(runtimeAttempt(runtime, 'completed', null, latency, execution?.receipt_id ?? null));
+        return {
+          text: result.text, runtime: publicRuntime(runtime), usage: result.usage,
+          latency_ms: latency, execution_receipt_id: execution?.receipt_id ?? null, attempts,
+        };
+      } catch (err) {
+        const latency = Date.now() - startedAt;
+        const code = errorCode(err);
+        await execution?.complete({
+          status: 'failed', tokens_in: result?.usage.tokens_in ?? null, tokens_out: result?.usage.tokens_out ?? null,
+          latency_ms: latency, error_code: code,
+        });
+        attempts.push(runtimeAttempt(runtime, 'failed', code, latency, execution?.receipt_id ?? null));
+        if (!validationError || !result || repairAttempt >= maxValidationRepairs || !input.buildValidationRepair) break;
+        const repair = input.buildValidationRepair({ text: result.text, error_code: code,
+          system: input.system, user: input.user, repair_attempt: repairAttempt + 1 });
+        if (!repair) break;
+        executionSystem = repair.system;
+        executionUser = repair.user;
+      }
     }
   }
   throw new ProviderUnavailableError('all configured live model runtimes failed', attempts);
 }
 
-export async function validateRuntime(
-  runtime: ResolvedRuntime,
-  observer?: ModelExecutionObserver,
-): Promise<RuntimeExecutionResult> {
+export async function validateRuntime(runtime: ResolvedRuntime, observer?: ModelExecutionObserver): Promise<RuntimeExecutionResult> {
   return executeEffectiveRuntimePlan({
     plan: { primary: runtime, fallbacks: [], resolution_attempts: [] },
     system: 'You are validating a model-runtime connection. Follow the user instruction exactly.',

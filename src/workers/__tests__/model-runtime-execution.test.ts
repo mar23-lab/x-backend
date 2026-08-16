@@ -282,6 +282,38 @@ describe('live provider dispatch', () => {
     ]);
   });
 
+  it('records and repairs one source-grounding omission on the same live runtime', async () => {
+    let calls = 0;
+    const prompts: string[] = [];
+    const runtime: ResolvedRuntime = {
+      runtime_id: 'platform:workers_ai', provider: 'workers_ai', model: '@cf/test', source: 'platform_default',
+      provider_config_version_id: null, base_url: null, credential: null,
+      ai: { run: async (_model, input) => {
+        calls += 1;
+        prompts.push(String((input as { messages?: Array<{ content?: string }> }).messages?.[1]?.content ?? ''));
+        return { response: calls === 1 ? 'The project has one milestone.' : 'The project has 2 goals and one milestone.' };
+      } },
+    };
+    const result = await executeEffectiveRuntimePlan({
+      plan: { primary: runtime, fallbacks: [], resolution_attempts: [] },
+      system: 'Use only source facts.', user: 'The exact record has 2 goals and one milestone.', maxTokens: 100,
+      validateText: (text) => text.includes('2 goals') ? null : 'GROUNDING_GOAL_COUNT_MISSING',
+      maxValidationRepairs: 1,
+      buildValidationRepair: ({ error_code, system, user, text }) => ({
+        system: `${system} Repair ${error_code}.`,
+        user: `${user}\nRejected: ${text}`,
+      }),
+    });
+
+    expect(calls).toBe(2);
+    expect(prompts[1]).toContain('Rejected: The project has one milestone.');
+    expect(result.text).toContain('2 goals');
+    expect(result.attempts).toEqual([
+      expect.objectContaining({ runtime_id: 'platform:workers_ai', status: 'failed', error_code: 'GROUNDING_GOAL_COUNT_MISSING' }),
+      expect.objectContaining({ runtime_id: 'platform:workers_ai', status: 'completed', error_code: null }),
+    ]);
+  });
+
   it('accepts a valid concise live response instead of reporting a provider outage', async () => {
     const runtime: ResolvedRuntime = {
       runtime_id: 'platform:workers_ai', provider: 'workers_ai', model: '@cf/test', source: 'platform_default',

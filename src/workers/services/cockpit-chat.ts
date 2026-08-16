@@ -1480,6 +1480,27 @@ function validateLiveGrounding(
   return null;
 }
 
+function buildLiveGroundingRepair(input: {
+  text: string;
+  error_code: string;
+  system: string;
+  user: string;
+  repair_attempt: number;
+}): { system: string; user: string } | null {
+  if (!input.error_code.startsWith('GROUNDING_')) return null;
+  if (input.error_code.endsWith('_MISMATCH') || input.error_code === 'GROUNDING_CURRENT_STATE_OVER_STALE') {
+    return null;
+  }
+  return {
+    system: `${input.system}\n\nThe prior live draft failed the server grounding contract with ${input.error_code}. `
+      + 'Rewrite it once using only the supplied source-bound facts. Include every requested canonical fact explicitly '
+      + 'with its exact noun label and value. Do not preserve an omission, invent a value, mention this validation '
+      + 'process, or contradict the source-bound draft. Return only the corrected customer-facing answer.',
+    user: `${input.user}\n\nRejected live draft:\n${input.text}\n\nCorrection requirement: ${input.error_code}. `
+      + 'Re-read the deterministic source-bound draft and typed facts above, then return one complete corrected answer.',
+  };
+}
+
 function annotateLiveFreshness(text: string, grounded: CockpitChatResult['grounded_on']): string {
   if (!grounded.data_freshness.is_stale) return text;
   const originalNormalized = text.toLowerCase();
@@ -1699,6 +1720,8 @@ export async function answerCockpitChat(
       user: executionUser,
       maxTokens: mode === 'deep-research' ? 900 : 700,
       validateText: (text) => validateLiveGrounding(annotateLiveFreshness(text, grounded), grounded, message),
+      maxValidationRepairs: 1,
+      buildValidationRepair: buildLiveGroundingRepair,
       observer: executionObserver,
     });
     return {

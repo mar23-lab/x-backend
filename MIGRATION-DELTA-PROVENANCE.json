@@ -8751,6 +8751,37 @@
           "reason": "Enable isolated read-only connector token lifecycle proof while operational issuance remains disabled"
         }
       ]
+    },
+    {
+      "delta_id": "live-chat-grounding-repair-20260816",
+      "generated_at": "2026-08-16T05:26:53.881Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "dba95d7fc0a0bccee13ab8e75132f89c39042ee1",
+      "target_base_commit": "dba95d7fc0a0bccee13ab8e75132f89c39042ee1",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/services/model-runtime-execution.ts",
+          "target_blob": "3dfcce509603ced69467cadfd90b05e47ecf9d21",
+          "reason": "Retry one source-bound live provider draft after a grounding omission while preserving strict mismatch rejection and recording each execution receipt"
+        },
+        {
+          "path": "src/workers/services/cockpit-chat.ts",
+          "target_blob": "9b68bc571f635c18ab45c3f23b2c8c742c9afc0a",
+          "reason": "Retry one source-bound live provider draft after a grounding omission while preserving strict mismatch rejection and recording each execution receipt"
+        },
+        {
+          "path": "src/workers/__tests__/model-runtime-execution.test.ts",
+          "target_blob": "16d7c4c9124664e7f7b952932c432c822db37160",
+          "reason": "Retry one source-bound live provider draft after a grounding omission while preserving strict mismatch rejection and recording each execution receipt"
+        },
+        {
+          "path": "src/workers/__tests__/cockpit-chat.test.ts",
+          "target_blob": "7cfbf7586e8d6214a3a52d1667f739c908289495",
+          "reason": "Retry one source-bound live provider draft after a grounding omission while preserving strict mismatch rejection and recording each execution receipt"
+        }
+      ]
     }
   ]
 }
