@@ -8782,6 +8782,27 @@
           "reason": "Retry one source-bound live provider draft after a grounding omission while preserving strict mismatch rejection and recording each execution receipt"
         }
       ]
+    },
+    {
+      "delta_id": "personalization-immediate-effect-20260816",
+      "generated_at": "2026-08-16T11:29:45.587Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "f1dff0a7ca66df5ecc0676df609cc2843b995ab9",
+      "target_base_commit": "f1dff0a7ca66df5ecc0676df609cc2843b995ab9",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/dal/template-policy-store.ts",
+          "target_blob": "d2094536bd5501a070a78ac53ae5a4b3867b9098",
+          "reason": "Accepted private learning updates the effective profile atomically and stale lineage is repaired by bounded read-through"
+        },
+        {
+          "path": "scripts/verify-customer-learning-personalization.mjs",
+          "target_blob": "da8280231b0438075bdc5d5d8d230f16f1d920b0",
+          "reason": "Accepted private learning updates the effective profile atomically and stale lineage is repaired by bounded read-through"
+        }
+      ]
     }
   ]
 }
