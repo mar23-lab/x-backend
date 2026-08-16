@@ -329,6 +329,32 @@ describe('compileChatFacts — data_freshness (P0.1: never imply "all clear" ove
     expect(result.answer).not.toContain('0 goals');
   });
 
+  it('repairs an omitted requested plan count on the same live provider', async () => {
+    let calls = 0;
+    const runtime: ResolvedRuntime = {
+      runtime_id: 'live-repair', provider: 'workers_ai', model: '@cf/test', source: 'platform_default',
+      provider_config_version_id: null, base_url: null, credential: null,
+      ai: { run: async () => {
+        calls += 1;
+        return { response: calls === 1
+          ? 'Cockpit & Workspace UX has 1 milestone, 2 todos, and 1 intent as of 2026-07-30.'
+          : 'Cockpit & Workspace UX has 2 goals, 1 milestone, 2 todos, and 1 intent as of 2026-07-30.' };
+      } },
+    };
+    const prompt = 'Name the current project and report the exact goal, milestone, todo, and intent counts with freshness.';
+    const result = await answerLiveCockpitChat(prompt, FACTS({ plan: SEMANTIC_PLAN }), 'ask', undefined, {
+      primary: runtime, fallbacks: [], resolution_attempts: [],
+    });
+
+    expect(calls).toBe(2);
+    expect(result.execution.runtime_id).toBe('live-repair');
+    expect(result.execution.attempts).toEqual([
+      expect.objectContaining({ runtime_id: 'live-repair', status: 'failed', error_code: 'GROUNDING_GOAL_COUNT_MISSING' }),
+      expect.objectContaining({ runtime_id: 'live-repair', status: 'completed', error_code: null }),
+    ]);
+    expect(result.answer).toContain('2 goals');
+  });
+
   it('rejects a live provider that omits a requested canonical plan entity', async () => {
     const runtime: ResolvedRuntime = {
       runtime_id: 'incomplete', provider: 'workers_ai', model: '@cf/test', source: 'platform_default',
