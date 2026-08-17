@@ -8850,6 +8850,22 @@
           "reason": "forward live runtime and semantic evidence through the default hard-stop"
         }
       ]
+    },
+    {
+      "delta_id": "markitdown-evidence-version-neutral-20260817",
+      "generated_at": "2026-08-17T02:03:00.035Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "83756022ec45465ccf947d2c6f9bb6fa3e5f54a8",
+      "target_base_commit": "83756022ec45465ccf947d2c6f9bb6fa3e5f54a8",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "scripts/run-upstream-capability-live-canary.mjs",
+          "target_blob": "b0b777c8490cf35eb2110585ece90f5ff4cd8ffd",
+          "reason": "Keep blocked media evidence accurate across MarkItDown package upgrades and lock the contract with regression coverage."
+        }
+      ]
     }
   ]
 }

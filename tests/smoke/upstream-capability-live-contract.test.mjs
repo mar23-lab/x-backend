@@ -145,6 +145,7 @@ test('MarkItDown live canary separates document authority from media semantics',
   assert.match(source, /approved_speech_transcription_provider_required/);
   assert.match(source, /malicious_yaml/);
   assert.doesNotMatch(source, /'yaml_frontmatter'/);
+  assert.doesNotMatch(source, /MarkItDown\s+\d+\.\d+\.\d+/);
   assert.match(source, /timeout: 30_000/);
 });
 
