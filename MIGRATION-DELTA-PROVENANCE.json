@@ -8918,6 +8918,47 @@
           "reason": "Restore governed first-session readiness parity in pilot-shadow and require an audited approver secret before deployment"
         }
       ]
+    },
+    {
+      "delta_id": "append-only-onboarding-replay-20260818",
+      "generated_at": "2026-08-17T22:17:36.000Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "b0a423530239edca54d1a441554ec544a6249822",
+      "target_base_commit": "b0a423530239edca54d1a441554ec544a6249822",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "package.json",
+          "target_blob": "09a8c163e96f9f61cea73f2ce977c78ca62e895b",
+          "reason": "Register the append-only operation-event verifier and its must-not-stay-dead self-test in the backend authority surface."
+        },
+        {
+          "path": "scripts/ci-local.mjs",
+          "target_blob": "94ffd3073cd3b0342729b8efda0f6af4ac2544f6",
+          "reason": "Make content-mutating operation-event upserts a blocking local release-authority check."
+        },
+        {
+          "path": "scripts/onboard-customer.mjs",
+          "target_blob": "b1c6a92f24515076ad6be91469b441c4718d4b45",
+          "reason": "Preserve append-only roadmap history by making CLI onboarding retries content-addressed and idempotent."
+        },
+        {
+          "path": "scripts/verify-operation-events-append-only.mjs",
+          "target_blob": "a7efca2fa644d879504e4a877e8f7b2b5222d437",
+          "reason": "Detect and block SQL that mutates operation-event content through conflict updates while retaining governed lifecycle advisories."
+        },
+        {
+          "path": "src/workers/__tests__/customer-provisioning-store.test.ts",
+          "target_blob": "f40e58b88643f04454df4f4832f48b10de872309",
+          "reason": "Prove identical onboarding replay is a no-op and changed roadmap content receives a stable revision event."
+        },
+        {
+          "path": "src/workers/dal/customer-provisioning-store.ts",
+          "target_blob": "8da89243b21c5da6e13780fa4138bba55bd18ae9",
+          "reason": "Replace the production readiness path's illegal content upsert with append-only, content-addressed roadmap revisions."
+        }
+      ]
     }
   ]
 }
