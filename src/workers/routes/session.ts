@@ -305,6 +305,18 @@ sessionRoute.get('/session', async (ctx) => {
       (entitlement as unknown as { operator_bootstrapped?: typeof bootstrapped }).operator_bootstrapped = bootstrapped;
     }
 
+    // The readiness journey needs a customer-safe identity before a workspace exists. This is derived
+    // only from the verified Clerk token; the browser cannot nominate a different organization. Keep it
+    // separate from `workspace`, which remains null until onboarding has durably provisioned the tenant.
+    if (String(entitlement.state) === 'needs_readiness' && orgId) {
+      (entitlement as unknown as { onboarding_identity?: unknown }).onboarding_identity = {
+        schema_id: 'xlooop.onboarding_identity.v1',
+        organization_id: orgId,
+        company_name: customerNameFromClaims({ orgName, orgSlug, email, orgId }),
+        organization_slug: orgSlug,
+      };
+    }
+
     // AI-EXEC-2 · invite-accept → membership seam (flag-gated). An invited teammate (a Clerk org
     // member/admin) who accepts + signs in otherwise DEAD-ENDS with no membership — the session flow only
     // ever writes `owner` rows. When the workspace already EXISTS and the invitee has no member row,

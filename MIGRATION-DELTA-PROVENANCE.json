@@ -8866,6 +8866,37 @@
           "reason": "Keep blocked media evidence accurate across MarkItDown package upgrades and lock the contract with regression coverage."
         }
       ]
+    },
+    {
+      "delta_id": "readiness-claim-honesty-20260817",
+      "generated_at": "2026-08-17T03:04:32.622Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "9ebb0243043cd84e77f20691ac26ca433a687a67",
+      "target_base_commit": "9ebb0243043cd84e77f20691ac26ca433a687a67",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/__tests__/session-readiness-gate.test.ts",
+          "target_blob": "5f41cefff24eaf75b894ae758ea6882f817eee4c",
+          "reason": "verified onboarding identity and readiness claims"
+        },
+        {
+          "path": "src/workers/routes/session.ts",
+          "target_blob": "30e66000e0e4cecc3ea33e068eeaac2e91115673",
+          "reason": "verified onboarding identity and readiness claims"
+        },
+        {
+          "path": "src/workers/routes/readiness.ts",
+          "target_blob": "9387da30c4f046c3f0e7513a78d378aa54982b3b",
+          "reason": "verified onboarding identity and readiness claims"
+        },
+        {
+          "path": "src/workers/__tests__/readiness-route.test.ts",
+          "target_blob": "8df28267634e2a5da91d27fae5afca3a4ca646f9",
+          "reason": "verified onboarding identity and readiness claims"
+        }
+      ]
     }
   ]
 }

@@ -57,7 +57,18 @@ async function callSession(env: Record<string, string>) {
     { headers: { Authorization: 'Bearer faketoken' } },
     env as never,
   );
-  return { status: res.status, body: (await res.json()) as { state?: string } };
+  return {
+    status: res.status,
+    body: (await res.json()) as {
+      state?: string;
+      onboarding_identity?: {
+        schema_id: string;
+        organization_id: string;
+        company_name: string;
+        organization_slug: string | null;
+      };
+    },
+  };
 }
 
 describe('session route · readiness gate activation (R-P1 · quote-bug guard)', () => {
@@ -66,11 +77,18 @@ describe('session route · readiness gate activation (R-P1 · quote-bug guard)',
     const { status, body } = await callSession({ ...BASE_ENV, CUSTOMER_INAPP_READINESS_GATE: '"true"' });
     expect(status).toBe(200);
     expect(body.state).toBe('needs_readiness');
+    expect(body.onboarding_identity).toEqual({
+      schema_id: 'xlooop.onboarding_identity.v1',
+      organization_id: 'org_hy',
+      company_name: 'Honest & Young',
+      organization_slug: null,
+    });
   });
 
   it('unquoted `true` → state needs_readiness (the canonical case)', async () => {
     const { body } = await callSession({ ...BASE_ENV, CUSTOMER_INAPP_READINESS_GATE: 'true' });
     expect(body.state).toBe('needs_readiness');
+    expect(body.onboarding_identity?.company_name).toBe('Honest & Young');
   });
 
   it('gate off → NOT needs_readiness (no surprise activation)', async () => {
