@@ -87,6 +87,8 @@
     "verify:operation-event-source-tool-constraint": "node scripts/verify-operation-event-source-tool-constraint.mjs",
     "verify:operation-event-source-tool-constraint:live": "node scripts/verify-operation-event-source-tool-constraint.mjs --live",
     "verify:operation-event-source-tool-constraint:self-test": "node scripts/verify-operation-event-source-tool-constraint.mjs --self-test",
+    "verify:operation-events-append-only": "node scripts/verify-operation-events-append-only.mjs",
+    "verify:operation-events-append-only:self-test": "node scripts/verify-operation-events-append-only.mjs --self-test",
     "verify:predeploy-migration-gate:self-test": "node scripts/predeploy-migration-gate.mjs --self-test",
     "bootstrap:local": "npm ci && npm --prefix packages/xlooop-mcp-server ci",
     "ci-local": "node scripts/ci-local.mjs",

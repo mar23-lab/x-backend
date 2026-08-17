@@ -118,6 +118,11 @@ const gates = [
   ['current schema-head source replay runner controls', 'npm', ['run', 'verify:schema-head-source-replay:self-test']],
   ['operation-event source-tool constraint', 'npm', ['run', 'verify:operation-event-source-tool-constraint']],
   ['operation-event source-tool constraint controls', 'npm', ['run', 'verify:operation-event-source-tool-constraint:self-test']],
+  // ADR-XLOOP-IA-001 · onboarding retries once mutated immutable event content through an
+  // ON CONFLICT DO UPDATE path that the old direct-UPDATE scanner could not see. Run both
+  // the detector's red controls and the real tree scan on every local authority pass.
+  ['operation-events append-only controls', 'npm', ['run', 'verify:operation-events-append-only:self-test']],
+  ['operation-events append-only authority', 'npm', ['run', 'verify:operation-events-append-only']],
   ['pilot live RLS evidence producer', 'npm', ['run', 'produce:pilot-shadow-live-rls-evidence:self-test']],
   ['pilot-shadow canary binding preparation controls', 'npm', ['run', 'prepare:pilot-shadow-canary-bindings:self-test']],
   ['API/MCP canary target isolation controls', 'npm', ['run', 'verify:api-mcp-live-canary-hard-stop:self-test']],

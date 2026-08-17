@@ -67,6 +67,13 @@ export interface ProvisionCustomerResult {
   roadmap_steps: number;
 }
 
+async function roadmapRevisionId(baseId: string, step: ProvisionRoadmapStep): Promise<string> {
+  const bytes = new TextEncoder().encode(`${step.summary}\u0000${step.body}`);
+  const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', bytes));
+  const suffix = Array.from(digest.slice(0, 8), (byte) => byte.toString(16).padStart(2, '0')).join('');
+  return `${baseId}_rev_${suffix}`;
+}
+
 /**
  * Provision (or re-provision, idempotently) a customer's workspace, owner/operator
  * membership, default project, welcome event, day-1 roadmap events, operator authority
@@ -94,6 +101,12 @@ export async function provisionCustomerWorkspaceRow(
       ? input.operatorClerkId.trim()
       : null;
   const roadmap = Array.isArray(input.roadmap) ? input.roadmap : [];
+  const roadmapIdentities = await Promise.all(
+    roadmap.map(async (step, i) => {
+      const baseId = `evt_${slug}_roadmap_${String(i + 1).padStart(2, '0')}`;
+      return { baseId, revisionId: await roadmapRevisionId(baseId, step) };
+    }),
+  );
 
   const stmts: unknown[] = [
     // 1. Workspace (1:1 with the Clerk org).
@@ -208,20 +221,33 @@ export async function provisionCustomerWorkspaceRow(
     );
   }
 
-  // Day-1 roadmap → queued operation_events (deterministic ids; occurred a minute apart).
-  // F1 (260628): the ON CONFLICT below is status-PRESERVING — a re-provision (a customer
-  // re-running the readiness journey from Profile to "update my roadmap") refreshes the
-  // content (summary/body) from the new answers but must NOT clobber a step the customer
-  // already marked done. `status` is therefore omitted from the DO UPDATE (the existing
-  // row keeps its status; the first INSERT still seeds 'queued'). Re-entry safety.
+  // Day-1 roadmap → queued operation_events (deterministic base ids; occurred a minute apart).
+  // ADR-XLOOP-IA-001 makes event content append-only. An identical retry is a no-op. If a
+  // re-entry changes a step, insert a content-addressed revision instead of mutating the
+  // original fact. The base-id prefix provides explicit lineage without overloading the
+  // comment-thread parent_event_id contract.
   roadmap.forEach((step, i) => {
-    const id = `evt_${slug}_roadmap_${String(i + 1).padStart(2, '0')}`;
+    const { baseId, revisionId } = roadmapIdentities[i];
     stmts.push(
       sql/*sql*/`
+        WITH base_event AS (
+          SELECT summary, body
+          FROM operation_events
+          WHERE id = ${baseId}
+        ), candidate AS (
+          SELECT
+            CASE WHEN EXISTS (SELECT 1 FROM base_event) THEN ${revisionId} ELSE ${baseId} END AS id
+          WHERE NOT EXISTS (
+            SELECT 1 FROM base_event
+            WHERE summary IS NOT DISTINCT FROM ${step.summary}
+              AND body IS NOT DISTINCT FROM ${step.body}
+          )
+        )
         INSERT INTO operation_events (id, workspace_id, project_id, source_tool, status, summary, body, visibility, occurred_at)
-        VALUES (${id}, ${orgId}, ${input.projectId}, 'xlooop', 'queued', ${step.summary}, ${step.body},
-          'internal_workspace', now() + (interval '1 minute' * ${i + 1}))
-        ON CONFLICT (id) DO UPDATE SET summary = EXCLUDED.summary, body = EXCLUDED.body
+        SELECT candidate.id, ${orgId}, ${input.projectId}, 'xlooop', 'queued', ${step.summary}, ${step.body},
+          'internal_workspace', now() + (interval '1 minute' * ${i + 1})
+        FROM candidate
+        ON CONFLICT (id) DO NOTHING
       `,
     );
   });

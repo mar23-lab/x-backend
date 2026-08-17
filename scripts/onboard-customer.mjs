@@ -27,6 +27,7 @@ import { fileURLToPath } from 'node:url';
 import { createInterface } from 'node:readline/promises';
 import { stdin, stdout } from 'node:process';
 import { spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(__dirname, '..');
@@ -335,15 +336,33 @@ async function main() {
         const orgEscRm = clerkOrgId.replace(/'/g, "''");
         const projEscRm = projectId.replace(/'/g, "''");
         const slugEscRm = customerSlug.replace(/'/g, "''");
-        const eventValues = roadmap
+        const eventStatements = roadmap
           .map((step, i) => {
-            const id = `evt_${slugEscRm}_roadmap_${String(i + 1).padStart(2, '0')}`;
+            const baseId = `evt_${slugEscRm}_roadmap_${String(i + 1).padStart(2, '0')}`;
+            const revision = createHash('sha256')
+              .update(`${step.summary}\u0000${step.body}`)
+              .digest('hex')
+              .slice(0, 16);
+            const revisionId = `${baseId}_rev_${revision}`;
             const summaryEsc = step.summary.replace(/'/g, "''");
             const bodyEsc = step.body.replace(/'/g, "''");
-            return `  ('${id}', '${orgEscRm}', '${projEscRm}', 'xlooop', 'queued', '${summaryEsc}', '${bodyEsc}', 'internal_workspace', now() + (interval '1 minute' * ${i + 1}))`;
+            return `WITH base_event AS (
+  SELECT summary, body FROM operation_events WHERE id = '${baseId}'
+), candidate AS (
+  SELECT CASE WHEN EXISTS (SELECT 1 FROM base_event) THEN '${revisionId}' ELSE '${baseId}' END AS id
+  WHERE NOT EXISTS (
+    SELECT 1 FROM base_event
+    WHERE summary IS NOT DISTINCT FROM '${summaryEsc}'
+      AND body IS NOT DISTINCT FROM '${bodyEsc}'
+  )
+)
+INSERT INTO operation_events (id, workspace_id, project_id, source_tool, status, summary, body, visibility, occurred_at)
+SELECT candidate.id, '${orgEscRm}', '${projEscRm}', 'xlooop', 'queued', '${summaryEsc}', '${bodyEsc}', 'internal_workspace', now() + (interval '1 minute' * ${i + 1})
+FROM candidate
+ON CONFLICT (id) DO NOTHING;`;
           })
-          .join(',\n');
-        const roadmapSql = `BEGIN;\nINSERT INTO operation_events (id, workspace_id, project_id, source_tool, status, summary, body, visibility, occurred_at)\nVALUES\n${eventValues}\nON CONFLICT (id) DO UPDATE SET summary = EXCLUDED.summary, body = EXCLUDED.body, status = EXCLUDED.status;\nCOMMIT;\n`;
+          .join('\n');
+        const roadmapSql = `BEGIN;\n${eventStatements}\nCOMMIT;\n`;
         const roadmapPath = resolve(REPO_ROOT, `.seed-customer-${customerSlug}-roadmap.sql`);
         writeFileSync(roadmapPath, roadmapSql, 'utf-8');
         const rmResult = spawnSync('psql', [databaseUrl, '-v', 'ON_ERROR_STOP=1', '-f', roadmapPath], {
