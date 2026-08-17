@@ -13,9 +13,10 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const CONFIG = 'wrangler.pilot-shadow.toml';
 const API_BASE = 'https://api-test.xlooop.com';
 const WORKER = 'xlooop-api-pilot-shadow';
-const EXPECTED_SELF_TEST_CHECKS = 7;
+const EXPECTED_SELF_TEST_CHECKS = 8;
 const REQUIRED_SECRETS = [
   'DATABASE_URL',
+  'CUSTOMER_AUTO_PROVISION_APPROVER_USER_ID',
   'MODEL_RUNTIME_ACTIVE_KEY_ID',
   'MODEL_RUNTIME_ENC_KEYS',
   'XLOOOP_RLS_APP_DATABASE_URL',
@@ -106,6 +107,8 @@ function selfTest() {
       PREFLIGHT_SCRIPTS.some(([script]) => script === 'scripts/verify-pilot-shadow-database-role-contract.mjs')],
     ['pilot deploy verifies the Workers AI model authority before Wrangler',
       PREFLIGHT_SCRIPTS.some(([script]) => script === 'scripts/verify-workers-ai-model-authority.mjs')],
+    ['pilot deploy requires an audited onboarding approver binding',
+      REQUIRED_SECRETS.includes('CUSTOMER_AUTO_PROVISION_APPROVER_USER_ID')],
   ];
   if (checks.length !== EXPECTED_SELF_TEST_CHECKS) {
     fail(`self-test registered ${checks.length} checks; expected ${EXPECTED_SELF_TEST_CHECKS}`);

@@ -8897,6 +8897,27 @@
           "reason": "verified onboarding identity and readiness claims"
         }
       ]
+    },
+    {
+      "delta_id": "pilot-shadow-onboarding-parity-20260817",
+      "generated_at": "2026-08-17T09:01:48.052Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "1bf58eca4ec3f56de1e78e24d0f1fe396de528e8",
+      "target_base_commit": "1bf58eca4ec3f56de1e78e24d0f1fe396de528e8",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "wrangler.pilot-shadow.toml",
+          "target_blob": "8ffdf3ca539ade4ddc9f6bf2c45b88074148f07f",
+          "reason": "Restore governed first-session readiness parity in pilot-shadow and require an audited approver secret before deployment"
+        },
+        {
+          "path": "scripts/verify-pilot-shadow-config.mjs",
+          "target_blob": "0ff2ef575aa490a581513f2d650ee9f58dc02ded",
+          "reason": "Restore governed first-session readiness parity in pilot-shadow and require an audited approver secret before deployment"
+        }
+      ]
     }
   ]
 }
