@@ -7,6 +7,9 @@ const readinessStore = vi.hoisted(() => ({
   getByWorkspace: vi.fn(),
   saveWorkspace: vi.fn(),
 }));
+const enrichmentService = vi.hoisted(() => ({
+  run: vi.fn(),
+}));
 
 vi.mock('../db/client', () => ({
   neonClient: vi.fn(() => vi.fn()),
@@ -17,6 +20,9 @@ vi.mock('../dal/customer-readiness-store', () => ({
 }));
 vi.mock('../services/onboarding-provisioner', () => ({
   provisionCustomerFromAccessRequest: vi.fn(async () => ({ ok: true })),
+}));
+vi.mock('../services/enrichment-service', () => ({
+  runEnrichmentSweep: enrichmentService.run,
 }));
 
 import { provisionCustomerFromAccessRequest } from '../services/onboarding-provisioner';
@@ -103,7 +109,7 @@ function submit(
       'content-type': 'application/json',
       'Idempotency-Key': idempotencyKey,
     },
-    body: JSON.stringify(body),
+    body: JSON.stringify({ company_name: 'Honest Young', ...body }),
   }, env as never);
 }
 
@@ -120,7 +126,16 @@ beforeEach(() => {
     domain: input.domain,
     readiness_answers: input.readiness_answers,
     request_digest: input.request_digest,
+    enrichment: input.enrichment,
   }));
+  enrichmentService.run.mockReset();
+  enrichmentService.run.mockResolvedValue({
+    schema_id: 'xlooop.enrichment_sweep.v1',
+    domain: 'honestyoung.example',
+    swept_at: '2026-08-17T01:02:03.000Z',
+    provenance: 'public_signal',
+    sources: [{ key: 'spf', label: 'Email SPF record', status: 'found', detail: 'SPF published' }],
+  });
 });
 
 describe('POST /api/v1/readiness/submit', () => {
@@ -282,6 +297,44 @@ describe('POST /api/v1/readiness/submit', () => {
     }));
   });
 
+  it('fails before any write when company onboarding has no verified company name', async () => {
+    const dal = dalStub();
+    const res = await submit(appFor(AUTH, dal), { company_name: '' });
+
+    expect(res.status).toBe(400);
+    expect(await res.json()).toEqual(expect.objectContaining({ code: 'COMPANY_NAME_REQUIRED' }));
+    expect(dal.createAccessRequest).not.toHaveBeenCalled();
+    expect(dal.createReadinessAssessment).not.toHaveBeenCalled();
+    expect(readinessStore.saveWorkspace).not.toHaveBeenCalled();
+    expect(provisionCustomerFromAccessRequest).not.toHaveBeenCalled();
+  });
+
+  it('ignores client enrichment and persists only the server-run public sweep', async () => {
+    const dal = dalStub({
+      getSessionEntitlement: vi.fn(async () => ({ state: 'approved_workspace' })),
+    });
+    const res = await submit(
+      appFor(AUTH, dal),
+      {
+        domain: 'honestyoung.example',
+        enrichment: { schema_id: 'xlooop.enrichment_sweep.v1', provenance: 'public_signal', sources: [{ key: 'fake' }] },
+      },
+      { ...ENV, ENRICHMENT_SWEEP_ENABLED: 'true' },
+    );
+
+    expect(res.status).toBe(200);
+    expect(enrichmentService.run).toHaveBeenCalledWith('honestyoung.example', expect.anything());
+    expect(readinessStore.saveWorkspace).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        enrichment: expect.objectContaining({
+          schema_id: 'xlooop.enrichment_sweep.v1',
+          sources: [expect.objectContaining({ key: 'spf' })],
+        }),
+      }),
+    );
+  });
+
   it('is 401 without auth', async () => {
     const res = await submit(appFor(null, dalStub()));
     expect(res.status).toBe(401);
@@ -304,8 +357,35 @@ describe('GET /api/v1/readiness', () => {
       has_readiness: true,
       readiness_revision_id: 'readiness:ra_1:2026-07-24T00:00:01.000Z',
       readiness_answers: expect.objectContaining({ business_direction: 'Grow' }),
+      public_signals: expect.objectContaining({ status: 'not_run', source_count: 0 }),
     }));
     expect(readinessStore.getByWorkspace).toHaveBeenCalledWith(expect.anything(), 'org_abc');
+  });
+
+  it('returns a customer-safe completed public-signal summary only for server sweep evidence', async () => {
+    readinessStore.getByWorkspace.mockResolvedValue(savedReadiness({
+      enrichment: {
+        schema_id: 'xlooop.enrichment_sweep.v1',
+        domain: 'honestyoung.example',
+        swept_at: '2026-08-17T01:02:03.000Z',
+        provenance: 'public_signal',
+        sources: [
+          { key: 'spf', label: 'Email SPF record', status: 'found', detail: 'SPF published' },
+          { key: 'bad', label: 'Invalid', status: 'invented', detail: 'must be removed' },
+        ],
+      },
+    }));
+    const res = await appFor(AUTH, dalStub()).request('/api/v1/readiness', {}, ENV as never);
+    const body = await res.json() as { public_signals: Record<string, unknown> };
+
+    expect(res.status).toBe(200);
+    expect(body.public_signals).toEqual({
+      status: 'completed',
+      domain: 'honestyoung.example',
+      swept_at: '2026-08-17T01:02:03.000Z',
+      source_count: 1,
+      sources: [{ key: 'spf', label: 'Email SPF record', status: 'found', detail: 'SPF published' }],
+    });
   });
 
   it('returns not-started only after a successful empty lookup', async () => {

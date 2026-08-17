@@ -107,6 +107,46 @@ function readinessPrefill(assessment: ReadinessAssessment) {
     account_type: assessment.account_type ?? null,
     deep_level: assessment.deep_level ?? null,
     readiness_answers: answers,
+    public_signals: publicSignalsFromAssessment(assessment),
+  };
+}
+
+const PUBLIC_SIGNAL_STATUSES = new Set(['found', 'not_found', 'not_configured', 'blocked', 'error']);
+
+function publicSignalsFromAssessment(assessment: ReadinessAssessment) {
+  const enrichment = assessment.enrichment && typeof assessment.enrichment === 'object'
+    ? assessment.enrichment
+    : null;
+  const isServerSweep = enrichment?.schema_id === 'xlooop.enrichment_sweep.v1'
+    && enrichment?.provenance === 'public_signal';
+  const rawSources = isServerSweep && Array.isArray(enrichment?.sources) ? enrichment.sources : [];
+  const sources = rawSources.flatMap((value) => {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return [];
+    const source = value as Record<string, unknown>;
+    const status = String(source.status || '');
+    if (!PUBLIC_SIGNAL_STATUSES.has(status)) return [];
+    const key = String(source.key || '').slice(0, 80);
+    const label = String(source.label || '').slice(0, 160);
+    if (!key || !label) return [];
+    return [{
+      key,
+      label,
+      status,
+      detail: typeof source.detail === 'string' ? source.detail.slice(0, 500) : null,
+    }];
+  });
+  const sweptAt = isServerSweep && typeof enrichment?.swept_at === 'string'
+    ? enrichment.swept_at
+    : null;
+  const domain = isServerSweep && typeof enrichment?.domain === 'string'
+    ? enrichment.domain
+    : assessment.domain ?? null;
+  return {
+    status: isServerSweep && !!domain && sources.length > 0 ? 'completed' : 'not_run',
+    domain,
+    swept_at: sweptAt,
+    source_count: sources.length,
+    sources,
   };
 }
 
@@ -176,10 +216,21 @@ readinessRoute.post('/readiness/submit', async (ctx) => {
       typeof body.account_type === 'string' && ALLOWED_ACCOUNT_TYPES.has(body.account_type)
         ? (body.account_type as 'personal' | 'company' | 'both')
         : 'company';
-    const companyName =
-      typeof body.company_name === 'string' && body.company_name.trim()
-        ? body.company_name.trim().slice(0, 200)
-        : email.split('@')[1] || 'Your company';
+    const requestedCompanyName = typeof body.company_name === 'string'
+      ? body.company_name.trim().slice(0, 200)
+      : '';
+    const existingWorkspaceName = existing.workspace && typeof existing.workspace.name === 'string'
+      ? existing.workspace.name.trim().slice(0, 200)
+      : '';
+    const companyName = requestedCompanyName || existingWorkspaceName
+      || (accountType === 'personal' ? 'Personal workspace' : '');
+    if (!companyName) {
+      return errorEnvelope(ctx, {
+        status: 400,
+        code: 'COMPANY_NAME_REQUIRED',
+        message: 'a verified company name is required to complete company onboarding',
+      });
+    }
 
     // Wave B (260628) · REAL public-signal enrichment (flag-gated, default OFF → dormant).
     // When enabled, compute the sweep SERVER-SIDE from the domain (best-effort, never throws)
@@ -188,10 +239,12 @@ readinessRoute.post('/readiness/submit', async (ctx) => {
     // else report 'not_configured' honestly. The result feeds buildCustomerContextProfile so
     // the connected AI sees real signals instead of a placebo.
     const domainStr = typeof body.domain === 'string' ? body.domain.slice(0, 253) : null;
-    let enrichment = boundedRecord(body.enrichment);
+    // Public evidence is server authority. Client-supplied `enrichment` is deliberately ignored so a
+    // browser cannot promote animation state or arbitrary JSON into an evidence-looking baseline.
+    let enrichment: Record<string, unknown> | null = null;
     if (envFlagTrue(ctx.env.ENRICHMENT_SWEEP_ENABLED)) {
       const sweep = await runEnrichmentSweep(domainStr, ctx.env).catch(() => null);
-      if (sweep) enrichment = boundedRecord({ ...(enrichment ?? {}), ...sweep });
+      if (sweep) enrichment = boundedRecord(sweep);
     }
 
     const readinessAnswers = boundedRecord(body.readiness_answers) ?? {};
