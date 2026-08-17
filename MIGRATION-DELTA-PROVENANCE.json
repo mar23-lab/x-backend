@@ -8959,6 +8959,42 @@
           "reason": "Replace the production readiness path's illegal content upsert with append-only, content-addressed roadmap revisions."
         }
       ]
+    },
+    {
+      "delta_id": "current-work-composite-parity-20260818",
+      "generated_at": "2026-08-17T23:40:06.600Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "8bf63c246626d730d4fae6c620386dfa52a1a217",
+      "target_base_commit": "8bf63c246626d730d4fae6c620386dfa52a1a217",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/dal/DalAdapter.ts",
+          "target_blob": "e5b7246d1be18e20f503b49eb642637fb8548e25",
+          "reason": "Current Work now composes visible operation events with unrepresented task packets under one RLS-scoped projection"
+        },
+        {
+          "path": "src/workers/dal/WorkersDalAdapter.ts",
+          "target_blob": "90c0bbea44bfdd395d6a49b40dd1dd71d6066ade",
+          "reason": "Current Work now composes visible operation events with unrepresented task packets under one RLS-scoped projection"
+        },
+        {
+          "path": "src/workers/routes/current-work.ts",
+          "target_blob": "c3eaabfea40e5394d2beaa69fef6d1f6522b339f",
+          "reason": "Current Work now composes visible operation events with unrepresented task packets under one RLS-scoped projection"
+        },
+        {
+          "path": "src/workers/__tests__/current-work-route.test.ts",
+          "target_blob": "485007a863aa8055ede2243d568d61848c23af05",
+          "reason": "Current Work now composes visible operation events with unrepresented task packets under one RLS-scoped projection"
+        },
+        {
+          "path": "src/workers/__tests__/operator-workspace-scope.test.ts",
+          "target_blob": "6c5214fa48e8e0d7369c6f6081beba52e52186e1",
+          "reason": "Current Work now composes visible operation events with unrepresented task packets under one RLS-scoped projection"
+        }
+      ]
     }
   ]
 }

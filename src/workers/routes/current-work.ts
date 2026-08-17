@@ -116,10 +116,9 @@ currentWorkRoute.get('/current-work', async (ctx) => {
     if (!scoped.ok) return scoped.res;
     const workspaceId = scoped.ws;
 
-    // Existing RLS-scoped read. Active project = the session's first project unless ?project_id given.
-    const session = await dal.getSession(auth.user_id, workspaceId);
-    const projects = Array.isArray(session.projects) ? session.projects : [];
-    const projectId = ctx.req.query('project_id') || (projects[0] ? projects[0].id : null);
+    // Scope is explicit. Omitting project_id means the whole workspace; the server must never infer
+    // "the first project" because project ordering is not user intent and differs across clients.
+    const projectId = ctx.req.query('project_id') || null;
 
     // 260805 · ASK FOR WHAT NEEDS A HUMAN — do not page by recency and filter afterwards.
     //
@@ -131,56 +130,43 @@ currentWorkRoute.get('/current-work', async (ctx) => {
     // compares two copies of it and reports "parity OK".
     //
     // Raising the limit only moves the cliff. The predicate belongs in SQL, next to the ORDER BY.
-    const page = await dal.listEvents(workspaceId, {
-      role: auth.role, limit: 200, top_level: true, attention_only: true,
-    }).catch((err) => {
+    const [composite, page] = await Promise.all([
+      // The customer UI renders visible operation events plus task packets that are not already
+      // represented by a visible event. The server projection must aggregate that same canonical
+      // set, not just operation_events, or the Current Work card and activity rail disagree.
+      dal.getCurrentWorkComposite(workspaceId, { role: auth.role, project_id: projectId }),
+      dal.listEvents(workspaceId, {
+        role: auth.role, limit: 200, top_level: true, attention_only: true,
+        project_id: projectId ?? undefined,
+      }).catch((err) => {
       // FALSE-ZERO DISCLOSURE (260806): a failed attention read otherwise drives the focus card
-      // to "All clear / nothing is waiting on you" — the product's central promise, inverted by an
-      // outage. Degrade kept; the log separates "clear" from "could not look".
+      // evidence count to zero. The canonical focus/count projection above remains authoritative;
+      // this degraded page is used only for the coarse evidence count.
       console.log(JSON.stringify({ kind: 'degraded_read_disclosed', surface: 'current_work_attention_page', error: String((err as Error)?.message || err).slice(0, 160) }));
       return { events: [], pagination: { has_more: false, next_before: null } };
-    });
-    const inScope = (e: { project_id: string | null }) => !projectId || e.project_id === projectId || e.project_id === null;
-    const events = page.events.filter(inScope);
-
-    const pending = events.filter((e) => e.status === 'needs_review' && e.approval_state !== 'approved');
-    const blocked = events.filter((e) => e.status === 'blocked');
-
-    // Counts come from a whole-workspace AGGREGATE, not from the page above. `done`/`total` were
-    // window-derived too, which made done_pct a percentage of the last 200 rows rather than of the
-    // work. A count computed from a page is not a count.
-    const totals = await dal.countEventStates(workspaceId, { role: auth.role, project_id: projectId })
-      .catch((err) => {
-        // FALSE-ZERO DISCLOSURE (260806): done/total fabricate zeros on a failed aggregate, so
-        // done_pct computes from nothing. The page-derived floor for needs_you/blocked stays.
-        console.log(JSON.stringify({ kind: 'degraded_read_disclosed', surface: 'current_work_totals', error: String((err as Error)?.message || err).slice(0, 160) }));
-        return { needs_you: pending.length, blocked: blocked.length, done: 0, total: 0 };
-      });
+      }),
+    ]);
+    const events = page.events;
+    const totals = composite.counts;
 
     // The single focal item + its plain-language primary action (mirrors the frontend H2 state machine).
-    let focus: null | { event_id: string; intent_id: string | null; project_id: string | null; title: string; state: string; status_label: string; next: string; primary_action: { code: string; label: string } | null } = null;
-    if (pending.length === 1) {
-      const it = pending[0];
-      focus = { event_id: it.id, intent_id: it.intent_id, project_id: it.project_id, title: clean(it.summary), state: 'needs_review', status_label: 'Waiting for your approval', next: 'Review it and record your sign-off', primary_action: { code: 'review_result', label: 'Review now' } };
-    } else if (pending.length > 1) {
-      const it = pending[0];
-      focus = { event_id: it.id, intent_id: it.intent_id, project_id: it.project_id, title: pending.length + ' items are waiting on you', state: 'needs_review', status_label: 'Waiting for your approval', next: 'Open the review queue', primary_action: { code: 'open_queue', label: 'Open queue' } };
-    } else if (blocked.length >= 1) {
-      const b = blocked[0];
-      focus = { event_id: b.id, intent_id: b.intent_id, project_id: b.project_id, title: clean(b.summary), state: 'blocked', status_label: 'Blocked', next: 'Resolve the blocker to continue', primary_action: { code: 'resolve_blocker', label: 'Resolve' } };
+    let focus: null | { event_id: string; packet_id: string | null; intent_id: string | null; project_id: string | null; title: string; state: string; status_label: string; next: string; primary_action: { code: string; label: string } | null } = null;
+    const focalItem = composite.focus;
+    if (totals.needs_you === 1 && focalItem?.state === 'needs_review') {
+      focus = { event_id: focalItem.object_type === 'event' ? focalItem.id : '', packet_id: focalItem.object_type === 'packet' ? focalItem.id : null, intent_id: focalItem.intent_id, project_id: focalItem.project_id, title: clean(focalItem.title), state: 'needs_review', status_label: 'Waiting for your approval', next: 'Review it and record your sign-off', primary_action: { code: 'review_result', label: 'Review now' } };
+    } else if (totals.needs_you > 1 && focalItem) {
+      focus = { event_id: focalItem.object_type === 'event' ? focalItem.id : '', packet_id: focalItem.object_type === 'packet' ? focalItem.id : null, intent_id: focalItem.intent_id, project_id: focalItem.project_id, title: totals.needs_you + ' items are waiting on you', state: 'needs_review', status_label: 'Waiting for your approval', next: 'Open the review queue', primary_action: { code: 'open_queue', label: 'Open queue' } };
+    } else if (totals.blocked >= 1 && focalItem?.state === 'blocked') {
+      focus = { event_id: focalItem.object_type === 'event' ? focalItem.id : '', packet_id: focalItem.object_type === 'packet' ? focalItem.id : null, intent_id: focalItem.intent_id, project_id: focalItem.project_id, title: clean(focalItem.title), state: 'blocked', status_label: 'Blocked', next: 'Resolve the blocker to continue', primary_action: { code: 'resolve_blocker', label: 'Resolve' } };
     } else {
-      focus = { event_id: '', intent_id: null, project_id: projectId, title: 'No work is waiting on you', state: 'all_clear', status_label: 'All clear', next: 'Describe the outcome you want', primary_action: null };
+      focus = { event_id: '', packet_id: null, intent_id: null, project_id: projectId, title: 'No work is waiting on you', state: 'all_clear', status_label: 'All clear', next: 'Describe the outcome you want', primary_action: null };
     }
 
     // `events` is now the ATTENTION page, so its length is not a workspace total — see `totals`.
     // Kept only for the parity payload below, which compares like for like with the client.
     const total = totals.total;
     const generatedAt = new Date().toISOString();
-    const sourceWatermark = events
-      .map((e) => String((e as unknown as { occurred_at?: string; created_at?: string; updated_at?: string }).updated_at
-        || (e as unknown as { occurred_at?: string }).occurred_at
-        || (e as unknown as { created_at?: string }).created_at || ''))
-      .filter(Boolean).sort().at(-1) || null;
+    const sourceWatermark = composite.source_watermark;
     const receiptObservation = await dal.countGovernedExecutionReceipts(workspaceId)
       .then((count) => ({ count, status: 'observed' as const }))
       .catch(() => ({ count: null, status: 'unavailable' as const }));
@@ -200,12 +186,12 @@ currentWorkRoute.get('/current-work', async (ctx) => {
       // canonical, coarse, counts-only (customer-safe doctrine: never evidence ids, never engine chains)
       focus: focus ? {
         ...focus,
-        focus_id: focus.event_id || null,
-        object_type: focus.event_id ? 'event' : 'none',
+        focus_id: focus.event_id || focus.packet_id || null,
+        object_type: focus.event_id ? 'event' : focus.packet_id ? 'packet' : 'none',
         lifecycle: focus.state,
         version: null,
         version_status: 'not_available_from_event_projection',
-        target: { type: focus.event_id ? 'event' : 'none', id: focus.event_id || null, label: focus.title },
+        target: { type: focus.event_id ? 'event' : focus.packet_id ? 'packet' : 'none', id: focus.event_id || focus.packet_id || null, label: focus.title },
         action: focus.primary_action,
         blocked_reason: focus.state === 'blocked' ? focus.title : null,
         review_state: focus.state === 'needs_review' ? 'requested' : focus.state === 'all_clear' ? 'not_required' : 'none',

@@ -3,7 +3,26 @@ import { Hono } from 'hono';
 import { currentWorkRoute } from '../routes/current-work';
 
 // Mock dal: getSession returns one project; listEvents returns a fixture event stream.
-function mkDal(events: any[], receiptCount = 0, receiptReadFails = false, parityCalls: any[] = []) {
+function compositeFrom(events: any[]) {
+  const item = events.find((e: any) => e.status === 'needs_review' && e.approval_state !== 'approved')
+    || events.find((e: any) => e.status === 'blocked') || null;
+  return {
+    counts: {
+      needs_you: events.filter((e: any) => e.status === 'needs_review' && e.approval_state !== 'approved').length,
+      blocked: events.filter((e: any) => e.status === 'blocked').length,
+      done: events.filter((e: any) => e.status === 'completed' || e.status === 'approved').length,
+      total: events.length,
+    },
+    focus: item ? {
+      id: item.id, object_type: 'event', project_id: item.project_id, intent_id: item.intent_id,
+      title: item.summary, state: item.status === 'needs_review' ? 'needs_review' : 'blocked',
+      updated_at: item.updated_at || item.occurred_at || '2026-08-18T00:00:00.000Z',
+    } : null,
+    source_watermark: events.length ? '2026-08-18T00:00:00.000Z' : null,
+  };
+}
+
+function mkDal(events: any[], receiptCount = 0, receiptReadFails = false, parityCalls: any[] = [], compositeOverride?: any) {
   return {
     getSession: async () => ({ projects: [{ id: 'prj_1', name: 'P1' }], workspace: { id: 'ws_1' }, user: { role: 'operator' } }),
     listEvents: async () => ({ events, pagination: { has_more: false, next_before: null } }),
@@ -16,6 +35,7 @@ function mkDal(events: any[], receiptCount = 0, receiptReadFails = false, parity
       done: events.filter((e: any) => e.status === 'completed' || e.status === 'approved').length,
       total: events.length,
     }),
+    getCurrentWorkComposite: async () => compositeOverride || compositeFrom(events),
     countGovernedExecutionReceipts: async () => {
       if (receiptReadFails) throw new Error('receipt read unavailable');
       return receiptCount;
@@ -28,12 +48,12 @@ function mkDal(events: any[], receiptCount = 0, receiptReadFails = false, parity
 }
 const AUTH = { user_id: 'u_1', workspace_id: 'ws_1', role: 'operator', email: 'o@x.com', service_principal: false } as any;
 
-function app(events: any[], flag: string | undefined, receiptCount = 0, receiptReadFails = false) {
+function app(events: any[], flag: string | undefined, receiptCount = 0, receiptReadFails = false, compositeOverride?: any) {
   const a = new Hono();
   a.use('*', async (ctx, next) => {
     ctx.env = { CURRENT_WORK_PROJECTION_ENABLED: flag } as any;
     ctx.set('auth', AUTH);
-    ctx.set('dal', mkDal(events, receiptCount, receiptReadFails));
+    ctx.set('dal', mkDal(events, receiptCount, receiptReadFails, [], compositeOverride));
     ctx.set('request_id', 'rq_1');
     await next();
   });
@@ -76,6 +96,25 @@ describe('current-work · CurrentWorkProjection read route (flag-gated, inert)',
     expect(b.focus.object_type).toBe('event');
     expect(b.focus.target).toEqual({ type: 'event', id: 'e1', label: 'Approve TAS section' });
     expect(b.counts.needs_you).toBe(1);
+  });
+
+  it('projects an unrepresented task packet as canonical Current Work', async () => {
+    const composite = {
+      counts: { needs_you: 1, blocked: 0, done: 0, total: 1 },
+      focus: {
+        id: 'pkt_1', object_type: 'packet', project_id: 'prj_1', intent_id: null,
+        title: 'Review supplier onboarding packet', state: 'needs_review',
+        updated_at: '2026-08-18T00:00:00.000Z',
+      },
+      source_watermark: '2026-08-18T00:00:00.000Z',
+    };
+    const res = await app([], 'true', 0, false, composite).request('/current-work?project_id=prj_1');
+    const b = await res.json();
+    expect(b.counts.total).toBe(1);
+    expect(b.focus.object_type).toBe('packet');
+    expect(b.focus.packet_id).toBe('pkt_1');
+    expect(b.focus.focus_id).toBe('pkt_1');
+    expect(b.focus.target).toEqual({ type: 'packet', id: 'pkt_1', label: 'Review supplier onboarding packet' });
   });
 
   it('projects N pending as an Open-queue action', async () => {
