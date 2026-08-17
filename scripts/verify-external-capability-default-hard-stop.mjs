@@ -16,6 +16,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..');
 const strictDefaults = process.argv.includes('--strict-defaults') || process.env.XLOOOP_REQUIRE_EXTERNAL_DEFAULTS === '1';
 const liveResultsFile = process.env.XLOOOP_UPSTREAM_CAPABILITY_RESULTS_FILE || '';
+const headroomSemanticResultsFile = process.env.XLOOOP_HEADROOM_SEMANTIC_RESULTS_FILE || '';
 const checks = [];
 const failures = [];
 const warnings = [];
@@ -103,7 +104,12 @@ run('upstream_capability_live_canary', 'npm', ['run', '--silent', 'verify:upstre
   requiredForDefault: true,
   message: 'Set XLOOOP_UPSTREAM_CAPABILITY_RESULTS_FILE to fresh live upstream sandbox-canary evidence before default promotion.',
 });
-run('external_capability_runtime_results_strict', 'npm', ['run', '--silent', 'verify:external-capability-runtime-results', '--', '--strict'], {
+const runtimeResultsArgs = ['run', '--silent', 'verify:external-capability-runtime-results', '--', '--strict'];
+if (liveResultsFile) runtimeResultsArgs.push(`--input=${path.resolve(liveResultsFile)}`);
+if (headroomSemanticResultsFile) {
+  runtimeResultsArgs.push(`--headroom-semantic-input=${path.resolve(headroomSemanticResultsFile)}`);
+}
+run('external_capability_runtime_results_strict', 'npm', runtimeResultsArgs, {
   blockInternal: strictDefaults,
   requiredForDefault: true,
   message: 'Strict runtime benchmark evidence is required before any MarkItDown, Headroom, or Hyper-Extract-derived default runtime.',

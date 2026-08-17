@@ -8829,6 +8829,27 @@
           "reason": "Separate authenticated bearer traffic from anonymous Cloudflare native IP rate-limit authority and prove binding selection"
         }
       ]
+    },
+    {
+      "delta_id": "capability-live-lineage-20260817",
+      "generated_at": "2026-08-17T01:42:56.236Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "952cb5d359d497af8db86c4b4896cc0eb6ef61a6",
+      "target_base_commit": "952cb5d359d497af8db86c4b4896cc0eb6ef61a6",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "scripts/verify-external-capability-default-hard-stop.mjs",
+          "target_blob": "d5b278eb63087f0a9664f0785a597832b26dbd96",
+          "reason": "forward live runtime and semantic evidence through the default hard-stop"
+        },
+        {
+          "path": "docs/deployment/PUBLIC_SELF_SERVE_EVIDENCE_GATES.md",
+          "target_blob": "f7f1c4e7c5a1e6b7d105895f50a85843d1ecd489",
+          "reason": "forward live runtime and semantic evidence through the default hard-stop"
+        }
+      ]
     }
   ]
 }

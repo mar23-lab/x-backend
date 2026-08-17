@@ -205,6 +205,18 @@ test('strict runtime verifier recognizes paid/platform evidence but still requir
   assert.ok(!report.warnings.some((warning) => warning.id === 'headroom_paid_or_platform_provider_canary_required'));
 });
 
+test('default hard stop forwards configured live and semantic evidence to its strict verifier', () => {
+  const source = fs.readFileSync(
+    path.join(repoRoot, 'scripts/verify-external-capability-default-hard-stop.mjs'),
+    'utf8',
+  );
+
+  assert.match(source, /XLOOOP_UPSTREAM_CAPABILITY_RESULTS_FILE/);
+  assert.match(source, /XLOOOP_HEADROOM_SEMANTIC_RESULTS_FILE/);
+  assert.match(source, /`--input=\$\{path\.resolve\(liveResultsFile\)\}`/);
+  assert.match(source, /`--headroom-semantic-input=\$\{path\.resolve\(headroomSemanticResultsFile\)\}`/);
+});
+
 function headroomStructuralResult() {
   return {
     capability: 'headroom',
