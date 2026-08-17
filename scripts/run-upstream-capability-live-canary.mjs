@@ -177,8 +177,8 @@ function runMarkitdownLive(capability, cases) {
       dependency,
       upstream_execution_attempted: false,
       reason: item.source_type === 'image'
-        ? 'MarkItDown 0.1.6 does not perform image semantic extraction without an explicitly configured multimodal client.'
-        : 'MarkItDown 0.1.6 uses an outbound Google speech-recognition call; the no-network sandbox policy forbids that implicit provider boundary.',
+        ? 'The current MarkItDown runtime does not perform image semantic extraction without an explicitly configured multimodal client.'
+        : 'The current MarkItDown runtime uses an outbound speech-recognition provider; the no-network sandbox policy forbids that implicit provider boundary.',
     });
   }
 
