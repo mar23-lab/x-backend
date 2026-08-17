@@ -127,6 +127,7 @@ import {
 import type { OperatingMode, OperatingModeWriteResult } from './session-preferences-store';
 import type { ModelRuntimesFacade } from './model-runtime-facade';
 import type { PlanEntitiesFacade } from './plan-entities-facade';
+import type { CurrentWorkCompositeProjection } from './current-work-store';
 
 export interface DalAdapter {
   /** GET /api/v1/session — returns user + workspace + projects context. */
@@ -141,6 +142,11 @@ export interface DalAdapter {
     workspaceId: WorkspaceId,
     opts: { role: EventListOpts['role']; project_id?: string | null },
   ): Promise<{ needs_you: number; blocked: number; done: number; total: number }>;
+  /** Canonical Current Work projection over visible events plus unrepresented task packets. */
+  getCurrentWorkComposite(
+    workspaceId: WorkspaceId,
+    opts: { role: EventListOpts['role']; project_id?: string | null },
+  ): Promise<CurrentWorkCompositeProjection>;
 
   /** R54-Stage2 · operator-overlay event list. Lists events across ALL
    *  workspaces owned by the operator's identity set (ownerUserIds), so the

@@ -192,6 +192,7 @@ import {
   listArchivedEventsRow,
   purgeArchivedXlooopEventsRow,
 } from './event-store';
+import { getCurrentWorkCompositeRow } from './current-work-store';
 import { listSplitEnabledWorkspaceIdsRow, listUnattributedEventsRow, listProjectIdsForWorkspacesRow, reassignEventProjectRow, type UnattributedEventRow } from './reclassify-store';
 import {
   getUserRow,
@@ -382,6 +383,13 @@ export class WorkersDalAdapter implements DalAdapter {
     opts: { role: EventListOpts['role']; project_id?: string | null },
   ): Promise<{ needs_you: number; blocked: number; done: number; total: number }> {
     return countEventStatesRow(this.rlsSql, workspaceId, opts); // 043 · same RLS-subject client
+  }
+
+  async getCurrentWorkComposite(
+    workspaceId: WorkspaceId,
+    opts: { role: EventListOpts['role']; project_id?: string | null },
+  ) {
+    return getCurrentWorkCompositeRow(this.rlsSql, workspaceId, opts);
   }
 
   async listEvents(workspaceId: WorkspaceId, opts: EventListOpts): Promise<EventPage> {
