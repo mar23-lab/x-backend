@@ -53,6 +53,12 @@ SOURCE_SCOPE_ENFORCEMENT_ENABLED = "true"
 # tokens remain explicitly off until their separate write-authority proof is approved.
 CUSTOMER_API_TOKENS_ENABLED = "true"
 CUSTOMER_OPERATIONAL_TOKENS_ENABLED = "false"
+# Customer onboarding must exercise the same governed first-session path as the
+# commercial runtime. The approver identity remains a write-only Worker secret
+# checked by deploy-pilot-shadow.mjs; no operator identifier is committed here.
+CUSTOMER_AUTO_PROVISION_ON_SESSION = "true"
+CUSTOMER_AUTO_PROVISION_FROM_CLERK_ORG = "true"
+CUSTOMER_INAPP_READINESS_GATE = "true"
 # Stays disabled until migration 101, the dedicated keyring, Google OAuth app,
 # and test.xlooop.com callback are all live-proven in this isolated environment.
 CONNECTOR_OAUTH_AUTHORITY_MODE = "disabled"

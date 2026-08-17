@@ -34,6 +34,9 @@ requireMatch(/^CHAT_HISTORY_PERSISTENCE_REQUIRED\s*=\s*"true"$/m, 'customer chat
 requireMatch(/^TENANT_PROJECTION_QUEUE_ENABLED\s*=\s*"true"$/m, 'tenant projection queue must be enabled');
 requireMatch(/^CUSTOMER_API_TOKENS_ENABLED\s*=\s*"true"$/m, 'read-only customer connector tokens must be enabled for the commercial API-access proof');
 requireMatch(/^CUSTOMER_OPERATIONAL_TOKENS_ENABLED\s*=\s*"false"$/m, 'operational customer connector tokens must remain explicitly disabled');
+requireMatch(/^CUSTOMER_AUTO_PROVISION_ON_SESSION\s*=\s*"true"$/m, 'customer session auto-provision must be enabled');
+requireMatch(/^CUSTOMER_AUTO_PROVISION_FROM_CLERK_ORG\s*=\s*"true"$/m, 'Clerk-org onboarding must be enabled');
+requireMatch(/^CUSTOMER_INAPP_READINESS_GATE\s*=\s*"true"$/m, 'in-app readiness must gate first-session provisioning');
 requireMatch(/^EXECUTOR_MODE\s*=\s*"disabled"$/m, 'executor must remain disabled');
 requireMatch(/^ENTITLEMENT_ENFORCEMENT\s*=\s*"off"$/m, 'entitlement cutover must remain off');
 requireMatch(/^PURGE_DELETED_ENABLED\s*=\s*"false"$/m, 'irreversible purge must remain disabled');
@@ -47,6 +50,9 @@ if (authorizedParties.includes('app.xlooop.com') || authorizedParties.includes('
 }
 if (/DIGEST_SWEEP_ENABLED\s*=\s*"true"|RECLASSIFY_CRON_ENABLED\s*=\s*"true"/.test(activeSource)) {
   errors.push('autonomous production loops must remain disabled');
+}
+if (/^(?:CUSTOMER_AUTO_PROVISION_APPROVER_USER_ID|MBP_OWNER_USER_ID)\s*=/m.test(activeSource)) {
+  errors.push('onboarding approver identity must be a Worker secret, not committed pilot config');
 }
 
 if (errors.length) {
