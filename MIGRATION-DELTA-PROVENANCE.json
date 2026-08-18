@@ -9098,6 +9098,77 @@
           "reason": "Enable the existing receipt-backed Plan facade on isolated pilot-shadow and verify the configuration flag"
         }
       ]
+    },
+    {
+      "delta_id": "project-multi-chat-contract-20260818",
+      "generated_at": "2026-08-18T10:24:56.014Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "aa90887abcb8058f31650e737ad8f429650329b6",
+      "target_base_commit": "aa90887abcb8058f31650e737ad8f429650329b6",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "docs/contracts/api-contract.v1.json",
+          "target_blob": "74fd9614d1bbf4244db2b98e6dfbd2547339892b",
+          "reason": "Record durable project conversation thread contract and its intake/chat integration changes"
+        },
+        {
+          "path": "src/workers/dal/DalAdapter.ts",
+          "target_blob": "c4146f3ad9ebe0cdefb356c77770ebfdeed953ef",
+          "reason": "Record durable project conversation thread contract and its intake/chat integration changes"
+        },
+        {
+          "path": "src/workers/dal/operational-spine-methods.ts",
+          "target_blob": "730310225aed0b94ade79846d373862d158dbf7b",
+          "reason": "Record durable project conversation thread contract and its intake/chat integration changes"
+        },
+        {
+          "path": "src/workers/__tests__/intake-route.test.ts",
+          "target_blob": "8aad80b3ffe5cae3682d44610c8356b803cfb8f9",
+          "reason": "Record durable project conversation thread contract and its intake/chat integration changes"
+        },
+        {
+          "path": "src/workers/__tests__/intake-store.test.ts",
+          "target_blob": "fa541438ed4f9d9e649c5cdd303425947a953f88",
+          "reason": "Record durable project conversation thread contract and its intake/chat integration changes"
+        },
+        {
+          "path": "src/workers/dal/intake-store.ts",
+          "target_blob": "64a49e93eaf282d24654d656b100a1d28b59f343",
+          "reason": "Record durable project conversation thread contract and its intake/chat integration changes"
+        },
+        {
+          "path": "src/workers/routes/customer-chat.ts",
+          "target_blob": "2210afb02b08b8a3ad3c637d4494b1dfdc4c5174",
+          "reason": "Record durable project conversation thread contract and its intake/chat integration changes"
+        },
+        {
+          "path": "src/workers/routes/intake.ts",
+          "target_blob": "01ba8b1390b2d5cf3b4e906bad1c90831d8f2175",
+          "reason": "Record durable project conversation thread contract and its intake/chat integration changes"
+        },
+        {
+          "path": "src/workers/dal/WorkersDalAdapter.ts",
+          "target_blob": "49caad30525b345945d920f45ff2db1ba69c5ed1",
+          "reason": "Record durable project conversation thread contract and its intake/chat integration changes"
+        },
+        {
+          "path": "src/workers/__tests__/customer-chat-route.test.ts",
+          "target_blob": "29b3655bc960e1395e468fbcd3ac6d7f641e8577",
+          "reason": "Record durable project conversation thread contract and its intake/chat integration changes"
+        },
+        {
+          "path": "src/workers/dal/chat-store.ts",
+          "target_blob": "a7de0cfa74a4659bcda57226d1d1031655d6e755",
+          "reason": "Record durable project conversation thread contract and its intake/chat integration changes"
+        },
+        {
+          "path": "src/workers/__tests__/chat-turn-facade.test.ts",
+          "target_blob": "703283b1d91c43c2fba0b9ca0854f6ec7d7b30e6",
+          "reason": "Record durable project conversation thread contract and its intake/chat integration changes"
+        }
+      ]
     }
   ]
 }
