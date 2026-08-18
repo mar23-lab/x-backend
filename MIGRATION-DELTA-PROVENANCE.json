@@ -9169,6 +9169,27 @@
           "reason": "Record durable project conversation thread contract and its intake/chat integration changes"
         }
       ]
+    },
+    {
+      "delta_id": "project-multi-chat-module-boundary-20260818",
+      "generated_at": "2026-08-18T10:41:51.791Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "5dc29dda9663908751e42386ea9007c7ade26cb8",
+      "target_base_commit": "5dc29dda9663908751e42386ea9007c7ade26cb8",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/dal/chat-store.ts",
+          "target_blob": "110df3471bec621c36234c79b65a4b17d84b871f",
+          "reason": "Split project chat thread and execution receipt persistence into focused DAL modules under the source-file-size ratchet"
+        },
+        {
+          "path": "src/workers/dal/intake-store.ts",
+          "target_blob": "1ab75311a22eea40e7a22056d52f1187dcaac40c",
+          "reason": "Split project chat thread and execution receipt persistence into focused DAL modules under the source-file-size ratchet"
+        }
+      ]
     }
   ]
 }
