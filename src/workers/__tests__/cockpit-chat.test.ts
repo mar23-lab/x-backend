@@ -77,6 +77,33 @@ describe('compileChatFacts — grounding extraction', () => {
     expect(g.recent[0].summary).toMatch(/legible empty\/degraded project banner/);
     expect(g.recent[0].status).toBe('completed');
   });
+
+  it('surfaces the canonical Current Work projection separately from event-page counts', () => {
+    const g = compileChatFacts(FACTS({
+      currentWork: {
+        counts: { needs_you: 1, blocked: 0, done: 13, total: 17 },
+        focus: {
+          id: 'packet_1', object_type: 'packet', project_id: 'org_3EG82-cockpit-ux', intent_id: null,
+          title: 'Approve the onboarding quality checklist', state: 'needs_review', updated_at: '2026-08-18T00:10:00Z',
+        },
+        source_watermark: '2026-08-18T00:10:00Z',
+      },
+    }));
+    expect(g.current_work).toMatchObject({
+      available: true,
+      counts: { needs_you: 1, blocked: 0, done: 13, total: 17 },
+      focus: { id: 'packet_1', title: 'Approve the onboarding quality checklist' },
+    });
+  });
+
+  it('marks Current Work unavailable instead of fabricating an all-clear projection', () => {
+    expect(compileChatFacts(FACTS()).current_work).toEqual({
+      available: false,
+      counts: null,
+      focus: null,
+      source_watermark: null,
+    });
+  });
 });
 
 describe('project requested-fact semantic corpus', () => {

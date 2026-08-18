@@ -46,6 +46,11 @@ function dalStub(overrides: Record<string, unknown> = {}) {
       projects: [],
     }),
     listEvents: async () => ({ events: [], pagination: { has_more: false, next_before: null } }),
+    getCurrentWorkComposite: async () => ({
+      counts: { needs_you: 0, blocked: 0, done: 0, total: 0 },
+      focus: null,
+      source_watermark: null,
+    }),
     listProjects: async () => [],
     listUserSources: async () => [],
     getCustomerContextProfile: async () => PROFILE,
@@ -183,6 +188,57 @@ describe('POST /api/v1/customer-chat', () => {
     expect(responses.map((body) => body.execution?.provider)).toEqual(['workers_ai', 'workers_ai']);
     expect(responses[0].answer).not.toBe(responses[1].answer);
     expect(responses.map((body) => body.answer).join('\n')).not.toMatch(/Here is what is happening in this project/);
+  });
+
+  it('uses the canonical Current Work projection and repairs a live answer that contradicts the visible UI', async () => {
+    const aiRun = vi.fn(async () => ({
+      response: aiRun.mock.calls.length === 1
+        ? 'The current project is Client Onboarding Quality Program. No additional items were found on record.'
+        : 'The current project is Client Onboarding Quality Program. The most important item awaiting attention is "Approve the onboarding quality checklist".',
+      usage: { prompt_tokens: 41, completion_tokens: 19 },
+    }));
+    const currentDal = dalStub({
+      getProject: async (workspaceId: string, projectId: string) => ({
+        id: projectId,
+        workspace_id: workspaceId,
+        name: 'Client Onboarding Quality Program',
+        status: 'active',
+        updated_at: '2026-08-18T00:00:00Z',
+      }),
+      plan: { listPlanEntities: async () => [] },
+      getCurrentWorkComposite: async () => ({
+        counts: { needs_you: 1, blocked: 0, done: 13, total: 17 },
+        focus: {
+          id: 'packet_review_1', object_type: 'packet', project_id: 'project_1', intent_id: null,
+          title: 'Approve the onboarding quality checklist', state: 'needs_review', updated_at: '2026-08-18T00:10:00Z',
+        },
+        source_watermark: '2026-08-18T00:10:00Z',
+      }),
+      modelRuntimes: {
+        listProviders: vi.fn(async () => []),
+        getOverride: vi.fn(async () => null),
+        getProviderCredential: vi.fn(async () => null),
+      },
+    });
+    const res = await appFor(AUTH, currentDal).request('/api/v1/customer-chat', {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        message: 'What is the current project, and what is the most important item awaiting my attention?',
+        project_id: 'project_1',
+      }),
+    }, { CUSTOMER_SAFE_SERIALIZER_ENABLED: 'false', AI: { run: aiRun } });
+
+    expect(res.status).toBe(200);
+    const body = await res.json() as Record<string, any>;
+    expect(aiRun).toHaveBeenCalledTimes(2);
+    expect(body.generated_by).toBe('llm');
+    expect(body.answer).toContain('Approve the onboarding quality checklist');
+    expect(body.answer).not.toMatch(/no additional items|all clear/i);
+    expect(body.grounded_on.current_work).toMatchObject({
+      available: true,
+      counts: { needs_you: 1, blocked: 0, done: 13, total: 17 },
+      focus: { id: 'packet_review_1', state: 'needs_review' },
+    });
   });
 
   it('maps the retired legacy Claude selector to the live platform Anthropic runtime', async () => {

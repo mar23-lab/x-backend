@@ -35,6 +35,11 @@ function dal(options: { auditEventId?: string | null } = {}) {
     getSessionEntitlement: async () => ({ state: 'approved_workspace' }),
     listEvents: async () => ({ events: [], pagination: { has_more: false, next_before: null } }),
     countEventStates: async () => ({ needs_you: 0, blocked: 0, done: 0, total: 0 }),
+    getCurrentWorkComposite: async () => ({
+      counts: { needs_you: 0, blocked: 0, done: 0, total: 0 },
+      focus: null,
+      source_watermark: null,
+    }),
     listUserSources: async () => [],
     getCustomerContextProfile: async () => null,
     modelRuntimes: {

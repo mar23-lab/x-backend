@@ -202,6 +202,9 @@ export function buildIntakeResolution(
     ...base,
     target: { type: 'none', id: null, label: 'Clarification required' },
     effect_summary: 'Clarify the intended outcome before anything is created or changed.',
-    risk: 'low', ambiguity: true, requires_confirmation: false, next_step: 'clarify', action_payload: {},
+    // An unmatched conversational request is not target ambiguity. The client uses this distinction
+    // to send ordinary text to the live chat runtime while retaining deterministic clarification for
+    // genuinely ambiguous packets, approvals, and explicitly named projects above.
+    risk: 'low', ambiguity: false, requires_confirmation: false, next_step: 'clarify', action_payload: {},
   };
 }

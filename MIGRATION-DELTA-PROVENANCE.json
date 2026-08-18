@@ -9016,6 +9016,67 @@
           "reason": "Bind connector status, test, and mint receipts to the authenticated deployment origin"
         }
       ]
+    },
+    {
+      "delta_id": "live-chat-current-work-grounding-20260818",
+      "generated_at": "2026-08-18T02:13:07.157Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "7549b83d8bc543cc178fc4da85e635435e72f40d",
+      "target_base_commit": "7549b83d8bc543cc178fc4da85e635435e72f40d",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/lib/intake-resolution.ts",
+          "target_blob": "79b3324236ba14dde12dde68f71ca102f525f53d",
+          "reason": "Route unmatched conversation to live runtime and ground attention answers in canonical Current Work projection"
+        },
+        {
+          "path": "src/workers/services/cockpit-chat.ts",
+          "target_blob": "3258b66c648615be8a92ba657006fab54053b900",
+          "reason": "Route unmatched conversation to live runtime and ground attention answers in canonical Current Work projection"
+        },
+        {
+          "path": "src/workers/routes/customer-chat.ts",
+          "target_blob": "c78b0682b59fc14b4d59477b00a3c0c99abb5bee",
+          "reason": "Route unmatched conversation to live runtime and ground attention answers in canonical Current Work projection"
+        },
+        {
+          "path": "src/workers/__tests__/intake-resolution.test.ts",
+          "target_blob": "11148021a8de5c03348f1426d8aa3baef2477d22",
+          "reason": "Route unmatched conversation to live runtime and ground attention answers in canonical Current Work projection"
+        },
+        {
+          "path": "src/workers/__tests__/cockpit-chat.test.ts",
+          "target_blob": "d3769813b53eca730b33d7070ccf5a64783eefa3",
+          "reason": "Route unmatched conversation to live runtime and ground attention answers in canonical Current Work projection"
+        },
+        {
+          "path": "src/workers/__tests__/customer-chat-route.test.ts",
+          "target_blob": "4b30497650751a1a4d4217149e7e18e8d1b18b09",
+          "reason": "Route unmatched conversation to live runtime and ground attention answers in canonical Current Work projection"
+        },
+        {
+          "path": "src/workers/__tests__/chat-assembly-trace.test.ts",
+          "target_blob": "1c8939c9106a97125a66100d38e7f77f7bef8e27",
+          "reason": "Route unmatched conversation to live runtime and ground attention answers in canonical Current Work projection"
+        },
+        {
+          "path": "src/workers/__tests__/chat-turn-facade.test.ts",
+          "target_blob": "01e8e98619b9303c2f5a3e7e0606dabe2dbc1b1d",
+          "reason": "Route unmatched conversation to live runtime and ground attention answers in canonical Current Work projection"
+        },
+        {
+          "path": "src/workers/__tests__/llm-usage-metering.test.ts",
+          "target_blob": "55d1052702c75815b07b6811c920170366007b58",
+          "reason": "Route unmatched conversation to live runtime and ground attention answers in canonical Current Work projection"
+        },
+        {
+          "path": "src/workers/__tests__/source-tier-grounding.test.ts",
+          "target_blob": "e6c77adc79a2f52104e54bc4a99825b5a24050a2",
+          "reason": "Route unmatched conversation to live runtime and ground attention answers in canonical Current Work projection"
+        }
+      ]
     }
   ]
 }
