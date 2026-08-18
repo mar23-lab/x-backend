@@ -554,6 +554,23 @@ async function handleCustomerChat(ctx: CustomerChatContext) {
         return { needs_you: 0, blocked: 0, done: 0, total: events.length };
       });
 
+    // Chat and the Current Work card must read the same event+packet composite. Event aggregates
+    // alone omit unrepresented task packets, which allowed a live model to say "no items" while the
+    // adjacent UI showed work awaiting approval. A failed read remains unavailable, never a false zero.
+    const currentWork = await Promise.resolve()
+      .then(() => dal.getCurrentWorkComposite(
+        workspaceId,
+        { role: auth.role, project_id: projectId ?? null },
+      ))
+      .catch((err) => {
+        console.log(JSON.stringify({
+          kind: 'cockpit_chat_grounding_read_failed',
+          surface: 'current_work',
+          error: String((err as Error)?.message || err).slice(0, 200),
+        }));
+        return undefined;
+      });
+
     const sourceRows = await dal.listUserSources(auth.user_id).catch((err) => {
       // FALSE-ZERO DISCLOSURE (260806): a failed source-list read otherwise makes the prompt
       // assert the customer has NO connected sources — a false statement served as grounding.
@@ -715,7 +732,7 @@ async function handleCustomerChat(ctx: CustomerChatContext) {
         // THE FALLBACK IS THE PAGE LENGTH, NEVER 0. cockpit-chat.ts:1032 switches to the empty-state
         // narrative when events_total === 0, which drops source facts entirely. A degraded aggregate
         // read must not under-report below what we can already see.
-        { workspaceName, companyContext, events, documents, projects, plan, projectSources, sources, total: chatTotals.total, scope, charter, personalizationProfile },
+        { workspaceName, companyContext, events, documents, projects, plan, currentWork, projectSources, sources, total: chatTotals.total, scope, charter, personalizationProfile },
         mode,
         executionObserver,
         liveRuntimePlan,
@@ -789,6 +806,8 @@ async function handleCustomerChat(ctx: CustomerChatContext) {
       workspace_id: workspaceId, events: events.length, documents: documents.length,
       projects_total: projects?.length ?? null, sources_total: sources.length,
       sources_connected: sources.filter((s) => s.status === 'connected').length,
+      current_work_available: Boolean(currentWork),
+      current_work_needs_you: currentWork?.counts.needs_you ?? null,
       generated_by: result.generated_by,
     });
     trace?.recordBundle({
@@ -898,6 +917,8 @@ async function handleCustomerChat(ctx: CustomerChatContext) {
         evidence_count: result.grounded_on.event_ids?.length ?? 0,
         project_plan_fact_count: result.grounded_on.plan.entities.length,
         project_source_fact_count: result.grounded_on.project_sources.total,
+        current_work_available: result.grounded_on.current_work.available,
+        current_work_needs_you: result.grounded_on.current_work.counts?.needs_you ?? null,
         document_count: result.grounded_on.documents.total,
         freshness: result.grounded_on.plan.updated_at
           ?? result.grounded_on.projects.updated_at

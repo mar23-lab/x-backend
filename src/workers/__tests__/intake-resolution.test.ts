@@ -31,6 +31,16 @@ describe('canonical intake resolution', () => {
     expect(row).toMatchObject({ operation: 'answer', next_step: 'answer_now', requires_confirmation: false });
   });
 
+  it.each(['hey', 'lets do a proper work', 'help me get started'])('routes unmatched conversation to live chat without claiming target ambiguity: %s', (text) => {
+    const row = buildIntakeResolution({ text, client_request_id: `conversation-${text}` }, '0'.repeat(64), inventory());
+    expect(row).toMatchObject({
+      next_step: 'clarify',
+      ambiguity: false,
+      requires_confirmation: false,
+      target: { type: 'none', id: null },
+    });
+  });
+
   it('honours explicit no-change language in a workspace summary request', () => {
     const text = 'What is currently in this workspace? Summarize the active projects, connected sources, and recorded events. State what is grounded, include freshness, and do not create or change anything.';
     const row = buildIntakeResolution({ text, client_request_id: 'c-readonly-account' }, '1'.repeat(64), inventory());

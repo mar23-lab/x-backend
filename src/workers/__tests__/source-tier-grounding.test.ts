@@ -77,6 +77,11 @@ function appWith(sqlStub: unknown) {
     // 260805 · /customer-chat reads its whole-workspace total from this aggregate now, not from the
     // recency page. Derived from the same (empty) fixture so the mock cannot contradict its data.
     countEventStates: async () => ({ needs_you: 0, blocked: 0, done: 0, total: 0 }),
+    getCurrentWorkComposite: async () => ({
+      counts: { needs_you: 0, blocked: 0, done: 0, total: 0 },
+      focus: null,
+      source_watermark: null,
+    }),
     listUserSources: async () => [GMAIL],
     getCustomerContextProfile: async () => PROFILE,
   };

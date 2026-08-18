@@ -13,6 +13,7 @@
 // Customer-safe vocab only.
 
 import type { HarnessFlowEvent, EventStatus } from '../dal/types/event';
+import type { CurrentWorkCompositeProjection } from '../dal/current-work-store';
 import type { AiRunner } from './agent-digest';
 import { companyContextPreamble } from '../dal/customer-context-store';
 import type { ModelExecutionObserver } from '../lib/model-execution-lineage';
@@ -200,6 +201,9 @@ export interface CockpitChatFacts {
   projects?: ProjectGroundingFact[];
   /** Canonical plan facts for an explicitly selected, tenant-validated project. */
   plan?: ProjectPlanGrounding | null;
+  /** The same tenant-scoped event+packet projection rendered by the Current Work UI. Undefined means
+   *  the read failed and chat must not infer an all-clear state from event-page fallbacks. */
+  currentWork?: CurrentWorkCompositeProjection;
   /** RLS-scoped source bindings for the explicitly selected project. undefined means the read failed. */
   projectSources?: ProjectSourceGroundingFact[];
   /** Total Plane-A count for the scope (may exceed events.length when capped). */
@@ -305,6 +309,12 @@ export interface CockpitChatResult {
       updated_at: string | null;
       counts: { goals: number; milestones: number; todos: number; intents: number };
       entities: PlanEntityGroundingFact[];
+    };
+    current_work: {
+      available: boolean;
+      counts: { needs_you: number; blocked: number; done: number; total: number } | null;
+      focus: CurrentWorkCompositeProjection['focus'];
+      source_watermark: string | null;
     };
     project_sources: {
       available: boolean;
@@ -600,6 +610,7 @@ export function compileChatFacts(facts: CockpitChatFacts, message = ''): Cockpit
   const projectSourcesAvailable = Array.isArray(facts.projectSources);
   const projectSources = projectSourcesAvailable ? facts.projectSources! : [];
   const plan = facts.plan ?? null;
+  const currentWork = facts.currentWork;
   const pinned = Array.isArray(facts.pinned) ? facts.pinned : [];
   const planeA = Array.isArray(facts.events) ? facts.events : [];
   const planeB = Array.isArray(facts.governance) ? facts.governance : [];
@@ -770,6 +781,12 @@ export function compileChatFacts(facts: CockpitChatFacts, message = ''): Cockpit
         intents: planEntities.filter((entity) => entity.kind === 'intent').length,
       },
       entities: planEntities.slice(0, 200),
+    },
+    current_work: {
+      available: Boolean(currentWork),
+      counts: currentWork ? { ...currentWork.counts } : null,
+      focus: currentWork?.focus ?? null,
+      source_watermark: currentWork?.source_watermark ?? null,
     },
     project_sources: {
       available: projectSourcesAvailable,
@@ -1273,6 +1290,15 @@ function buildStructuredFactBlock(facts: CockpitChatFacts, grounded: CockpitChat
     },
     items,
   };
+  if (grounded.current_work.available) {
+    block.current_work = {
+      counts: grounded.current_work.counts,
+      focus: grounded.current_work.focus,
+      source_watermark: grounded.current_work.source_watermark,
+    };
+  } else {
+    block.current_work = { available: false };
+  }
   if (grounded.governance.total > 0) {
     block.governance = {
       waiting_owner: grounded.governance.waiting_owner, running: grounded.governance.running,
@@ -1462,6 +1488,36 @@ function validateRequestedFactGrounding(
   return null;
 }
 
+function isCurrentWorkQuestion(question: string): boolean {
+  return /\b(?:current work|most important item|what should i do next|what needs (?:my|your) attention|waiting on (?:me|you)|awaiting (?:my|your) (?:attention|approval|review)|needs? (?:my|your) (?:attention|approval|review))\b/i
+    .test(String(question || ''));
+}
+
+function validateCurrentWorkGrounding(
+  text: string,
+  grounded: CockpitChatResult['grounded_on'],
+  question: string,
+): string | null {
+  if (!isCurrentWorkQuestion(question)) return null;
+  const current = grounded.current_work;
+  const normalized = normalizedFactText(text);
+  if (!current.available || !current.counts) {
+    return /\b(?:unavailable|could not verify|unable to verify)\b/.test(normalized)
+      ? null
+      : 'GROUNDING_CURRENT_WORK_UNAVAILABLE_NOT_DISCLOSED';
+  }
+
+  const outstanding = current.counts.needs_you + current.counts.blocked;
+  if (outstanding > 0 && /\b(?:no (?:additional )?items?|nothing (?:needs|is awaiting)|no work (?:is )?waiting|all clear)\b/.test(normalized)) {
+    return 'GROUNDING_CURRENT_WORK_CONTRADICTION';
+  }
+  if (current.focus) {
+    const focusTitle = normalizedFactText(current.focus.title);
+    if (focusTitle && !normalized.includes(focusTitle)) return 'GROUNDING_CURRENT_WORK_FOCUS_MISSING';
+  }
+  return null;
+}
+
 function validateLiveGrounding(
   text: string,
   grounded: CockpitChatResult['grounded_on'],
@@ -1469,6 +1525,8 @@ function validateLiveGrounding(
 ): string | null {
   const factError = validateRequestedFactGrounding(text, grounded, question);
   if (factError) return factError;
+  const currentWorkError = validateCurrentWorkGrounding(text, grounded, question);
+  if (currentWorkError) return currentWorkError;
   if (!grounded.data_freshness.is_stale) return null;
   const normalized = text.toLowerCase();
   const acknowledgesAge = normalized.includes(String(grounded.data_freshness.staleness_minutes))
@@ -1571,6 +1629,24 @@ export async function answerCockpitChat(
     `Total items on record: ${grounded.events_total} (${grounded.planes.events} activity events + ${grounded.planes.governance} governance packets/decisions; I am giving you the ${grounded.events_considered} most recent).`,
     `Status counts (both planes) — completed: ${grounded.completed}; in progress: ${grounded.in_progress}; awaiting the operator's sign-off: ${grounded.needs_review}; blocked: ${grounded.blocked}.`,
   ];
+  const currentWorkCounts = grounded.current_work.counts;
+  if (grounded.current_work.available && currentWorkCounts) {
+    const current = grounded.current_work;
+    factLines.push(
+      `Canonical Current Work projection (authoritative for what the UI says needs attention): `
+      + `needs you ${currentWorkCounts.needs_you}; blocked ${currentWorkCounts.blocked}; `
+      + `done ${currentWorkCounts.done}; total ${currentWorkCounts.total}; `
+      + `source watermark ${current.source_watermark || 'unavailable'}.`,
+    );
+    if (current.focus) {
+      factLines.push(
+        `Highest-priority Current Work item: "${clip(current.focus.title, 180)}" `
+        + `(state ${current.focus.state}, type ${current.focus.object_type}, updated ${current.focus.updated_at}).`,
+      );
+    }
+  } else {
+    factLines.push('Canonical Current Work projection: unavailable; do not infer that nothing needs attention.');
+  }
   if (grounded.plan.available) {
     factLines.push(
       `Selected project plan: ${grounded.plan.project_name} (${grounded.plan.project_id}); `
