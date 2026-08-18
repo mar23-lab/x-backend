@@ -284,6 +284,7 @@ describePostgres('schema 91 PostgreSQL authority', () => {
         resolution.current_work_version,
         executeRequestId,
         interactionId,
+        null,
         closing,
       );
       expect(executed).toMatchObject({
@@ -341,6 +342,7 @@ describePostgres('schema 91 PostgreSQL authority', () => {
         resolution.current_work_version,
         executeRequestId,
         interactionId,
+        null,
         closing,
       );
       expect(replay).toMatchObject({

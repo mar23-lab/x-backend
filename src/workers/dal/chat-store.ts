@@ -1,10 +1,8 @@
 // chat-store.ts · cockpit chat thread persistence (Wave 3) · cross-browser continuity.
 //
-// Authority: 020_cockpit_chat_threads. ONE thread per (operator, scope); messages appended in order.
-// The thread id is DETERMINISTIC from (user_id, scope_key) so the same operator returning to the same
-// scope re-opens the same thread (idempotent upsert) — that is what makes a conversation survive a
-// reload or a different browser. Legacy routes may treat persistence as best-effort; commercial pilot
-// routes can require this append before returning a successful answer.
+// Authority: 020_cockpit_chat_threads + 102_project_chat_threads. The deterministic thread remains the
+// compatibility/default thread for a user+scope. Commercial clients may create additional explicit
+// project threads and must pass their opaque id on history and turn requests.
 
 import { makeError } from './shared-helpers';
 import type { Sql } from '../db/client';
@@ -61,6 +59,30 @@ export interface ChatExchangeWriteResult {
   messages: ChatMessageRow[];
 }
 
+export type ChatThreadStatus = 'active' | 'archived';
+export type ChatThreadTitleSource = 'default' | 'auto' | 'manual' | 'legacy';
+
+export interface ChatThreadRow {
+  id: string;
+  workspace_id: string | null;
+  project_id: string | null;
+  domain_id: string | null;
+  title: string;
+  title_source: ChatThreadTitleSource;
+  status: ChatThreadStatus;
+  message_count: number;
+  created_at: string;
+  updated_at: string;
+  last_message_at: string;
+  archived_at: string | null;
+}
+
+export interface ChatThreadWriteReceipt {
+  thread: ChatThreadRow;
+  receipt_id: string;
+  audit_event_id: string;
+}
+
 const MAX_BODY = 8000;
 const norm = (v: unknown): string => String(v ?? '').toLowerCase().replace(/[^a-z0-9]/g, '');
 
@@ -70,8 +92,28 @@ export function chatScopeKey(scope: ChatScopeRef): string {
 }
 
 /** Deterministic thread id per (user, scope) so the same operator+scope reuses one thread. */
-function threadIdFor(userId: string, scopeKey: string): string {
+export function threadIdFor(userId: string, scopeKey: string): string {
   return ('thr_' + norm(userId) + '__' + scopeKey).slice(0, 200);
+}
+
+function normalizeChatThreadRow(r: Record<string, unknown>): ChatThreadRow {
+  return {
+    id: String(r.id ?? ''),
+    workspace_id: r.workspace_id == null ? null : String(r.workspace_id),
+    project_id: r.project_id == null ? null : String(r.project_id),
+    domain_id: r.domain_id == null ? null : String(r.domain_id),
+    title: String(r.title || 'New chat'),
+    title_source: (['default', 'auto', 'manual', 'legacy'].includes(String(r.title_source))
+      ? String(r.title_source) : 'default') as ChatThreadTitleSource,
+    status: r.status === 'archived' ? 'archived' : 'active',
+    message_count: Number(r.message_count ?? 0),
+    created_at: r.created_at ? new Date(r.created_at as string).toISOString() : '',
+    updated_at: r.updated_at ? new Date(r.updated_at as string).toISOString() : '',
+    last_message_at: r.last_message_at
+      ? new Date(r.last_message_at as string).toISOString()
+      : (r.updated_at ? new Date(r.updated_at as string).toISOString() : ''),
+    archived_at: r.archived_at ? new Date(r.archived_at as string).toISOString() : null,
+  };
 }
 
 /** Upsert the thread row (idempotent) and return its id. */
@@ -93,16 +135,21 @@ export async function appendChatExchangeRow(
   userId: string,
   scope: ChatScopeRef,
   messages: ChatMessageInput[],
+  requestedThreadId: string | null = null,
   concurrencyRetry = 0,
 ): Promise<ChatExchangeWriteResult> {
   const valid = (Array.isArray(messages) ? messages : []).filter(
     (m) => m && (m.role === 'you' || m.role === 'assistant') && typeof m.body === 'string' && m.body.trim(),
   );
-  if (!valid.length) return { thread_id: threadIdFor(userId, chatScopeKey(scope)), messages: [] };
+  if (!valid.length) return { thread_id: requestedThreadId || threadIdFor(userId, chatScopeKey(scope)), messages: [] };
   if (!userId) throw makeError('VALIDATION_ERROR', 'user_id is required', 400);
 
   const scopeKey = chatScopeKey(scope);
-  const threadId = threadIdFor(userId, scopeKey);
+  const explicitThreadId = String(requestedThreadId || '').trim() || null;
+  if (explicitThreadId && (!/^thr_[a-zA-Z0-9_|-]{8,200}$/.test(explicitThreadId))) {
+    throw makeError('VALIDATION_ERROR', 'thread_id is invalid', 400);
+  }
+  const threadId = explicitThreadId || threadIdFor(userId, scopeKey);
   const payload = valid.map((m, sequence) => {
     const links = Array.isArray(m.grounding_event_ids) && m.role === 'assistant'
       ? m.grounding_event_ids.filter((x) => typeof x === 'string' && x).slice(0, 200)
@@ -157,6 +204,16 @@ export async function appendChatExchangeRow(
         audit_target_id text,
         closing_attestation_id text
       )
+    ), authorized_thread AS MATERIALIZED (
+      SELECT id
+      FROM chat_threads
+      WHERE id = ${threadId}
+        AND user_id = ${userId}
+        AND scope_key = ${scopeKey}
+        AND workspace_id IS NOT DISTINCT FROM ${scope.workspace_id ?? null}::text
+        AND project_id IS NOT DISTINCT FROM ${scope.project_id ?? null}::text
+        AND domain_id IS NOT DISTINCT FROM ${scope.domain_id ?? null}::text
+        AND COALESCE(status, 'active') = 'active'
     ), existing_messages AS MATERIALIZED (
       SELECT message.sequence, existing.*
       FROM input_messages message
@@ -189,12 +246,44 @@ export async function appendChatExchangeRow(
       SELECT true AS allowed
       WHERE NOT EXISTS (SELECT 1 FROM conflicting_existing)
     ), thread_written AS (
-      INSERT INTO chat_threads (id, user_id, workspace_id, project_id, domain_id, scope_key)
+      INSERT INTO chat_threads (
+        id, user_id, workspace_id, project_id, domain_id, scope_key,
+        title, title_source, status, last_message_at
+      )
       SELECT
         ${threadId}, ${userId}, ${scope.workspace_id ?? null}, ${scope.project_id ?? null},
-        ${scope.domain_id ?? null}, ${scopeKey}
+        ${scope.domain_id ?? null}, ${scopeKey},
+        COALESCE(
+          NULLIF(left((SELECT body FROM input_messages WHERE role = 'you' ORDER BY sequence LIMIT 1), 120), ''),
+          'New chat'
+        ),
+        CASE WHEN EXISTS (SELECT 1 FROM input_messages WHERE role = 'you') THEN 'auto' ELSE 'default' END,
+        'active', now()
       FROM write_authorized
-      ON CONFLICT (id) DO UPDATE SET updated_at = now()
+      WHERE ${explicitThreadId}::text IS NULL OR EXISTS (SELECT 1 FROM authorized_thread)
+      ON CONFLICT (id) DO UPDATE SET
+        updated_at = now(),
+        last_message_at = now(),
+        title = CASE
+          WHEN chat_threads.title_source = 'default'
+          THEN COALESCE(
+            NULLIF(left((SELECT body FROM input_messages WHERE role = 'you' ORDER BY sequence LIMIT 1), 120), ''),
+            chat_threads.title
+          )
+          ELSE chat_threads.title
+        END,
+        title_source = CASE
+          WHEN chat_threads.title_source = 'default'
+            AND EXISTS (SELECT 1 FROM input_messages WHERE role = 'you')
+          THEN 'auto'
+          ELSE chat_threads.title_source
+        END
+      WHERE chat_threads.user_id = ${userId}
+        AND chat_threads.scope_key = ${scopeKey}
+        AND chat_threads.workspace_id IS NOT DISTINCT FROM ${scope.workspace_id ?? null}::text
+        AND chat_threads.project_id IS NOT DISTINCT FROM ${scope.project_id ?? null}::text
+        AND chat_threads.domain_id IS NOT DISTINCT FROM ${scope.domain_id ?? null}::text
+        AND COALESCE(chat_threads.status, 'active') = 'active'
       RETURNING id
     ), existing_audits AS MATERIALIZED (
       SELECT message.sequence, audit.target_id AS audit_target_id, audit.id::text AS audit_event_id
@@ -284,7 +373,10 @@ export async function appendChatExchangeRow(
     // READ COMMITTED snapshot was taken. One new statement sees the committed rows and converges on their
     // receipts. A genuinely different payload remains a conflict on the second attempt and fails closed.
     if (concurrencyRetry === 0) {
-      return appendChatExchangeRow(sql, userId, scope, messages, 1);
+      return appendChatExchangeRow(sql, userId, scope, messages, explicitThreadId, 1);
+    }
+    if (explicitThreadId) {
+      throw makeError('CHAT_THREAD_NOT_FOUND', 'chat thread was not found in this project', 404);
     }
     throw makeError(
       'INTERACTION_ID_CONFLICT',
@@ -327,9 +419,11 @@ export async function listChatHistoryRow(
   userId: string,
   scope: ChatScopeRef,
   limit = 100,
+  requestedThreadId: string | null = null,
 ): Promise<ChatMessageRow[]> {
   if (!userId) return [];
-  const threadId = threadIdFor(userId, chatScopeKey(scope));
+  const scopeKey = chatScopeKey(scope);
+  const threadId = String(requestedThreadId || '').trim() || threadIdFor(userId, scopeKey);
   const cap = Math.max(1, Math.min(200, Number(limit) || 100));
   const rows = (await sql/*sql*/`
     SELECT *
@@ -339,12 +433,175 @@ export async function listChatHistoryRow(
         operation_event_id, intent_id, audit_event_id, closing_attestation_id, created_at
       FROM chat_messages
       WHERE thread_id = ${threadId}
+        AND EXISTS (
+          SELECT 1
+          FROM chat_threads t
+          WHERE t.id = chat_messages.thread_id
+            AND t.user_id = ${userId}
+            AND t.scope_key = ${scopeKey}
+            AND t.workspace_id IS NOT DISTINCT FROM ${scope.workspace_id ?? null}::text
+            AND t.project_id IS NOT DISTINCT FROM ${scope.project_id ?? null}::text
+            AND t.domain_id IS NOT DISTINCT FROM ${scope.domain_id ?? null}::text
+        )
       ORDER BY created_at DESC, id DESC
       LIMIT ${cap}
     ) newest
     ORDER BY created_at ASC, id ASC
   `) as Array<Record<string, unknown>>;
   return rows.map(normalizeChatMessageRow);
+}
+
+/** List the authenticated user's threads in one exact scope, newest activity first. */
+export async function listChatThreadsRow(
+  sql: Sql,
+  userId: string,
+  scope: ChatScopeRef,
+  includeArchived = false,
+  limit = 50,
+): Promise<ChatThreadRow[]> {
+  if (!userId) return [];
+  const scopeKey = chatScopeKey(scope);
+  const cap = Math.max(1, Math.min(100, Number(limit) || 50));
+  const rows = (await sql/*sql*/`
+    SELECT
+      t.id, t.workspace_id, t.project_id, t.domain_id, t.title, t.title_source,
+      t.status, t.created_at, t.updated_at, t.last_message_at, t.archived_at,
+      count(m.id)::integer AS message_count
+    FROM chat_threads t
+    LEFT JOIN chat_messages m ON m.thread_id = t.id
+    WHERE t.user_id = ${userId}
+      AND t.scope_key = ${scopeKey}
+      AND t.workspace_id IS NOT DISTINCT FROM ${scope.workspace_id ?? null}::text
+      AND t.project_id IS NOT DISTINCT FROM ${scope.project_id ?? null}::text
+      AND t.domain_id IS NOT DISTINCT FROM ${scope.domain_id ?? null}::text
+      AND (${includeArchived}::boolean OR COALESCE(t.status, 'active') = 'active')
+    GROUP BY t.id
+    ORDER BY COALESCE(t.last_message_at, t.updated_at, t.created_at) DESC, t.id DESC
+    LIMIT ${cap}
+  `) as Array<Record<string, unknown>>;
+  return rows.map(normalizeChatThreadRow);
+}
+
+/** Create a new explicit thread. The legacy deterministic thread is created only by legacy calls. */
+export async function createChatThreadRow(
+  sql: Sql,
+  userId: string,
+  scope: ChatScopeRef,
+  requestedTitle: string | null = null,
+): Promise<ChatThreadWriteReceipt> {
+  if (!userId) throw makeError('VALIDATION_ERROR', 'user_id is required', 400);
+  const title = String(requestedTitle || '').trim() || 'New chat';
+  if (title.length > 120) throw makeError('VALIDATION_ERROR', 'title must be at most 120 characters', 400);
+  const id = `thr_${crypto.randomUUID().replace(/-/g, '')}`;
+  const scopeKey = chatScopeKey(scope);
+  const rows = (await sql/*sql*/`
+    WITH thread_written AS (
+      INSERT INTO chat_threads (
+        id, user_id, workspace_id, project_id, domain_id, scope_key,
+        title, title_source, status, last_message_at
+      )
+      VALUES (
+        ${id}, ${userId}, ${scope.workspace_id ?? null}, ${scope.project_id ?? null},
+        ${scope.domain_id ?? null}, ${scopeKey}, ${title},
+        ${requestedTitle ? 'manual' : 'default'}, 'active', now()
+      )
+      RETURNING *
+    ), audit_written AS (
+      INSERT INTO audit_logs (
+        actor_user_id, action, target_type, target_id, workspace_id, reason, metadata
+      )
+      SELECT
+        ${userId}, 'chat_thread_create', 'chat_thread', thread_written.id,
+        thread_written.workspace_id, 'project conversation created',
+        jsonb_build_object(
+          'project_id', thread_written.project_id,
+          'domain_id', thread_written.domain_id,
+          'title_source', thread_written.title_source
+        )
+      FROM thread_written
+      RETURNING id::text AS audit_event_id
+    )
+    SELECT thread_written.*, 0::integer AS message_count, audit_written.audit_event_id
+    FROM thread_written CROSS JOIN audit_written
+  `) as Array<Record<string, unknown>>;
+  const row = rows[0];
+  if (!row) throw makeError('CHAT_THREAD_CREATE_FAILED', 'chat thread could not be created', 503);
+  const auditEventId = String(row.audit_event_id || '');
+  return {
+    thread: normalizeChatThreadRow(row),
+    receipt_id: `chat-thread-create:${id}:${auditEventId}`,
+    audit_event_id: auditEventId,
+  };
+}
+
+/** Rename, archive, or restore a thread owned by this user in this exact scope. */
+export async function updateChatThreadRow(
+  sql: Sql,
+  userId: string,
+  scope: ChatScopeRef,
+  threadId: string,
+  input: { title?: string; status?: ChatThreadStatus },
+): Promise<ChatThreadWriteReceipt | null> {
+  if (!userId) throw makeError('VALIDATION_ERROR', 'user_id is required', 400);
+  const id = String(threadId || '').trim();
+  if (!/^thr_[a-zA-Z0-9_|-]{8,200}$/.test(id)) throw makeError('VALIDATION_ERROR', 'thread_id is invalid', 400);
+  const hasTitle = typeof input.title === 'string';
+  const title = hasTitle ? String(input.title).trim() : '';
+  if (hasTitle && (!title || title.length > 120)) {
+    throw makeError('VALIDATION_ERROR', 'title must be 1-120 characters', 400);
+  }
+  const hasStatus = input.status === 'active' || input.status === 'archived';
+  if (!hasTitle && !hasStatus) throw makeError('VALIDATION_ERROR', 'thread mutation is empty', 400);
+  const scopeKey = chatScopeKey(scope);
+  const action = hasStatus ? (input.status === 'archived' ? 'chat_thread_archive' : 'chat_thread_restore') : 'chat_thread_rename';
+  const rows = (await sql/*sql*/`
+    WITH thread_updated AS (
+      UPDATE chat_threads
+      SET
+        title = CASE WHEN ${hasTitle}::boolean THEN ${title}::text ELSE title END,
+        title_source = CASE WHEN ${hasTitle}::boolean THEN 'manual' ELSE title_source END,
+        status = CASE WHEN ${hasStatus}::boolean THEN ${input.status ?? null}::text ELSE status END,
+        archived_at = CASE
+          WHEN ${hasStatus}::boolean AND ${input.status ?? null}::text = 'archived' THEN now()
+          WHEN ${hasStatus}::boolean AND ${input.status ?? null}::text = 'active' THEN NULL
+          ELSE archived_at
+        END,
+        updated_at = now()
+      WHERE id = ${id}
+        AND user_id = ${userId}
+        AND scope_key = ${scopeKey}
+        AND workspace_id IS NOT DISTINCT FROM ${scope.workspace_id ?? null}::text
+        AND project_id IS NOT DISTINCT FROM ${scope.project_id ?? null}::text
+        AND domain_id IS NOT DISTINCT FROM ${scope.domain_id ?? null}::text
+      RETURNING *
+    ), audit_written AS (
+      INSERT INTO audit_logs (
+        actor_user_id, action, target_type, target_id, workspace_id, reason, metadata
+      )
+      SELECT
+        ${userId}, ${action}, 'chat_thread', thread_updated.id,
+        thread_updated.workspace_id, 'project conversation lifecycle updated',
+        jsonb_build_object(
+          'project_id', thread_updated.project_id,
+          'status', thread_updated.status,
+          'title_source', thread_updated.title_source
+        )
+      FROM thread_updated
+      RETURNING id::text AS audit_event_id
+    )
+    SELECT thread_updated.*,
+      (SELECT count(*)::integer FROM chat_messages m WHERE m.thread_id = thread_updated.id) AS message_count,
+      audit_written.audit_event_id
+    FROM thread_updated CROSS JOIN audit_written
+  `) as Array<Record<string, unknown>>;
+  const row = rows[0];
+  if (!row) return null;
+  const auditEventId = String(row.audit_event_id || '');
+  return {
+    thread: normalizeChatThreadRow(row),
+    receipt_id: `chat-thread-update:${id}:${auditEventId}`,
+    audit_event_id: auditEventId,
+  };
 }
 
 /** W2 (260708) · receipt lookup: the message + its thread's tenancy, keyed on the opaque receipt_uid.

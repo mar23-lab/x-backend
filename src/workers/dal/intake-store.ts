@@ -169,6 +169,7 @@ export async function executeIntakeResolutionRow(
   expectedCurrentWorkVersion: number,
   clientRequestId: string,
   interactionId: string,
+  threadId: string | null,
   closing: GovernedClosingAttestationInput,
 ): Promise<IntakeExecutionResult> {
   assertWorkspaceScope(workspaceId);
@@ -187,6 +188,18 @@ export async function executeIntakeResolutionRow(
            AND workspace_id = ${workspaceId}
            AND actor_user_id = ${actorUserId}
            AND interaction_id = ${interactionId}
+           AND (
+             ${threadId}::text IS NULL
+             OR EXISTS (
+               SELECT 1
+                 FROM chat_threads requested_thread
+                WHERE requested_thread.id = ${threadId}
+                  AND requested_thread.user_id = intake_resolutions.actor_user_id
+                  AND requested_thread.workspace_id = intake_resolutions.workspace_id
+                  AND requested_thread.project_id IS NOT DISTINCT FROM intake_resolutions.project_id
+                  AND requested_thread.status = 'active'
+             )
+           )
            AND status = 'pending'
            AND version = ${expectedVersion}
            AND current_work_version = ${expectedCurrentWorkVersion}
@@ -322,7 +335,17 @@ export async function executeIntakeResolutionRow(
           )
           FROM effect
         RETURNING id
-      ), conversation_thread AS (
+      ), requested_conversation_thread AS (
+        SELECT requested_thread.id
+          FROM chat_threads requested_thread
+          JOIN effect ON true
+         WHERE ${threadId}::text IS NOT NULL
+           AND requested_thread.id = ${threadId}
+           AND requested_thread.user_id = effect.actor_user_id
+           AND requested_thread.workspace_id = effect.workspace_id
+           AND requested_thread.project_id IS NOT DISTINCT FROM effect.project_id
+           AND requested_thread.status = 'active'
+      ), created_conversation_thread AS (
         INSERT INTO chat_threads (id, user_id, workspace_id, project_id, domain_id, scope_key)
         SELECT
           left(
@@ -335,8 +358,13 @@ export async function executeIntakeResolutionRow(
           regexp_replace(lower(workspace_id), '[^a-z0-9]', '', 'g') || '|'
           || regexp_replace(lower(COALESCE(project_id, '')), '[^a-z0-9]', '', 'g') || '|'
         FROM effect
+        WHERE ${threadId}::text IS NULL
         ON CONFLICT (id) DO UPDATE SET updated_at = now()
         RETURNING id
+      ), conversation_thread AS (
+        SELECT id FROM requested_conversation_thread
+        UNION ALL
+        SELECT id FROM created_conversation_thread
       ), conversation_message AS (
         INSERT INTO chat_messages (
           thread_id, role, body, mode, generated_by, grounded_on,

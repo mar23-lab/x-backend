@@ -165,11 +165,18 @@ intakeRoute.post('/intake/:resolution_id/execute', async (ctx) => {
       current_work_version?: unknown;
       client_request_id?: unknown;
       interaction_id?: unknown;
+      thread_id?: unknown;
     } | null;
     if (!body || !Number.isInteger(body.version) || !Number.isInteger(body.current_work_version)
       || typeof body.client_request_id !== 'string' || !body.client_request_id.trim() || body.client_request_id.length > 160
       || typeof body.interaction_id !== 'string' || !body.interaction_id.trim() || body.interaction_id.length > 200) {
       return fail(ctx, 400, 'VALIDATION_ERROR', 'version, current_work_version, client_request_id, and interaction_id are required');
+    }
+    if (body.thread_id != null && (
+      typeof body.thread_id !== 'string'
+      || !/^thr_[a-zA-Z0-9_|-]{8,200}$/.test(body.thread_id.trim())
+    )) {
+      return fail(ctx, 400, 'VALIDATION_ERROR', 'thread_id must identify a canonical chat thread');
     }
     const { workspace_id, user_id, role } = ctx.get('auth');
     // W.2 two-tier ruling (260720): executing a governed intake ADVANCES governed state -> owner/operator
@@ -196,6 +203,7 @@ intakeRoute.post('/intake/:resolution_id/execute', async (ctx) => {
       Number(body.current_work_version),
       body.client_request_id.trim(),
       body.interaction_id.trim(),
+      typeof body.thread_id === 'string' ? body.thread_id.trim() : null,
       {
         role_key: `role.workspace.${role}`,
         closing_skill: 'skill.governed-execution-closeout',

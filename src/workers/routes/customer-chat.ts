@@ -109,6 +109,119 @@ export const customerChatRoute = new Hono<{ Bindings: CustomerChatEnv; Variables
 // answer instead (flag-off ⇒ passthrough, byte-identical; streamed/non-JSON 2xx degrades to no-dedupe).
 customerChatRoute.use('*', idempotencyMiddleware());
 
+customerChatRoute.get('/customer-chat/threads', async (ctx) => {
+  try {
+    const auth = ctx.get('auth');
+    const gate = await gateCustomerWorkspace(ctx as never);
+    if (!gate.ok) return gate.res;
+    const scoped = await resolveScopedWorkspace(
+      ctx as never,
+      ctx.env.OPERATOR_WORKSPACE_SCOPE_ENABLED,
+      gate.ws,
+      auth.user_id,
+      String(ctx.req.query('workspace_id') || '').trim() || null,
+      gate.dal,
+    );
+    if (!scoped.ok) return scoped.res;
+    const projectId = String(ctx.req.query('project_id') || '').trim();
+    if (!projectId) {
+      return errorEnvelope(ctx, { status: 400, code: 'VALIDATION_ERROR', message: 'project_id is required' });
+    }
+    const project = await gate.dal.getProject(scoped.ws, projectId);
+    if (!project || project.status === 'archived') {
+      return errorEnvelope(ctx, { status: 404, code: 'NOT_FOUND', message: 'project not found in this workspace' });
+    }
+    const includeArchived = ctx.req.query('include_archived') === 'true';
+    const scope: CockpitChatScope = { workspace_id: scoped.ws, project_id: projectId, domain_id: null };
+    const threads = await gate.dal.listChatThreads(auth.user_id, scope, includeArchived, 100);
+    return ctx.json({ threads, scope, request_id: ctx.get('request_id') });
+  } catch (err) {
+    return errorEnvelope(ctx, err);
+  }
+});
+
+customerChatRoute.post('/customer-chat/threads', async (ctx) => {
+  try {
+    const auth = ctx.get('auth');
+    const gate = await gateCustomerWorkspace(ctx as never);
+    if (!gate.ok) return gate.res;
+    const body = (await ctx.req.json().catch(() => null)) as {
+      workspace_id?: string;
+      project_id?: string;
+      title?: string;
+    } | null;
+    const scoped = await resolveScopedWorkspace(
+      ctx as never,
+      ctx.env.OPERATOR_WORKSPACE_SCOPE_ENABLED,
+      gate.ws,
+      auth.user_id,
+      typeof body?.workspace_id === 'string' ? body.workspace_id : null,
+      gate.dal,
+    );
+    if (!scoped.ok) return scoped.res;
+    const projectId = String(body?.project_id || '').trim();
+    if (!projectId) {
+      return errorEnvelope(ctx, { status: 400, code: 'VALIDATION_ERROR', message: 'project_id is required' });
+    }
+    const project = await gate.dal.getProject(scoped.ws, projectId);
+    if (!project || project.status === 'archived') {
+      return errorEnvelope(ctx, { status: 404, code: 'NOT_FOUND', message: 'project not found in this workspace' });
+    }
+    const scope: CockpitChatScope = { workspace_id: scoped.ws, project_id: projectId, domain_id: null };
+    const result = await gate.dal.createChatThread(
+      auth.user_id,
+      scope,
+      typeof body?.title === 'string' ? body.title : null,
+    );
+    ctx.status(201);
+    return ctx.json({ ...result, scope, request_id: ctx.get('request_id') });
+  } catch (err) {
+    return errorEnvelope(ctx, err);
+  }
+});
+
+customerChatRoute.patch('/customer-chat/threads/:threadId', async (ctx) => {
+  try {
+    const auth = ctx.get('auth');
+    const gate = await gateCustomerWorkspace(ctx as never);
+    if (!gate.ok) return gate.res;
+    const body = (await ctx.req.json().catch(() => null)) as {
+      workspace_id?: string;
+      project_id?: string;
+      title?: string;
+      status?: 'active' | 'archived';
+    } | null;
+    const scoped = await resolveScopedWorkspace(
+      ctx as never,
+      ctx.env.OPERATOR_WORKSPACE_SCOPE_ENABLED,
+      gate.ws,
+      auth.user_id,
+      typeof body?.workspace_id === 'string' ? body.workspace_id : null,
+      gate.dal,
+    );
+    if (!scoped.ok) return scoped.res;
+    const projectId = String(body?.project_id || '').trim();
+    if (!projectId) {
+      return errorEnvelope(ctx, { status: 400, code: 'VALIDATION_ERROR', message: 'project_id is required' });
+    }
+    const project = await gate.dal.getProject(scoped.ws, projectId);
+    if (!project || project.status === 'archived') {
+      return errorEnvelope(ctx, { status: 404, code: 'NOT_FOUND', message: 'project not found in this workspace' });
+    }
+    const scope: CockpitChatScope = { workspace_id: scoped.ws, project_id: projectId, domain_id: null };
+    const input: { title?: string; status?: 'active' | 'archived' } = {};
+    if (typeof body?.title === 'string') input.title = body.title;
+    if (body?.status === 'active' || body?.status === 'archived') input.status = body.status;
+    const result = await gate.dal.updateChatThread(auth.user_id, scope, ctx.req.param('threadId'), input);
+    if (!result) {
+      return errorEnvelope(ctx, { status: 404, code: 'NOT_FOUND', message: 'chat thread not found in this project' });
+    }
+    return ctx.json({ ...result, scope, request_id: ctx.get('request_id') });
+  } catch (err) {
+    return errorEnvelope(ctx, err);
+  }
+});
+
 // Exported for the D-16 consumer unit test — the annotate+reorder logic is the new behavior and its
 // natural unit boundary (access_tier isn't surfaced in the route response, only used for grounding weight).
 export function buildSourceFacts(
@@ -171,6 +284,7 @@ customerChatRoute.get('/customer-chat/history', async (ctx) => {
     if (!scoped.ok) return scoped.res;
 
     const requestedProjectId = String(ctx.req.query('project_id') || '').trim() || null;
+    const requestedThreadId = String(ctx.req.query('thread_id') || '').trim() || null;
     if (requestedProjectId) {
       const project = await gate.dal.getProject(scoped.ws, requestedProjectId);
       if (!project || project.status === 'archived') {
@@ -180,7 +294,12 @@ customerChatRoute.get('/customer-chat/history', async (ctx) => {
 
     const strict = envFlagTrue(ctx.env.CHAT_HISTORY_PERSISTENCE_REQUIRED);
     const lister = (gate.dal as unknown as {
-      listChatHistory?: (userId: string, scope: CockpitChatScope, limit?: number) => Promise<unknown[]>;
+      listChatHistory?: (
+        userId: string,
+        scope: CockpitChatScope,
+        limit?: number,
+        threadId?: string | null,
+      ) => Promise<unknown[]>;
     }).listChatHistory;
     if (typeof lister !== 'function') {
       if (strict) {
@@ -197,8 +316,12 @@ customerChatRoute.get('/customer-chat/history', async (ctx) => {
 
     const scope: CockpitChatScope = { workspace_id: scoped.ws, project_id: requestedProjectId, domain_id: null };
     try {
-      const messages = await lister.call(gate.dal, auth.user_id, scope, 100);
-      return ctx.json({ messages: classifyCommercialChatHistory(Array.isArray(messages) ? messages : []), scope });
+      const messages = await lister.call(gate.dal, auth.user_id, scope, 100, requestedThreadId);
+      return ctx.json({
+        messages: classifyCommercialChatHistory(Array.isArray(messages) ? messages : []),
+        thread_id: requestedThreadId,
+        scope,
+      });
     } catch (err) {
       emitEvent('chat_history_persistence_failed', {
         workspace_id: scoped.ws,
@@ -265,6 +388,7 @@ async function handleCustomerChat(ctx: CustomerChatContext) {
       context_refs?: unknown;
       runtime_id?: string | null;
       model_id?: string | null;
+      thread_id?: string | null;
     } | null;
     const message = typeof body?.message === 'string' ? body.message.trim() : '';
     if (!message || message.length > 1000) {
@@ -287,6 +411,9 @@ async function handleCustomerChat(ctx: CustomerChatContext) {
     const workspaceId = scoped.ws;
     const projectId = typeof body?.project_id === 'string' && body.project_id.trim()
       ? body.project_id.trim()
+      : null;
+    const threadId = typeof body?.thread_id === 'string' && body.thread_id.trim()
+      ? body.thread_id.trim()
       : null;
     const interactionId = typeof body?.interaction_id === 'string' && body.interaction_id.trim()
       ? body.interaction_id.trim()
@@ -383,6 +510,7 @@ async function handleCustomerChat(ctx: CustomerChatContext) {
         userId: string,
         scope: CockpitChatScope,
         messages: import('../dal/chat-store').ChatMessageInput[],
+        threadId?: string | null,
       ) => Promise<import('../dal/chat-store').ChatExchangeWriteResult>;
     }).appendChatExchange;
     if (chatHistoryPersistenceRequired && typeof appendChatExchange !== 'function') {
@@ -851,7 +979,7 @@ async function handleCustomerChat(ctx: CustomerChatContext) {
             execution_receipt_id: result.execution?.receipt_id ?? null,
             packet_id: assistantLineage?.context_packet_id ?? null,
           },
-        ]);
+        ], threadId);
         const messages = Array.isArray(persisted?.messages) ? persisted.messages : [];
         const userMessage = messages.find((entry) =>
           entry.entry_type === 'user_request' || entry.role === 'you');

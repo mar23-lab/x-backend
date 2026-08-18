@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { appendChatExchangeRow, listChatHistoryRow } from '../dal/chat-store';
+import {
+  appendChatExchangeRow,
+  createChatThreadRow,
+  listChatHistoryRow,
+  listChatThreadsRow,
+  updateChatThreadRow,
+} from '../dal/chat-store';
 
 function sqlReturning(rows: Array<Record<string, unknown>>) {
   const statements: Array<{ text: string; values: unknown[] }> = [];
@@ -121,5 +127,63 @@ describe('chat authority persistence', () => {
     expect(statements[0]!.text).toContain('ORDER BY created_at DESC, id DESC');
     expect(statements[0]!.text).toContain('LIMIT');
     expect(statements[0]!.text).toContain('ORDER BY created_at ASC, id ASC');
+  });
+
+  it('binds an explicit thread to the exact user and scope before appending', async () => {
+    const persisted = [
+      { id: 61, thread_id: 'thr_12345678', role: 'you', body: 'Scoped', interaction_id: 'i4', entry_type: 'user_request' },
+    ];
+    const { sql, statements } = sqlReturning(persisted);
+    const result = await appendChatExchangeRow(
+      sql,
+      'user_1',
+      { workspace_id: 'ws_1', project_id: 'project_1' },
+      [{ role: 'you', body: 'Scoped', interaction_id: 'i4', entry_type: 'user_request' }],
+      'thr_12345678',
+    );
+    expect(result.thread_id).toBe('thr_12345678');
+    expect(statements[0]!.text).toContain('authorized_thread AS MATERIALIZED');
+    expect(statements[0]!.text).toContain("COALESCE(status, 'active') = 'active'");
+    expect(statements[0]!.values).toContain('thr_12345678');
+  });
+
+  it('lists, creates, and updates project threads with lifecycle audit receipts', async () => {
+    const threadRow = {
+      id: 'thr_12345678', workspace_id: 'ws_1', project_id: 'project_1', domain_id: null,
+      title: 'Launch plan', title_source: 'manual', status: 'active', message_count: 2,
+      created_at: '2026-08-18T00:00:00Z', updated_at: '2026-08-18T00:01:00Z',
+      last_message_at: '2026-08-18T00:01:00Z', archived_at: null, audit_event_id: '701',
+    };
+
+    const listed = sqlReturning([threadRow]);
+    const threads = await listChatThreadsRow(
+      listed.sql,
+      'user_1',
+      { workspace_id: 'ws_1', project_id: 'project_1' },
+    );
+    expect(threads[0]).toMatchObject({ id: 'thr_12345678', title: 'Launch plan', message_count: 2 });
+    expect(listed.statements[0]!.text).toContain('ORDER BY COALESCE(t.last_message_at');
+
+    const createdSql = sqlReturning([threadRow]);
+    const created = await createChatThreadRow(
+      createdSql.sql,
+      'user_1',
+      { workspace_id: 'ws_1', project_id: 'project_1' },
+      'Launch plan',
+    );
+    expect(created).toMatchObject({ audit_event_id: '701', thread: { title: 'Launch plan' } });
+    expect(created.receipt_id).toContain('chat-thread-create:');
+    expect(createdSql.statements[0]!.text).toContain("'chat_thread_create'");
+
+    const updatedSql = sqlReturning([threadRow]);
+    const updated = await updateChatThreadRow(
+      updatedSql.sql,
+      'user_1',
+      { workspace_id: 'ws_1', project_id: 'project_1' },
+      'thr_12345678',
+      { title: 'Launch plan' },
+    );
+    expect(updated).toMatchObject({ audit_event_id: '701', thread: { id: 'thr_12345678' } });
+    expect(updatedSql.statements[0]!.text).toContain("'chat_thread'");
   });
 });

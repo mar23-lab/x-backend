@@ -119,7 +119,7 @@ describe('single-intake transactional execution', () => {
   it('binds project validation and the execution idempotency key into the atomic write', async () => {
     const { sql, statements } = sqlWith([[EXECUTION_ROW]]);
     const result = await executeIntakeResolutionRow(
-      sql, 'ws_1', 'user_1', 'inr_1', 1, 0, 'execute_1', 'interaction_1', CLOSING,
+      sql, 'ws_1', 'user_1', 'inr_1', 1, 0, 'execute_1', 'interaction_1', 'thr_project_thread_1', CLOSING,
     );
     expect(result).toMatchObject({
       ok: true,
@@ -142,6 +142,9 @@ describe('single-intake transactional execution', () => {
     expect(write.text).toContain('client_request_id');
     expect(write.values).toContain('execute_1');
     expect(write.values).toContain('interaction_1');
+    expect(write.values).toContain('thr_project_thread_1');
+    expect(write.text).toContain('requested_thread.status =');
+    expect(write.text).toContain('requested_conversation_thread');
     expect(write.text).toContain('INSERT INTO intents');
     expect(write.text).toContain('INSERT INTO operation_events');
     expect(write.text).toContain('INSERT INTO audit_logs');
@@ -159,7 +162,7 @@ describe('single-intake transactional execution', () => {
   it('replays the original receipt for the same execution idempotency key', async () => {
     const { sql } = sqlWith([[], [EXECUTION_ROW]]);
     const result = await executeIntakeResolutionRow(
-      sql, 'ws_1', 'user_1', 'inr_1', 1, 0, 'execute_1', 'interaction_1', CLOSING,
+      sql, 'ws_1', 'user_1', 'inr_1', 1, 0, 'execute_1', 'interaction_1', null, CLOSING,
     );
     expect(result).toMatchObject({ ok: true, replayed: true, packet_id: 'pkt_1', receipt: { id: 'ger_1' } });
   });
@@ -167,7 +170,7 @@ describe('single-intake transactional execution', () => {
   it('does not replay a consumed resolution for a different execution key', async () => {
     const { sql } = sqlWith([[], [EXECUTION_ROW]]);
     const result = await executeIntakeResolutionRow(
-      sql, 'ws_1', 'user_1', 'inr_1', 1, 0, 'execute_other', 'interaction_1', CLOSING,
+      sql, 'ws_1', 'user_1', 'inr_1', 1, 0, 'execute_other', 'interaction_1', null, CLOSING,
     );
     expect(result).toEqual({ ok: false, reason: 'already_consumed' });
   });
@@ -175,7 +178,7 @@ describe('single-intake transactional execution', () => {
   it('cannot claim or replay a resolution through a different interaction', async () => {
     const { sql, statements } = sqlWith([[], [], [{ status: 'consumed', expires_at: RESOLUTION.expires_at, version: 1, current_work_version: 0 }]]);
     const result = await executeIntakeResolutionRow(
-      sql, 'ws_1', 'user_1', 'inr_1', 1, 0, 'execute_1', 'interaction_other', CLOSING,
+      sql, 'ws_1', 'user_1', 'inr_1', 1, 0, 'execute_1', 'interaction_other', null, CLOSING,
     );
     expect(result).toEqual({ ok: false, reason: 'already_consumed' });
     const write = statements.find((statement) => statement.text.includes('WITH claimed AS'))!;

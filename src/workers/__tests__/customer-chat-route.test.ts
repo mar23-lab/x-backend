@@ -913,6 +913,81 @@ describe('GET /api/v1/customer-chat/history', () => {
   });
 });
 
+describe('project chat-thread lifecycle', () => {
+  const project = { id: 'project_1', workspace_id: 'org_hy', name: 'Launch', status: 'active' };
+  const thread = {
+    id: 'thr_12345678', workspace_id: 'org_hy', project_id: 'project_1', domain_id: null,
+    title: 'Launch plan', title_source: 'manual', status: 'active', message_count: 0,
+    created_at: '2026-08-18T00:00:00.000Z', updated_at: '2026-08-18T00:00:00.000Z',
+    last_message_at: '2026-08-18T00:00:00.000Z', archived_at: null,
+  };
+
+  it('lists only the signed-in user project threads and ignores an untrusted workspace query', async () => {
+    const captured: Array<Record<string, unknown>> = [];
+    const dal = dalStub({
+      getProject: async (workspaceId: string, projectId: string) => {
+        captured.push({ method: 'getProject', workspaceId, projectId });
+        return project;
+      },
+      listChatThreads: async (userId: string, scope: Record<string, unknown>, includeArchived: boolean, limit: number) => {
+        captured.push({ method: 'listChatThreads', userId, scope, includeArchived, limit });
+        return [thread];
+      },
+    });
+    const res = await appFor(AUTH, dal).request(
+      '/api/v1/customer-chat/threads?workspace_id=org_ATTACKER&project_id=project_1',
+      undefined,
+      {},
+    );
+    expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({ threads: [thread] });
+    expect(captured).toEqual([
+      { method: 'getProject', workspaceId: 'org_hy', projectId: 'project_1' },
+      {
+        method: 'listChatThreads', userId: 'u1',
+        scope: { workspace_id: 'org_hy', project_id: 'project_1', domain_id: null },
+        includeArchived: false, limit: 100,
+      },
+    ]);
+  });
+
+  it('creates and renames a project thread with receipt-backed DAL results', async () => {
+    const createChatThread = vi.fn(async () => ({
+      thread, receipt_id: 'chat-thread-create:thr_12345678:701', audit_event_id: '701',
+    }));
+    const updateChatThread = vi.fn(async () => ({
+      thread: { ...thread, title: 'Client launch' },
+      receipt_id: 'chat-thread-update:thr_12345678:702', audit_event_id: '702',
+    }));
+    const app = appFor(AUTH, dalStub({ getProject: async () => project, createChatThread, updateChatThread }));
+
+    const created = await app.request('/api/v1/customer-chat/threads', {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ workspace_id: 'org_ATTACKER', project_id: 'project_1', title: 'Launch plan' }),
+    }, {});
+    expect(created.status).toBe(201);
+    expect(await created.json()).toMatchObject({ receipt_id: 'chat-thread-create:thr_12345678:701' });
+    expect(createChatThread).toHaveBeenCalledWith(
+      'u1',
+      { workspace_id: 'org_hy', project_id: 'project_1', domain_id: null },
+      'Launch plan',
+    );
+
+    const renamed = await app.request('/api/v1/customer-chat/threads/thr_12345678', {
+      method: 'PATCH', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ workspace_id: 'org_ATTACKER', project_id: 'project_1', title: 'Client launch' }),
+    }, {});
+    expect(renamed.status).toBe(200);
+    expect(await renamed.json()).toMatchObject({ receipt_id: 'chat-thread-update:thr_12345678:702' });
+    expect(updateChatThread).toHaveBeenCalledWith(
+      'u1',
+      { workspace_id: 'org_hy', project_id: 'project_1', domain_id: null },
+      'thr_12345678',
+      { title: 'Client launch' },
+    );
+  });
+});
+
 // ── T1/P3 (260710) · mechanical source-truth override (flag-gated) ────────────────────────────────
 const STALE_SETUP_EVENT = {
   id: 'evt_setup_gmail', workspace_id: 'org_hy', project_id: null, source_tool: 'xlooop', agent_id: null,
