@@ -115,6 +115,7 @@ developerAccessRoute.post('/developer-access/test', async (ctx) => {
 });
 
 function buildStatus(auth: AuthContext, workspaceName: string, apiOrigin: string) {
+  const connectorEndpoints = buildConnectorEndpoints(apiOrigin);
   return {
     schema_id: 'xlooop.developer_access_status.v1',
     readiness_state: 'read_only_validation',
@@ -123,9 +124,8 @@ function buildStatus(auth: AuthContext, workspaceName: string, apiOrigin: string
     connector_namespace: CUSTOMER_MCP_CONNECTOR_NAMESPACE,
     profile: XCP_GATEWAY_PROFILE,
     connect: {
-      endpoint: `${apiOrigin}${XCP_GATEWAY_RPC_PATH}`,
+      ...connectorEndpoints,
       transport: 'streamable_http',
-      session_start_endpoint: `${apiOrigin}${XCP_GATEWAY_SESSION_START_PATH}`,
       authorization: 'oauth_or_bearer_connector_token',
     },
     workspace_label: workspaceName,
@@ -146,6 +146,13 @@ function buildStatus(auth: AuthContext, workspaceName: string, apiOrigin: string
       customer_token_fallback_status: 'not_enabled_until_revocation_proof',
       token_values_must_not_be_copied_to_chat_or_docs: true,
     },
+  };
+}
+
+function buildConnectorEndpoints(apiOrigin: string) {
+  return {
+    endpoint: `${apiOrigin}${XCP_GATEWAY_RPC_PATH}`,
+    session_start_endpoint: `${apiOrigin}${XCP_GATEWAY_SESSION_START_PATH}`,
   };
 }
 
@@ -238,6 +245,7 @@ developerAccessRoute.post('/developer-access/tokens', async (ctx) => {
     const token_sha256 = await hashToken(raw);
     const expires_at = new Date(Date.now() + 90 * 86400000).toISOString();
     const packet_prefix = `pkt-${slugifyWorkspace(auth.workspace_id)}-`;
+    const connectorEndpoints = buildConnectorEndpoints(new URL(ctx.req.url).origin);
     const created = await ctx.get('dal').createCustomerToken({
       workspace_id: auth.workspace_id,
       token_sha256,
@@ -282,8 +290,8 @@ developerAccessRoute.post('/developer-access/tokens', async (ctx) => {
       connect: {
         gateway_name: CUSTOMER_MCP_CONNECTOR_NAMESPACE,
         profile: XCP_GATEWAY_PROFILE,
-        endpoint: 'https://api.xlooop.com/api/v1/mcp/rpc',
-        session_start_check: `curl -s https://api.xlooop.com/api/v1/mcp/session-start -H "Authorization: Bearer ${raw}"`,
+        endpoint: connectorEndpoints.endpoint,
+        session_start_check: `curl -s ${connectorEndpoints.session_start_endpoint} -H "Authorization: Bearer ${raw}"`,
       },
     });
   } catch (err) {

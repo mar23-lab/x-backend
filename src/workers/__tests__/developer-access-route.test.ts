@@ -45,7 +45,9 @@ const BOTH_ON = { DATABASE_URL: 'postgres://t', CUSTOMER_API_TOKENS_ENABLED: 'tr
 const OFF = { DATABASE_URL: 'postgres://t' } as never;
 
 const mint = (app: Hono, body: Record<string, unknown>, env: never) =>
-  app.request('/api/v1/developer-access/tokens', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }, env);
+  app.request('https://api-test.xlooop.com/api/v1/developer-access/tokens', {
+    method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body),
+  }, env);
 
 describe('GET /developer-access/status · canonical MCP discovery', () => {
   it('advertises one xcp-gateway customer intake and no legacy identity tool or peer gateway', async () => {
@@ -119,6 +121,12 @@ describe('POST /developer-access/tokens · the controlled minter', () => {
     expect(res.status).toBe(201);
     const body = await res.json() as Record<string, unknown>;
     expect(String(body.token)).toMatch(/^xlk_ro_[0-9a-f]{64}$/);
+    expect(body.connect).toMatchObject({
+      endpoint: 'https://api-test.xlooop.com/api/v1/mcp/rpc',
+    });
+    expect(String((body.connect as Record<string, unknown>).session_start_check))
+      .toContain('https://api-test.xlooop.com/api/v1/mcp/session-start');
+    expect(JSON.stringify(body.connect)).not.toContain('https://api.xlooop.com');
     const persisted = dal.created[0];
     expect(persisted.token_sha256).not.toBe(body.token);            // never the raw token in the DB
     expect(String(persisted.token_sha256)).toMatch(/^[0-9a-f]{64}$/); // SHA-256 only
