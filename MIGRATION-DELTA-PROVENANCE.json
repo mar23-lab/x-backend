@@ -9077,6 +9077,27 @@
           "reason": "Route unmatched conversation to live runtime and ground attention answers in canonical Current Work projection"
         }
       ]
+    },
+    {
+      "delta_id": "pilot-plan-facade-parity-20260818",
+      "generated_at": "2026-08-18T05:42:22.907Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "886d5ee7e3eb4e192774ef1fe5d891d40296cff9",
+      "target_base_commit": "886d5ee7e3eb4e192774ef1fe5d891d40296cff9",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "wrangler.pilot-shadow.toml",
+          "target_blob": "988ae4152dfd261cc47bd68c292714274d508f07",
+          "reason": "Enable the existing receipt-backed Plan facade on isolated pilot-shadow and verify the configuration flag"
+        },
+        {
+          "path": "scripts/verify-pilot-shadow-config.mjs",
+          "target_blob": "1f7b287ea64ab5728720867b49287502675bfe9d",
+          "reason": "Enable the existing receipt-backed Plan facade on isolated pilot-shadow and verify the configuration flag"
+        }
+      ]
     }
   ]
 }

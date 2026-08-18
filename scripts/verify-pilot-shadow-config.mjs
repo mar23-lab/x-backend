@@ -32,6 +32,7 @@ requireMatch(/^ROLE_SKILL_CATALOG_ENABLED\s*=\s*"true"$/m, 'role/skill catalog m
 requireMatch(/^CONTEXT_PACKET_PERSISTENCE_ENABLED\s*=\s*"true"$/m, 'context packet persistence must be enabled');
 requireMatch(/^CHAT_HISTORY_PERSISTENCE_REQUIRED\s*=\s*"true"$/m, 'customer chat history persistence must fail closed');
 requireMatch(/^TENANT_PROJECTION_QUEUE_ENABLED\s*=\s*"true"$/m, 'tenant projection queue must be enabled');
+requireMatch(/^PLAN_ENTITIES_ENABLED\s*=\s*"true"$/m, 'canonical Plan facade must be enabled');
 requireMatch(/^CUSTOMER_API_TOKENS_ENABLED\s*=\s*"true"$/m, 'read-only customer connector tokens must be enabled for the commercial API-access proof');
 requireMatch(/^CUSTOMER_OPERATIONAL_TOKENS_ENABLED\s*=\s*"false"$/m, 'operational customer connector tokens must remain explicitly disabled');
 requireMatch(/^CUSTOMER_AUTO_PROVISION_ON_SESSION\s*=\s*"true"$/m, 'customer session auto-provision must be enabled');
