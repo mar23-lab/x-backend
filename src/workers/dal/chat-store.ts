@@ -1,10 +1,8 @@
 // chat-store.ts · cockpit chat thread persistence (Wave 3) · cross-browser continuity.
 //
-// Authority: 020_cockpit_chat_threads. ONE thread per (operator, scope); messages appended in order.
-// The thread id is DETERMINISTIC from (user_id, scope_key) so the same operator returning to the same
-// scope re-opens the same thread (idempotent upsert) — that is what makes a conversation survive a
-// reload or a different browser. Legacy routes may treat persistence as best-effort; commercial pilot
-// routes can require this append before returning a successful answer.
+// Authority: 020_cockpit_chat_threads + 102_project_chat_threads. The deterministic thread remains the
+// compatibility/default thread for a user+scope. Commercial clients may create additional explicit
+// project threads and must pass their opaque id on history and turn requests.
 
 import { makeError } from './shared-helpers';
 import type { Sql } from '../db/client';
@@ -61,6 +59,36 @@ export interface ChatExchangeWriteResult {
   messages: ChatMessageRow[];
 }
 
+export type ChatThreadStatus = 'active' | 'archived';
+export type ChatThreadTitleSource = 'default' | 'auto' | 'manual' | 'legacy';
+
+export interface ChatThreadRow {
+  id: string;
+  workspace_id: string | null;
+  project_id: string | null;
+  domain_id: string | null;
+  title: string;
+  title_source: ChatThreadTitleSource;
+  status: ChatThreadStatus;
+  message_count: number;
+  created_at: string;
+  updated_at: string;
+  last_message_at: string;
+  archived_at: string | null;
+}
+
+export interface ChatThreadWriteReceipt {
+  thread: ChatThreadRow;
+  receipt_id: string;
+  audit_event_id: string;
+}
+
+export {
+  createChatThreadRow,
+  listChatThreadsRow,
+  updateChatThreadRow,
+} from './chat-thread-store';
+
 const MAX_BODY = 8000;
 const norm = (v: unknown): string => String(v ?? '').toLowerCase().replace(/[^a-z0-9]/g, '');
 
@@ -70,7 +98,7 @@ export function chatScopeKey(scope: ChatScopeRef): string {
 }
 
 /** Deterministic thread id per (user, scope) so the same operator+scope reuses one thread. */
-function threadIdFor(userId: string, scopeKey: string): string {
+export function threadIdFor(userId: string, scopeKey: string): string {
   return ('thr_' + norm(userId) + '__' + scopeKey).slice(0, 200);
 }
 
@@ -93,16 +121,21 @@ export async function appendChatExchangeRow(
   userId: string,
   scope: ChatScopeRef,
   messages: ChatMessageInput[],
+  requestedThreadId: string | null = null,
   concurrencyRetry = 0,
 ): Promise<ChatExchangeWriteResult> {
   const valid = (Array.isArray(messages) ? messages : []).filter(
     (m) => m && (m.role === 'you' || m.role === 'assistant') && typeof m.body === 'string' && m.body.trim(),
   );
-  if (!valid.length) return { thread_id: threadIdFor(userId, chatScopeKey(scope)), messages: [] };
+  if (!valid.length) return { thread_id: requestedThreadId || threadIdFor(userId, chatScopeKey(scope)), messages: [] };
   if (!userId) throw makeError('VALIDATION_ERROR', 'user_id is required', 400);
 
   const scopeKey = chatScopeKey(scope);
-  const threadId = threadIdFor(userId, scopeKey);
+  const explicitThreadId = String(requestedThreadId || '').trim() || null;
+  if (explicitThreadId && (!/^thr_[a-zA-Z0-9_|-]{8,200}$/.test(explicitThreadId))) {
+    throw makeError('VALIDATION_ERROR', 'thread_id is invalid', 400);
+  }
+  const threadId = explicitThreadId || threadIdFor(userId, scopeKey);
   const payload = valid.map((m, sequence) => {
     const links = Array.isArray(m.grounding_event_ids) && m.role === 'assistant'
       ? m.grounding_event_ids.filter((x) => typeof x === 'string' && x).slice(0, 200)
@@ -157,6 +190,16 @@ export async function appendChatExchangeRow(
         audit_target_id text,
         closing_attestation_id text
       )
+    ), authorized_thread AS MATERIALIZED (
+      SELECT id
+      FROM chat_threads
+      WHERE id = ${threadId}
+        AND user_id = ${userId}
+        AND scope_key = ${scopeKey}
+        AND workspace_id IS NOT DISTINCT FROM ${scope.workspace_id ?? null}::text
+        AND project_id IS NOT DISTINCT FROM ${scope.project_id ?? null}::text
+        AND domain_id IS NOT DISTINCT FROM ${scope.domain_id ?? null}::text
+        AND COALESCE(status, 'active') = 'active'
     ), existing_messages AS MATERIALIZED (
       SELECT message.sequence, existing.*
       FROM input_messages message
@@ -189,12 +232,44 @@ export async function appendChatExchangeRow(
       SELECT true AS allowed
       WHERE NOT EXISTS (SELECT 1 FROM conflicting_existing)
     ), thread_written AS (
-      INSERT INTO chat_threads (id, user_id, workspace_id, project_id, domain_id, scope_key)
+      INSERT INTO chat_threads (
+        id, user_id, workspace_id, project_id, domain_id, scope_key,
+        title, title_source, status, last_message_at
+      )
       SELECT
         ${threadId}, ${userId}, ${scope.workspace_id ?? null}, ${scope.project_id ?? null},
-        ${scope.domain_id ?? null}, ${scopeKey}
+        ${scope.domain_id ?? null}, ${scopeKey},
+        COALESCE(
+          NULLIF(left((SELECT body FROM input_messages WHERE role = 'you' ORDER BY sequence LIMIT 1), 120), ''),
+          'New chat'
+        ),
+        CASE WHEN EXISTS (SELECT 1 FROM input_messages WHERE role = 'you') THEN 'auto' ELSE 'default' END,
+        'active', now()
       FROM write_authorized
-      ON CONFLICT (id) DO UPDATE SET updated_at = now()
+      WHERE ${explicitThreadId}::text IS NULL OR EXISTS (SELECT 1 FROM authorized_thread)
+      ON CONFLICT (id) DO UPDATE SET
+        updated_at = now(),
+        last_message_at = now(),
+        title = CASE
+          WHEN chat_threads.title_source = 'default'
+          THEN COALESCE(
+            NULLIF(left((SELECT body FROM input_messages WHERE role = 'you' ORDER BY sequence LIMIT 1), 120), ''),
+            chat_threads.title
+          )
+          ELSE chat_threads.title
+        END,
+        title_source = CASE
+          WHEN chat_threads.title_source = 'default'
+            AND EXISTS (SELECT 1 FROM input_messages WHERE role = 'you')
+          THEN 'auto'
+          ELSE chat_threads.title_source
+        END
+      WHERE chat_threads.user_id = ${userId}
+        AND chat_threads.scope_key = ${scopeKey}
+        AND chat_threads.workspace_id IS NOT DISTINCT FROM ${scope.workspace_id ?? null}::text
+        AND chat_threads.project_id IS NOT DISTINCT FROM ${scope.project_id ?? null}::text
+        AND chat_threads.domain_id IS NOT DISTINCT FROM ${scope.domain_id ?? null}::text
+        AND COALESCE(chat_threads.status, 'active') = 'active'
       RETURNING id
     ), existing_audits AS MATERIALIZED (
       SELECT message.sequence, audit.target_id AS audit_target_id, audit.id::text AS audit_event_id
@@ -284,7 +359,10 @@ export async function appendChatExchangeRow(
     // READ COMMITTED snapshot was taken. One new statement sees the committed rows and converges on their
     // receipts. A genuinely different payload remains a conflict on the second attempt and fails closed.
     if (concurrencyRetry === 0) {
-      return appendChatExchangeRow(sql, userId, scope, messages, 1);
+      return appendChatExchangeRow(sql, userId, scope, messages, explicitThreadId, 1);
+    }
+    if (explicitThreadId) {
+      throw makeError('CHAT_THREAD_NOT_FOUND', 'chat thread was not found in this project', 404);
     }
     throw makeError(
       'INTERACTION_ID_CONFLICT',
@@ -327,9 +405,11 @@ export async function listChatHistoryRow(
   userId: string,
   scope: ChatScopeRef,
   limit = 100,
+  requestedThreadId: string | null = null,
 ): Promise<ChatMessageRow[]> {
   if (!userId) return [];
-  const threadId = threadIdFor(userId, chatScopeKey(scope));
+  const scopeKey = chatScopeKey(scope);
+  const threadId = String(requestedThreadId || '').trim() || threadIdFor(userId, scopeKey);
   const cap = Math.max(1, Math.min(200, Number(limit) || 100));
   const rows = (await sql/*sql*/`
     SELECT *
@@ -339,6 +419,16 @@ export async function listChatHistoryRow(
         operation_event_id, intent_id, audit_event_id, closing_attestation_id, created_at
       FROM chat_messages
       WHERE thread_id = ${threadId}
+        AND EXISTS (
+          SELECT 1
+          FROM chat_threads t
+          WHERE t.id = chat_messages.thread_id
+            AND t.user_id = ${userId}
+            AND t.scope_key = ${scopeKey}
+            AND t.workspace_id IS NOT DISTINCT FROM ${scope.workspace_id ?? null}::text
+            AND t.project_id IS NOT DISTINCT FROM ${scope.project_id ?? null}::text
+            AND t.domain_id IS NOT DISTINCT FROM ${scope.domain_id ?? null}::text
+        )
       ORDER BY created_at DESC, id DESC
       LIMIT ${cap}
     ) newest

@@ -415,6 +415,7 @@ export interface DalAdapter {
     expectedCurrentWorkVersion: number,
     clientRequestId: string,
     interactionId: string,
+    threadId: string | null,
     closing: import('./types').GovernedClosingAttestationInput,
   ): Promise<IntakeExecutionResult>;
   /** Tenant-scoped count used by Current Work; returns no receipt identifiers or payloads. */
@@ -649,19 +650,41 @@ export interface DalAdapter {
   /** PMF · the very-disappointed % metric + sentiment counts (operator dashboard). */
   getPmfSummary(): Promise<import('./pmf-store').PmfSummary>;
 
-  /** Wave 3 · persist a cockpit-chat exchange to the (operator, scope) thread (cross-browser memory). */
+  /** Persist an exchange to an explicit thread, or the legacy/default scope thread when omitted. */
   appendChatExchange(
     userId: string,
     scope: import('./chat-store').ChatScopeRef,
     messages: import('./chat-store').ChatMessageInput[],
+    threadId?: string | null,
   ): Promise<import('./chat-store').ChatExchangeWriteResult>;
 
-  /** Wave 3 · load the stored cockpit-chat thread for an (operator, scope), oldest → newest. */
+  /** Load one explicit thread, or the legacy/default scope thread when omitted. */
   listChatHistory(
     userId: string,
     scope: import('./chat-store').ChatScopeRef,
     limit?: number,
+    threadId?: string | null,
   ): Promise<import('./chat-store').ChatMessageRow[]>;
+
+  listChatThreads(
+    userId: string,
+    scope: import('./chat-store').ChatScopeRef,
+    includeArchived?: boolean,
+    limit?: number,
+  ): Promise<import('./chat-store').ChatThreadRow[]>;
+
+  createChatThread(
+    userId: string,
+    scope: import('./chat-store').ChatScopeRef,
+    title?: string | null,
+  ): Promise<import('./chat-store').ChatThreadWriteReceipt>;
+
+  updateChatThread(
+    userId: string,
+    scope: import('./chat-store').ChatScopeRef,
+    threadId: string,
+    input: { title?: string; status?: import('./chat-store').ChatThreadStatus },
+  ): Promise<import('./chat-store').ChatThreadWriteReceipt | null>;
 
   /** Exact tenant-scoped document metadata/extracted-text read for selected chat/intake context. */
   listDocumentsByIds(

@@ -29,9 +29,10 @@ function appFor(opts: { enabled?: boolean; packets?: any[]; approvals?: any[]; p
       current_work_version: number,
       client_request_id: string,
       interaction_id: string,
+      thread_id: string | null,
       closing: any,
     ) => {
-      calls.push({ method: 'executeIntakeResolution', workspace_id, actor_user_id, id, version, current_work_version, client_request_id, interaction_id, closing });
+      calls.push({ method: 'executeIntakeResolution', workspace_id, actor_user_id, id, version, current_work_version, client_request_id, interaction_id, thread_id, closing });
       return {
         ok: true,
         resolution: { id },
@@ -222,6 +223,7 @@ describe('single intake route', () => {
         current_work_version: 3,
         client_request_id: 'exec_1',
         interaction_id: 'interaction_1',
+        thread_id: 'thr_project_thread_1',
       }),
     }, env);
     expect(ok.status).toBe(200);
@@ -229,9 +231,31 @@ describe('single intake route', () => {
       method: 'executeIntakeResolution', workspace_id: 'tenant_a', actor_user_id: 'user_a', id: 'inr_1',
       version: 1, current_work_version: 3, client_request_id: 'exec_1',
       interaction_id: 'interaction_1',
+      thread_id: 'thr_project_thread_1',
       closing: { role_key: 'role.workspace.owner', closing_skill: 'skill.governed-execution-closeout', outcome: 'attested' },
     });
     expect((calls.at(-1) as any).closing.content_sha256).toMatch(/^[a-f0-9]{64}$/);
+  });
+
+  it('rejects a non-canonical conversation thread before execution', async () => {
+    const { app, calls, env } = appFor({ enabled: true });
+    const response = await app.request('/api/v1/intake/inr_1/execute', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        version: 1,
+        current_work_version: 3,
+        client_request_id: 'exec_bad_thread',
+        interaction_id: 'interaction_bad_thread',
+        thread_id: 'local-browser-thread',
+      }),
+    }, env);
+    expect(response.status).toBe(400);
+    expect(await response.json()).toMatchObject({
+      code: 'VALIDATION_ERROR',
+      error: 'thread_id must identify a canonical chat thread',
+    });
+    expect(calls.some((call) => call.method === 'executeIntakeResolution')).toBe(false);
   });
 
   // W.2 two-tier ruling (260720): execute ADVANCES governed state -> spine-gated (owner/operator).

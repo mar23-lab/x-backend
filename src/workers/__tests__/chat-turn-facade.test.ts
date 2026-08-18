@@ -30,8 +30,10 @@ const AUTH = { user_id: 'user_a', workspace_id: 'workspace_a', role: 'member' };
 
 function dal(options: { auditEventId?: string | null } = {}) {
   const captured: Array<Record<string, unknown>> = [];
+  const threadIds: Array<string | null | undefined> = [];
   return {
     captured,
+    threadIds,
     getSessionEntitlement: async () => ({ state: 'approved_workspace' }),
     listEvents: async () => ({ events: [], pagination: { has_more: false, next_before: null } }),
     countEventStates: async () => ({ needs_you: 0, blocked: 0, done: 0, total: 0 }),
@@ -45,7 +47,13 @@ function dal(options: { auditEventId?: string | null } = {}) {
     modelRuntimes: {
       listProviders: async () => [], getOverride: async () => null, getProviderCredential: async () => null,
     },
-    appendChatExchange: async (_userId: string, _scope: unknown, messages: Array<Record<string, unknown>>) => {
+    appendChatExchange: async (
+      _userId: string,
+      _scope: unknown,
+      messages: Array<Record<string, unknown>>,
+      threadId?: string | null,
+    ) => {
+      threadIds.push(threadId);
       captured.push(...messages);
       return {
         thread_id: 'thread_1',
@@ -86,7 +94,7 @@ describe('POST /api/v1/chat/turns', () => {
     }));
     const res = await appFor(currentDal).request('/api/v1/chat/turns', {
       method: 'POST', headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ message: 'What should I do next?', llm: 'claude' }),
+      body: JSON.stringify({ message: 'What should I do next?', llm: 'claude', thread_id: 'thr_12345678' }),
     }, {
       DATABASE_URL: 'postgres://test', AI: { run: aiRun }, ROLE_SKILL_CATALOG_ENABLED: 'true',
       CUSTOMER_SAFE_SERIALIZER_ENABLED: 'false',
@@ -122,6 +130,7 @@ describe('POST /api/v1/chat/turns', () => {
       status: 'enabled', mode: 'atomic_post_completion', provider_native: false, receipt_before_stream: true,
     });
     expect(aiRun).toHaveBeenCalledTimes(1);
+    expect(currentDal.threadIds).toEqual(['thr_12345678']);
     expect(currentDal.captured[1]).toMatchObject({
       resolution_id: 'policy_resolution_1',
       execution_receipt_id: 'execution_receipt_1',

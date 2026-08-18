@@ -131,7 +131,13 @@ import { getCustomerContextProfileRow } from './customer-context-store';
 import { provisionCustomerWorkspaceRow } from './customer-provisioning-store';
 import { getWorkspaceActivitySummaryRow } from './workspace-activity-store';
 import { recordPmfResponseRow, getPmfSummaryRow } from './pmf-store';
-import { appendChatExchangeRow, listChatHistoryRow } from './chat-store';
+import {
+  appendChatExchangeRow,
+  createChatThreadRow,
+  listChatHistoryRow,
+  listChatThreadsRow,
+  updateChatThreadRow,
+} from './chat-store';
 import { listDocumentsByIdsRow } from './document-store';
 import { getEngagementRollupRow } from './engagement-store';
 import { seedStarterTemplateBindingsRow } from './template-policy-store';
@@ -1009,16 +1015,44 @@ export class WorkersDalAdapter implements DalAdapter {
     userId: string,
     scope: import('./chat-store').ChatScopeRef,
     messages: import('./chat-store').ChatMessageInput[],
+    threadId?: string | null,
   ): Promise<import('./chat-store').ChatExchangeWriteResult> {
-    return appendChatExchangeRow(this.sql, userId, scope, messages);
+    return appendChatExchangeRow(this.sql, userId, scope, messages, threadId ?? null);
   }
 
   async listChatHistory(
     userId: string,
     scope: import('./chat-store').ChatScopeRef,
     limit?: number,
+    threadId?: string | null,
   ): Promise<import('./chat-store').ChatMessageRow[]> {
-    return listChatHistoryRow(this.sql, userId, scope, limit);
+    return listChatHistoryRow(this.sql, userId, scope, limit, threadId ?? null);
+  }
+
+  async listChatThreads(
+    userId: string,
+    scope: import('./chat-store').ChatScopeRef,
+    includeArchived?: boolean,
+    limit?: number,
+  ): Promise<import('./chat-store').ChatThreadRow[]> {
+    return listChatThreadsRow(this.sql, userId, scope, includeArchived, limit);
+  }
+
+  async createChatThread(
+    userId: string,
+    scope: import('./chat-store').ChatScopeRef,
+    title?: string | null,
+  ): Promise<import('./chat-store').ChatThreadWriteReceipt> {
+    return createChatThreadRow(this.sql, userId, scope, title ?? null);
+  }
+
+  async updateChatThread(
+    userId: string,
+    scope: import('./chat-store').ChatScopeRef,
+    threadId: string,
+    input: { title?: string; status?: import('./chat-store').ChatThreadStatus },
+  ): Promise<import('./chat-store').ChatThreadWriteReceipt | null> {
+    return updateChatThreadRow(this.sql, userId, scope, threadId, input);
   }
 
   async listDocumentsByIds(
