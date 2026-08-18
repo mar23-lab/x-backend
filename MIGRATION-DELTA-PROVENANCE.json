@@ -8995,6 +8995,27 @@
           "reason": "Current Work now composes visible operation events with unrepresented task packets under one RLS-scoped projection"
         }
       ]
+    },
+    {
+      "delta_id": "260818-environment-bound-connector-authority",
+      "generated_at": "2026-08-18T00:34:26.988Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "ef27e835da3f94d444dede3b0c369d3821b569af",
+      "target_base_commit": "ef27e835da3f94d444dede3b0c369d3821b569af",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/routes/developer-access.ts",
+          "target_blob": "737c477ffef39f10f2ff7fdb51f697d1e56e5e4e",
+          "reason": "Bind connector status, test, and mint receipts to the authenticated deployment origin"
+        },
+        {
+          "path": "src/workers/__tests__/developer-access-route.test.ts",
+          "target_blob": "18735cca69fad8e2aa0f5f48640dcf9785081364",
+          "reason": "Bind connector status, test, and mint receipts to the authenticated deployment origin"
+        }
+      ]
     }
   ]
 }
