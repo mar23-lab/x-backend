@@ -24,7 +24,7 @@ const DEFAULT_CANARY_ENV_FILE = path.join(
   '.xlooop',
   'pilot-telemetry',
   'secrets',
-  'xlooop-canary-api-token.env',
+  'xlooop-pilot-shadow-canary.env',
 );
 
 const ALLOWED_INTERNAL_CANARY_HOSTS = new Set([
@@ -155,6 +155,14 @@ function assessCanaryTarget(rawApiBase) {
 
 function runSelfTest() {
   const cases = [
+    {
+      id: 'default_profile_is_pilot_shadow_specific',
+      actual: {
+        ok: path.basename(DEFAULT_CANARY_ENV_FILE) === 'xlooop-pilot-shadow-canary.env',
+        reason: DEFAULT_CANARY_ENV_FILE,
+      },
+      expected: true,
+    },
     {
       id: 'missing_target_fails_closed',
       actual: assessCanaryTarget(''),

@@ -9264,6 +9264,27 @@
           "reason": "Refresh expired Neon OAuth credentials through standards-based discovery and refresh-token exchange, persist them atomically with mode 0600, preserve rotated refresh tokens, and retain fail-closed browser re-authentication guidance"
         }
       ]
+    },
+    {
+      "delta_id": "codex-pilot-shadow-canary-profile-authority-20260819",
+      "generated_at": "2026-08-19T09:00:02.874Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "54e0d5becce78c65db46d392848aec8074f43ace",
+      "target_base_commit": "54e0d5becce78c65db46d392848aec8074f43ace",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "scripts/verify-internal-company-a-b-canary.mjs",
+          "target_blob": "180a2cbc208938b8171cc642b5cc6653928de3e2",
+          "reason": "Separate pilot-shadow and production canary operator profiles to prevent cross-lane authority drift"
+        },
+        {
+          "path": "docs/architecture/backend/AUTH_TENANCY_MODEL.md",
+          "target_blob": "bdbb8ac2b9fdab05bb17d911afe554d126190785",
+          "reason": "Separate pilot-shadow and production canary operator profiles to prevent cross-lane authority drift"
+        }
+      ]
     }
   ]
 }
