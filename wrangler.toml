@@ -151,12 +151,21 @@ binding = "AI"
 binding = "EXTERNAL_CAPABILITY_ADAPTER"
 service = "xlooop-capability-adapter"
 
+# Customer-safe Settings readiness reads exactly one immutable lifecycle receipt. The object key
+# and SHA-256 below pin authority to the production R2 canary receipt; any missing object, byte drift,
+# or contract mismatch remains attention rather than becoming a claimed pass.
+[[r2_buckets]]
+binding = "LIFECYCLE_RECEIPTS"
+bucket_name = "xlooop-production-lifecycle-receipts"
+
 # Non-secret build/runtime config (secrets set via `wrangler secret put`)
 [vars]
 ENVIRONMENT = "production"
 MARKITDOWN_ADAPTER_ENABLED = "false"
 HEADROOM_COMPRESSION_ENABLED = "false"
 EXTERNAL_CAPABILITY_TENANT_REFS = ""
+DELETE_EXPORT_RECEIPT_KEY = "receipts/lifecycle-20260818t231014z-a9de10c9/receipt.json"
+DELETE_EXPORT_RECEIPT_SHA256 = "bfaee66eaa4cab79e4315aa967096c065f7a7cc7ac51feb7e882b4589f01a6bb"
 # W9-H1 (260722, operator-ratified): declare the authority this worker has de-facto held since
 # the ~260719 cutover. XLOOOP_AUTHORITY_MODE has exactly ONE runtime consumer (routes/health.ts,
 # reporting only — no behavioral branch), so this is a truthful-attestation change, not a

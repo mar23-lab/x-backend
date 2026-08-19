@@ -44,6 +44,9 @@ export interface SettingsReadinessEnv extends AuthEnv, LiveRuntimeEnv, Connector
   SENTRY_DSN?: string;
   CONNECTOR_OAUTH_REVOCATION_MODE?: string;
   CONNECTOR_OAUTH_AUTHORITY_MODE?: string;
+  LIFECYCLE_RECEIPTS?: R2Bucket;
+  DELETE_EXPORT_RECEIPT_KEY?: string;
+  DELETE_EXPORT_RECEIPT_SHA256?: string;
 }
 
 export interface SettingsReadinessVariables extends AuthVariables {
@@ -60,6 +63,114 @@ function check(
   input: Omit<ReadinessCheck, 'checked_at'>,
 ): ReadinessCheck {
   return { ...input, checked_at: checkedAt };
+}
+
+function isSha256(value: unknown): value is string {
+  return typeof value === 'string' && /^[a-f0-9]{64}$/i.test(value);
+}
+
+async function sha256Hex(value: ArrayBuffer): Promise<string> {
+  const digest = await crypto.subtle.digest('SHA-256', value);
+  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('');
+}
+
+async function verifyProductionLifecycleReceipt(env: SettingsReadinessEnv): Promise<{
+  verified: boolean;
+  reason: string;
+  receiptId?: string;
+  immutableReceiptRef?: string;
+  generatedAt?: string;
+}> {
+  const key = env.DELETE_EXPORT_RECEIPT_KEY?.trim();
+  const expectedHash = env.DELETE_EXPORT_RECEIPT_SHA256?.trim().toLowerCase();
+  if (!env.LIFECYCLE_RECEIPTS || !key || !isSha256(expectedHash)) {
+    return { verified: false, reason: 'receipt_store_or_pinned_identity_not_configured' };
+  }
+
+  const object = await env.LIFECYCLE_RECEIPTS.get(key);
+  if (!object) return { verified: false, reason: 'pinned_receipt_not_found' };
+
+  const bytes = await object.arrayBuffer();
+  if ((await sha256Hex(bytes)) !== expectedHash) {
+    return { verified: false, reason: 'pinned_receipt_hash_mismatch' };
+  }
+
+  let receipt: Record<string, unknown>;
+  try {
+    receipt = JSON.parse(new TextDecoder().decode(bytes)) as Record<string, unknown>;
+  } catch {
+    return { verified: false, reason: 'pinned_receipt_invalid_json' };
+  }
+
+  const proofs = receipt.receipt_proofs as Record<string, unknown> | undefined;
+  const requiredFields = [
+    'receipt_id',
+    'immutable_receipt_ref',
+    'source_system',
+    'tenant_scope',
+    'company_id',
+    'user_id',
+    'actor_id',
+    'workspace_scope',
+    'approval_id',
+    'export_request_id',
+    'delete_request_id',
+    'audit_id',
+    'storage_provider',
+    'storage_bucket',
+    'object_key',
+    'object_hash_sha256',
+    'export_manifest_hash_sha256',
+    'receipt_proofs',
+    'legal_hold_policy_id',
+    'retention_class',
+    'rollback_boundary',
+    'erasure_boundary',
+    'tombstone_proof',
+    'action_executed_at',
+    'generated_at',
+    'verifier_command',
+  ];
+  const proofKeys = [
+    'object_storage_receipt_id',
+    'export_manifest_receipt_id',
+    'proof_bundle_receipt_id',
+    'delete_request_receipt_id',
+    'legal_hold_receipt_id',
+    'negative_read_receipt_id',
+  ];
+  const actionTime = Date.parse(String(receipt.action_executed_at ?? ''));
+  const generatedTime = Date.parse(String(receipt.generated_at ?? ''));
+  const generatedAgeDays = (Date.now() - generatedTime) / 86_400_000;
+  const contractValid = requiredFields.every((field) => receipt[field] !== undefined && receipt[field] !== '')
+    && receipt.schema_id === 'xlooop.delete_export_object_storage_receipt.v1'
+    && receipt.evidence_class === 'production_live_receipt'
+    && receipt.source_system === 'production_object_storage_lifecycle'
+    && receipt.storage_provider === 'cloudflare_r2'
+    && /^receipt\.[a-z0-9_.:-]+$/.test(String(receipt.receipt_id))
+    && /^xlooop:\/\/receipts\//.test(String(receipt.immutable_receipt_ref))
+    && receipt.negative_read_after_delete === true
+    && receipt.raw_customer_data_used === false
+    && !Number.isNaN(actionTime)
+    && !Number.isNaN(generatedTime)
+    && actionTime <= generatedTime
+    && generatedAgeDays >= 0
+    && generatedAgeDays <= 7
+    && /verify:public-self-serve-production-receipts/.test(String(receipt.verifier_command))
+    && typeof receipt.legal_hold_state === 'string' && receipt.legal_hold_state.length > 0
+    && typeof receipt.retention_class === 'string' && receipt.retention_class.length > 0
+    && isSha256(receipt.object_hash_sha256)
+    && isSha256(receipt.export_manifest_hash_sha256)
+    && proofKeys.every((proofKey) => typeof proofs?.[proofKey] === 'string' && proofs[proofKey].length > 0);
+  if (!contractValid) return { verified: false, reason: 'pinned_receipt_contract_invalid' };
+
+  return {
+    verified: true,
+    reason: 'verified',
+    receiptId: String(receipt.receipt_id),
+    immutableReceiptRef: String(receipt.immutable_receipt_ref),
+    generatedAt: String(receipt.generated_at),
+  };
 }
 
 settingsReadinessRoute.get('/settings/readiness', async (ctx) => {
@@ -229,14 +340,23 @@ settingsReadinessRoute.get('/settings/readiness', async (ctx) => {
   }));
 
   try {
-    const evidence = await gate.dal.listEvidenceItems(gate.ws, { limit: 100 });
+    const [evidence, lifecycleReceipt] = await Promise.all([
+      gate.dal.listEvidenceItems(gate.ws, { limit: 100 }),
+      verifyProductionLifecycleReceipt(ctx.env),
+    ]);
     const boundedReceipts = evidence.filter((item) => item.kind === 'receipt');
     checks.push(check(checkedAt, {
       id: 'delete_export',
-      status: 'attention',
-      summary: 'A hash-verified production lifecycle receipt is not available from an authoritative receipt store.',
-      receipt_refs: boundedReceipts.map((item) => item.id),
-      source_refs: ['tenant_scoped_evidence_items_bounded_metadata'],
+      status: lifecycleReceipt.verified ? 'ready' : 'attention',
+      summary: lifecycleReceipt.verified
+        ? 'A hash-pinned production object-storage, retention, legal-hold, and erasure receipt was verified.'
+        : 'A hash-verified production lifecycle receipt is not available from the authoritative receipt store.',
+      receipt_refs: lifecycleReceipt.verified
+        ? [lifecycleReceipt.receiptId!, lifecycleReceipt.immutableReceiptRef!]
+        : boundedReceipts.map((item) => item.id),
+      source_refs: lifecycleReceipt.verified
+        ? ['cloudflare_r2:LIFECYCLE_RECEIPTS', 'DELETE_EXPORT_RECEIPT_KEY', 'DELETE_EXPORT_RECEIPT_SHA256']
+        : ['tenant_scoped_evidence_items_bounded_metadata'],
       details: {
         bounded_evidence_count: boundedReceipts.length,
         bounded_evidence: boundedReceipts.map((item) => ({
@@ -244,9 +364,11 @@ settingsReadinessRoute.get('/settings/readiness', async (ctx) => {
           content_hash: item.content_hash,
           created_at: item.created_at,
         })),
-        production_live_receipt_authority: 'unavailable',
-        structured_receipt_verified: false,
-        required_authority: 'tenant-scoped structured receipt store with canonical payload SHA-256 verification',
+        production_live_receipt_authority: lifecycleReceipt.verified ? 'verified' : 'unavailable',
+        structured_receipt_verified: lifecycleReceipt.verified,
+        receipt_generated_at: lifecycleReceipt.generatedAt ?? null,
+        verification_failure: lifecycleReceipt.verified ? null : lifecycleReceipt.reason,
+        required_authority: 'hash-pinned Cloudflare R2 receipt with production lifecycle contract validation',
       },
     }));
   } catch {
