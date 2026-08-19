@@ -9206,6 +9206,27 @@
           "reason": "attest production lifecycle receipt binding"
         }
       ]
+    },
+    {
+      "delta_id": "production-db-authority-profile-20260819",
+      "generated_at": "2026-08-19T00:49:17.595Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "e78df4532f473930d7fc50f04bc9986188c3f925",
+      "target_base_commit": "e78df4532f473930d7fc50f04bc9986188c3f925",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "package.json",
+          "target_blob": "84a8f341856f21184ddc34d7c9a4a720420a8a63",
+          "reason": "Add a value-free, redacting Neon authority profile runner and wire its controls into the local authority stack"
+        },
+        {
+          "path": "scripts/ci-local.mjs",
+          "target_blob": "ec9184fe39b4b20c5e29bdf799582e64a248ee61",
+          "reason": "Add a value-free, redacting Neon authority profile runner and wire its controls into the local authority stack"
+        }
+      ]
     }
   ]
 }

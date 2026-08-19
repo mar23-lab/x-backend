@@ -110,6 +110,7 @@ const gates = [
   ['data schemas', 'npm', ['run', 'verify:data-schemas']],
   ['orphan tests', 'npm', ['run', 'verify:no-orphan-worker-tests']],
   ['prod-migration object-probe classifier', 'npm', ['run', 'verify:prod-migrations:self-test']],
+  ['production DB authority profile controls', 'npm', ['run', 'verify:production-db-live-authority:profile:self-test']],
   ['migration 090 SELECT-only preflight classifier', 'npm', ['run', 'preflight:migration-090:self-test']],
   ['migration 091 SELECT-only preflight classifier', 'npm', ['run', 'preflight:migration-091:self-test']],
   ['schema 91 disposable PostgreSQL release gate', 'npm', ['run', 'verify:schema91-postgres:self-test']],
