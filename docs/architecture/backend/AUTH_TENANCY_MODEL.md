@@ -169,7 +169,7 @@ raw token, refuses repository-local output, and does not call Cloudflare:
 
 ```bash
 npm run prepare:pilot-shadow-canary-bindings -- \
-  --read-env-file="$HOME/.xlooop/pilot-telemetry/secrets/xlooop-canary-api-token.env" \
+  --read-env-file="$HOME/.xlooop/pilot-telemetry/secrets/xlooop-pilot-shadow-canary.env" \
   --lifecycle-token-file=/tmp/xlooop-canary-lifecycle-api-token.txt \
   --output=/private/tmp/xlooop-pilot-shadow-canary-secret-bundle.json
 ```
@@ -187,7 +187,10 @@ rm /private/tmp/xlooop-pilot-shadow-canary-secret-bundle.json
 
 `XLOOOP_CANARY_WORKSPACE_ID` is provisioned separately and is never inferred
 from a token file. Production uses its own exact approval and secret bundle;
-the pilot-shadow helper must not be repointed to `wrangler.toml`.
+the pilot-shadow helper must not be repointed to `wrangler.toml`. Keep the
+operator profiles lane-specific: `xlooop-pilot-shadow-canary.env` for the
+internal A/B run and `xlooop-production-canary.env` for the production hard
+stop. A generic canary profile is not an authority source for either lane.
 
 Run the API/MCP parity verifier without a short-lived browser JWT:
 

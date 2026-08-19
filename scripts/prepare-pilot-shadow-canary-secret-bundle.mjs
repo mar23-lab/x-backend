@@ -14,6 +14,13 @@ import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const defaultReadEnvFile = path.join(
+  os.homedir(),
+  '.xlooop',
+  'pilot-telemetry',
+  'secrets',
+  'xlooop-pilot-shadow-canary.env',
+);
 
 if (process.argv.includes('--self-test')) {
   selfTest();
@@ -22,7 +29,7 @@ if (process.argv.includes('--self-test')) {
 
 const readEnvFile = arg('read-env-file')
   || process.env.XLOOOP_CANARY_API_TOKEN_ENV_FILE
-  || path.join(os.homedir(), '.xlooop', 'pilot-telemetry', 'secrets', 'xlooop-canary-api-token.env');
+  || defaultReadEnvFile;
 const lifecycleTokenFile = arg('lifecycle-token-file')
   || process.env.XLOOOP_CANARY_LIFECYCLE_API_TOKEN_FILE
   || '/tmp/xlooop-canary-lifecycle-api-token.txt';
