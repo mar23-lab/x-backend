@@ -1,20 +1,20 @@
 {
   "_meta": {
     "schema": "mbp-operations-projection.v1",
-    "generated_at": "2026-08-10T03:30:03+10:00",
+    "generated_at": "2026-08-19T03:30:02+10:00",
     "producer": "_sys/scripts/export_mbp_to_xlooop_projection.py",
-    "git_sha": "6d8078249c0e0838006effa2d9b6e0cfae24e804"
+    "git_sha": "853e05310795791d619b2e9aea7f01333dc486bf"
   },
   "projection_kind": "mbp_operations_projection",
   "projection_contract_version": "v0.1.0",
-  "projection_id": "projection:mbp:xlooop:r-m-d-i-20260810-0330",
+  "projection_id": "projection:mbp:xlooop:r-m-d-i-20260819-0330",
   "authority_source": "mbp_governance_projection",
   "source_repo": "MB-P",
   "source_mode": "read_only_projection",
   "operator_workspace_id": "mbp-private",
   "consumer_workspace_id": "xlooop",
-  "generated_at": "2026-08-10T03:30:03+10:00",
-  "valid_until": "2026-08-11T03:30:03+10:00",
+  "generated_at": "2026-08-19T03:30:02+10:00",
+  "valid_until": "2026-08-20T03:30:02+10:00",
   "health": "connected_snapshot",
   "redaction_state": "metadata_only",
   "private_raw_content_included": false,
@@ -150,9 +150,9 @@
   ],
   "packets": [
     {
-      "packet_id": "packet-mbp-skills-260810",
+      "packet_id": "packet-mbp-skills-260819",
       "intent_id": "intent-mbp-skill-registry-projection",
-      "title": "MB-P skill registry: 223 canonical skills",
+      "title": "MB-P skill registry: 231 canonical skills",
       "workspace_id": "mbp-private",
       "project_id": "mbp-governance",
       "lifecycle_state": "evidence_ready",
@@ -165,7 +165,7 @@
       "source_refs": [
         {
           "ref_id": "source:mbp:skills-index",
-          "label": "skills-index.yaml metadata (223 skills)",
+          "label": "skills-index.yaml metadata (231 skills)",
           "uri": "mbp://governance/skills-index",
           "ref_kind": "governance",
           "raw_content_included": false
@@ -173,7 +173,7 @@
       ]
     },
     {
-      "packet_id": "packet-mbp-hard-rules-260810",
+      "packet_id": "packet-mbp-hard-rules-260819",
       "intent_id": "intent-mbp-hard-rules-projection",
       "title": "MB-P HARD_RULES v1.52.0 (283 HR-* IDs)",
       "workspace_id": "mbp-private",
@@ -196,7 +196,7 @@
       ]
     },
     {
-      "packet_id": "packet-mbp-pillars-260810",
+      "packet_id": "packet-mbp-pillars-260819",
       "intent_id": "intent-mbp-pillar-maturity-projection",
       "title": "MB-P pillar maturity composite ~7.86; 0/7 at 10/10",
       "workspace_id": "mbp-private",
@@ -219,7 +219,7 @@
       ]
     },
     {
-      "packet_id": "packet-mbp-recent-waves-260810",
+      "packet_id": "packet-mbp-recent-waves-260819",
       "intent_id": "intent-mbp-recent-waves-projection",
       "title": "MB-P recent waves (5 most recent retrospectives)",
       "workspace_id": "mbp-private",
@@ -231,7 +231,7 @@
       "evidence_state": "ready",
       "signoff_state": "ready",
       "xcp_feedback_state": "ready_for_substrate",
-      "xcp_feedback_id": "xcp-feedback-mbp-recent-waves-260810",
+      "xcp_feedback_id": "xcp-feedback-mbp-recent-waves-260819",
       "owner_decision_state": "approved_for_substrate_learning",
       "owner_decision_ref": "operator_request:2026-05-13:projection-learning-100",
       "learning_summary": "Recent wave retrospectives are approved as reusable XCP learning input for the internal MB-P operations proof.",
@@ -274,7 +274,7 @@
       ]
     },
     {
-      "packet_id": "packet-mbp-comprehensive-review-260810",
+      "packet_id": "packet-mbp-comprehensive-review-260819",
       "intent_id": "intent-mbp-comprehensive-ecosystem-review-scope",
       "title": "MB-P comprehensive ecosystem review scope is dashboard-visible and mandatory",
       "workspace_id": "mbp-private",
