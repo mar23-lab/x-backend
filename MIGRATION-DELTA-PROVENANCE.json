@@ -9190,6 +9190,22 @@
           "reason": "Split project chat thread and execution receipt persistence into focused DAL modules under the source-file-size ratchet"
         }
       ]
+    },
+    {
+      "delta_id": "live-authority-readiness-closure-20260819",
+      "generated_at": "2026-08-19T00:01:03.305Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "97046d0d275d6ef3ae0cef2aabf5fd3ce5ce0e58",
+      "target_base_commit": "97046d0d275d6ef3ae0cef2aabf5fd3ce5ce0e58",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "wrangler.toml",
+          "target_blob": "045b58a09362840ba6e519e8fbc110ae3f7e7a06",
+          "reason": "attest production lifecycle receipt binding"
+        }
+      ]
     }
   ]
 }
