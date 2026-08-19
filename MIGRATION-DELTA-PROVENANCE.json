@@ -9285,6 +9285,37 @@
           "reason": "Separate pilot-shadow and production canary operator profiles to prevent cross-lane authority drift"
         }
       ]
+    },
+    {
+      "delta_id": "codex-production-authority-posture-monotonicity-20260820",
+      "generated_at": "2026-08-19T15:08:28.572Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "37ba51c50f3876d372abdf8b0c4e3390ddc0a830",
+      "target_base_commit": "37ba51c50f3876d372abdf8b0c4e3390ddc0a830",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "package.json",
+          "target_blob": "cde2319361c8f329eece8e987b0756e2daf8236b",
+          "reason": "preserve monotonic internal validation authority while public live-evidence gates remain independent"
+        },
+        {
+          "path": "scripts/ci-local.mjs",
+          "target_blob": "a4a0dd13d53e64114caa41cd1860d0b6f428ddf9",
+          "reason": "preserve monotonic internal validation authority while public live-evidence gates remain independent"
+        },
+        {
+          "path": "scripts/verify-live-evidence-authority-matrix.mjs",
+          "target_blob": "da2f7837a3fc5326a7199a098e1f451f83f99702",
+          "reason": "preserve monotonic internal validation authority while public live-evidence gates remain independent"
+        },
+        {
+          "path": "scripts/verify-public-production-readiness-hard-stop.mjs",
+          "target_blob": "9b99742c3c57db6b95246f3798d79f6ffd877997",
+          "reason": "preserve monotonic internal validation authority while public live-evidence gates remain independent"
+        }
+      ]
     }
   ]
 }

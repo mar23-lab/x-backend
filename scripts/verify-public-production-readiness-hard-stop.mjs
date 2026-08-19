@@ -11,6 +11,12 @@ const failures = [];
 const warnings = [];
 const strictPublic = process.argv.includes('--strict-public') || process.env.XLOOOP_REQUIRE_PUBLIC_SELF_SERVE === '1';
 
+if (process.argv.includes('--self-test')) {
+  const result = authorityPostureSelfTest();
+  console.log(JSON.stringify(result, null, 2));
+  process.exit(result.status === 'PASS' ? 0 : 1);
+}
+
 function run(id, command, args, options = {}) {
   const proc = spawnSync(command, args, { cwd: process.cwd(), encoding: 'utf8', maxBuffer: 1024 * 1024 * 12, env: process.env });
   const parsed = parseLastJson(proc.stdout || '');
@@ -96,6 +102,10 @@ const publicLaneIds = new Set([
   'public_self_serve_production_receipts',
 ]);
 const internalSafetyFailures = failures.filter((row) => !publicLaneIds.has(row.id));
+const internalControlledValidationAuthority = deriveInternalControlledValidationAuthority(
+  internalSafetyFailures.length,
+  externalCapabilityPublicAuthority,
+);
 const blockedAuthorityLanes = [
   publicAuthority ? null : 'public/self-serve delete-export-legal-hold receipt',
   externalCapabilityPublicAuthority ? null : 'external capability safe non-default posture',
@@ -116,7 +126,7 @@ const report = {
   two_company_live_pilot_authority: twoCompanyAuthority,
   production_db_live_authority: productionDbAuthority,
   public_production_authority: liveEvidenceAuthority,
-  internal_controlled_validation_authority: internalSafetyFailures.length === 0 && externalCapabilityPublicAuthority === true && publicAuthority === false,
+  internal_controlled_validation_authority: internalControlledValidationAuthority,
   internal_safety_failure_count: internalSafetyFailures.length,
   checks,
   failures,
@@ -128,6 +138,33 @@ const report = {
 };
 console.log(JSON.stringify(report, null, 2));
 process.exit(status === 'PASS' ? 0 : 1);
+
+function deriveInternalControlledValidationAuthority(internalSafetyFailureCount, externalCapabilityAuthority) {
+  return internalSafetyFailureCount === 0 && externalCapabilityAuthority === true;
+}
+
+function authorityPostureSelfTest() {
+  const cases = [
+    { id: 'internal_green_before_public_receipt', failure_count: 0, external_authority: true, public_authority: false, expected: true },
+    { id: 'internal_stays_green_after_public_receipt', failure_count: 0, external_authority: true, public_authority: true, expected: true },
+    { id: 'internal_failure_blocks_internal_authority', failure_count: 1, external_authority: true, public_authority: false, expected: false },
+    { id: 'unsafe_external_posture_blocks_internal_authority', failure_count: 0, external_authority: false, public_authority: false, expected: false },
+  ].map((testCase) => {
+    const actual = deriveInternalControlledValidationAuthority(testCase.failure_count, testCase.external_authority);
+    return {
+      id: testCase.id,
+      status: actual === testCase.expected ? 'PASS' : 'FAIL',
+      public_authority: testCase.public_authority,
+      expected: testCase.expected,
+      actual,
+    };
+  });
+  return {
+    schema_id: 'xlooop.public_production_readiness_hard_stop.self_test.v1',
+    status: cases.every((testCase) => testCase.status === 'PASS') ? 'PASS' : 'FAIL',
+    checks: cases,
+  };
+}
 
 function parseLastJson(text) {
   if (!text) return {};
