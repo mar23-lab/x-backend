@@ -9248,6 +9248,22 @@
           "reason": "Bind the matching external-safe export manifest, source commit, projection hash, validity window, and x-backend consumer authority"
         }
       ]
+    },
+    {
+      "delta_id": "neon-oauth-refresh-authority-20260819",
+      "generated_at": "2026-08-19T01:35:00.000Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "0be5eefa371260aeeb151a744cfc90ba14dc47c3",
+      "target_base_commit": "0be5eefa371260aeeb151a744cfc90ba14dc47c3",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "scripts/run-production-db-authority-profile.mjs",
+          "target_blob": "3434782aac2bcae29d64c7935d739181c2b0c459",
+          "reason": "Refresh expired Neon OAuth credentials through standards-based discovery and refresh-token exchange, persist them atomically with mode 0600, preserve rotated refresh tokens, and retain fail-closed browser re-authentication guidance"
+        }
+      ]
     }
   ]
 }

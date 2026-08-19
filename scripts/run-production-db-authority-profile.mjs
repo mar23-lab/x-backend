@@ -2,8 +2,8 @@
 // Resolve production Neon role credentials just-in-time and run a governed
 // authority verifier without persisting or printing connection strings.
 
-import { readFileSync } from 'node:fs';
-import { homedir } from 'node:os';
+import { chmodSync, mkdtempSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { homedir, tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import process from 'node:process';
@@ -18,6 +18,9 @@ const DEFAULT_PROFILE = Object.freeze({
 });
 
 const API_BASE = 'https://console.neon.tech/api/v2';
+const OAUTH_HOST = 'https://oauth2.neon.tech';
+const OAUTH_CLIENT_ID = 'neonctl';
+const TOKEN_REFRESH_SKEW_MS = 60_000;
 const SELF_TEST = process.argv.includes('--self-test');
 const TARGET = argumentValue('--target') || 'production-db';
 const ALLOWED_TARGETS = Object.freeze({
@@ -27,7 +30,7 @@ const ALLOWED_TARGETS = Object.freeze({
 });
 
 if (SELF_TEST) {
-  runSelfTest();
+  await runSelfTest();
   process.exit(0);
 }
 
@@ -39,7 +42,7 @@ if (!Object.hasOwn(ALLOWED_TARGETS, TARGET)) {
 
 const profile = resolveProfile(process.env);
 const credentialsPath = process.env.XLOOOP_NEON_CREDENTIALS_FILE || join(homedir(), '.config', 'neonctl', 'credentials.json');
-const accessToken = readAccessToken(credentialsPath);
+const accessToken = await resolveAccessToken(credentialsPath);
 
 const ownerPassword = await revealPassword(accessToken, profile, profile.owner_role);
 const appPassword = await revealPassword(accessToken, profile, profile.app_role);
@@ -82,7 +85,7 @@ function resolveProfile(env) {
   return profile;
 }
 
-function readAccessToken(path) {
+async function resolveAccessToken(path) {
   const environmentToken = process.env.NEON_API_KEY || process.env.XLOOOP_NEON_API_TOKEN;
   if (environmentToken) return environmentToken;
   let parsed;
@@ -91,9 +94,79 @@ function readAccessToken(path) {
   } catch {
     fail(`Neon credential profile is unavailable at ${path}. Run neonctl auth before this verifier.`);
   }
-  const token = parsed?.access_token;
-  if (!token || typeof token !== 'string') fail('Neon credential profile has no access token.');
-  return token;
+  if (!credentialNeedsRefresh(parsed)) return parsed.access_token;
+  if (!parsed?.refresh_token || typeof parsed.refresh_token !== 'string') {
+    fail('Neon OAuth credential is expired and has no refresh token. Run neonctl auth before this verifier.');
+  }
+  const refreshed = await refreshOAuthCredential(parsed);
+  persistCredentialSet(path, refreshed);
+  return refreshed.access_token;
+}
+
+function credentialNeedsRefresh(credentials, now = Date.now()) {
+  return typeof credentials?.access_token !== 'string'
+    || !credentials.access_token
+    || !Number.isFinite(credentials?.expires_at)
+    || credentials.expires_at <= now + TOKEN_REFRESH_SKEW_MS;
+}
+
+async function refreshOAuthCredential(credentials, fetchImpl = fetch) {
+  let discoveryResponse;
+  try {
+    discoveryResponse = await fetchImpl(`${OAUTH_HOST}/.well-known/openid-configuration`, {
+      headers: { Accept: 'application/json' },
+      signal: AbortSignal.timeout(30_000),
+    });
+  } catch (error) {
+    fail(`Neon OAuth discovery failed: ${error?.name || 'network_error'}`);
+  }
+  const discovery = await discoveryResponse.json().catch(() => ({}));
+  if (!discoveryResponse.ok || typeof discovery.token_endpoint !== 'string') {
+    fail(`Neon OAuth discovery failed: HTTP ${discoveryResponse.status}`);
+  }
+
+  const body = new URLSearchParams({
+    grant_type: 'refresh_token',
+    refresh_token: credentials.refresh_token,
+    client_id: OAUTH_CLIENT_ID,
+  });
+  let tokenResponse;
+  try {
+    tokenResponse = await fetchImpl(discovery.token_endpoint, {
+      method: 'POST',
+      headers: { Accept: 'application/json', 'Content-Type': 'application/x-www-form-urlencoded' },
+      body,
+      signal: AbortSignal.timeout(30_000),
+    });
+  } catch (error) {
+    fail(`Neon OAuth refresh failed: ${error?.name || 'network_error'}`);
+  }
+  const tokenSet = await tokenResponse.json().catch(() => ({}));
+  if (!tokenResponse.ok || typeof tokenSet.access_token !== 'string' || !tokenSet.access_token) {
+    fail(`Neon OAuth refresh failed: HTTP ${tokenResponse.status}. Run neonctl auth before this verifier.`);
+  }
+  return mergeTokenSet(credentials, tokenSet);
+}
+
+function mergeTokenSet(previous, refreshed, now = Date.now()) {
+  const expiresIn = Number.isFinite(refreshed.expires_in) ? refreshed.expires_in : 0;
+  return {
+    ...previous,
+    ...refreshed,
+    refresh_token: refreshed.refresh_token || previous.refresh_token,
+    expires_at: now + expiresIn * 1000,
+  };
+}
+
+function persistCredentialSet(path, credentials) {
+  const temporaryPath = `${path}.tmp-${process.pid}`;
+  try {
+    writeFileSync(temporaryPath, `${JSON.stringify(credentials, null, 2)}\n`, { encoding: 'utf8', flag: 'wx', mode: 0o600 });
+    chmodSync(temporaryPath, 0o600);
+    renameSync(temporaryPath, path);
+  } catch {
+    fail(`Neon OAuth credential refreshed but could not be persisted safely at ${path}.`);
+  }
 }
 
 async function revealPassword(accessToken, profile, role) {
@@ -158,15 +231,53 @@ function fail(message) {
   process.exit(1);
 }
 
-function runSelfTest() {
+async function runSelfTest() {
   const synthetic = resolveProfile({});
   const nested = findPassword({ role: { password: 'synthetic-password' } });
   const dsn = buildDsn(synthetic, synthetic.app_role, 'p@ss/word');
   const redacted = redact(`token=abc ${dsn} p@ss/word`, ['abc', 'p@ss/word', dsn]);
+  const now = Date.now();
+  const currentCredential = { access_token: 'current', expires_at: now + 120_000 };
+  const expiringCredential = { access_token: 'expiring', expires_at: now + 30_000 };
+  const mergedCredential = mergeTokenSet(
+    { refresh_token: 'preserved-refresh' },
+    { access_token: 'next-access', expires_in: 3600 },
+    now,
+  );
+  let fetchCall = 0;
+  const refreshedCredential = await refreshOAuthCredential(
+    { access_token: 'stale-access', refresh_token: 'synthetic-refresh', expires_at: now - 1 },
+    async () => {
+      fetchCall += 1;
+      if (fetchCall === 1) {
+        return new Response(JSON.stringify({ token_endpoint: 'https://oauth.example/token' }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+      return new Response(JSON.stringify({ access_token: 'refreshed-access', expires_in: 3600 }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    },
+  );
+  const tempDirectory = mkdtempSync(join(tmpdir(), 'xlooop-neon-profile-self-test-'));
+  const tempCredentialPath = join(tempDirectory, 'credentials.json');
+  persistCredentialSet(tempCredentialPath, refreshedCredential);
+  const persistedCredential = JSON.parse(readFileSync(tempCredentialPath, 'utf8'));
+  const persistedMode = statSync(tempCredentialPath).mode & 0o777;
+  rmSync(tempDirectory, { recursive: true, force: true });
   const failures = [];
   if (nested !== 'synthetic-password') failures.push('nested password resolution');
   if (!dsn.includes('p%40ss%2Fword')) failures.push('DSN credential encoding');
   if (/abc|p@ss|postgresql:\/\//.test(redacted)) failures.push('secret redaction');
+  if (credentialNeedsRefresh(currentCredential, now)) failures.push('current OAuth credential classified stale');
+  if (!credentialNeedsRefresh(expiringCredential, now)) failures.push('expiry skew not enforced');
+  if (mergedCredential.refresh_token !== 'preserved-refresh') failures.push('refresh-token rotation fallback');
+  if (mergedCredential.expires_at !== now + 3_600_000) failures.push('refreshed expiry calculation');
+  if (fetchCall !== 2 || refreshedCredential.access_token !== 'refreshed-access') failures.push('OAuth refresh exchange');
+  if (persistedCredential.refresh_token !== 'synthetic-refresh') failures.push('refreshed credential persistence');
+  if (persistedMode !== 0o600) failures.push('credential file mode');
   if (!Object.hasOwn(ALLOWED_TARGETS, 'public-readiness')) failures.push('public readiness target');
   if (failures.length) {
     console.error(JSON.stringify({ status: 'FAIL', failures }, null, 2));
