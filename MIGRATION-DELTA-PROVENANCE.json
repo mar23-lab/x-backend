@@ -9227,6 +9227,27 @@
           "reason": "Add a value-free, redacting Neon authority profile runner and wire its controls into the local authority stack"
         }
       ]
+    },
+    {
+      "delta_id": "mbp-projection-freshness-20260819",
+      "generated_at": "2026-08-19T03:30:02+10:00",
+      "source_repo": "MB-P",
+      "source_commit": "853e05310795791d619b2e9aea7f01333dc486bf",
+      "target_base_commit": "9a6e8338c3650e795e9ca9c6fdd742795d3fbaeb",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "data/mbp-operations-projection.json",
+          "target_blob": "e8e0a229cd7714de5ddf066b92a6caf704a1ddce",
+          "reason": "Stage the current MB-P metadata_readonly and metadata_only operations projection for x-backend; private raw content is excluded and the consumer runtime remains physically independent of MB-P"
+        },
+        {
+          "path": "data/mbp-projection-export-manifest.json",
+          "target_blob": "7a6713c78b435c9cbd069b16b24142c833a06a66",
+          "reason": "Bind the matching external-safe export manifest, source commit, projection hash, validity window, and x-backend consumer authority"
+        }
+      ]
     }
   ]
 }
