@@ -11,6 +11,7 @@ import { envFlagTrue } from '../lib/env-flag';
 import { ROLLBACK_WINDOW_DAYS } from '../lib/self-service';
 import { VALID_STATUSES, VALID_SOURCE_TOOLS } from '../lib/event-validation';
 import { lineageFor } from '../lib/actor-lineage';
+import { resolveScopedWorkspace } from '../lib/operator-workspace-scope';
 import type { AuthEnv, AuthVariables } from '../middleware/auth';
 import type { DalAdapter } from '../dal/DalAdapter';
 import type {
@@ -23,6 +24,7 @@ import type {
 export interface EventsEnv extends AuthEnv {
   DATABASE_URL: string;
   CUSTOMER_SELF_SERVICE_ENABLED?: string; // P.9 (260628) · gates customer event soft-delete/restore + recently-deleted read. Default OFF → dormant until operator browser-verify. Parsed via envFlagTrue (quote-tolerant).
+  OPERATOR_WORKSPACE_SCOPE_ENABLED?: string;
 }
 
 export interface EventsVariables extends AuthVariables {
@@ -41,6 +43,7 @@ eventsRoute.get('/events', async (ctx) => {
     const url = new URL(ctx.req.url);
     const limitRaw = url.searchParams.get('limit');
     const before = url.searchParams.get('before') || undefined;
+    const requested_workspace_id = url.searchParams.get('workspace_id') || undefined;
     const project_id = url.searchParams.get('project_id') || undefined;
     const status = url.searchParams.get('status') as EventStatus | null;
     const source_tool = url.searchParams.get('source_tool') as SourceTool | null;
@@ -79,6 +82,32 @@ eventsRoute.get('/events', async (ctx) => {
       ...(parent_event_id ? { parent_event_id } : {}),
       ...(top_level ? { top_level } : {}),
     };
+
+    // The commercial customer UI is always tenant-scoped, including when the signed-in identity is
+    // also the verified platform owner. An explicit workspace_id therefore bypasses the owner-wide
+    // observability overlay below and resolves exactly one authorized workspace. Without this branch,
+    // projectless events from other owned workspaces can appear under the active customer workspace.
+    if (requested_workspace_id) {
+      const scoped = await resolveScopedWorkspace(
+        ctx as never,
+        ctx.env.OPERATOR_WORKSPACE_SCOPE_ENABLED,
+        workspace_id,
+        user_id,
+        requested_workspace_id,
+        dal,
+      );
+      if (!scoped.ok) return scoped.res;
+      if (!scoped.ws) {
+        ctx.status(403);
+        return ctx.json({
+          error: 'JWT missing org_id and no authorized workspace scope was resolved',
+          code: 'FORBIDDEN',
+          request_id: ctx.get('request_id'),
+        });
+      }
+      const page = await dal.listEvents(scoped.ws, opts);
+      return ctx.json(withDataClass(withAuthority(page as unknown as Record<string, unknown>, auth, 'event'), 'live'));
+    }
 
     // R54-Stage2 · operator overlay (mirror of the GET /provenance overlay).
     // The operator's real activity (e.g. GitHub events from Stage 1) lands in

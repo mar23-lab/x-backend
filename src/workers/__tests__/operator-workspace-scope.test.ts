@@ -13,6 +13,7 @@ import { describe, it, expect } from 'vitest';
 import { Hono } from 'hono';
 import { currentWorkRoute } from '../routes/current-work';
 import { customerChatRoute } from '../routes/customer-chat';
+import { eventsRoute } from '../routes/events';
 import { resolveScopedWorkspace } from '../lib/operator-workspace-scope';
 
 // ─────────────────────────────────────────────────────────────────────────────────────────────────
@@ -52,6 +53,77 @@ function cwApp(spy: any, env: Record<string, string | undefined>) {
   return a;
 }
 const mkSpy = () => ({ eventsFor: [] as string[], canScopeCalls: [] as Array<[string, string]>, canScope: true });
+
+// ─────────────────────────────────────────────────────────────────────────────────────────────────
+// events · GET /events?workspace_id=
+// ─────────────────────────────────────────────────────────────────────────────────────────────────
+const EVENTS_AUTH = { user_id: 'u_op', workspace_id: 'ws_small', role: 'owner', email: 'o@x.com', service_principal: false } as any;
+
+function eventsApp(spy: { scoped: string[]; overlay: number; canScopeCalls: Array<[string, string]>; canScope: boolean }, env: Record<string, string | undefined>) {
+  const app = new Hono();
+  app.use('*', async (ctx, next) => {
+    ctx.env = { MBP_OWNER_USER_ID: 'u_op', ...env } as any;
+    ctx.set('auth', EVENTS_AUTH);
+    ctx.set('dal', {
+      listEvents: async (workspaceId: string) => {
+        spy.scoped.push(workspaceId);
+        return { events: [], pagination: { has_more: false, next_before: null } };
+      },
+      listEventsForOperator: async () => {
+        spy.overlay += 1;
+        return { events: [], pagination: { has_more: false, next_before: null } };
+      },
+      userCanScopeWorkspace: async (userId: string, workspaceId: string) => {
+        spy.canScopeCalls.push([userId, workspaceId]);
+        return spy.canScope;
+      },
+    } as any);
+    ctx.set('request_id', 'rq_events');
+    await next();
+  });
+  app.route('/', eventsRoute);
+  return app;
+}
+
+const eventsSpy = () => ({ scoped: [] as string[], overlay: 0, canScopeCalls: [] as Array<[string, string]>, canScope: true });
+
+describe('events · explicit tenant scope bypasses the owner-wide overlay', () => {
+  it('preserves the owner-wide overlay only when no workspace scope is requested', async () => {
+    const spy = eventsSpy();
+    const res = await eventsApp(spy, {}).request('/events?top_level=true');
+    expect(res.status).toBe(200);
+    expect(spy.overlay).toBe(1);
+    expect(spy.scoped).toEqual([]);
+  });
+
+  it('flag OFF resolves an explicit request to the JWT workspace and never uses the overlay', async () => {
+    const spy = eventsSpy();
+    const res = await eventsApp(spy, {}).request('/events?workspace_id=ws_big&top_level=true');
+    expect(res.status).toBe(200);
+    expect(spy.scoped).toEqual(['ws_small']);
+    expect(spy.overlay).toBe(0);
+    expect(spy.canScopeCalls).toEqual([]);
+  });
+
+  it('flag ON reads an authorized requested workspace and never uses the overlay', async () => {
+    const spy = eventsSpy();
+    const res = await eventsApp(spy, { OPERATOR_WORKSPACE_SCOPE_ENABLED: 'true' })
+      .request('/events?workspace_id=ws_big&top_level=true');
+    expect(res.status).toBe(200);
+    expect(spy.scoped).toEqual(['ws_big']);
+    expect(spy.overlay).toBe(0);
+    expect(spy.canScopeCalls).toEqual([['u_op', 'ws_big']]);
+  });
+
+  it('fails closed for an unauthorized requested workspace', async () => {
+    const spy = eventsSpy(); spy.canScope = false;
+    const res = await eventsApp(spy, { OPERATOR_WORKSPACE_SCOPE_ENABLED: 'true' })
+      .request('/events?workspace_id=ws_big&top_level=true');
+    expect(res.status).toBe(403);
+    expect(spy.scoped).toEqual([]);
+    expect(spy.overlay).toBe(0);
+  });
+});
 
 describe('current-work · operator-workspace-scope (OPERATOR_WORKSPACE_SCOPE_ENABLED)', () => {
   it('(a) flag OFF: scope is auth.workspace_id even when ?workspace_id is passed (byte-identical)', async () => {
