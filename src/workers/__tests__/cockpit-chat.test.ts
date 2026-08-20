@@ -382,6 +382,48 @@ describe('compileChatFacts — data_freshness (P0.1: never imply "all clear" ove
     expect(result.answer).toContain('2 goals');
   });
 
+  it('normalizes harmless Markdown before returning a customer-facing live answer', async () => {
+    const runtime: ResolvedRuntime = {
+      runtime_id: 'markdown-live', provider: 'workers_ai', model: '@cf/test', source: 'platform_default',
+      provider_config_version_id: null, base_url: null, credential: null,
+      ai: { run: async () => ({ response: '**Status:** Checked.\n- **Next step:** Review the pending approval.' }) },
+    };
+
+    const result = await answerLiveCockpitChat('give me a short update', FACTS(), 'ask', undefined, {
+      primary: runtime, fallbacks: [], resolution_attempts: [],
+    });
+
+    expect(result.answer).toContain('Status: Checked.');
+    expect(result.answer).toContain('• Next step: Review the pending approval.');
+    expect(result.answer).not.toMatch(/\*\*|^\s*[-*+]\s/m);
+  });
+
+  it('repairs internal drafting language and generic status/action scaffolding', async () => {
+    let calls = 0;
+    const runtime: ResolvedRuntime = {
+      runtime_id: 'style-repair', provider: 'workers_ai', model: '@cf/test', source: 'platform_default',
+      provider_config_version_id: null, base_url: null, credential: null,
+      ai: { run: async () => {
+        calls += 1;
+        return { response: calls === 1
+          ? '**Status:** Checked. **Action:** Revert to the operative version of the source-bound draft.'
+          : 'The recorded work has been checked. Review the pending approval next.' };
+      } },
+    };
+
+    const result = await answerLiveCockpitChat('give me a short update', FACTS(), 'ask', undefined, {
+      primary: runtime, fallbacks: [], resolution_attempts: [],
+    });
+
+    expect(calls).toBe(2);
+    expect(result.execution.attempts).toEqual([
+      expect.objectContaining({ runtime_id: 'style-repair', status: 'failed', error_code: 'STYLE_INTERNAL_DRAFTING_LANGUAGE' }),
+      expect.objectContaining({ runtime_id: 'style-repair', status: 'completed', error_code: null }),
+    ]);
+    expect(result.answer).toContain('Review the pending approval next.');
+    expect(result.answer).not.toMatch(/source-bound draft|operative version|^\s*(?:Status|Action)\s*:/im);
+  });
+
   it('rejects a live provider that omits a requested canonical plan entity', async () => {
     const runtime: ResolvedRuntime = {
       runtime_id: 'incomplete', provider: 'workers_ai', model: '@cf/test', source: 'platform_default',

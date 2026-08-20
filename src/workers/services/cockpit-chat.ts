@@ -1538,24 +1538,57 @@ function validateLiveGrounding(
   return null;
 }
 
-function buildLiveGroundingRepair(input: {
+function normalizeCustomerFacingChatText(text: string): string {
+  return String(text || '')
+    .replace(/\r\n?/g, '\n')
+    .split('\n')
+    .map((line) => line
+      .replace(/^\s{0,3}#{1,6}\s+/, '')
+      .replace(/^\s*[-*+]\s+/, '• '))
+    .join('\n')
+    .replace(/\*\*([^*\n]+)\*\*/g, '$1')
+    .replace(/__([^_\n]+)__/g, '$1')
+    .replace(/`([^`\n]+)`/g, '$1')
+    .replace(/(^|[\s(])\*([^*\n]+)\*(?=$|[\s).,!?;:])/g, '$1$2')
+    .trim();
+}
+
+function validateCustomerFacingChatStyle(text: string): string | null {
+  const normalized = normalizedFactText(text);
+  if (/\b(?:source[- ]bound (?:answer )?draft|deterministic (?:answer )?draft|operative version)\b/.test(normalized)) {
+    return 'STYLE_INTERNAL_DRAFTING_LANGUAGE';
+  }
+  const hasStatusLabel = /(?:^|[\n.!?]\s*)status\s*:/i.test(text);
+  const hasActionLabel = /(?:^|[\n.!?]\s*)action\s*:/i.test(text);
+  if (hasStatusLabel && hasActionLabel) return 'STYLE_GENERIC_STATUS_ACTION_TEMPLATE';
+  return null;
+}
+
+function prepareCustomerFacingChatText(
+  text: string,
+  grounded: CockpitChatResult['grounded_on'],
+): string {
+  return normalizeCustomerFacingChatText(annotateLiveFreshness(text, grounded));
+}
+
+function buildLiveResponseRepair(input: {
   text: string;
   error_code: string;
   system: string;
   user: string;
   repair_attempt: number;
 }): { system: string; user: string } | null {
-  if (!input.error_code.startsWith('GROUNDING_')) return null;
+  if (!input.error_code.startsWith('GROUNDING_') && !input.error_code.startsWith('STYLE_')) return null;
   if (input.error_code.endsWith('_MISMATCH') || input.error_code === 'GROUNDING_CURRENT_STATE_OVER_STALE') {
     return null;
   }
   return {
-    system: `${input.system}\n\nThe prior live draft failed the server grounding contract with ${input.error_code}. `
-      + 'Rewrite it once using only the supplied source-bound facts. Include every requested canonical fact explicitly '
-      + 'with its exact noun label and value. Do not preserve an omission, invent a value, mention this validation '
-      + 'process, or contradict the source-bound draft. Return only the corrected customer-facing answer.',
-    user: `${input.user}\n\nRejected live draft:\n${input.text}\n\nCorrection requirement: ${input.error_code}. `
-      + 'Re-read the deterministic source-bound draft and typed facts above, then return one complete corrected answer.',
+    system: `${input.system}\n\nThe prior response did not meet the customer response contract (${input.error_code}). `
+      + 'Rewrite it once using only the supplied facts. Include every requested canonical fact explicitly with its '
+      + 'exact noun label and value. Do not preserve an omission, invent a value, expose internal drafting or '
+      + 'validation language, or add generic Status/Action labels. Return only the corrected customer-facing answer.',
+    user: `${input.user}\n\nResponse to correct:\n${input.text}\n\nCorrection requirement: ${input.error_code}. `
+      + 'Re-read the supplied facts and return one complete, direct answer in plain text.',
   };
 }
 
@@ -1744,7 +1777,10 @@ export async function answerCockpitChat(
     + 'Answer the operator\'s question about their work using ONLY the event facts and any uploaded documents provided below — never invent '
     + 'numbers, names, events, clients, or statuses, and never speculate beyond the facts. Be specific: cite the '
     + 'real counts and name the relevant recent items. Professional, plain, customer-safe English; no internal '
-    + 'jargon, no markdown headings. 3 to 6 short sentences. If the facts do not answer the question, say so '
+    + 'jargon and no Markdown syntax. Answer directly; never expose terms such as "source-bound draft", '
+    + '"deterministic draft", "operative version", or the validation/repair process. Do not add generic '
+    + 'Status/Action labels unless the operator explicitly asks for that format. 3 to 6 short sentences. '
+    + 'If the facts do not answer the question, say so '
     + 'plainly and report what the record does show.'
     // Product capabilities (260702) · "how do I …?" questions ask HOW to do something in the product — they are
     // about capabilities, NOT the event record. Do not answer "the record does not cover it" and NEVER deflect to
@@ -1795,13 +1831,17 @@ export async function answerCockpitChat(
       system: executionSystem,
       user: executionUser,
       maxTokens: mode === 'deep-research' ? 900 : 700,
-      validateText: (text) => validateLiveGrounding(annotateLiveFreshness(text, grounded), grounded, message),
+      validateText: (text) => {
+        const prepared = prepareCustomerFacingChatText(text, grounded);
+        return validateCustomerFacingChatStyle(prepared)
+          ?? validateLiveGrounding(prepared, grounded, message);
+      },
       maxValidationRepairs: 1,
-      buildValidationRepair: buildLiveGroundingRepair,
+      buildValidationRepair: buildLiveResponseRepair,
       observer: executionObserver,
     });
     return {
-      answer: annotateLiveFreshness(live.text, grounded),
+      answer: prepareCustomerFacingChatText(live.text, grounded),
       generated_by: 'llm',
       grounded_on: grounded,
       model: live.runtime.model,
