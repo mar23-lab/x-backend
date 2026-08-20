@@ -9384,6 +9384,22 @@
           "reason": "Prove customer-facing normalization and one bounded live repair while retaining the existing grounding and provider-unavailable contracts"
         }
       ]
+    },
+    {
+      "delta_id": "codex-connector-revocation-error-truth-20260820",
+      "generated_at": "2026-08-20T11:50:31.762Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "31a77e6c1f583c07ee9ee3be2d02268b8977cacc",
+      "target_base_commit": "31a77e6c1f583c07ee9ee3be2d02268b8977cacc",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/middleware/auth.ts",
+          "target_blob": "c591ba816602a7db44b85312e555a53a0f47cb72",
+          "reason": "Classify governed opaque connector credentials after live-row miss so revoked tokens return safe connector-specific authority truth instead of a misleading JWT parse diagnostic."
+        }
+      ]
     }
   ]
 }

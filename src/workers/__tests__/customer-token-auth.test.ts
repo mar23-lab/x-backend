@@ -70,6 +70,18 @@ describe('customer connector authentication authority and scopes', () => {
     expect((await response.json() as { code: string }).code).toBe('AUTHORITY_REVOKED');
   });
 
+  it('reports a revoked opaque connector credential without misclassifying it as a JWT', async () => {
+    mocks.getToken.mockResolvedValue(null);
+    const revokedHeaders = { Authorization: `Bearer xlk_ro_${'a'.repeat(64)}` };
+    const response = await app().request('/api/v1/mcp/session-start', { headers: revokedHeaders }, env);
+
+    expect(response.status).toBe(401);
+    expect(await response.json()).toMatchObject({
+      code: 'UNAUTHORIZED',
+      error: 'customer connector token is invalid or revoked',
+    });
+  });
+
   it('denies missing scopes and every unregistered customer-token operation', async () => {
     const write = await app().request('/api/v1/evidence', { method: 'POST', headers }, env);
     expect(write.status).toBe(403);
@@ -78,4 +90,3 @@ describe('customer connector authentication authority and scopes', () => {
     expect(lifecycle.status).toBe(403);
   });
 });
-

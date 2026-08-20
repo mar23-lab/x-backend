@@ -125,6 +125,9 @@ export function clerkAuth(opts: ClerkAuthOptions = {}): MiddlewareHandler<{
       // never bad.
       return jsonError(ctx, 503, 'SERVICE_UNAVAILABLE', 'token verification is temporarily unavailable; retry');
     }
+    if (customer === 'miss' && isCustomerConnectorCredential(token)) {
+      return jsonError(ctx, 401, 'UNAUTHORIZED', 'customer connector token is invalid or revoked');
+    }
 
     try {
       const payload = await verifyClerkSessionToken(
@@ -254,9 +257,9 @@ async function canaryAuth(
  * A customer mints an opaque, revocable, workspace-scoped token (see developer-access.ts +
  * customer-token-store). Here we resolve it to an AuthContext. Inert unless the route opts in
  * (allowCustomerToken) AND the feature flag is on — so merging this changes nothing in prod until
- * the operator enables it. Revoked/expired tokens fail closed: getCustomerTokenByHashRow only
- * returns live rows, so a revoked token returns 'miss' → falls through to Clerk → 401
- * (satisfies the "revoking the token must make access fail" requirement).
+ * the operator enables it. Revoked tokens are absent from the live-row lookup and are classified
+ * by their xlk_* credential shape before Clerk verification, so customers receive an honest
+ * connector-specific 401 instead of a misleading JWT parse error.
  */
 async function customerTokenAuth(
   ctx: Context<{ Bindings: AuthEnv; Variables: AuthVariables }>,
@@ -322,6 +325,10 @@ export function clerkAuthorizedParties(value?: string): string[] {
 function normalizeSha256Hex(value?: string): string {
   const clean = (value || '').trim().toLowerCase();
   return /^[a-f0-9]{64}$/.test(clean) ? clean : '';
+}
+
+function isCustomerConnectorCredential(value: string): boolean {
+  return /^xlk_(?:ro|op)_[a-f0-9]{64}$/i.test(value);
 }
 
 async function sha256Hex(value: string): Promise<string> {
