@@ -1,6 +1,7 @@
 import { Client, type QueryConfig } from 'pg';
 import { describe, expect, it } from 'vitest';
 import { appendChatExchangeRow } from '../dal/chat-store';
+import { createChatThreadRow, updateChatThreadRow } from '../dal/chat-thread-store';
 import { saveWorkspaceReadinessAssessmentRow } from '../dal/customer-readiness-store';
 import { createIntakeResolutionRow, executeIntakeResolutionRow } from '../dal/intake-store';
 import { recordCustomerConsentAckRow, revokeCustomerAuthorityRow } from '../dal/customer-authority-store';
@@ -63,6 +64,88 @@ const databaseUrl = process.env.XLOOOP_SCHEMA91_PG_URL;
 const describePostgres = databaseUrl ? describe : describe.skip;
 
 describePostgres('schema 91 PostgreSQL authority', () => {
+  it('atomically creates and updates a project chat thread with governance audit receipts', async () => {
+    const client = new Client({ connectionString: databaseUrl });
+    await client.connect();
+
+    const suffix = crypto.randomUUID().replaceAll('-', '');
+    const workspaceId = `ws_chat_thread_pg103_${suffix}`;
+    const userId = `user_chat_thread_pg103_${suffix}`;
+    const projectId = `proj_chat_thread_pg103_${suffix}`;
+
+    try {
+      await client.query(
+        `INSERT INTO users (id, email, status, approved_at)
+         VALUES ($1, $2, 'approved', now())`,
+        [userId, `${suffix}@example.test`],
+      );
+      await client.query(
+        `INSERT INTO workspaces (id, name, owner_user_id, workspace_type, relationship_status)
+         VALUES ($1, 'Chat thread schema 103 integration', $2, 'company', 'internal_dogfood')`,
+        [workspaceId, userId],
+      );
+      await client.query(
+        `INSERT INTO workspace_members (workspace_id, user_id, role, status, activated_at)
+         VALUES ($1, $2, 'owner', 'active', now())`,
+        [workspaceId, userId],
+      );
+      await client.query(
+        `INSERT INTO projects (id, workspace_id, name, status)
+         VALUES ($1, $2, 'Chat thread authority', 'active')`,
+        [projectId, workspaceId],
+      );
+
+      const sql = postgresSql(client);
+      const scope = { workspace_id: workspaceId, project_id: projectId, domain_id: null };
+      const created = await createChatThreadRow(sql, userId, scope, null);
+      expect(created).toMatchObject({
+        thread: {
+          workspace_id: workspaceId,
+          project_id: projectId,
+          title: 'New chat',
+          title_source: 'default',
+          status: 'active',
+          message_count: 0,
+        },
+      });
+      expect(created.receipt_id).toBe(
+        `chat-thread-create:${created.thread.id}:${created.audit_event_id}`,
+      );
+
+      const renamed = await updateChatThreadRow(sql, userId, scope, created.thread.id, {
+        title: 'Client launch decisions',
+      });
+      expect(renamed).toMatchObject({
+        thread: { title: 'Client launch decisions', title_source: 'manual', status: 'active' },
+      });
+
+      const archived = await updateChatThreadRow(sql, userId, scope, created.thread.id, {
+        status: 'archived',
+      });
+      expect(archived).toMatchObject({ thread: { status: 'archived' } });
+      expect(archived?.thread.archived_at).toBeTruthy();
+
+      const authority = await client.query(
+        `SELECT
+           (SELECT count(*)::integer FROM chat_threads
+             WHERE id = $1 AND workspace_id = $2 AND project_id = $3 AND status = 'archived') AS thread_count,
+           (SELECT count(*)::integer FROM audit_logs
+             WHERE workspace_id = $2 AND target_type = 'chat_thread' AND target_id = $1
+               AND action IN ('chat_thread_create', 'chat_thread_rename', 'chat_thread_archive')) AS audit_count`,
+        [created.thread.id, workspaceId, projectId],
+      );
+      expect(authority.rows[0]).toEqual({ thread_count: 1, audit_count: 3 });
+    } finally {
+      await client.query('DELETE FROM audit_logs WHERE workspace_id = $1', [workspaceId]);
+      await client.query('DELETE FROM chat_threads WHERE workspace_id = $1', [workspaceId]);
+      await client.query('DELETE FROM projects WHERE workspace_id = $1', [workspaceId]);
+      await client.query('DELETE FROM workspace_members WHERE workspace_id = $1', [workspaceId]);
+      await client.query('DELETE FROM workspaces WHERE id = $1', [workspaceId]);
+      await client.query('DELETE FROM users WHERE id = $1', [userId]);
+      await client.end();
+    }
+  });
+
   it('persists and replays one authenticated onboarding baseline with durable readback', async () => {
     const client = new Client({ connectionString: databaseUrl });
     await client.connect();

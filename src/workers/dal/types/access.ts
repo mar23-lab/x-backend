@@ -564,7 +564,12 @@ export type AuditAction =
   | 'model_runtime_provider_set'
   | 'model_runtime_provider_delete'
   | 'model_runtime_default_change'
-  | 'model_runtime_validate';
+  | 'model_runtime_validate'
+  // Project-scoped conversation lifecycle (migration 103 keeps the DB CHECK in parity).
+  | 'chat_thread_create'
+  | 'chat_thread_rename'
+  | 'chat_thread_archive'
+  | 'chat_thread_restore';
 
 export type AuditTargetType =
   | 'user'
@@ -578,11 +583,17 @@ export type AuditTargetType =
   | 'synthetic_domain_goal'
   | 'synthetic_domain_propagation_rule'
   | 'synthetic_domain_recommendation'
+  | 'event'
+  | 'packet'
+  | 'decision'
+  | 'sign_off'
   // A-W1 (260707) · session/token lifecycle audit targets (migration 048 widened the DB CHECK to match).
   | 'api_token'
   | 'session'
   // Wave C (260708) · model-runtime provider config target (migration 053 widened the DB CHECK to match)
-  | 'model_runtime_provider';
+  | 'model_runtime_provider'
+  // Project conversation aggregate (migration 103).
+  | 'chat_thread';
 
 export interface AuditLogEntry {
   id: number;

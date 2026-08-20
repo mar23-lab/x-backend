@@ -60,6 +60,8 @@
     "dev:api": "DEPLOY_MIGRATION_GATE_NONPROD=1 wrangler dev --config wrangler.toml",
     "verify:prod-migrations": "node scripts/verify-prod-migrations.mjs",
     "verify:prod-migrations:self-test": "node scripts/verify-prod-migrations.mjs --self-test",
+    "verify:audit-target-schema-parity": "node scripts/verify-audit-target-schema-parity.mjs",
+    "verify:audit-target-schema-parity:self-test": "node scripts/verify-audit-target-schema-parity.mjs --self-test",
     "preflight:migration-090": "node scripts/preflight-migration-090.mjs",
     "preflight:migration-090:json": "node scripts/preflight-migration-090.mjs --json",
     "preflight:migration-090:self-test": "node scripts/preflight-migration-090.mjs --self-test",
