@@ -9316,6 +9316,32 @@
           "reason": "preserve monotonic internal validation authority while public live-evidence gates remain independent"
         }
       ]
+    },
+    {
+      "delta_id": "chat-thread-audit-contract-20260820",
+      "generated_at": "2026-08-20T06:20:43.947Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "251a7a044e3fc4b47124a0908ae7d561bac9505e",
+      "target_base_commit": "251a7a044e3fc4b47124a0908ae7d561bac9505e",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "package.json",
+          "target_blob": "5128ff77782e7e399ec851b125169a7338efc8fe",
+          "reason": "Close production chat-thread audit target mismatch and enforce source-to-schema parity"
+        },
+        {
+          "path": "scripts/ci-local.mjs",
+          "target_blob": "7b93f2868b9211472be87d21961533189449f655",
+          "reason": "Close production chat-thread audit target mismatch and enforce source-to-schema parity"
+        },
+        {
+          "path": "src/workers/dal/types/access.ts",
+          "target_blob": "6482fa8b62e94b19c85b6eab38b4667976b6521d",
+          "reason": "Close production chat-thread audit target mismatch and enforce source-to-schema parity"
+        }
+      ]
     }
   ]
 }

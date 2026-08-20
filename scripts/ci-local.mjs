@@ -110,6 +110,8 @@ const gates = [
   ['data schemas', 'npm', ['run', 'verify:data-schemas']],
   ['orphan tests', 'npm', ['run', 'verify:no-orphan-worker-tests']],
   ['prod-migration object-probe classifier', 'npm', ['run', 'verify:prod-migrations:self-test']],
+  ['audit target schema parity controls', 'npm', ['run', 'verify:audit-target-schema-parity:self-test']],
+  ['audit target schema parity', 'npm', ['run', 'verify:audit-target-schema-parity']],
   ['production DB authority profile controls', 'npm', ['run', 'verify:production-db-live-authority:profile:self-test']],
   ['live evidence authority posture controls', 'npm', ['run', 'verify:live-evidence-authority-matrix:self-test']],
   ['public production readiness posture controls', 'npm', ['run', 'verify:public-production-readiness-hard-stop:self-test']],
