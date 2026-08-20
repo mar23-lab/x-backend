@@ -20,6 +20,13 @@ import process from 'node:process';
 const strict =
   process.argv.includes('--strict-live-authority') ||
   process.env.XLOOOP_REQUIRE_PUBLIC_PRODUCTION_AUTHORITY === '1';
+
+if (process.argv.includes('--self-test')) {
+  const result = authorityPostureSelfTest();
+  console.log(JSON.stringify(result, null, 2));
+  process.exit(result.status === 'PASS' ? 0 : 1);
+}
+
 const checks = [];
 const failures = [];
 const warnings = [];
@@ -120,6 +127,7 @@ run('two_company_live_pilot_evidence', 'npm', ['run', '--silent', 'verify:two-co
 });
 
 const publicProductionAuthority = checks.every((row) => row.required_for_public_production && row.authority === true);
+const internalControlledValidationAuthority = deriveInternalControlledValidationAuthority(authorityFor);
 if (strict && !publicProductionAuthority) {
   failures.push({
     id: 'public_production_authority_blocked',
@@ -134,7 +142,7 @@ const report = {
   status,
   strict_live_authority: strict,
   public_production_authority: publicProductionAuthority,
-  internal_controlled_validation_authority: status === 'PASS' && publicProductionAuthority === false,
+  internal_controlled_validation_authority: internalControlledValidationAuthority,
   authority_summary: {
     production_db_live_authority: authorityFor('production_db_live_authority'),
     public_self_serve_authority: authorityFor('public_self_serve_production_receipts'),
@@ -155,6 +163,60 @@ process.exit(status === 'PASS' ? 0 : 1);
 
 function authorityFor(id) {
   return checks.find((row) => row.id === id)?.authority === true;
+}
+
+function deriveInternalControlledValidationAuthority(authorityLookup) {
+  return [
+    'production_db_live_authority',
+    'external_capability_default_hard_stop',
+    'api_mcp_live_canary_hard_stop',
+  ].every((id) => authorityLookup(id) === true);
+}
+
+function authorityPostureSelfTest() {
+  const cases = [
+    {
+      id: 'internal_green_while_public_pilot_pending',
+      authorities: {
+        production_db_live_authority: true,
+        external_capability_default_hard_stop: true,
+        api_mcp_live_canary_hard_stop: true,
+        public_self_serve_production_receipts: true,
+        two_company_live_pilot_evidence: false,
+      },
+      expected: true,
+    },
+    {
+      id: 'internal_remains_green_after_public_promotion',
+      authorities: {
+        production_db_live_authority: true,
+        external_capability_default_hard_stop: true,
+        api_mcp_live_canary_hard_stop: true,
+        public_self_serve_production_receipts: true,
+        two_company_live_pilot_evidence: true,
+      },
+      expected: true,
+    },
+    {
+      id: 'missing_internal_lane_blocks_internal_authority',
+      authorities: {
+        production_db_live_authority: false,
+        external_capability_default_hard_stop: true,
+        api_mcp_live_canary_hard_stop: true,
+        public_self_serve_production_receipts: true,
+        two_company_live_pilot_evidence: true,
+      },
+      expected: false,
+    },
+  ].map((testCase) => {
+    const actual = deriveInternalControlledValidationAuthority((id) => testCase.authorities[id] === true);
+    return { id: testCase.id, status: actual === testCase.expected ? 'PASS' : 'FAIL', expected: testCase.expected, actual };
+  });
+  return {
+    schema_id: 'xlooop.live_evidence_authority_matrix.self_test.v1',
+    status: cases.every((testCase) => testCase.status === 'PASS') ? 'PASS' : 'FAIL',
+    checks: cases,
+  };
 }
 
 function parseLastJson(text) {
