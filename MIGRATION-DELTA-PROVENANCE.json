@@ -9363,6 +9363,27 @@
           "reason": "Bind explicit tenant-scoped event reads and their authorization regression matrix to source authority"
         }
       ]
+    },
+    {
+      "delta_id": "codex-customer-facing-chat-language-20260820",
+      "generated_at": "2026-08-20T10:08:00.000Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "747a809667d66850f0260df7813013c5eec38c51",
+      "target_base_commit": "747a809667d66850f0260df7813013c5eec38c51",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/services/cockpit-chat.ts",
+          "target_blob": "dcda0781f59faf946ca237dfc8c2ae5b112eeee2",
+          "reason": "Normalize harmless Markdown and reject internal drafting language before a live model response becomes customer-visible or persistent; preserve live-only execution, grounding, repair, and receipt authority"
+        },
+        {
+          "path": "src/workers/__tests__/cockpit-chat.test.ts",
+          "target_blob": "2412676aefb425f0b115125a156737bbffd6a020",
+          "reason": "Prove customer-facing normalization and one bounded live repair while retaining the existing grounding and provider-unavailable contracts"
+        }
+      ]
     }
   ]
 }
