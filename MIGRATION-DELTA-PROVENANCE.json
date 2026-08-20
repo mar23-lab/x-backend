@@ -9342,6 +9342,27 @@
           "reason": "Close production chat-thread audit target mismatch and enforce source-to-schema parity"
         }
       ]
+    },
+    {
+      "delta_id": "codex-tenant-scoped-events-provenance-20260820",
+      "generated_at": "2026-08-20T08:33:30.775Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "867467ed29901d76f0aade8a820f8484b95f65ce",
+      "target_base_commit": "867467ed29901d76f0aade8a820f8484b95f65ce",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "src/workers/routes/events.ts",
+          "target_blob": "9ee57f65c7bc83b7e4a1dbe1d91b834156ee685a",
+          "reason": "Bind explicit tenant-scoped event reads and their authorization regression matrix to source authority"
+        },
+        {
+          "path": "src/workers/__tests__/operator-workspace-scope.test.ts",
+          "target_blob": "5eb40b6f27255ddb06f7940a84c0ab78700c1a90",
+          "reason": "Bind explicit tenant-scoped event reads and their authorization regression matrix to source authority"
+        }
+      ]
     }
   ]
 }
