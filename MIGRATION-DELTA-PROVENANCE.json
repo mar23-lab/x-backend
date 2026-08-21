@@ -9400,6 +9400,22 @@
           "reason": "Classify governed opaque connector credentials after live-row miss so revoked tokens return safe connector-specific authority truth instead of a misleading JWT parse diagnostic."
         }
       ]
+    },
+    {
+      "delta_id": "pilot-shadow-schema-head-103-20260821",
+      "generated_at": "2026-08-21T01:49:55.152Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "c0e5ad126ae0802f2e3a371f22cd7ead63bc95b8",
+      "target_base_commit": "c0e5ad126ae0802f2e3a371f22cd7ead63bc95b8",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "wrangler.pilot-shadow.toml",
+          "target_blob": "40037b6903e9712a53dba595a436703854661269",
+          "reason": "align pilot-shadow schema authority and derive verifier head from migrations"
+        }
+      ]
     }
   ]
 }
