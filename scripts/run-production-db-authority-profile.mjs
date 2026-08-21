@@ -2,9 +2,9 @@
 // Resolve production Neon role credentials just-in-time and run a governed
 // authority verifier without persisting or printing connection strings.
 
-import { chmodSync, mkdtempSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, mkdtempSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { homedir, tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { isAbsolute, join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import process from 'node:process';
 
@@ -23,6 +23,22 @@ const OAUTH_CLIENT_ID = 'neonctl';
 const TOKEN_REFRESH_SKEW_MS = 60_000;
 const SELF_TEST = process.argv.includes('--self-test');
 const TARGET = argumentValue('--target') || 'production-db';
+const PUBLIC_READINESS_PROFILE_ENV = 'XLOOOP_PUBLIC_READINESS_PROFILE_FILE';
+const PUBLIC_READINESS_PROFILE_BASENAME = 'xlooop-public-readiness-profile.env';
+const DEFAULT_PUBLIC_READINESS_PROFILES = Object.freeze([
+  join(tmpdir(), PUBLIC_READINESS_PROFILE_BASENAME),
+  ...(process.platform === 'darwin' ? [join('/private/tmp', PUBLIC_READINESS_PROFILE_BASENAME)] : []),
+]);
+const PUBLIC_READINESS_PROFILE_KEYS = Object.freeze(new Set([
+  'XLOOOP_DELETE_EXPORT_RECEIPT_FILE',
+  'XLOOOP_PARITY_PACKET_ID',
+  'XLOOOP_CANARY_TARGET',
+  'XLOOOP_CANARY_API_TOKEN_FILE',
+  'XLOOOP_CANARY_LIFECYCLE_API_TOKEN_FILE',
+  'XLOOOP_UPSTREAM_CAPABILITY_RESULTS_FILE',
+  'XLOOOP_HEADROOM_SEMANTIC_RESULTS_FILE',
+  'XLOOOP_TWO_COMPANY_PILOT_EVIDENCE_FILE',
+]));
 const ALLOWED_TARGETS = Object.freeze({
   'production-db': ['run', '--silent', 'verify:production-db-live-authority', '--', '--strict-live-db'],
   'live-evidence-matrix': ['run', '--silent', 'verify:live-evidence-authority-matrix', '--', '--strict-live-authority'],
@@ -40,6 +56,7 @@ if (!Object.hasOwn(ALLOWED_TARGETS, TARGET)) {
   fail(`Unsupported target ${JSON.stringify(TARGET)}. Allowed targets: ${Object.keys(ALLOWED_TARGETS).join(', ')}`);
 }
 
+const authorityProfile = resolveAuthorityProfile(process.env, TARGET);
 const profile = resolveProfile(process.env);
 const credentialsPath = process.env.XLOOOP_NEON_CREDENTIALS_FILE || join(homedir(), '.config', 'neonctl', 'credentials.json');
 const accessToken = await resolveAccessToken(credentialsPath);
@@ -55,6 +72,7 @@ const result = spawnSync(npmCommand(), ALLOWED_TARGETS[TARGET], {
   encoding: 'utf8',
   maxBuffer: 1024 * 1024 * 24,
   env: {
+    ...authorityProfile.values,
     ...process.env,
     DATABASE_URL: ownerDsn,
     XLOOOP_RLS_APP_DATABASE_URL: appDsn,
@@ -83,6 +101,56 @@ function resolveProfile(env) {
   }
   if (!/\.neon\.tech$/.test(profile.host)) fail('Production DB authority profile host must be a Neon hostname.');
   return profile;
+}
+
+function resolveAuthorityProfile(env, target, defaultPaths = DEFAULT_PUBLIC_READINESS_PROFILES) {
+  if (target !== 'public-readiness') return { path: null, values: {} };
+  const configuredPath = env[PUBLIC_READINESS_PROFILE_ENV] || '';
+  const candidatePaths = configuredPath ? [configuredPath] : [...new Set(defaultPaths)];
+  for (const candidatePath of candidatePaths) {
+    if (!isAbsolute(candidatePath)) {
+      fail(`${PUBLIC_READINESS_PROFILE_ENV} must be an absolute path.`);
+    }
+  }
+  const profilePath = candidatePaths.find((candidatePath) => existsSync(candidatePath));
+  if (!profilePath && configuredPath) fail(`Public-readiness authority profile is unavailable at ${configuredPath}.`);
+  if (!profilePath) return { path: null, values: {} };
+  try {
+    return { path: profilePath, values: parseAuthorityProfile(readFileSync(profilePath, 'utf8')) };
+  } catch (error) {
+    fail(`Invalid public-readiness authority profile at ${profilePath}: ${error.message}`);
+  }
+}
+
+function parseAuthorityProfile(source) {
+  const values = {};
+  for (const [index, originalLine] of String(source).split(/\r?\n/).entries()) {
+    const line = originalLine.trim();
+    if (!line || line.startsWith('#')) continue;
+    const match = /^([A-Z][A-Z0-9_]*)=(.*)$/.exec(line);
+    if (!match) throw new Error(`line ${index + 1} is not KEY=VALUE data`);
+    const [, key, rawValue] = match;
+    if (!PUBLIC_READINESS_PROFILE_KEYS.has(key)) {
+      throw new Error(`line ${index + 1} uses forbidden key ${key}`);
+    }
+    if (Object.hasOwn(values, key)) throw new Error(`line ${index + 1} duplicates ${key}`);
+    const value = rawValue.trim();
+    if (!value) throw new Error(`line ${index + 1} has an empty value for ${key}`);
+    if (/\$\(|\$\{|`|[\u0000-\u001f\u007f]/.test(value)) {
+      throw new Error(`line ${index + 1} contains unsupported syntax for ${key}`);
+    }
+    if (key.endsWith('_FILE') && !isAbsolute(value)) {
+      throw new Error(`line ${index + 1} must use an absolute file path for ${key}`);
+    }
+    if (key === 'XLOOOP_CANARY_TARGET' && value !== 'production') {
+      throw new Error('public-readiness canary target must be production');
+    }
+    if (key === 'XLOOOP_PARITY_PACKET_ID' && !/^pkt-canary-[A-Za-z0-9._-]+$/.test(value)) {
+      throw new Error('XLOOOP_PARITY_PACKET_ID must be a canary packet id');
+    }
+    values[key] = value;
+  }
+  return values;
 }
 
 async function resolveAccessToken(path) {
@@ -263,6 +331,30 @@ async function runSelfTest() {
   );
   const tempDirectory = mkdtempSync(join(tmpdir(), 'xlooop-neon-profile-self-test-'));
   const tempCredentialPath = join(tempDirectory, 'credentials.json');
+  const authorityProfilePath = join(tempDirectory, 'public-readiness.env');
+  writeFileSync(authorityProfilePath, [
+    'XLOOOP_DELETE_EXPORT_RECEIPT_FILE=/tmp/receipt.json',
+    'XLOOOP_PARITY_PACKET_ID=pkt-canary-self-test',
+    'XLOOOP_CANARY_TARGET=production',
+    'XLOOOP_CANARY_API_TOKEN_FILE=/tmp/read-token.txt',
+    'XLOOOP_CANARY_LIFECYCLE_API_TOKEN_FILE=/tmp/lifecycle-token.txt',
+    '',
+  ].join('\n'));
+  const authorityProfile = resolveAuthorityProfile({
+    [PUBLIC_READINESS_PROFILE_ENV]: authorityProfilePath,
+  }, 'public-readiness', [authorityProfilePath]);
+  let forbiddenInlineTokenRejected = false;
+  try {
+    parseAuthorityProfile('XLOOOP_CANARY_API_TOKEN=secret-must-not-be-forwarded');
+  } catch {
+    forbiddenInlineTokenRejected = true;
+  }
+  let relativePathRejected = false;
+  try {
+    parseAuthorityProfile('XLOOOP_DELETE_EXPORT_RECEIPT_FILE=relative.json');
+  } catch {
+    relativePathRejected = true;
+  }
   persistCredentialSet(tempCredentialPath, refreshedCredential);
   const persistedCredential = JSON.parse(readFileSync(tempCredentialPath, 'utf8'));
   const persistedMode = statSync(tempCredentialPath).mode & 0o777;
@@ -279,6 +371,10 @@ async function runSelfTest() {
   if (persistedCredential.refresh_token !== 'synthetic-refresh') failures.push('refreshed credential persistence');
   if (persistedMode !== 0o600) failures.push('credential file mode');
   if (!Object.hasOwn(ALLOWED_TARGETS, 'public-readiness')) failures.push('public readiness target');
+  if (authorityProfile.values.XLOOOP_CANARY_TARGET !== 'production') failures.push('public readiness profile forwarding');
+  if (Object.keys(authorityProfile.values).length !== 5) failures.push('public readiness profile whitelist');
+  if (!forbiddenInlineTokenRejected) failures.push('inline token refusal');
+  if (!relativePathRejected) failures.push('relative evidence path refusal');
   if (failures.length) {
     console.error(JSON.stringify({ status: 'FAIL', failures }, null, 2));
     process.exit(1);
@@ -289,5 +385,8 @@ async function runSelfTest() {
     profile_contains_secret_values: false,
     supported_targets: Object.keys(ALLOWED_TARGETS),
     redaction_verified: true,
+    public_readiness_profile_forwarding_verified: true,
+    public_readiness_profile_allowed_keys: [...PUBLIC_READINESS_PROFILE_KEYS],
+    inline_secret_values_allowed: false,
   }, null, 2));
 }
