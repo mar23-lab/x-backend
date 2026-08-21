@@ -82,6 +82,7 @@ import { requestAccessRoute } from './routes/request-access';
 import { rateLimit, rateLimitWhenFlag } from './middleware/rate-limit';
 import { diagnoseRoute } from './routes/diagnose';
 import { adminRoute } from './routes/admin';
+import { workspaceRelationshipRoute } from './routes/workspace-relationship';
 // Wave R-I.7 Stage C · investor portal (DR-11/12/13/14)
 import {
   investorPublicRoute,
@@ -282,9 +283,7 @@ protectedRoutes.route('/', settingsReadinessRoute);  // Customer-safe live check
 protectedRoutes.route('/', readinessRoute);          // M.7 · POST /readiness/submit (in-app first-login onboarding journey → scaled provision)
 protectedRoutes.route('/', inferenceHealthRoute);    // R51-ζ-3 · 6-panel inference health
 protectedRoutes.route('/', documentsRoute);          // Stage 2 source-intake · /documents (org required → workspace-scoped, no cross-tenant)
-
 app.route('/api/v1', protectedRoutes);
-
 // ---- User-scoped routes (require JWT only; org_id NOT required because
 //      OAuth connections belong to the user account, not the workspace) ----
 //      R50.3b · CLERK_OAUTH_PROVIDER_CONFIG.md
@@ -303,6 +302,7 @@ const adminRoutes = new Hono<{ Bindings: AppEnv; Variables: AppVariables }>();
 adminRoutes.use('*', clerkAuth({ requireOrg: false }));   // admins don't need to be in an org
 adminRoutes.use('*', requireAdmin());
 adminRoutes.route('/', adminRoute);
+adminRoutes.route('/admin', workspaceRelationshipRoute);
 adminRoutes.route('/admin', investorAdminRoute);          // Wave R-I.7 Stage C · /admin/investor/{tier-1-grant,tier-2-escalate,tier-2-revoke}
 
 app.route('/api/v1', adminRoutes);

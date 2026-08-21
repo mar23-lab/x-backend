@@ -129,6 +129,7 @@ import {
 } from './customer-readiness-store';
 import { getCustomerContextProfileRow } from './customer-context-store';
 import { provisionCustomerWorkspaceRow } from './customer-provisioning-store';
+import { transitionWorkspaceRelationshipStatusRow } from './workspace-relationship-store';
 import { getWorkspaceActivitySummaryRow } from './workspace-activity-store';
 import { recordPmfResponseRow, getPmfSummaryRow } from './pmf-store';
 import {
@@ -992,6 +993,13 @@ export class WorkersDalAdapter implements DalAdapter {
     input: import('./customer-provisioning-store').ProvisionCustomerInput,
   ): Promise<import('./customer-provisioning-store').ProvisionCustomerResult> {
     return provisionCustomerWorkspaceRow(this.sql, input);
+  }
+
+  async transitionWorkspaceRelationshipStatus(
+    workspaceId: WorkspaceId,
+    input: import('./workspace-relationship-store').WorkspaceRelationshipTransitionInput,
+  ): Promise<import('./workspace-relationship-store').WorkspaceRelationshipTransitionReceipt> {
+    return transitionWorkspaceRelationshipStatusRow(this.sql, workspaceId, input);
   }
 
   async getWorkspaceActivitySummary(
