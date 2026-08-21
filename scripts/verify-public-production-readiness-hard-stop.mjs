@@ -79,7 +79,12 @@ run('upstream_capability_live_canary', 'npm', ['run', '--silent', 'verify:upstre
 run('external_capability_runtime_results', 'npm', ['run', '--silent', 'verify:external-capability-runtime-results'], { blockInternal: true });
 run('external_capability_default_hard_stop', 'npm', ['run', '--silent', 'verify:external-capability-default-hard-stop'], { blockInternal: true, authorityField: 'external_capability_default_authority', message: 'Provide live upstream canary and strict runtime benchmark evidence before default-enabling external capabilities.' });
 run('api_mcp_live_canary_hard_stop', 'npm', ['run', '--silent', 'verify:api-mcp-live-canary-hard-stop', '--', '--strict-live', '--target=production'], { blockInternal: true, requiredForPublic: true, authorityField: 'api_mcp_live_canary_authority', message: 'Set XLOOOP_PARITY_PACKET_ID and scoped canary read/lifecycle tokens before API/MCP live authority.' });
-run('two_company_live_pilot_evidence', 'npm', ['run', '--silent', 'verify:two-company-live-pilot-evidence'], { blockInternal: true, requiredForPublic: true, authorityField: 'two_company_live_pilot_authority', message: 'Set XLOOOP_TWO_COMPANY_PILOT_EVIDENCE_FILE to a real 24-48h external_live_pilot evidence packet; existing APS/H&Y account usage counts only after it is source-linked in that packet.' });
+run('two_company_live_pilot_evidence', 'npm', [
+  'run',
+  '--silent',
+  'verify:two-company-live-pilot-evidence',
+  ...(strictPublic ? ['--', '--strict-live'] : []),
+], { blockInternal: true, requiredForPublic: true, authorityField: 'two_company_live_pilot_authority', message: 'Set XLOOOP_TWO_COMPANY_PILOT_EVIDENCE_FILE to a real 24-48h external_live_pilot evidence packet; existing APS/H&Y account usage counts only after it is source-linked in that packet.' });
 run('production_db_live_authority', 'npm', ['run', '--silent', 'verify:production-db-live-authority', '--', '--strict-live-db'], { blockInternal: true, requiredForPublic: true, authorityField: 'production_db_live_authority', message: 'Set DATABASE_URL and XLOOOP_RLS_APP_DATABASE_URL to prove production migrations and app-role RLS before public/customer onboarding.' });
 run('live_evidence_authority_matrix', 'npm', ['run', '--silent', 'verify:live-evidence-authority-matrix'], { blockInternal: true, requiredForPublic: true, authorityField: 'public_production_authority', message: 'Every live evidence lane must report authority=true before public/customer onboarding resumes.' });
 run('delete_export_object_storage_execution', 'npm', ['run', '--silent', 'verify:delete-export-object-storage-execution'], { blockInternal: true });
@@ -113,7 +118,23 @@ const blockedAuthorityLanes = [
   twoCompanyAuthority ? null : 'two-company pilot evidence',
   productionDbAuthority ? null : 'production DB/RLS',
 ].filter(Boolean);
-const status = failures.length ? 'FAIL' : 'PASS';
+const publicProductionAuthority = derivePublicProductionAuthority({
+  publicAuthority,
+  externalCapabilityPublicAuthority,
+  apiMcpLiveAuthority,
+  twoCompanyAuthority,
+  productionDbAuthority,
+  liveEvidenceAuthority,
+});
+if (strictPublic && !publicProductionAuthority && !failures.some((row) => row.id === 'strict_public_authority_blocked')) {
+  failures.push({
+    id: 'strict_public_authority_blocked',
+    status: 'FAIL',
+    blocked_authority_lanes: blockedAuthorityLanes,
+    message: 'Strict public readiness requires every public authority lane to pass.',
+  });
+}
+const status = deriveVerifierStatus(failures.length, strictPublic, publicProductionAuthority);
 const report = {
   schema_id: 'xlooop.public_production_readiness_hard_stop.verifier.v1',
   status,
@@ -125,14 +146,15 @@ const report = {
   api_mcp_live_canary_authority: apiMcpLiveAuthority,
   two_company_live_pilot_authority: twoCompanyAuthority,
   production_db_live_authority: productionDbAuthority,
-  public_production_authority: liveEvidenceAuthority,
+  public_production_authority: publicProductionAuthority,
+  live_evidence_authority: liveEvidenceAuthority,
   internal_controlled_validation_authority: internalControlledValidationAuthority,
   internal_safety_failure_count: internalSafetyFailures.length,
   checks,
   failures,
   warnings,
   blocked_authority_lanes: blockedAuthorityLanes,
-  conclusion: publicAuthority && externalCapabilityPublicAuthority && apiMcpLiveAuthority && twoCompanyAuthority && productionDbAuthority
+  conclusion: publicProductionAuthority
     ? 'Public/self-serve production, external capability safe posture, API/MCP live-canary, two-company pilot, and production DB authority are present.'
     : `Internal controlled validation may continue. Public production remains blocked by: ${blockedAuthorityLanes.join(', ')}.`
 };
@@ -143,8 +165,16 @@ function deriveInternalControlledValidationAuthority(internalSafetyFailureCount,
   return internalSafetyFailureCount === 0 && externalCapabilityAuthority === true;
 }
 
+function derivePublicProductionAuthority(authority) {
+  return Object.values(authority).every((value) => value === true);
+}
+
+function deriveVerifierStatus(failureCount, strict, publicProductionAuthority) {
+  return failureCount > 0 || (strict && !publicProductionAuthority) ? 'FAIL' : 'PASS';
+}
+
 function authorityPostureSelfTest() {
-  const cases = [
+  const internalCases = [
     { id: 'internal_green_before_public_receipt', failure_count: 0, external_authority: true, public_authority: false, expected: true },
     { id: 'internal_stays_green_after_public_receipt', failure_count: 0, external_authority: true, public_authority: true, expected: true },
     { id: 'internal_failure_blocks_internal_authority', failure_count: 1, external_authority: true, public_authority: false, expected: false },
@@ -159,6 +189,22 @@ function authorityPostureSelfTest() {
       actual,
     };
   });
+  const publicCases = [
+    { id: 'all_public_lanes_grant_authority', lanes: [true, true, true, true, true, true], expected: true },
+    { id: 'missing_two_company_lane_blocks_authority', lanes: [true, true, true, false, true, false], expected: false },
+  ].map((testCase) => {
+    const actual = derivePublicProductionAuthority(Object.fromEntries(testCase.lanes.map((value, index) => [index, value])));
+    return { id: testCase.id, status: actual === testCase.expected ? 'PASS' : 'FAIL', expected: testCase.expected, actual };
+  });
+  const exitCases = [
+    { id: 'advisory_mode_preserves_internal_validation', failure_count: 0, strict: false, public_authority: false, expected: 'PASS' },
+    { id: 'strict_mode_fails_without_public_authority', failure_count: 0, strict: true, public_authority: false, expected: 'FAIL' },
+    { id: 'strict_mode_passes_with_public_authority', failure_count: 0, strict: true, public_authority: true, expected: 'PASS' },
+  ].map((testCase) => {
+    const actual = deriveVerifierStatus(testCase.failure_count, testCase.strict, testCase.public_authority);
+    return { id: testCase.id, status: actual === testCase.expected ? 'PASS' : 'FAIL', expected: testCase.expected, actual };
+  });
+  const cases = [...internalCases, ...publicCases, ...exitCases];
   return {
     schema_id: 'xlooop.public_production_readiness_hard_stop.self_test.v1',
     status: cases.every((testCase) => testCase.status === 'PASS') ? 'PASS' : 'FAIL',

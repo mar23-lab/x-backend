@@ -9463,6 +9463,27 @@
           "reason": "Normalize canonical runtime results and legacy capability_results at the public authority preflight boundary"
         }
       ]
+    },
+    {
+      "delta_id": "public-readiness-authority-profile-20260822",
+      "generated_at": "2026-08-21T21:20:29.726Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "b1b5027049bed8732055a30434be6e70a506b917",
+      "target_base_commit": "b1b5027049bed8732055a30434be6e70a506b917",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "scripts/run-production-db-authority-profile.mjs",
+          "target_blob": "24a4b873f5e3bd4ce7f7e2ce0be329fc03b21e6e",
+          "reason": "forward governed live authority inputs and make strict public readiness fail closed"
+        },
+        {
+          "path": "scripts/verify-public-production-readiness-hard-stop.mjs",
+          "target_blob": "fc9abb771844814c41d3efd485c4daa31372bfef",
+          "reason": "forward governed live authority inputs and make strict public readiness fail closed"
+        }
+      ]
     }
   ]
 }
