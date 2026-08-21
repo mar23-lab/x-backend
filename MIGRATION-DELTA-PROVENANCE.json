@@ -9447,6 +9447,22 @@
           "reason": "Auditable platform-admin workspace lifecycle transition and source-size ratchet compliance"
         }
       ]
+    },
+    {
+      "delta_id": "live-authority-capability-schema-20260821",
+      "generated_at": "2026-08-21T09:43:42.664Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "6b9ec8f8b7951801096529cab691b9c2c7b47a28",
+      "target_base_commit": "6b9ec8f8b7951801096529cab691b9c2c7b47a28",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "scripts/verify-live-authority-inputs.mjs",
+          "target_blob": "1852622c213f31a5f9d61537513b09cfad6787fc",
+          "reason": "Normalize canonical runtime results and legacy capability_results at the public authority preflight boundary"
+        }
+      ]
     }
   ]
 }
