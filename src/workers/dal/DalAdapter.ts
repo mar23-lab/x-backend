@@ -606,6 +606,12 @@ export interface DalAdapter {
     input: import('./customer-provisioning-store').ProvisionCustomerInput,
   ): Promise<import('./customer-provisioning-store').ProvisionCustomerResult>;
 
+  /** Platform-admin-only customer lifecycle classification change with atomic audit receipt. */
+  transitionWorkspaceRelationshipStatus(
+    workspaceId: WorkspaceId,
+    input: import('./workspace-relationship-store').WorkspaceRelationshipTransitionInput,
+  ): Promise<import('./workspace-relationship-store').WorkspaceRelationshipTransitionReceipt>;
+
   /**
    * Accumulated-value + activity summary for a workspace — powers the retention-loop value
    * surface, the "since you left" delta (sinceIso), and leading must-have indicators.

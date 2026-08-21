@@ -9416,6 +9416,37 @@
           "reason": "align pilot-shadow schema authority and derive verifier head from migrations"
         }
       ]
+    },
+    {
+      "delta_id": "audited-workspace-lifecycle-20260821",
+      "generated_at": "2026-08-21T05:08:26.585Z",
+      "source_repo": "mar23-lab/x-backend",
+      "source_commit": "c1841354ddf18897cad7dbff13b10aba036b3831",
+      "target_base_commit": "c1841354ddf18897cad7dbff13b10aba036b3831",
+      "authority": "source_authority_no_automatic_deploy",
+      "copied_files": [],
+      "transformed_files": [
+        {
+          "path": "docs/contracts/api-contract.v1.json",
+          "target_blob": "bcdfcb3b3481932f3c7f141766b7f75c49d1f00c",
+          "reason": "Auditable platform-admin workspace lifecycle transition and regenerated API contract"
+        },
+        {
+          "path": "src/workers/dal/DalAdapter.ts",
+          "target_blob": "cba27fed966d1f9d1a48a629ae6a6cdf47b79bf0",
+          "reason": "Auditable platform-admin workspace lifecycle transition and regenerated API contract"
+        },
+        {
+          "path": "src/workers/dal/WorkersDalAdapter.ts",
+          "target_blob": "8e915ee4b6fd311086f10e0de67939237226d199",
+          "reason": "Auditable platform-admin workspace lifecycle transition and regenerated API contract"
+        },
+        {
+          "path": "src/workers/index.ts",
+          "target_blob": "33aa245b9193afd681223796a841d3f5986f781d",
+          "reason": "Auditable platform-admin workspace lifecycle transition and source-size ratchet compliance"
+        }
+      ]
     }
   ]
 }
