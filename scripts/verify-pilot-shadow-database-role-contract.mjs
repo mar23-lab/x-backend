@@ -1,11 +1,15 @@
 #!/usr/bin/env node
 
-import { neon } from '@neondatabase/serverless';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { localMigrationHead } from './lib/candidate-deployment-contract.mjs';
 
 const OWNER_ROLE = 'neondb_owner';
 const APP_ROLE = 'xlooop_app';
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const EXPECTED_SCHEMA_HEAD = localMigrationHead(ROOT);
 
-export function assess(owner, app) {
+export function assess(owner, app, expectedSchemaHead = EXPECTED_SCHEMA_HEAD) {
   const failures = [];
   if (owner.role_name !== OWNER_ROLE) failures.push(`DATABASE_URL role must be ${OWNER_ROLE}`);
   if (app.role_name !== APP_ROLE) failures.push(`XLOOOP_RLS_APP_DATABASE_URL role must be ${APP_ROLE}`);
@@ -15,21 +19,29 @@ export function assess(owner, app) {
   if (app.users_select || app.synthetic_membership_select) {
     failures.push(`${APP_ROLE} must not have direct broad-table SELECT privileges`);
   }
-  if (Number(owner.schema_head) !== 101) failures.push('owner DSN must resolve to schema head 101');
+  if (Number(owner.schema_head) !== expectedSchemaHead) {
+    failures.push(`owner DSN must resolve to schema head ${expectedSchemaHead}`);
+  }
   if (owner.database_name !== app.database_name) failures.push('owner and app DSNs must resolve to the same database');
   return failures;
 }
 
 if (process.argv.includes('--self-test')) {
   const good = assess(
-    { role_name: OWNER_ROLE, schema_head: 101, database_name: 'neondb' },
+    { role_name: OWNER_ROLE, schema_head: EXPECTED_SCHEMA_HEAD, database_name: 'neondb' },
     { role_name: APP_ROLE, database_name: 'neondb', is_superuser: false, bypasses_rls: false, users_select: false, synthetic_membership_select: false },
   );
   const swapped = assess(
-    { role_name: APP_ROLE, schema_head: 101, database_name: 'neondb' },
+    { role_name: APP_ROLE, schema_head: EXPECTED_SCHEMA_HEAD, database_name: 'neondb' },
     { role_name: OWNER_ROLE, database_name: 'other', is_superuser: false, bypasses_rls: false, users_select: true, synthetic_membership_select: true },
   );
-  const ok = good.length === 0 && swapped.length >= 3;
+  const stale = assess(
+    { role_name: OWNER_ROLE, schema_head: EXPECTED_SCHEMA_HEAD - 1, database_name: 'neondb' },
+    { role_name: APP_ROLE, database_name: 'neondb', is_superuser: false, bypasses_rls: false, users_select: false, synthetic_membership_select: false },
+  );
+  const ok = good.length === 0
+    && swapped.length >= 3
+    && stale.includes(`owner DSN must resolve to schema head ${EXPECTED_SCHEMA_HEAD}`);
   console.log(JSON.stringify({ schema_id: 'xlooop.pilot_shadow_database_role_contract.self_test.v1', status: ok ? 'PASS' : 'FAIL' }));
   process.exit(ok ? 0 : 1);
 }
@@ -44,6 +56,8 @@ if (!ownerUrl || !appUrl) {
   }, null, 2));
   process.exit(2);
 }
+
+const { neon } = await import('@neondatabase/serverless');
 
 async function inspect(url, includeSchemaHead) {
   const sql = neon(url);
