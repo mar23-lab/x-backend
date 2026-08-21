@@ -32,6 +32,31 @@ test('raw live runtime evidence is accepted and string warnings stay structured'
   });
 });
 
+test('live authority preflight reads the canonical runtime results field', () => {
+  const input = writeFixture('preflight-runtime-results.json', {
+    schema_id: 'xlooop.external_capability_runtime_results.v1',
+    results: [{ capability: 'markitdown', default_adoption_allowed: false }],
+  });
+
+  const result = spawnSync(process.execPath, ['scripts/verify-live-authority-inputs.mjs'], {
+    cwd: repoRoot,
+    encoding: 'utf8',
+    env: {
+      ...process.env,
+      XLOOOP_REQUIRE_EXTERNAL_DEFAULTS: '1',
+      XLOOOP_UPSTREAM_CAPABILITY_RESULTS_FILE: input,
+    },
+  });
+  const report = JSON.parse(result.stdout);
+  const capabilityCheck = report.checks.find(
+    (check) => check.id === 'external_capability_results_include_capabilities',
+  );
+
+  assert.equal(capabilityCheck?.status, 'PASS');
+  assert.equal(capabilityCheck?.capability_result_count, 1);
+  assert.equal(report.lane_readiness.external_default_inputs_ready, true);
+});
+
 test('aggregate summary is rejected as non-authoritative runtime evidence', () => {
   const input = writeFixture('summary.json', {
     schema_id: 'xlooop.external_capability_live_canary_summary.v1',

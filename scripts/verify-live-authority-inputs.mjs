@@ -159,9 +159,7 @@ add('rls_app_database_url_configured', Boolean(process.env.XLOOOP_RLS_APP_DATABA
 // External capability promotion evidence.
 const upstreamResults = readOptionalJsonFile('XLOOOP_UPSTREAM_CAPABILITY_RESULTS_FILE', !requireExternalDefaults);
 if (upstreamResults.json) {
-  const capabilityResults = Array.isArray(upstreamResults.json.capability_results)
-    ? upstreamResults.json.capability_results
-    : [];
+  const capabilityResults = normalizeCapabilityResults(upstreamResults.json);
   add('external_capability_results_schema_present', Boolean(upstreamResults.json.schema_id), {
     schema_id: upstreamResults.json.schema_id || null,
   });
@@ -252,6 +250,12 @@ process.exit(failures.length ? 1 : 0);
 
 function checksFor(ids) {
   return ids.every((id) => checks.find((row) => row.id === id)?.status === 'PASS');
+}
+
+function normalizeCapabilityResults(report) {
+  if (Array.isArray(report.results)) return report.results;
+  if (Array.isArray(report.capability_results)) return report.capability_results;
+  return [];
 }
 
 function readOptionalJsonFile(envName, warnOnly) {
